@@ -462,7 +462,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // only one child. Because there is only one possible child, check if
         // either is Red since NIL is Black.
         let to_delete_color: Color = self.get_color::<V>(index);
-        let child_color: Color = if self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Red
+        let child_color: Color = if self.get_color::<V>(self.get_left_index::<V>(index))
+            == Color::Red
             || self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Red
         {
             Color::Red
@@ -497,9 +498,9 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         let sibling_color: Color = self.get_color::<V>(sibling_index);
         let parent_color: Color = self.get_color::<V>(parent_index);
 
-        let sibling_has_red_child: bool = self.get_color::<V>(self.get_left_index::<V>(sibling_index))
-            == Color::Red
-            || self.get_color::<V>(self.get_right_index::<V>(sibling_index)) == Color::Red;
+        let sibling_has_red_child: bool =
+            self.get_color::<V>(self.get_left_index::<V>(sibling_index)) == Color::Red
+                || self.get_color::<V>(self.get_right_index::<V>(sibling_index)) == Color::Red;
 
         // 3a
         if sibling_color == Color::Black && sibling_has_red_child {
