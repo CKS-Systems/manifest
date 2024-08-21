@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = [
+  "lib",
+]
+
+[workspace.dependencies]
+shank = "0.4.2"
+spl-token = { version = "=3.5.0", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "3.0.4", features = [ "no-entrypoint" ] }
+solana-program = "1.18.1"
+borsh = "=0.9.3"
+bytemuck = "1.7.2"
+num_enum = "=0.5.9"
+thiserror = "1.0.38"
+solana-security-txt = "1.1.0"
+static_assertions = "=1.1.0"
+
+anyhow = "1.0.66"
+solana-program-test = "1.16.7"
+solana-logger = "1.16.7"
+solana-sdk = "1.16.7"
+tokio = "1.28.0"
+
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.release]
+codegen-units = 1
+lto = "fat"
+overflow-checks = true
+strip = "debuginfo"
+
+[profile.release.build-override]
+codegen-units = 1
+incremental = false
+opt-level = 3
+strip = "debuginfo"
+
+# Test with release settings so CU usage is accurately measured.
+[profile.test]
+lto = "fat"
+opt-level = 3
+debug = false
+codegen-units = 1
+overflow-checks = true
+strip = "debuginfo"
+
+[patch.crates-io]
+ahash = { git = "https://github.com/mschneider/aHash.git", branch = "patch" }

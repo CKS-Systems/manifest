@@ -1,0 +1,19 @@
+[package]
+name = "manifest-toolbox"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/CKS-systems/manifest"
+authors = ["Britt Cyr <britt@cks.systems>"]
+description = "Data structures for Manifest"
+license-file = "LICENSE"
+
+[features]
+trace = []
+
+[dependencies]
+bytemuck = { workspace = true }
+solana-program = { workspace = true }
+static_assertions = { workspace = true }
+
+# Does not work with sbf. Enable when debugging red black only
+colored = { version = "2.1.0", optional = true }

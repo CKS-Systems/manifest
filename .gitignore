@@ -1,0 +1,15 @@
+*.log
+lcov.info
+.viminfo
+target
+**/*.rs.bk
+**/.crates
+**/node_modules
+**/cargo
+dist
+**/nyc_output/*
+test-ledger
+idl/yarn.lock
+client/nyc_output
+**nyc_output
+**coverage
