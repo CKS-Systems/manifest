@@ -6,6 +6,7 @@ on:
     branches: ['main']
     paths:
       [
+        'programs/**',
         'lib',
         'Cargo.toml',
         'Cargo.lock',

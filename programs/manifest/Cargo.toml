@@ -1,0 +1,60 @@
+[package]
+name = "manifest"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/CKS-systems/manifest"
+authors = ["Britt Cyr <britt@cks.systems>"]
+description = "Onchain orderbook optimized for space and accounts"
+license-file = "LICENSE"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "manifest"
+
+[features]
+no-entrypoint = []
+cpi = ["no-entrypoint"]
+no-log-ix-name = []
+default = []
+test = []
+fuzz = []
+trace = ["hypertree/trace"]
+trace-svm = []
+no-clock = []
+
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.release]
+lto = "fat"
+codegen-units = 1
+overflow-checks = true
+strip = "debuginfo"
+
+# Test with release settings so CU usage is accurately measured.
+[profile.test]
+lto = "fat"
+opt-level = 3
+debug = false
+codegen-units = 1
+overflow-checks = true
+strip = "debuginfo"
+
+[dependencies]
+hypertree = { path = "../../lib" }
+# Cannot use workspace because the generator needs to see a version here
+shank = "0.4.2"
+spl-token = { workspace = true, features = ["no-entrypoint"] }
+spl-token-2022 = { workspace = true, features = ["no-entrypoint"] }
+solana-program = { workspace = true }
+borsh = { workspace = true }
+bytemuck = { workspace = true }
+num_enum = { workspace = true }
+thiserror = { workspace = true }
+solana-security-txt = { workspace = true }
+static_assertions = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+solana-program-test = { workspace = true }
+solana-logger = { workspace = true }
+solana-sdk = { workspace = true }
+tokio = { workspace = true }
