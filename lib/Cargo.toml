@@ -1,5 +1,5 @@
 [package]
-name = "manifest-toolbox"
+name = "hypertree"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"

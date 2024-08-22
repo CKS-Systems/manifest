@@ -1295,7 +1295,6 @@ mod test {
         let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrder::new(6 * 1_000));
         tree.verify_rb_tree();
-        tree.verify_rb_tree();
     }
 
     #[test]
