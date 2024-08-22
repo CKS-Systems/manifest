@@ -1,0 +1,14 @@
+ignore:
+  - "client/ts/src/manifest/accounts"
+  - "client/ts/src/manifest/errors"
+  # Do not need to cover the direct instructions since users are expected to use
+  # the wrapper.
+  - "client/ts/src/manifest/instructions/BatchUpdate.ts"
+  - "client/ts/src/manifest/instructions/CancelOrder.ts"
+  - "client/ts/src/manifest/instructions/ClaimSeat.ts"
+  - "client/ts/src/manifest/instructions/Deposit.ts"
+  - "client/ts/src/manifest/instructions/Expand.ts"
+  - "client/ts/src/manifest/instructions/PlaceOrder.ts"
+  - "client/ts/src/manifest/instructions/Withdraw.ts"
+  # Infinite loop and variability in other messages makes it difficult to cover fill feed
+  - "client/ts/src/fillFeed.ts"
