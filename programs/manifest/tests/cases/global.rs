@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use hypertree::NIL;
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
@@ -12,7 +13,6 @@ use manifest::{
         OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
     },
 };
-use hypertree::NIL;
 use solana_program_test::tokio;
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair};
 

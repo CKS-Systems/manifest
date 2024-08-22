@@ -1,5 +1,6 @@
 use std::u64;
 
+use hypertree::{RedBlackTree, NIL};
 use manifest::{
     quantities::WrapperU64,
     state::{
@@ -8,7 +9,6 @@ use manifest::{
     },
     validation::get_vault_address,
 };
-use hypertree::{RedBlackTree, NIL};
 use solana_program_test::tokio;
 use solana_sdk::signature::{Keypair, Signer};
 

@@ -3,6 +3,7 @@ use std::{
     io::Error,
 };
 
+use hypertree::{DataIndex, NIL};
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
@@ -20,7 +21,6 @@ use manifest::{
     },
     validation::{get_global_address, MintAccountInfo},
 };
-use hypertree::{DataIndex, NIL};
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
