@@ -81,6 +81,8 @@ pub(crate) fn process_swap(
         is_exact_in,
     } = SwapParams::try_from_slice(data)?;
 
+    trace!("swap in_atoms:{in_atoms} out_atoms:{out_atoms} is_base_in:{is_base_in} is_exact_in:{is_exact_in}");
+
     // this is a virtual credit to ensure matching always proceeds
     // net token transfers will be handled later
     dynamic_account.deposit(payer.key, in_atoms, is_base_in)?;
