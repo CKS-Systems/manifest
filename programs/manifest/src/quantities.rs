@@ -3,7 +3,7 @@ use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::trace;
 use shank::ShankAccount;
-use solana_program::program_error::ProgramError;
+use solana_program::{msg, program_error::ProgramError};
 use std::{
     fmt::Display,
     ops::{Add, AddAssign, Div},
@@ -175,8 +175,42 @@ pub struct QuoteAtomsPerBaseAtom {
 }
 
 const ATOM_LIMIT: u128 = u64::MAX as u128;
-const D20: u128 = 100_000_000_000_000_000_000;
+const D20: u128 = 10u128.pow(20);
 const D20F: f64 = D20 as f64;
+
+const DECIMAL_CONSTANTS: [u128; 31] = [
+    10u128.pow(30),
+    10u128.pow(29),
+    10u128.pow(28),
+    10u128.pow(27),
+    10u128.pow(26),
+    10u128.pow(25),
+    10u128.pow(24),
+    10u128.pow(23),
+    10u128.pow(22),
+    10u128.pow(21),
+    10u128.pow(20),
+    10u128.pow(19),
+    10u128.pow(18),
+    10u128.pow(17),
+    10u128.pow(16),
+    10u128.pow(15),
+    10u128.pow(14),
+    10u128.pow(13),
+    10u128.pow(12),
+    10u128.pow(11),
+    10u128.pow(10),
+    10u128.pow(09),
+    10u128.pow(08),
+    10u128.pow(07),
+    10u128.pow(06),
+    10u128.pow(05),
+    10u128.pow(04),
+    10u128.pow(03),
+    10u128.pow(02),
+    10u128.pow(01),
+    10u128.pow(00),
+];
 
 // Prices
 impl QuoteAtomsPerBaseAtom {
@@ -185,12 +219,42 @@ impl QuoteAtomsPerBaseAtom {
     pub const MIN: Self = QuoteAtomsPerBaseAtom::ZERO;
     pub const MAX: Self = QuoteAtomsPerBaseAtom { inner: u128::MAX };
 
+    pub fn try_from_mantissa_and_exponent(
+        mantissa: u32,
+        exponent: i8,
+    ) -> Result<Self, PriceConversionError> {
+        if exponent > 10 {
+            msg!("invalid exponent {exponent} > 10 would truncate",);
+            return Err(PriceConversionError(0x0));
+        }
+        if exponent < -20 {
+            msg!("invalid exponent {exponent} < -20 would truncate",);
+            return Err(PriceConversionError(0x1));
+        }
+        /* map exponent to array range
+         10 -> [0]  -> D30
+          0 -> [10] -> D20
+        -10 -> [20] -> D10
+        -20 -> [30] ->  D0
+        */
+        let offset = -(exponent - 10) as usize;
+        let inner = DECIMAL_CONSTANTS[offset]
+            .checked_mul(mantissa as u128)
+            .ok_or(PriceConversionError(0x2))?;
+        return Ok(QuoteAtomsPerBaseAtom { inner });
+    }
+
     pub fn checked_base_for_quote(
         self,
         quote_atoms: QuoteAtoms,
         round_up: bool,
     ) -> Result<BaseAtoms, ProgramError> {
-        let dividend = quote_atoms.inner as u128 * D20;
+        if self == Self::ZERO {
+            return Ok(BaseAtoms::new(0));
+        }
+        let dividend = D20
+            .checked_mul(quote_atoms.inner as u128)
+            .ok_or(PriceConversionError(0x4))?;
         let base_atoms = if round_up {
             dividend.div_ceil(self.inner)
         } else {
@@ -210,7 +274,10 @@ impl QuoteAtomsPerBaseAtom {
         base_atoms: BaseAtoms,
         round_up: bool,
     ) -> Result<u128, ProgramError> {
-        let product = self.inner * (base_atoms.inner as u128);
+        let product = self
+            .inner
+            .checked_mul(base_atoms.inner as u128)
+            .ok_or(PriceConversionError(0x8))?;
         let quote_atoms = if round_up {
             product.div_ceil(D20)
         } else {
@@ -243,9 +310,12 @@ impl QuoteAtomsPerBaseAtom {
         if BaseAtoms::ZERO == num_base_atoms {
             return Ok(self);
         }
-        let quote_atoms_matched = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
+        let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
+        let quote_matched_d20 = quote_matched_atoms
+            .checked_mul(D20)
+            .ok_or(PriceConversionError(0x9))?;
         // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = (quote_atoms_matched * D20).div(num_base_atoms.inner as u128);
+        let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
         Ok(QuoteAtomsPerBaseAtom { inner })
     }
 }
@@ -264,19 +334,33 @@ impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     }
 }
 
+#[derive(Debug)]
+pub struct PriceConversionError(u32);
+
+const PRICE_CONVERSION_ERROR_BASE: u32 = 100;
+
+impl From<PriceConversionError> for ProgramError {
+    fn from(value: PriceConversionError) -> Self {
+        ProgramError::Custom(value.0 + PRICE_CONVERSION_ERROR_BASE)
+    }
+}
+
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
-    type Error = &'static str;
+    type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         let mantissa = value * D20F;
         if mantissa.is_infinite() {
-            return Err("infinite can not be expressed as fixed point decimal");
+            msg!("infinite can not be expressed as fixed point decimal");
+            return Err(PriceConversionError(0xC));
         }
         if mantissa.is_nan() {
-            return Err("nan can not be expressed as fixed point decimal");
+            msg!("nan can not be expressed as fixed point decimal");
+            return Err(PriceConversionError(0xD));
         }
         if mantissa > u128::MAX as f64 {
-            return Err("price is too large");
+            msg!("price is too large");
+            return Err(PriceConversionError(0xE));
         }
         Ok(QuoteAtomsPerBaseAtom {
             inner: mantissa as u128,
