@@ -209,14 +209,16 @@ async fn token22_base() -> anyhow::Result<()> {
         vec![
             PlaceOrderParams::new(
                 1_000,
-                0.9,
+                9,
+                -1,
                 true,
                 OrderType::PostOnly,
                 NO_EXPIRATION_LAST_VALID_SLOT,
             ),
             PlaceOrderParams::new(
                 1_000,
-                1.1,
+                11,
+                -1,
                 false,
                 OrderType::PostOnly,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -471,14 +473,16 @@ async fn token22_quote() -> anyhow::Result<()> {
         vec![
             PlaceOrderParams::new(
                 1_000,
-                0.9,
+                9,
+                -1,
                 true,
                 OrderType::PostOnly,
                 NO_EXPIRATION_LAST_VALID_SLOT,
             ),
             PlaceOrderParams::new(
                 1_000,
-                1.1,
+                11,
+                -1,
                 false,
                 OrderType::PostOnly,
                 NO_EXPIRATION_LAST_VALID_SLOT,
