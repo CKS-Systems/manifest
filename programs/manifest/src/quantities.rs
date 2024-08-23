@@ -5,9 +5,7 @@ use hypertree::trace;
 use shank::ShankAccount;
 use solana_program::{msg, program_error::ProgramError};
 use std::{
-    fmt::Display,
-    ops::{Add, AddAssign, Div},
-    u128, u64,
+    cmp::Ordering, fmt::Display, ops::{Add, AddAssign, Div}, u128, u64
 };
 
 /// New and as_u64 for creating and switching to u64 when needing to use base or
@@ -156,10 +154,6 @@ basic_u64!(GlobalAtoms);
 
 // Manifest pricing
 #[derive(
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
     Clone,
     Copy,
     Default,
@@ -169,9 +163,16 @@ basic_u64!(GlobalAtoms);
     Serialize,
     ShankAccount,
 )]
-#[repr(transparent)]
+#[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
-    inner: u128,
+    inner: [u64; 2],
+}
+
+fn u128_to_u64_slice(a: u128) -> [u64; 2] {
+    bytemuck::cast(a)
+}
+fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
+    bytemuck::cast(a)
 }
 
 const ATOM_LIMIT: u128 = u64::MAX as u128;
@@ -214,10 +215,9 @@ const DECIMAL_CONSTANTS: [u128; 31] = [
 
 // Prices
 impl QuoteAtomsPerBaseAtom {
-    pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: 0 };
-    pub const ONE: Self = QuoteAtomsPerBaseAtom { inner: D20 };
+    pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: [0; 2] };
     pub const MIN: Self = QuoteAtomsPerBaseAtom::ZERO;
-    pub const MAX: Self = QuoteAtomsPerBaseAtom { inner: u128::MAX };
+    pub const MAX: Self = QuoteAtomsPerBaseAtom { inner: [u64::MAX; 2] };
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
@@ -241,7 +241,7 @@ impl QuoteAtomsPerBaseAtom {
         let inner = DECIMAL_CONSTANTS[offset]
             .checked_mul(mantissa as u128)
             .ok_or(PriceConversionError(0x2))?;
-        return Ok(QuoteAtomsPerBaseAtom { inner });
+        return Ok(QuoteAtomsPerBaseAtom { inner: u128_to_u64_slice(inner) });
     }
 
     pub fn checked_base_for_quote(
@@ -255,10 +255,11 @@ impl QuoteAtomsPerBaseAtom {
         let dividend = D20
             .checked_mul(quote_atoms.inner as u128)
             .ok_or(PriceConversionError(0x4))?;
+        let inner: u128 = u64_slice_to_u128(self.inner);
         let base_atoms = if round_up {
-            dividend.div_ceil(self.inner)
+            dividend.div_ceil(inner)
         } else {
-            dividend.div(self.inner)
+            dividend.div(inner)
         };
         assert_with_msg(
             base_atoms <= ATOM_LIMIT,
@@ -274,8 +275,8 @@ impl QuoteAtomsPerBaseAtom {
         base_atoms: BaseAtoms,
         round_up: bool,
     ) -> Result<u128, ProgramError> {
-        let product = self
-            .inner
+        let inner: u128 = u64_slice_to_u128(self.inner);
+        let product: u128 = inner
             .checked_mul(base_atoms.inner as u128)
             .ok_or(PriceConversionError(0x8))?;
         let quote_atoms = if round_up {
@@ -316,20 +317,40 @@ impl QuoteAtomsPerBaseAtom {
             .ok_or(PriceConversionError(0x9))?;
         // no special case rounding needed because effective price is just a value used to compare for order
         let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
-        Ok(QuoteAtomsPerBaseAtom { inner })
+        Ok(QuoteAtomsPerBaseAtom { inner: u128_to_u64_slice(inner) })
     }
 }
 
+impl Ord for QuoteAtomsPerBaseAtom {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (u64_slice_to_u128(self.inner)).cmp(&u64_slice_to_u128(other.inner))
+    }
+}
+
+impl PartialOrd for QuoteAtomsPerBaseAtom {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for QuoteAtomsPerBaseAtom {
+    fn eq(&self, other: &Self) -> bool {
+        (self.inner) == (other.inner)
+    }
+}
+
+impl Eq for QuoteAtomsPerBaseAtom {}
+
 impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", &(self.inner as f64 / D20F)))
+        f.write_fmt(format_args!("{}", &(u64_slice_to_u128(self.inner) as f64 / D20F)))
     }
 }
 
 impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QuoteAtomsPerBaseAtom")
-            .field("value", &(self.inner as f64 / D20F))
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
             .finish()
     }
 }
@@ -363,7 +384,7 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
             return Err(PriceConversionError(0xE));
         }
         Ok(QuoteAtomsPerBaseAtom {
-            inner: mantissa as u128,
+            inner: u128_to_u64_slice(mantissa as u128),
         })
     }
 }
@@ -419,7 +440,7 @@ fn test_checked_sub() {
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
-        inner: 100 * D20 - 1,
+        inner: u128_to_u64_slice(100 * D20 - 1),
     };
     assert_eq!(
         base_atoms
@@ -436,7 +457,7 @@ fn test_print() {
     println!(
         "{}",
         QuoteAtomsPerBaseAtom {
-            inner: 123 * D20 / 100
+            inner: u128_to_u64_slice(123 * D20 / 100),
         }
     );
 }
@@ -448,7 +469,7 @@ fn test_debug() {
     println!(
         "{:?}",
         QuoteAtomsPerBaseAtom {
-            inner: 123 * D20 / 100
+            inner: u128_to_u64_slice(123 * D20 / 100),
         }
     );
 }

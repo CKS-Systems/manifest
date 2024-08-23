@@ -70,7 +70,7 @@ impl WrapperOpenOrder {
         WrapperOpenOrder {
             client_order_id,
             order_sequence_number: 0,
-            price: QuoteAtomsPerBaseAtom::ONE,
+            price: QuoteAtomsPerBaseAtom::ZERO,
             num_base_atoms: BaseAtoms::ZERO,
             last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
             order_type: OrderType::Limit,
