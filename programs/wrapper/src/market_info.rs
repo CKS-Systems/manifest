@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
-use manifest::quantities::{BaseAtoms, QuoteAtoms};
 use hypertree::{DataIndex, NIL};
+use manifest::quantities::{BaseAtoms, QuoteAtoms};
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 use std::{cmp::Ordering, mem::size_of};

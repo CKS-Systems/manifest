@@ -8,15 +8,15 @@ use crate::{
     market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperStateFixed,
 };
 use bytemuck::{Pod, Zeroable};
+use hypertree::{
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, TreeReadOperations, NIL,
+};
 use manifest::{
     program::assert_with_msg,
     quantities::BaseAtoms,
     state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
     validation::{Program, Signer},
-};
-use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, TreeReadOperations, NIL,
 };
 use solana_program::{
     account_info::AccountInfo,

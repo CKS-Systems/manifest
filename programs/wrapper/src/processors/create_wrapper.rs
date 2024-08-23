@@ -1,5 +1,5 @@
-use manifest::validation::{Program, Signer};
 use hypertree::get_mut_helper;
+use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,

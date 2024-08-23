@@ -1,9 +1,9 @@
 use bytemuck::{Pod, Zeroable};
+use hypertree::{DataIndex, PodBool, NIL};
 use manifest::{
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
 };
-use hypertree::{DataIndex, PodBool, NIL};
 use static_assertions::const_assert_eq;
 use std::{cmp::Ordering, mem::size_of};
 

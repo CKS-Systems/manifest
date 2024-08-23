@@ -4,6 +4,7 @@ use std::{
 };
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::{get_helper, get_mut_helper, DataIndex, FreeList, RBNode, TreeReadOperations, NIL};
 use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
@@ -12,9 +13,6 @@ use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{MarketFixed, MarketRef, OrderType},
     validation::{ManifestAccountInfo, Program, Signer},
-};
-use hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, RBNode, TreeReadOperations, NIL,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},

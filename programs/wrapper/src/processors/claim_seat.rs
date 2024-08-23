@@ -1,11 +1,11 @@
 use std::{cell::RefMut, mem::size_of};
 
+use hypertree::{get_mut_helper, DataIndex, FreeList, TreeReadOperations, NIL};
 use manifest::{
     program::{claim_seat_instruction, expand_instruction, get_mut_dynamic_account},
     state::{MarketFixed, MarketRefMut},
     validation::ManifestAccountInfo,
 };
-use hypertree::{get_mut_helper, DataIndex, FreeList, TreeReadOperations, NIL};
 
 use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
 use manifest::validation::{Program, Signer};
