@@ -1193,6 +1193,10 @@ pub async fn send_tx_with_retry(
                 // Retry on rpc errors.
                 continue;
             }
+            BanksClientError::Io(_io_err) => {
+                // Retry on io errors.
+                continue;
+            }
             _ => {
                 println!("Unexpected error: {:?}", error);
                 return Err(error);
