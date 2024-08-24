@@ -44,6 +44,14 @@ The market account holds all relevant information. It begins with a header that 
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,
 ClaimedSeats and 1 LinkedList for FreeListNodes, overlapping across each other. All are graphs where each vertex along with adjacency list fits in 80 bytes, allowing them to use the same blocks.
 
+<pre>
+--------------------------------------------------------------------------------------------------------
+|                   Header                    |                               Dynamic                   |
+--------------------------------------------------------------------------------------------------------
+| BaseMint, QuoteMint, BidsRootIndex, ...     | Bid | Ask | FreeListNode | Seat | Seat | Bid | Bid | Ask|
+--------------------------------------------------------------------------------------------------------
+</pre>
+
 ### Core vs Wrapper
 Manifest views the orderbook as an infrastructure layer primitive. Other orderbooks get bogged down by special feature requests from trading teams that ultimately make the program bloated and confusing. Manifest strives to only include features that are absolutely necessary to be in the base layer. Anything that can be handled at layers above on the stack will not be done in manifest. This simplification makes formal verification of the program feasible.
 
