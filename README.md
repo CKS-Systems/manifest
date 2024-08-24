@@ -1,7 +1,7 @@
 # Manifest
 
 The feeless order book exchange that supercharges your on-chain trading
-abilities Manifest is the next generation of orderbooks on Solana. It is
+abilities. Manifest is the next generation of orderbooks on Solana. It is
 optimized for freedom. No more permissioned markets. No more trading fees. No
 more large 2 SOL rent to start a market. Capital efficiency built in.
 
