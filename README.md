@@ -3,7 +3,7 @@
 The feeless order book exchange that supercharges your on-chain trading
 abilities. Manifest is the next generation of orderbooks on Solana. It is
 optimized for freedom. No more permissioned markets. No more trading fees. No
-more large 2 SOL rent to start a market. Capital efficiency built in.
+more 2 SOL rent deposit to start a market. Capital efficiency built in.
 
 ## Comparison
 
@@ -22,6 +22,7 @@ more large 2 SOL rent to start a market. Capital efficiency built in.
 |Instruction size | | | |
 |Silent failures | Yes| Yes| No|
 |Token 22 | No| No| Yes|
+|Customizable wrapper| No| No| Yes|
 
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account
 - No trading fees in Manifest
@@ -53,7 +54,7 @@ ClaimedSeats and 1 LinkedList for FreeListNodes, overlapping across each other. 
 </pre>
 
 ### Core vs Wrapper
-Manifest views the orderbook as an infrastructure layer primitive. Other orderbooks get bogged down by special feature requests from trading teams that ultimately make the program bloated and confusing. Manifest strives to only include features that are absolutely necessary to be in the base layer. Anything that can be handled at layers above on the stack will not be done in manifest. This simplification makes formal verification of the program feasible.
+Manifest implements the orderbook as an infrastructure layer primitive and creates the purest form of risk exchange possible. Other orderbooks get bogged down by special feature requests from trading teams that ultimately make the program bloated and confusing. Manifest strives to only include features that are absolutely necessary to be in the base layer. Anything that can be handled at layers above on the stack will not be done in manifest. This simplification makes formal verification of the program feasible.
 
 Manifest should be interacted with though a wrapper program. Features like ClientOrderId, FillOrKill, PostOnlySlide, adjusting orders for insufficient funds, can and should be in a separate program that does a CPI into Manifest. A reference implementation and deployment of a wrapper are provided, showing what can be done outside the core of an orderbook without needing to be in the orderbook itself.
 
