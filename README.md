@@ -1,4 +1,4 @@
-# ![Logo](../manifest/assets/brown-contrast-split.png)
+# ![Logo](assets/brown-contrast-split.png)
 # <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
 *The feeless orderbook exchange that supercharges your on-chain trading.*
 
