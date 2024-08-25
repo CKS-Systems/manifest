@@ -3,7 +3,7 @@ import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
-import { toNum } from './utils/numbers';
+import { convertU128, toNum } from './utils/numbers';
 import bs58 from 'bs58';
 import keccak256 from 'keccak256';
 
@@ -182,9 +182,8 @@ function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
     taker: fillLog.taker.toBase58(),
     baseAtoms: toNum(fillLog.baseAtoms.inner),
     quoteAtoms: toNum(fillLog.quoteAtoms.inner),
-    price: toNum(
-      Buffer.from(fillLog.price.inner as Uint8Array).readDoubleLE(0),
-    ),
+    // TOOD: Fix this for the new price format
+    price: convertU128(fillLog.price.inner[1]),
     takerIsBuy: fillLog.takerIsBuy,
     slot,
   };

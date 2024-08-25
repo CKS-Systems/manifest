@@ -3,12 +3,12 @@ use jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
 };
 
+use hypertree::get_helper;
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketValue},
     validation::{get_global_address, get_global_vault_address, get_vault_address},
 };
-use hypertree::get_helper;
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::mem::size_of;
 
@@ -202,17 +202,18 @@ impl Amm for ManifestMarket {
 #[cfg(test)]
 mod test {
     use super::*;
+    use hypertree::{get_mut_helper, trace, DataIndex};
     use manifest::{
         quantities::{BaseAtoms, GlobalAtoms},
         state::{
-            constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, GlobalFixed, GlobalValue, OrderType, BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_FIXED_SIZE
+            constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, GlobalFixed,
+            GlobalValue, OrderType, BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_FIXED_SIZE,
         },
         validation::{
             loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
             TokenProgram,
         },
     };
-    use hypertree::{get_mut_helper, trace, DataIndex};
     use solana_sdk::{account::Account, account_info::AccountInfo};
     use spl_token::state::Mint;
     use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
