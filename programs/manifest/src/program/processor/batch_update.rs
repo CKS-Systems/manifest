@@ -165,10 +165,11 @@ pub(crate) fn process_batch_update(
                         &global_trade_accounts_opts,
                     )?;
                 }
-                Some(hinted_index) => {
+                Some(hinted_cancel_index) => {
                     // TODO: Verify that it is an order at the index, not a
                     // ClaimedSeat that a malicious user pretended was a seat.
-                    let order: &RestingOrder = dynamic_account.get_order_by_index(hinted_index);
+                    let order: &RestingOrder =
+                        dynamic_account.get_order_by_index(hinted_cancel_index);
                     // Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
@@ -176,11 +177,11 @@ pub(crate) fn process_batch_update(
                         trader_index % (BLOCK_SIZE as DataIndex) == 0
                             && trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_index),
+                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
-                        hinted_index,
+                        hinted_cancel_index,
                         &global_trade_accounts_opts,
                     )?;
                 }
