@@ -4,6 +4,7 @@ import { ClaimedSeat, RestingOrderInternal } from '../market';
 import {
   BeetArgsStruct,
   fixedSizeUint8Array,
+  u128,
   u32,
   u64,
   u8,
@@ -32,12 +33,15 @@ export const publicKeyBeet = new BeetArgsStruct<PubkeyWrapper>(
  */
 export const restingOrderBeet = new BeetArgsStruct<RestingOrderInternal>(
   [
-    ['traderIndex', u32],
-    ['lastValidSlot', u32],
+    ['price', u128],
+    ['effectivePrice', u128],
     ['numBaseAtoms', u64],
     ['sequenceNumber', u64],
-    ['price', fixedSizeUint8Array(8)],
-    ['padding', uniformFixedSizeArray(u64, 2)],
+    ['traderIndex', u32],
+    ['lastValidSlot', u32],
+    // is_bid
+    // order_type
+    ['padding', uniformFixedSizeArray(u8, 0)],
   ],
   'restingOrder',
 );

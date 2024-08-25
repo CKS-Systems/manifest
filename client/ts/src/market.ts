@@ -3,8 +3,9 @@ import { bignum } from '@metaplex-foundation/beet';
 import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
-import { toNum } from './utils/numbers';
+import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
+import { BN } from 'bn.js';
 
 /**
  * Internal use only. Needed because shank doesnt handle f64 and because the
@@ -16,7 +17,8 @@ export type RestingOrderInternal = {
   lastValidSlot: bignum;
   sequenceNumber: bignum;
   // Deserializes to UInt8Array, but we then convert it to number.
-  price: Uint8Array;
+  price: bignum;
+  effectivePrice: bignum;
   padding: bignum[]; // 16 bytes
 };
 
@@ -293,7 +295,7 @@ export class Market {
    * Deserializes market data from a given buffer and returns a `Market` object
    *
    * This includes both the fixed and dynamic parts of the market.
-   * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/market.rs#L56
+   * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/market.rs
    *
    * @param data The data buffer to deserialize
    */
@@ -347,14 +349,10 @@ export class Market {
     const _freeListHeadIndex = data.readUInt32LE(offset);
     offset += 4;
 
-    // _padding2: [u32; 1],
+    // _padding2: [u32; 3],
     // _padding3: [u64; 32],
-    // _padding4: [u64; 16],
+    // _padding4: [u64; 8],
 
-    // Market fixed size len is 512.
-    // https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/constants.rs
-
-    // TODO: Fix this for the new pricing
     const bids: RestingOrder[] =
       bidsRootIndex != NIL
         ? deserializeRedBlackTree(
@@ -374,9 +372,7 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: Buffer.from(
-                restingOrderInternal.price as Uint8Array,
-              ).readDoubleLE(0),
+              price: convertU128(restingOrderInternal.price),
             };
           })
         : [];
@@ -400,9 +396,7 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: Buffer.from(
-                restingOrderInternal.price as Uint8Array,
-              ).readDoubleLE(0),
+              price: convertU128(restingOrderInternal.price),
             };
           })
         : [];

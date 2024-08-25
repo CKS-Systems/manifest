@@ -481,7 +481,7 @@ function toWrapperPlaceOrderParams(
   let priceMantissa = wrapperPlaceOrderParamsExternal.price;
   while (priceExponent > -20 && priceMantissa < 4294967295 / 100) {
     priceExponent -= 1;
-    priceMantissa /= 10;
+    priceMantissa *= 10;
   }
   priceMantissa = Math.floor(priceMantissa);
 
