@@ -1,4 +1,4 @@
-# Manifest
+# <img src="/manifest/assets/logo-dark-contrast-split.png" alt="Logo" width="40"/> Manifest
 
 *The feeless orderbook exchange that supercharges your on-chain trading.*
 
@@ -33,7 +33,7 @@ Details:
 - No trading fees forever on Manifest.
 - Lot sizes restrict expressable prices. This meaningfully matters to orderflow through routers that have non-standard sizes. Manifest reduces the min trade size to atomic and increases the the range of expressable prices to cover all that are needed.
 - Anchor is great for starting on Solana, but more advanced programs should not take the compute tradeoff for the convenience.
-- Rent is a critical cost savings for Manifest. This enables smaller value tokens with less volume to have still have orderbooks.
+- Rent is a critical cost savings for Manifest. This enables smaller value tokens with less volume to still have orderbooks.
 - Manifest aims to be freedom maximizing, so is its open source GPL-3.0 License.
 - Open orders separation was a necessary feature for margin trading. Read locks to get the open orders for a trader are frequent on a margin exchange. The default wrapper implementation of Manifest allows a margin exchange to read lock an account without significant contention and land its transactions more often.
 - Number of accounts for a swap is a limiter for some routers. Manifest swaps that do not use global orders achieve the theoretical minimum number of accounts.
