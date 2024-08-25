@@ -15,7 +15,7 @@ import * as beetSolana from '@metaplex-foundation/beet-solana';
  * @category generated
  */
 export type QuoteAtomsPerBaseAtomArgs = {
-  inner: beet.bignum[] /* size: 2 */;
+  inner: beet.bignum;
 };
 /**
  * Holds the data for the {@link QuoteAtomsPerBaseAtom} Account and provides de/serialization
@@ -25,7 +25,7 @@ export type QuoteAtomsPerBaseAtomArgs = {
  * @category generated
  */
 export class QuoteAtomsPerBaseAtom implements QuoteAtomsPerBaseAtomArgs {
-  private constructor(readonly inner: beet.bignum[] /* size: 2 */) {}
+  private constructor(readonly inner: beet.bignum) {}
 
   /**
    * Creates a {@link QuoteAtomsPerBaseAtom} instance from the provided args.
@@ -139,7 +139,17 @@ export class QuoteAtomsPerBaseAtom implements QuoteAtomsPerBaseAtomArgs {
    */
   pretty() {
     return {
-      inner: this.inner,
+      inner: (() => {
+        const x = <{ toNumber: () => number }>this.inner;
+        if (typeof x.toNumber === 'function') {
+          try {
+            return x.toNumber();
+          } catch (_) {
+            return x;
+          }
+        }
+        return x;
+      })(),
     };
   }
 }
@@ -152,7 +162,7 @@ export const quoteAtomsPerBaseAtomBeet = new beet.BeetStruct<
   QuoteAtomsPerBaseAtom,
   QuoteAtomsPerBaseAtomArgs
 >(
-  [['inner', beet.uniformFixedSizeArray(beet.u64, 2)]],
+  [['inner', beet.u128]],
   QuoteAtomsPerBaseAtom.fromArgs,
   'QuoteAtomsPerBaseAtom',
 );

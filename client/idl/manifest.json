@@ -1046,12 +1046,7 @@
         "fields": [
           {
             "name": "inner",
-            "type": {
-              "array": [
-                "u64",
-                2
-              ]
-            }
+            "type": "u128"
           }
         ]
       }

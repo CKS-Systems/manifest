@@ -87,18 +87,7 @@ function modifyIdlCore(programName) {
       }
     }
 
-    // Solita does not support f64
-    // https://github.com/metaplex-foundation/beet/issues/48
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.name == 'price') {
-            field.type = 'FixedSizeUint8Array';
-          }
-          return field;
-        });
-      }
-    }
+    // TODO: Override u128 price in the output for QuoteAtomsPerBaseAtom
 
     for (const idlAccount of idl.accounts) {
       if (idlAccount.type && idlAccount.type.fields) {
