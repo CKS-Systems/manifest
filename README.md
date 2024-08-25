@@ -1,18 +1,22 @@
 # Manifest
 
-The feeless order book exchange that supercharges your on-chain trading
-abilities. Manifest is the next generation of orderbooks on Solana. It is
-optimized for freedom. No more permissioned markets. No more trading fees. No
-more 2 SOL rent deposit to start a market. Capital efficiency built in.
+*The feeless orderbook exchange that supercharges your on-chain trading.*
+
+Manifest is the next generation liquidity primitive on Solana.
+No more permissioned markets. 
+No more trading fees. 
+No more expensive rent to start a market.
+Capital efficiency built-in. 
+Maximal freedom to exchange risk.
 
 ## Comparison
 
 
 |  |    Openbook    | Phoenix  |Manifest              |
 |--|----------------|-------------------|----------------------|
-| Crank |Yes|No |No |
-| Fees |Yes |Yes |No|
-| Predefined lot sizes |Yes |Yes |No|
+| Crankless |No |Yes |Yes |
+| Feeless |No |No |Yes|
+| Atomic lot sizes |No |No |Yes|
 | Anchor |Yes |Yes |No|
 | Rent|2 SOL |2 SOL |.002 SOL|
 | License|GPL |Business |GPL|
@@ -24,17 +28,19 @@ more 2 SOL rent deposit to start a market. Capital efficiency built in.
 |Token 22 | No| No| Yes|
 |Customizable wrapper| No| No| Yes|
 
-- Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account
-- No trading fees in Manifest
+Details:
+- Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
+- No trading fees forever on Manifest.
 - Lot sizes restrict expressable prices. This meaningfully matters to orderflow through routers that have non-standard sizes. Manifest reduces the min trade size to atomic and increases the the range of expressable prices to cover all that are needed.
-- Anchor is great for starting on Solana, but more advanced programs should not take the compute tradeoff for the convenience
-- Rent is the big savings for Manifest. This enables the use case of smaller value tokens with less volume to have orderbooks.
-- Manifest aims to be freedom maximizing, so is its license
+- Anchor is great for starting on Solana, but more advanced programs should not take the compute tradeoff for the convenience.
+- Rent is a critical cost savings for Manifest. This enables smaller value tokens with less volume to have still have orderbooks.
+- Manifest aims to be freedom maximizing, so is its open source GPL-3.0 License.
 - Open orders separation was a necessary feature for margin trading. Read locks to get the open orders for a trader are frequent on a margin exchange. The default wrapper implementation of Manifest allows a margin exchange to read lock an account without significant contention and land its transactions more often.
 - Number of accounts for a swap is a limiter for some routers. Manifest swaps that do not use global orders achieve the theoretical minimum number of accounts.
-- CU is a major cost for market makers. Benchmarking shows Manifest has improved higher percentiles which is what the large spenders really care about.
+- CU is a major cost for market makers. Benchmarking demonstrates higher percentile CU improvements, significantly lessening the cost to actively trade.
 - Silent failures are an unfortunate feature request from market makers because of how solana transactions work. Manifest rejects this at the infra level, but still allows those who need it to handle in the wrapper.
 - Token 22 is the new version of token program. While it is not useful for defi and will make orderbooks less efficient, there are some notable tokens that will use it. Manifest only takes the performance hit to support token22 precisely when needed and moving token22 tokens, and only then.
+- A new core vs. wrapper program architecture enables greater composability for traders and exchange interfaces. Customize feature sets and distribution for any market requirement.
 
 ## Design Overview
 ### Data Structure
