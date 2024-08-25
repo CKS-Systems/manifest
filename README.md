@@ -1,5 +1,5 @@
-# <img src="/manifest/assets/logo-dark-contrast-split.png" alt="Logo" width="40"/> Manifest
-
+# ![Logo](../manifest/assets/brown-contrast-split.png)
+# <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
 *The feeless orderbook exchange that supercharges your on-chain trading.*
 
 Manifest is the next generation liquidity primitive on Solana.
@@ -28,7 +28,7 @@ Maximal freedom to exchange risk.
 |Token 22 | No| No| Yes|
 |Customizable wrapper| No| No| Yes|
 
-Details:
+### Details:
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
 - No trading fees forever on Manifest.
 - Lot sizes restrict expressable prices. This meaningfully matters to orderflow through routers that have non-standard sizes. Manifest reduces the min trade size to atomic and increases the the range of expressable prices to cover all that are needed.
