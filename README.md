@@ -75,3 +75,8 @@ cargo build-sbf
 cargo test-sbf
 ```
 
+#### Typescript client test
+```
+sh local-validator-test.sh
+```
+
