@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link QuoteAtoms}
@@ -74,7 +74,7 @@ export class QuoteAtoms implements QuoteAtomsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, quoteAtomsBeet);
@@ -136,7 +136,7 @@ export class QuoteAtoms implements QuoteAtomsArgs {
     return {
       inner: (() => {
         const x = <{ toNumber: () => number }>this.inner;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -154,7 +154,7 @@ export class QuoteAtoms implements QuoteAtomsArgs {
  * @category generated
  */
 export const quoteAtomsBeet = new beet.BeetStruct<QuoteAtoms, QuoteAtomsArgs>(
-  [["inner", beet.u64]],
+  [['inner', beet.u64]],
   QuoteAtoms.fromArgs,
-  "QuoteAtoms",
+  'QuoteAtoms',
 );

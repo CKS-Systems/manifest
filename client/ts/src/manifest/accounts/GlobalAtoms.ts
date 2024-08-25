@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link GlobalAtoms}
@@ -74,7 +74,7 @@ export class GlobalAtoms implements GlobalAtomsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, globalAtomsBeet);
@@ -136,7 +136,7 @@ export class GlobalAtoms implements GlobalAtomsArgs {
     return {
       inner: (() => {
         const x = <{ toNumber: () => number }>this.inner;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -156,4 +156,4 @@ export class GlobalAtoms implements GlobalAtomsArgs {
 export const globalAtomsBeet = new beet.BeetStruct<
   GlobalAtoms,
   GlobalAtomsArgs
->([["inner", beet.u64]], GlobalAtoms.fromArgs, "GlobalAtoms");
+>([['inner', beet.u64]], GlobalAtoms.fromArgs, 'GlobalAtoms');

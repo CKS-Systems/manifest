@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
 
 /**
  * @category Instructions
@@ -15,7 +15,7 @@ import * as web3 from "@solana/web3.js";
  */
 export const CreateWrapperStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number;
-}>([["instructionDiscriminator", beet.u8]], "CreateWrapperInstructionArgs");
+}>([['instructionDiscriminator', beet.u8]], 'CreateWrapperInstructionArgs');
 /**
  * Accounts required by the _CreateWrapper_ instruction
  *
@@ -45,7 +45,7 @@ export const createWrapperInstructionDiscriminator = 0;
  */
 export function createCreateWrapperInstruction(
   accounts: CreateWrapperInstructionAccounts,
-  programId = new web3.PublicKey("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL"),
+  programId = new web3.PublicKey('wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL'),
 ) {
   const [data] = CreateWrapperStruct.serialize({
     instructionDiscriminator: createWrapperInstructionDiscriminator,

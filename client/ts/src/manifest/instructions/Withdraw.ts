@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { WithdrawParams, withdrawParamsBeet } from "../types/WithdrawParams";
+import * as splToken from '@solana/spl-token';
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams';
 
 /**
  * @category Instructions
@@ -29,10 +29,10 @@ export const WithdrawStruct = new beet.BeetArgsStruct<
   }
 >(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", withdrawParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', withdrawParamsBeet],
   ],
-  "WithdrawInstructionArgs",
+  'WithdrawInstructionArgs',
 );
 /**
  * Accounts required by the _Withdraw_ instruction
@@ -70,7 +70,7 @@ export const withdrawInstructionDiscriminator = 3;
 export function createWithdrawInstruction(
   accounts: WithdrawInstructionAccounts,
   args: WithdrawInstructionArgs,
-  programId = new web3.PublicKey("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"),
+  programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
   const [data] = WithdrawStruct.serialize({
     instructionDiscriminator: withdrawInstructionDiscriminator,

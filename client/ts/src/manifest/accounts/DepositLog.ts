@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beet from "@metaplex-foundation/beet";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as web3 from '@solana/web3.js';
+import * as beet from '@metaplex-foundation/beet';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link DepositLog}
@@ -87,7 +87,7 @@ export class DepositLog implements DepositLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, depositLogBeet);
@@ -152,7 +152,7 @@ export class DepositLog implements DepositLogArgs {
       mint: this.mint.toBase58(),
       amountAtoms: (() => {
         const x = <{ toNumber: () => number }>this.amountAtoms;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -171,11 +171,11 @@ export class DepositLog implements DepositLogArgs {
  */
 export const depositLogBeet = new beet.BeetStruct<DepositLog, DepositLogArgs>(
   [
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
-    ["mint", beetSolana.publicKey],
-    ["amountAtoms", beet.u64],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
+    ['mint', beetSolana.publicKey],
+    ['amountAtoms', beet.u64],
   ],
   DepositLog.fromArgs,
-  "DepositLog",
+  'DepositLog',
 );

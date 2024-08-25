@@ -5,7 +5,6 @@ import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
-import { BN } from 'bn.js';
 
 /**
  * Internal use only. Needed because shank doesnt handle f64 and because the

@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { DepositParams, depositParamsBeet } from "../types/DepositParams";
+import * as splToken from '@solana/spl-token';
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import { DepositParams, depositParamsBeet } from '../types/DepositParams';
 
 /**
  * @category Instructions
@@ -29,10 +29,10 @@ export const DepositStruct = new beet.BeetArgsStruct<
   }
 >(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", depositParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', depositParamsBeet],
   ],
-  "DepositInstructionArgs",
+  'DepositInstructionArgs',
 );
 /**
  * Accounts required by the _Deposit_ instruction
@@ -76,7 +76,7 @@ export const depositInstructionDiscriminator = 2;
 export function createDepositInstruction(
   accounts: DepositInstructionAccounts,
   args: DepositInstructionArgs,
-  programId = new web3.PublicKey("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL"),
+  programId = new web3.PublicKey('wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL'),
 ) {
   const [data] = DepositStruct.serialize({
     instructionDiscriminator: depositInstructionDiscriminator,

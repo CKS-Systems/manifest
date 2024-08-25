@@ -5,15 +5,15 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beet from "@metaplex-foundation/beet";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as web3 from '@solana/web3.js';
+import * as beet from '@metaplex-foundation/beet';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 import {
   QuoteAtomsPerBaseAtom,
   quoteAtomsPerBaseAtomBeet,
-} from "./QuoteAtomsPerBaseAtom";
-import { BaseAtoms, baseAtomsBeet } from "./BaseAtoms";
-import { OrderType, orderTypeBeet } from "../types/OrderType";
+} from './QuoteAtomsPerBaseAtom';
+import { BaseAtoms, baseAtomsBeet } from './BaseAtoms';
+import { OrderType, orderTypeBeet } from '../types/OrderType';
 
 /**
  * Arguments used to create {@link PlaceOrderLog}
@@ -111,7 +111,7 @@ export class PlaceOrderLog implements PlaceOrderLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, placeOrderLogBeet);
@@ -177,7 +177,7 @@ export class PlaceOrderLog implements PlaceOrderLogArgs {
       baseAtoms: this.baseAtoms,
       orderSequenceNumber: (() => {
         const x = <{ toNumber: () => number }>this.orderSequenceNumber;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -188,7 +188,7 @@ export class PlaceOrderLog implements PlaceOrderLogArgs {
       })(),
       orderIndex: this.orderIndex,
       lastValidSlot: this.lastValidSlot,
-      orderType: "OrderType." + OrderType[this.orderType],
+      orderType: 'OrderType.' + OrderType[this.orderType],
       isBid: this.isBid,
       padding: this.padding,
     };
@@ -204,17 +204,17 @@ export const placeOrderLogBeet = new beet.BeetStruct<
   PlaceOrderLogArgs
 >(
   [
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
-    ["price", quoteAtomsPerBaseAtomBeet],
-    ["baseAtoms", baseAtomsBeet],
-    ["orderSequenceNumber", beet.u64],
-    ["orderIndex", beet.u32],
-    ["lastValidSlot", beet.u32],
-    ["orderType", orderTypeBeet],
-    ["isBid", beet.bool],
-    ["padding", beet.uniformFixedSizeArray(beet.u8, 6)],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
+    ['price', quoteAtomsPerBaseAtomBeet],
+    ['baseAtoms', baseAtomsBeet],
+    ['orderSequenceNumber', beet.u64],
+    ['orderIndex', beet.u32],
+    ['lastValidSlot', beet.u32],
+    ['orderType', orderTypeBeet],
+    ['isBid', beet.bool],
+    ['padding', beet.uniformFixedSizeArray(beet.u8, 6)],
   ],
   PlaceOrderLog.fromArgs,
-  "PlaceOrderLog",
+  'PlaceOrderLog',
 );

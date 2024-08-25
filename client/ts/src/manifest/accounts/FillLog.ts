@@ -5,15 +5,15 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
-import * as beet from "@metaplex-foundation/beet";
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
+import * as beet from '@metaplex-foundation/beet';
 import {
   QuoteAtomsPerBaseAtom,
   quoteAtomsPerBaseAtomBeet,
-} from "./QuoteAtomsPerBaseAtom";
-import { BaseAtoms, baseAtomsBeet } from "./BaseAtoms";
-import { QuoteAtoms, quoteAtomsBeet } from "./QuoteAtoms";
+} from './QuoteAtomsPerBaseAtom';
+import { BaseAtoms, baseAtomsBeet } from './BaseAtoms';
+import { QuoteAtoms, quoteAtomsBeet } from './QuoteAtoms';
 
 /**
  * Arguments used to create {@link FillLog}
@@ -105,7 +105,7 @@ export class FillLog implements FillLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, fillLogBeet);
@@ -183,15 +183,15 @@ export class FillLog implements FillLogArgs {
  */
 export const fillLogBeet = new beet.BeetStruct<FillLog, FillLogArgs>(
   [
-    ["market", beetSolana.publicKey],
-    ["maker", beetSolana.publicKey],
-    ["taker", beetSolana.publicKey],
-    ["price", quoteAtomsPerBaseAtomBeet],
-    ["baseAtoms", baseAtomsBeet],
-    ["quoteAtoms", quoteAtomsBeet],
-    ["takerIsBuy", beet.bool],
-    ["padding", beet.uniformFixedSizeArray(beet.u8, 15)],
+    ['market', beetSolana.publicKey],
+    ['maker', beetSolana.publicKey],
+    ['taker', beetSolana.publicKey],
+    ['price', quoteAtomsPerBaseAtomBeet],
+    ['baseAtoms', baseAtomsBeet],
+    ['quoteAtoms', quoteAtomsBeet],
+    ['takerIsBuy', beet.bool],
+    ['padding', beet.uniformFixedSizeArray(beet.u8, 15)],
   ],
   FillLog.fromArgs,
-  "FillLog",
+  'FillLog',
 );

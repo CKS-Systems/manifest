@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
+import * as beet from '@metaplex-foundation/beet';
 export type SwapParams = {
   inAtoms: beet.bignum;
   outAtoms: beet.bignum;
@@ -19,10 +19,10 @@ export type SwapParams = {
  */
 export const swapParamsBeet = new beet.BeetArgsStruct<SwapParams>(
   [
-    ["inAtoms", beet.u64],
-    ["outAtoms", beet.u64],
-    ["isBaseIn", beet.bool],
-    ["isExactIn", beet.bool],
+    ['inAtoms', beet.u64],
+    ['outAtoms', beet.u64],
+    ['isBaseIn', beet.bool],
+    ['isExactIn', beet.bool],
   ],
-  "SwapParams",
+  'SwapParams',
 );

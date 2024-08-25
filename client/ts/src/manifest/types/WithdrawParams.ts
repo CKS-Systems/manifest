@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
+import * as beet from '@metaplex-foundation/beet';
 export type WithdrawParams = {
   amountAtoms: beet.bignum;
 };
@@ -15,6 +15,6 @@ export type WithdrawParams = {
  * @category generated
  */
 export const withdrawParamsBeet = new beet.BeetArgsStruct<WithdrawParams>(
-  [["amountAtoms", beet.u64]],
-  "WithdrawParams",
+  [['amountAtoms', beet.u64]],
+  'WithdrawParams',
 );

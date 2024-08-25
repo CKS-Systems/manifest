@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { SwapParams, swapParamsBeet } from "../types/SwapParams";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import { SwapParams, swapParamsBeet } from '../types/SwapParams';
 
 /**
  * @category Instructions
@@ -28,10 +28,10 @@ export const SwapStruct = new beet.BeetArgsStruct<
   }
 >(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", swapParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', swapParamsBeet],
   ],
-  "SwapInstructionArgs",
+  'SwapInstructionArgs',
 );
 /**
  * Accounts required by the _Swap_ instruction
@@ -87,7 +87,7 @@ export const swapInstructionDiscriminator = 4;
 export function createSwapInstruction(
   accounts: SwapInstructionAccounts,
   args: SwapInstructionArgs,
-  programId = new web3.PublicKey("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"),
+  programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
   const [data] = SwapStruct.serialize({
     instructionDiscriminator: swapInstructionDiscriminator,

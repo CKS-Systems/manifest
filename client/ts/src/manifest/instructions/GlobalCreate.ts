@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token';
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
 
 /**
  * @category Instructions
@@ -16,7 +16,7 @@ import * as web3 from "@solana/web3.js";
  */
 export const GlobalCreateStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number;
-}>([["instructionDiscriminator", beet.u8]], "GlobalCreateInstructionArgs");
+}>([['instructionDiscriminator', beet.u8]], 'GlobalCreateInstructionArgs');
 /**
  * Accounts required by the _GlobalCreate_ instruction
  *
@@ -49,7 +49,7 @@ export const globalCreateInstructionDiscriminator = 7;
  */
 export function createGlobalCreateInstruction(
   accounts: GlobalCreateInstructionAccounts,
-  programId = new web3.PublicKey("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"),
+  programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
   const [data] = GlobalCreateStruct.serialize({
     instructionDiscriminator: globalCreateInstructionDiscriminator,

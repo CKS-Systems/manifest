@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
+import * as beet from '@metaplex-foundation/beet';
 export type DepositParams = {
   amountAtoms: beet.bignum;
 };
@@ -15,6 +15,6 @@ export type DepositParams = {
  * @category generated
  */
 export const depositParamsBeet = new beet.BeetArgsStruct<DepositParams>(
-  [["amountAtoms", beet.u64]],
-  "DepositParams",
+  [['amountAtoms', beet.u64]],
+  'DepositParams',
 );

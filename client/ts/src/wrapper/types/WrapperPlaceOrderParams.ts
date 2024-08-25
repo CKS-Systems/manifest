@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import { OrderType, orderTypeBeet } from "./OrderType";
+import * as beet from '@metaplex-foundation/beet';
+import { OrderType, orderTypeBeet } from './OrderType';
 export type WrapperPlaceOrderParams = {
   clientOrderId: beet.bignum;
   baseAtoms: beet.bignum;
@@ -25,14 +25,14 @@ export type WrapperPlaceOrderParams = {
 export const wrapperPlaceOrderParamsBeet =
   new beet.BeetArgsStruct<WrapperPlaceOrderParams>(
     [
-      ["clientOrderId", beet.u64],
-      ["baseAtoms", beet.u64],
-      ["priceMantissa", beet.u32],
-      ["priceExponent", beet.i8],
-      ["isBid", beet.bool],
-      ["lastValidSlot", beet.u32],
-      ["orderType", orderTypeBeet],
-      ["minOutAtoms", beet.u64],
+      ['clientOrderId', beet.u64],
+      ['baseAtoms', beet.u64],
+      ['priceMantissa', beet.u32],
+      ['priceExponent', beet.i8],
+      ['isBid', beet.bool],
+      ['lastValidSlot', beet.u32],
+      ['orderType', orderTypeBeet],
+      ['minOutAtoms', beet.u64],
     ],
-    "WrapperPlaceOrderParams",
+    'WrapperPlaceOrderParams',
   );

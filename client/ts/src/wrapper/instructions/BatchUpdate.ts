@@ -5,12 +5,12 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
 import {
   WrapperBatchUpdateParams,
   wrapperBatchUpdateParamsBeet,
-} from "../types/WrapperBatchUpdateParams";
+} from '../types/WrapperBatchUpdateParams';
 
 /**
  * @category Instructions
@@ -31,10 +31,10 @@ export const BatchUpdateStruct = new beet.FixableBeetArgsStruct<
   }
 >(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", wrapperBatchUpdateParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', wrapperBatchUpdateParamsBeet],
   ],
-  "BatchUpdateInstructionArgs",
+  'BatchUpdateInstructionArgs',
 );
 /**
  * Accounts required by the _BatchUpdate_ instruction
@@ -72,7 +72,7 @@ export const batchUpdateInstructionDiscriminator = 4;
 export function createBatchUpdateInstruction(
   accounts: BatchUpdateInstructionAccounts,
   args: BatchUpdateInstructionArgs,
-  programId = new web3.PublicKey("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL"),
+  programId = new web3.PublicKey('wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL'),
 ) {
   const [data] = BatchUpdateStruct.serialize({
     instructionDiscriminator: batchUpdateInstructionDiscriminator,

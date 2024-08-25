@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link QuoteAtomsPerBaseAtom}
@@ -76,7 +76,7 @@ export class QuoteAtomsPerBaseAtom implements QuoteAtomsPerBaseAtomArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(
@@ -152,7 +152,7 @@ export const quoteAtomsPerBaseAtomBeet = new beet.BeetStruct<
   QuoteAtomsPerBaseAtom,
   QuoteAtomsPerBaseAtomArgs
 >(
-  [["inner", beet.uniformFixedSizeArray(beet.u64, 2)]],
+  [['inner', beet.uniformFixedSizeArray(beet.u64, 2)]],
   QuoteAtomsPerBaseAtom.fromArgs,
-  "QuoteAtomsPerBaseAtom",
+  'QuoteAtomsPerBaseAtom',
 );

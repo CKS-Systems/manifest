@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
+import * as beet from '@metaplex-foundation/beet';
 export type BatchUpdateReturn = {
   orders: [beet.bignum, number][];
 };
@@ -16,6 +16,6 @@ export type BatchUpdateReturn = {
  */
 export const batchUpdateReturnBeet =
   new beet.FixableBeetArgsStruct<BatchUpdateReturn>(
-    [["orders", beet.array(beet.fixedSizeTuple([beet.u64, beet.u32]))]],
-    "BatchUpdateReturn",
+    [['orders', beet.array(beet.fixedSizeTuple([beet.u64, beet.u32]))]],
+    'BatchUpdateReturn',
   );

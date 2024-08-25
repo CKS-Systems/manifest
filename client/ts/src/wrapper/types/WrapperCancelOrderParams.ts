@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
+import * as beet from '@metaplex-foundation/beet';
 export type WrapperCancelOrderParams = {
   clientOrderId: beet.bignum;
 };
@@ -16,6 +16,6 @@ export type WrapperCancelOrderParams = {
  */
 export const wrapperCancelOrderParamsBeet =
   new beet.BeetArgsStruct<WrapperCancelOrderParams>(
-    [["clientOrderId", beet.u64]],
-    "WrapperCancelOrderParams",
+    [['clientOrderId', beet.u64]],
+    'WrapperCancelOrderParams',
   );

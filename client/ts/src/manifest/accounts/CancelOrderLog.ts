@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beet from "@metaplex-foundation/beet";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as web3 from '@solana/web3.js';
+import * as beet from '@metaplex-foundation/beet';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link CancelOrderLog}
@@ -84,7 +84,7 @@ export class CancelOrderLog implements CancelOrderLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, cancelOrderLogBeet);
@@ -148,7 +148,7 @@ export class CancelOrderLog implements CancelOrderLogArgs {
       trader: this.trader.toBase58(),
       orderSequenceNumber: (() => {
         const x = <{ toNumber: () => number }>this.orderSequenceNumber;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -170,10 +170,10 @@ export const cancelOrderLogBeet = new beet.BeetStruct<
   CancelOrderLogArgs
 >(
   [
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
-    ["orderSequenceNumber", beet.u64],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
+    ['orderSequenceNumber', beet.u64],
   ],
   CancelOrderLog.fromArgs,
-  "CancelOrderLog",
+  'CancelOrderLog',
 );

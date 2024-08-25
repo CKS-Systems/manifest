@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
-import * as beet from "@metaplex-foundation/beet";
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
+import * as beet from '@metaplex-foundation/beet';
 
 /**
  * Arguments used to create {@link ClaimSeatLog}
@@ -78,7 +78,7 @@ export class ClaimSeatLog implements ClaimSeatLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, claimSeatLogBeet);
@@ -153,9 +153,9 @@ export const claimSeatLogBeet = new beet.BeetStruct<
   ClaimSeatLogArgs
 >(
   [
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
   ],
   ClaimSeatLog.fromArgs,
-  "ClaimSeatLog",
+  'ClaimSeatLog',
 );

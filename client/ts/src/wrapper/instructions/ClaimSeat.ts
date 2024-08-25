@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
 
 /**
  * @category Instructions
@@ -15,7 +15,7 @@ import * as web3 from "@solana/web3.js";
  */
 export const ClaimSeatStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number;
-}>([["instructionDiscriminator", beet.u8]], "ClaimSeatInstructionArgs");
+}>([['instructionDiscriminator', beet.u8]], 'ClaimSeatInstructionArgs');
 /**
  * Accounts required by the _ClaimSeat_ instruction
  *
@@ -49,7 +49,7 @@ export const claimSeatInstructionDiscriminator = 1;
  */
 export function createClaimSeatInstruction(
   accounts: ClaimSeatInstructionAccounts,
-  programId = new web3.PublicKey("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL"),
+  programId = new web3.PublicKey('wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL'),
 ) {
   const [data] = ClaimSeatStruct.serialize({
     instructionDiscriminator: claimSeatInstructionDiscriminator,

@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beet from "@metaplex-foundation/beet";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as web3 from '@solana/web3.js';
+import * as beet from '@metaplex-foundation/beet';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 
 /**
  * Arguments used to create {@link WithdrawLog}
@@ -87,7 +87,7 @@ export class WithdrawLog implements WithdrawLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, withdrawLogBeet);
@@ -152,7 +152,7 @@ export class WithdrawLog implements WithdrawLogArgs {
       mint: this.mint.toBase58(),
       amountAtoms: (() => {
         const x = <{ toNumber: () => number }>this.amountAtoms;
-        if (typeof x.toNumber === "function") {
+        if (typeof x.toNumber === 'function') {
           try {
             return x.toNumber();
           } catch (_) {
@@ -174,11 +174,11 @@ export const withdrawLogBeet = new beet.BeetStruct<
   WithdrawLogArgs
 >(
   [
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
-    ["mint", beetSolana.publicKey],
-    ["amountAtoms", beet.u64],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
+    ['mint', beetSolana.publicKey],
+    ['amountAtoms', beet.u64],
   ],
   WithdrawLog.fromArgs,
-  "WithdrawLog",
+  'WithdrawLog',
 );

@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
-import * as beet from "@metaplex-foundation/beet";
-import { GlobalAtoms, globalAtomsBeet } from "./GlobalAtoms";
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
+import * as beet from '@metaplex-foundation/beet';
+import { GlobalAtoms, globalAtomsBeet } from './GlobalAtoms';
 
 /**
  * Arguments used to create {@link GlobalDepositLog}
@@ -81,7 +81,7 @@ export class GlobalDepositLog implements GlobalDepositLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, globalDepositLogBeet);
@@ -157,10 +157,10 @@ export const globalDepositLogBeet = new beet.BeetStruct<
   GlobalDepositLogArgs
 >(
   [
-    ["global", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
-    ["globalAtoms", globalAtomsBeet],
+    ['global', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
+    ['globalAtoms', globalAtomsBeet],
   ],
   GlobalDepositLog.fromArgs,
-  "GlobalDepositLog",
+  'GlobalDepositLog',
 );

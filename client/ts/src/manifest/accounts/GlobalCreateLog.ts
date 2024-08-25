@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
-import * as beet from "@metaplex-foundation/beet";
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
+import * as beet from '@metaplex-foundation/beet';
 
 /**
  * Arguments used to create {@link GlobalCreateLog}
@@ -78,7 +78,7 @@ export class GlobalCreateLog implements GlobalCreateLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, globalCreateLogBeet);
@@ -153,9 +153,9 @@ export const globalCreateLogBeet = new beet.BeetStruct<
   GlobalCreateLogArgs
 >(
   [
-    ["global", beetSolana.publicKey],
-    ["creator", beetSolana.publicKey],
+    ['global', beetSolana.publicKey],
+    ['creator', beetSolana.publicKey],
   ],
   GlobalCreateLog.fromArgs,
-  "GlobalCreateLog",
+  'GlobalCreateLog',
 );

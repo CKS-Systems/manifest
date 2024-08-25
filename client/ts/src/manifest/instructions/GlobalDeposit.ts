@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token';
+import * as beet from '@metaplex-foundation/beet';
+import * as web3 from '@solana/web3.js';
 import {
   GlobalDepositParams,
   globalDepositParamsBeet,
-} from "../types/GlobalDepositParams";
+} from '../types/GlobalDepositParams';
 
 /**
  * @category Instructions
@@ -32,10 +32,10 @@ export const GlobalDepositStruct = new beet.BeetArgsStruct<
   }
 >(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", globalDepositParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', globalDepositParamsBeet],
   ],
-  "GlobalDepositInstructionArgs",
+  'GlobalDepositInstructionArgs',
 );
 /**
  * Accounts required by the _GlobalDeposit_ instruction
@@ -73,7 +73,7 @@ export const globalDepositInstructionDiscriminator = 10;
 export function createGlobalDepositInstruction(
   accounts: GlobalDepositInstructionAccounts,
   args: GlobalDepositInstructionArgs,
-  programId = new web3.PublicKey("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"),
+  programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
   const [data] = GlobalDepositStruct.serialize({
     instructionDiscriminator: globalDepositInstructionDiscriminator,

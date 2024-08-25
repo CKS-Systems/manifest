@@ -8,14 +8,14 @@ async function testUtils(): Promise<void> {
   );
   assert((await getClusterFromConnection(localnetConnection)) == 'localnet');
 
-  const devnetConnection: Connection = new Connection(
-    'https://api.devnet.solana.com',
-  );
+  //const devnetConnection: Connection = new Connection(
+  //  'https://api.devnet.solana.com',
+  //);
   //assert((await getClusterFromConnection(devnetConnection)) == 'devnet');
 
-  const mainnetConnection: Connection = new Connection(
-    'https://api.mainnet-beta.solana.com',
-  );
+  //const mainnetConnection: Connection = new Connection(
+  //  'https://api.mainnet-beta.solana.com',
+  //);
   //assert((await getClusterFromConnection(mainnetConnection)) == 'mainnet-beta');
 }
 

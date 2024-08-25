@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from "@solana/web3.js";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
-import * as beet from "@metaplex-foundation/beet";
+import * as web3 from '@solana/web3.js';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
+import * as beet from '@metaplex-foundation/beet';
 
 /**
  * Arguments used to create {@link GlobalClaimSeatLog}
@@ -82,7 +82,7 @@ export class GlobalClaimSeatLog implements GlobalClaimSeatLogArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms",
+      'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
     ),
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, globalClaimSeatLogBeet);
@@ -158,10 +158,10 @@ export const globalClaimSeatLogBeet = new beet.BeetStruct<
   GlobalClaimSeatLogArgs
 >(
   [
-    ["global", beetSolana.publicKey],
-    ["market", beetSolana.publicKey],
-    ["trader", beetSolana.publicKey],
+    ['global', beetSolana.publicKey],
+    ['market', beetSolana.publicKey],
+    ['trader', beetSolana.publicKey],
   ],
   GlobalClaimSeatLog.fromArgs,
-  "GlobalClaimSeatLog",
+  'GlobalClaimSeatLog',
 );
