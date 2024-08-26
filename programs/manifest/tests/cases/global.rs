@@ -239,8 +239,10 @@ async fn global_place_order_only_global_quote() -> anyhow::Result<()> {
         "Order size was wrong"
     );
     assert_eq!(
-        orders.get(0).unwrap().get_price(),
-        QuoteAtomsPerBaseAtom::try_from(1.0).unwrap(),
+        orders.get(0).unwrap().get_effective_price(),
+        QuoteAtomsPerBaseAtom::try_from(1.0)
+            .unwrap()
+            .to_effective_price(),
         "Order price was wrong"
     );
     assert_eq!(

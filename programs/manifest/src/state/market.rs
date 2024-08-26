@@ -10,7 +10,9 @@ use std::mem::size_of;
 use crate::{
     logs::{emit_stack, FillLog},
     program::{assert_with_msg, ManifestError},
-    quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{
+        BaseAtoms, EffectivePrice, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64,
+    },
     state::{
         utils::{
             assert_can_take, move_global_tokens_and_modify_resting_order, try_to_remove_from_global,
@@ -504,6 +506,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             order_type,
             global_trade_accounts_opts,
         } = args;
+        let effective_price: EffectivePrice = price.to_effective_price();
         assert_with_msg(
             trader_index != NIL,
             ManifestError::AlreadyClaimedSeat,
@@ -577,8 +580,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
 
             // Stop trying to match if price no longer satisfies limit.
-            if (is_bid && other_order.get_price() > price)
-                || (!is_bid && other_order.get_price() < price)
+            if (is_bid && other_order.get_effective_price() > effective_price)
+                || (!is_bid && other_order.get_effective_price() < effective_price)
             {
                 break;
             }

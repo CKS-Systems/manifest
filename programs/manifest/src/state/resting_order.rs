@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
+use crate::quantities::{BaseAtoms, EffectivePrice, QuoteAtomsPerBaseAtom};
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};
@@ -62,7 +62,7 @@ pub struct RestingOrder {
     price: QuoteAtomsPerBaseAtom,
     // Sort key is the worst effective price someone could get by
     // trading with me due to the rounding being in my favor as a maker.
-    effective_price: QuoteAtomsPerBaseAtom,
+    effective_price: EffectivePrice,
     num_base_atoms: BaseAtoms,
     sequence_number: u64,
     trader_index: DataIndex,
@@ -118,6 +118,10 @@ impl RestingOrder {
 
     pub fn get_price(&self) -> QuoteAtomsPerBaseAtom {
         self.price
+    }
+
+    pub fn get_effective_price(&self) -> EffectivePrice {
+        self.effective_price
     }
 
     #[cfg(any(test, feature = "no-clock"))]
@@ -180,7 +184,7 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.price) == (other.price)
+        (self.effective_price) == (other.effective_price)
     }
 }
 

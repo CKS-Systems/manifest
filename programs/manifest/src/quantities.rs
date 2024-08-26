@@ -155,7 +155,14 @@ pub struct GlobalAtoms {
 }
 basic_u64!(GlobalAtoms);
 
-// Manifest pricing
+// Manifest pricing comparable only.
+#[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
+#[repr(C)]
+pub struct EffectivePrice {
+    inner: [u64; 2],
+}
+
+// Manifest pricing does not implement comparison.
 #[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
 #[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
@@ -215,6 +222,10 @@ impl QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
 
+    pub fn to_effective_price(&self) -> EffectivePrice {
+        EffectivePrice { inner: self.inner }
+    }
+
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
@@ -247,7 +258,7 @@ impl QuoteAtomsPerBaseAtom {
         quote_atoms: QuoteAtoms,
         round_up: bool,
     ) -> Result<BaseAtoms, ProgramError> {
-        if self == Self::ZERO {
+        if self.inner == [0; 2] {
             return Ok(BaseAtoms::new(0));
         }
         let dividend = D20
@@ -305,41 +316,41 @@ impl QuoteAtomsPerBaseAtom {
         self,
         num_base_atoms: BaseAtoms,
         is_bid: bool,
-    ) -> Result<QuoteAtomsPerBaseAtom, ProgramError> {
+    ) -> Result<EffectivePrice, ProgramError> {
         if BaseAtoms::ZERO == num_base_atoms {
-            return Ok(self);
+            return Ok(EffectivePrice { inner: [0; 2] });
         }
-        let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        let quote_matched_d20 = quote_matched_atoms
+        let quote_matched_atoms: u128 = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
+        let quote_matched_d20: u128 = quote_matched_atoms
             .checked_mul(D20)
             .ok_or(PriceConversionError(0x9))?;
         // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
-        Ok(QuoteAtomsPerBaseAtom {
+        let inner: u128 = quote_matched_d20.div(num_base_atoms.inner as u128);
+        Ok(EffectivePrice {
             inner: u128_to_u64_slice(inner),
         })
     }
 }
 
-impl Ord for QuoteAtomsPerBaseAtom {
+impl Ord for EffectivePrice {
     fn cmp(&self, other: &Self) -> Ordering {
         (u64_slice_to_u128(self.inner)).cmp(&u64_slice_to_u128(other.inner))
     }
 }
 
-impl PartialOrd for QuoteAtomsPerBaseAtom {
+impl PartialOrd for EffectivePrice {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for QuoteAtomsPerBaseAtom {
+impl PartialEq for EffectivePrice {
     fn eq(&self, other: &Self) -> bool {
         (self.inner) == (other.inner)
     }
 }
 
-impl Eq for QuoteAtomsPerBaseAtom {}
+impl Eq for EffectivePrice {}
 
 impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -350,7 +361,24 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     }
 }
 
+impl std::fmt::Display for EffectivePrice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}",
+            &(u64_slice_to_u128(self.inner) as f64 / D20F)
+        ))
+    }
+}
+
 impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QuoteAtomsPerBaseAtom")
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for EffectivePrice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QuoteAtomsPerBaseAtom")
             .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
