@@ -10,10 +10,11 @@ pub mod validation;
 
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
-    create_market::process_create_market, deposit::process_deposit, expand_market::process_expand_market,
-    global_add_trader::process_global_add_trader, global_claim_seat::process_global_claim_seat,
-    global_create::process_global_create, global_deposit::process_global_deposit, process_swap,
-    withdraw::process_withdraw, ManifestInstruction,
+    create_market::process_create_market, deposit::process_deposit,
+    expand_market::process_expand_market, global_add_trader::process_global_add_trader,
+    global_claim_seat::process_global_claim_seat, global_create::process_global_create,
+    global_deposit::process_global_deposit, process_swap, withdraw::process_withdraw,
+    ManifestInstruction,
 };
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
