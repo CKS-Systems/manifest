@@ -261,6 +261,7 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -436,10 +437,11 @@
                         <span class="kw-2">&amp;</span>global_trade_accounts_opts,
                     )<span class="question-mark">?</span>;
                 }
-                <span class="prelude-val">Some</span>(hinted_index) =&gt; {
+                <span class="prelude-val">Some</span>(hinted_cancel_index) =&gt; {
                     <span class="comment">// TODO: Verify that it is an order at the index, not a
                     // ClaimedSeat that a malicious user pretended was a seat.
-                    </span><span class="kw">let </span>order: <span class="kw-2">&amp;</span>RestingOrder = dynamic_account.get_order_by_index(hinted_index);
+                    </span><span class="kw">let </span>order: <span class="kw-2">&amp;</span>RestingOrder =
+                        dynamic_account.get_order_by_index(hinted_cancel_index);
                     <span class="comment">// Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
@@ -447,11 +449,11 @@
                         trader_index % (BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0
                             </span>&amp;&amp; trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_index),
+                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_cancel_index),
                     )<span class="question-mark">?</span>;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
-                        hinted_index,
+                        hinted_cancel_index,
                         <span class="kw-2">&amp;</span>global_trade_accounts_opts,
                     )<span class="question-mark">?</span>;
                 }

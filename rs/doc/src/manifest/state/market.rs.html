@@ -1076,7 +1076,6 @@
 <a href="#1074" id="1074">1074</a>
 <a href="#1075" id="1075">1075</a>
 <a href="#1076" id="1076">1076</a>
-<a href="#1077" id="1077">1077</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
@@ -1980,8 +1979,7 @@
         }
         remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)<span class="question-mark">?</span>;
 
-        <span class="comment">// TODO: Assert that the trader_index is the owner of the order
-        </span><span class="prelude-val">Ok</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
