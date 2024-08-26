@@ -394,6 +394,29 @@ createErrorFromNameLookup.set(
 );
 
 /**
+ * IncorrectAccount: 'Account key did not match expected'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class IncorrectAccountError extends Error {
+  readonly code: number = 0x11;
+  readonly name: string = 'IncorrectAccount';
+  constructor() {
+    super('Account key did not match expected');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, IncorrectAccountError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x11, () => new IncorrectAccountError());
+createErrorFromNameLookup.set(
+  'IncorrectAccount',
+  () => new IncorrectAccountError(),
+);
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated
