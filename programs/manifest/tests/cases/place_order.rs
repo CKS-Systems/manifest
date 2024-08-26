@@ -24,7 +24,8 @@ async fn place_order_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -40,7 +41,8 @@ async fn place_order_fail_no_seat_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit
         )
@@ -58,7 +60,8 @@ async fn place_order_fail_no_deposit_yet_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit
         )
@@ -77,7 +80,8 @@ async fn place_order_fail_insufficient_funds_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             2 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit
         )
@@ -97,7 +101,8 @@ async fn place_order_not_expand_if_not_needed_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -107,7 +112,8 @@ async fn place_order_not_expand_if_not_needed_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -135,7 +141,8 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             2 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -151,7 +158,8 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -179,7 +187,8 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -209,7 +218,8 @@ async fn match_limit_orders_basic_test_reverse() -> anyhow::Result<()> {
         .place_order(
             Side::Bid,
             2 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -224,7 +234,8 @@ async fn match_limit_orders_basic_test_reverse() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -249,7 +260,8 @@ async fn match_limit_orders_basic_test_reverse() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -275,7 +287,8 @@ async fn match_limit_orders_more_than_resting_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -291,7 +304,8 @@ async fn match_limit_orders_more_than_resting_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             2 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -324,20 +338,22 @@ async fn match_limit_orders_fail_expired_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
         .await?;
     // Slots may advance during tests, so expiration is set pretty far out.
     test_fixture
-        .place_order(Side::Ask, 1 * SOL_UNIT_SIZE, 2.0, 1_000, OrderType::Limit)
+        .place_order(Side::Ask, 1 * SOL_UNIT_SIZE, 2, 0, 1_000, OrderType::Limit)
         .await?;
     test_fixture
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            3.0,
+            3,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -346,7 +362,8 @@ async fn match_limit_orders_fail_expired_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            4.0,
+            4,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -360,7 +377,8 @@ async fn match_limit_orders_fail_expired_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             4 * SOL_UNIT_SIZE,
-            4.0,
+            4,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -397,7 +415,8 @@ async fn match_limit_orders_partial_match_price_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -406,7 +425,8 @@ async fn match_limit_orders_partial_match_price_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            2.0,
+            2,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -415,7 +435,8 @@ async fn match_limit_orders_partial_match_price_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            3.0,
+            3,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -430,7 +451,8 @@ async fn match_limit_orders_partial_match_price_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             3 * SOL_UNIT_SIZE,
-            2.0,
+            2,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -475,7 +497,8 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .place_order(
             Side::Bid,
             1_000_000_000,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -493,7 +516,8 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             500_000_000,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -594,7 +618,8 @@ async fn post_only_basic_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             2 * SOL_UNIT_SIZE,
-            10.0,
+            10,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -611,7 +636,8 @@ async fn post_only_basic_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::PostOnly,
             &second_keypair,
@@ -638,7 +664,8 @@ async fn post_only_fail_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             2 * SOL_UNIT_SIZE,
-            10.0,
+            10,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -655,7 +682,8 @@ async fn post_only_fail_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            11.0,
+            11,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::PostOnly,
             &second_keypair
@@ -684,7 +712,8 @@ async fn post_only_slide_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             2 * SOL_UNIT_SIZE,
-            10.0,
+            10,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -701,7 +730,8 @@ async fn post_only_slide_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            11.0,
+            11,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::PostOnlySlide,
             &second_keypair,
@@ -737,7 +767,8 @@ async fn post_only_slide_ask_test() -> anyhow::Result<()> {
         .place_order(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            10.0,
+            10,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -754,7 +785,8 @@ async fn post_only_slide_ask_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            9.0,
+            9,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::PostOnlySlide,
             &second_keypair,
@@ -766,7 +798,8 @@ async fn post_only_slide_ask_test() -> anyhow::Result<()> {
         .place_order(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            12.0,
+            12,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
         )
@@ -793,7 +826,7 @@ async fn place_order_already_expired_test() -> anyhow::Result<()> {
 
     test_fixture.advance_time_seconds(10).await;
     assert!(test_fixture
-        .place_order(Side::Ask, 1, 1.0, 1, OrderType::Limit,)
+        .place_order(Side::Ask, 1, 1, 0, 1, OrderType::Limit,)
         .await
         .is_err());
 

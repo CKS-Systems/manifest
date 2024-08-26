@@ -3,8 +3,9 @@ use hypertree::RBTREE_OVERHEAD_BYTES;
 pub const MARKET_FIXED_SIZE: usize = 512;
 pub const GLOBAL_FIXED_SIZE: usize = 88;
 
-// Red black tree overhead is 16 bytes. If each block is 64 bytes, then we get
-// 48 bytes for a RestingOrder or ClaimedSeat.
+// Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
+// 64 bytes for a RestingOrder or ClaimedSeat.
+// TODO: Separate constants for global block size and market block size.
 pub const BLOCK_SIZE: usize = 80;
 const BLOCK_PAYLOAD_SIZE: usize = BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 pub const RESTING_ORDER_SIZE: usize = BLOCK_PAYLOAD_SIZE;

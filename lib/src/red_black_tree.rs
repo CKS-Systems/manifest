@@ -964,6 +964,7 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
     }
 
+    // TODO: Go from max to min because that would be cheaper as we already store max
     /// Sorted iterator starting from the min.
     pub fn iter(&self) -> RedBlackTreeIterator<V> {
         RedBlackTreeIterator {

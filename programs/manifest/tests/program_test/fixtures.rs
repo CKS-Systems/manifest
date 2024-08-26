@@ -423,14 +423,16 @@ impl TestFixture {
         &mut self,
         side: Side,
         base_atoms: u64,
-        price_atoms: f64,
+        price_mantissa: u32,
+        price_exponent: i8,
         last_valid_slot: u32,
         order_type: OrderType,
     ) -> anyhow::Result<(), BanksClientError> {
         self.place_order_for_keypair(
             side,
             base_atoms,
-            price_atoms,
+            price_mantissa,
+            price_exponent,
             last_valid_slot,
             order_type,
             &self.payer_keypair(),
@@ -443,7 +445,8 @@ impl TestFixture {
         &mut self,
         side: Side,
         base_atoms: u64,
-        price_atoms: f64,
+        price_mantissa: u32,
+        price_exponent: i8,
         last_valid_slot: u32,
         order_type: OrderType,
         keypair: &Keypair,
@@ -456,7 +459,8 @@ impl TestFixture {
             vec![],
             vec![PlaceOrderParams::new(
                 base_atoms,
-                price_atoms,
+                price_mantissa,
+                price_exponent,
                 is_bid,
                 order_type,
                 last_valid_slot,
@@ -1187,6 +1191,10 @@ pub async fn send_tx_with_retry(
         match error {
             BanksClientError::RpcError(_rpc_err) => {
                 // Retry on rpc errors.
+                continue;
+            }
+            BanksClientError::Io(_io_err) => {
+                // Retry on io errors.
                 continue;
             }
             _ => {

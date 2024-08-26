@@ -14,7 +14,7 @@ use crate::{
     validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
 };
 
-use super::{ManifestAccountInfo, TokenProgram};
+use super::{get_vault_address, ManifestAccountInfo, TokenProgram};
 
 /// CreateMarket account infos
 pub(crate) struct CreateMarketContext<'a, 'info> {
@@ -40,9 +40,24 @@ impl<'a, 'info> CreateMarketContext<'a, 'info> {
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let base_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
         let quote_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
-        // TODO: Verify that the vaults are at the PDAs that they are expected.
         let base_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
         let quote_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
+
+        let (expected_base_vault, _base_vault_bump) =
+            get_vault_address(market.key, base_mint.info.key);
+        let (expected_quote_vault, _quote_vault_bump) =
+            get_vault_address(market.key, quote_mint.info.key);
+
+        assert_with_msg(
+            expected_base_vault == *base_vault.info.key,
+            ManifestError::IncorrectAccount,
+            "Incorrect base vault account",
+        )?;
+        assert_with_msg(
+            expected_quote_vault == *quote_vault.info.key,
+            ManifestError::IncorrectAccount,
+            "Incorrect quote vault account",
+        )?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         let token_program_22: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
