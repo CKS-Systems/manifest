@@ -631,21 +631,6 @@
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
 <a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -662,7 +647,7 @@
     validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
 };
 
-<span class="kw">use super</span>::{get_vault_address, ManifestAccountInfo, TokenProgram};
+<span class="kw">use super</span>::{ManifestAccountInfo, TokenProgram};
 
 <span class="doccomment">/// CreateMarket account infos
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CreateMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -688,24 +673,9 @@
             Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
         <span class="kw">let </span>base_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>quote_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>base_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="comment">// TODO: Verify that the vaults are at the PDAs that they are expected.
+        </span><span class="kw">let </span>base_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>quote_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>(expected_base_vault, _base_vault_bump) =
-            get_vault_address(market.key, base_mint.info.key);
-        <span class="kw">let </span>(expected_quote_vault, _quote_vault_bump) =
-            get_vault_address(market.key, quote_mint.info.key);
-
-        assert_with_msg(
-            expected_base_vault == <span class="kw-2">*</span>base_vault.info.key,
-            ManifestError::IncorrectAccount,
-            <span class="string">"Incorrect base vault account"</span>,
-        )<span class="question-mark">?</span>;
-        assert_with_msg(
-            expected_quote_vault == <span class="kw-2">*</span>quote_vault.info.key,
-            ManifestError::IncorrectAccount,
-            <span class="string">"Incorrect quote vault account"</span>,
-        )<span class="question-mark">?</span>;
         <span class="kw">let </span>token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>token_program_22: TokenProgram = TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{

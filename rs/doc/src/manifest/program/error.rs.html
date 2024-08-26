@@ -59,8 +59,6 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
 <span class="kw">use </span>thiserror::Error;
 
@@ -101,8 +99,6 @@
     </span>MissingGlobal = <span class="number">15</span>,
     <span class="attr">#[error(<span class="string">"Insufficient funds on global account to rest an order"</span>)]
     </span>GlobalInsufficient = <span class="number">16</span>,
-    <span class="attr">#[error(<span class="string">"Account key did not match expected"</span>)]
-    </span>IncorrectAccount = <span class="number">17</span>,
 }
 
 <span class="kw">impl </span>From&lt;ManifestError&gt; <span class="kw">for </span>ProgramError {
