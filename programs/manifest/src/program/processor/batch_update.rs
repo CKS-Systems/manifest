@@ -6,7 +6,7 @@ use crate::{
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
-        BLOCK_SIZE,
+        MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -182,7 +182,7 @@ pub(crate) fn process_batch_update(
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     assert_with_msg(
-                        trader_index % (BLOCK_SIZE as DataIndex) == 0
+                        trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0
                             && trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
                         &format!("Invalid cancel hint index {}", hinted_cancel_index),

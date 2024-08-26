@@ -4,7 +4,7 @@ use hypertree::{RedBlackTree, NIL};
 use manifest::{
     quantities::WrapperU64,
     state::{
-        constants::{BLOCK_SIZE, MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
+        constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
         OrderType, RestingOrder,
     },
     validation::get_vault_address,
@@ -126,7 +126,7 @@ async fn place_order_not_expand_if_not_needed_test() -> anyhow::Result<()> {
     // Always 1 more than needed.
     assert_eq!(
         loaded_account.data.len(),
-        MARKET_FIXED_SIZE + (3 * BLOCK_SIZE)
+        MARKET_FIXED_SIZE + (3 * MARKET_BLOCK_SIZE)
     );
 
     Ok(())

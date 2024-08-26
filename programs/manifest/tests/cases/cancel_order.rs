@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use hypertree::DataIndex;
 use manifest::{
     program::{batch_update::CancelOrderParams, batch_update_instruction},
-    state::{OrderType, BLOCK_SIZE},
+    state::{OrderType, MARKET_BLOCK_SIZE},
 };
 use solana_program_test::{tokio, ProgramTestContext};
 use solana_sdk::{
@@ -74,7 +74,7 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
             None,
             vec![CancelOrderParams::new_with_hint(
                 0,
-                Some((BLOCK_SIZE * 2) as DataIndex)
+                Some((MARKET_BLOCK_SIZE * 2) as DataIndex)
             )],
             vec![],
             &test_fixture.payer_keypair()
@@ -142,7 +142,7 @@ async fn cancel_order_with_hint_test() -> anyhow::Result<()> {
         None,
         vec![
             // 0 is ClaimedSeat, next is the order
-            CancelOrderParams::new_with_hint(0, Some((1 * BLOCK_SIZE).try_into().unwrap())),
+            CancelOrderParams::new_with_hint(0, Some((1 * MARKET_BLOCK_SIZE).try_into().unwrap())),
         ],
         vec![],
         None,
