@@ -93,61 +93,48 @@ impl TestFixture {
         let sol_mint_f: MintFixture =
             MintFixture::new(Rc::clone(&context), Some(sol_keypair), Some(9)).await;
 
-        let mut context_cell: RefMut<ProgramTestContext> = context.borrow_mut();
-        let payer_pubkey: &Pubkey = &context_cell.payer.pubkey();
+        let payer_pubkey: Pubkey = context.borrow().payer.pubkey();
+        let payer: Keypair = context.borrow().payer.insecure_clone();
         let create_market_ixs: Vec<Instruction> = create_market_instructions(
             &market_keypair.pubkey(),
             &sol_mint_f.key,
             &usdc_mint_f.key,
-            payer_pubkey,
+            &payer_pubkey,
         )
         .unwrap();
 
-        let create_market_tx: Transaction = {
-            Transaction::new_signed_with_payer(
-                &create_market_ixs[..],
-                Some(payer_pubkey),
-                &[&context_cell.payer.insecure_clone(), &market_keypair],
-                context_cell.get_new_latest_blockhash().await.unwrap(),
-            )
-        };
-
-        context_cell
-            .banks_client
-            .process_transaction(create_market_tx)
-            .await
-            .unwrap();
+        send_tx_with_retry(
+            Rc::clone(&context),
+            &create_market_ixs[..],
+            Some(&payer_pubkey),
+            &[&payer.insecure_clone(), &market_keypair],
+        )
+        .await
+        .unwrap();
 
         // Now that market is created, we can make a market fixture.
         let market_fixture: MarketFixture =
             MarketFixture::new(Rc::clone(&context), market_keypair.pubkey()).await;
 
         let create_wrapper_ixs: Vec<Instruction> =
-            create_wrapper_instructions(payer_pubkey, payer_pubkey, &wrapper_keypair.pubkey())
+            create_wrapper_instructions(&payer_pubkey, &payer_pubkey, &wrapper_keypair.pubkey())
                 .unwrap();
+        send_tx_with_retry(
+            Rc::clone(&context),
+            &create_wrapper_ixs[..],
+            Some(&payer_pubkey),
+            &[&payer.insecure_clone(), &wrapper_keypair],
+        )
+        .await
+        .unwrap();
 
-        let create_wrapper_tx: Transaction = {
-            Transaction::new_signed_with_payer(
-                &create_wrapper_ixs[..],
-                Some(payer_pubkey),
-                &[&context_cell.payer.insecure_clone(), &wrapper_keypair],
-                context_cell.get_new_latest_blockhash().await.unwrap(),
-            )
-        };
-
-        context_cell
-            .banks_client
-            .process_transaction(create_wrapper_tx)
-            .await
-            .unwrap();
         let wrapper_fixture: WrapperFixture =
             WrapperFixture::new(Rc::clone(&context), wrapper_keypair.pubkey()).await;
 
-        drop(context_cell);
         let payer_sol_fixture: TokenAccountFixture =
-            TokenAccountFixture::new(Rc::clone(&context), &sol_mint_f.key, payer_pubkey).await;
+            TokenAccountFixture::new(Rc::clone(&context), &sol_mint_f.key, &payer_pubkey).await;
         let payer_usdc_fixture =
-            TokenAccountFixture::new(Rc::clone(&context), &usdc_mint_f.key, payer_pubkey).await;
+            TokenAccountFixture::new(Rc::clone(&context), &usdc_mint_f.key, &payer_pubkey).await;
 
         TestFixture {
             context: Rc::clone(&context),
@@ -198,26 +185,20 @@ impl TestFixture {
         keypair: &Keypair,
         wrapper_state: &Pubkey,
     ) -> anyhow::Result<(), BanksClientError> {
-        let mut program_test_context: RefMut<ProgramTestContext> = self.context.borrow_mut();
         let claim_seat_ix: Instruction = claim_seat_instruction(
             &self.market.key,
             &keypair.pubkey(),
             &keypair.pubkey(),
             wrapper_state,
         );
-        let claim_seat_tx: Transaction = {
-            Transaction::new_signed_with_payer(
-                &[claim_seat_ix],
-                Some(&keypair.pubkey()),
-                &[keypair],
-                program_test_context.get_new_latest_blockhash().await?,
-            )
-        };
-
-        program_test_context
-            .banks_client
-            .process_transaction(claim_seat_tx)
-            .await?;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[claim_seat_ix],
+            Some(&keypair.pubkey()),
+            &[&keypair.insecure_clone()],
+        )
+        .await
+        .unwrap();
         Ok(())
     }
 
@@ -292,7 +273,6 @@ impl TestFixture {
             (&self.usdc_mint.key, trader_token_account)
         };
 
-        let mut program_test_context: RefMut<ProgramTestContext> = self.context.borrow_mut();
         let deposit_ix: Instruction = deposit_instruction(
             &self.market.key,
             &keypair.pubkey(),
@@ -303,18 +283,14 @@ impl TestFixture {
             spl_token::id(),
         );
 
-        let deposit_tx: Transaction = {
-            Transaction::new_signed_with_payer(
-                &[deposit_ix],
-                Some(&keypair.pubkey()),
-                &[keypair],
-                program_test_context.get_new_latest_blockhash().await?,
-            )
-        };
-        program_test_context
-            .banks_client
-            .process_transaction(deposit_tx)
-            .await?;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[deposit_ix],
+            Some(&keypair.pubkey()),
+            &[&keypair.insecure_clone()],
+        )
+        .await
+        .unwrap();
 
         Ok(())
     }
@@ -372,7 +348,6 @@ impl TestFixture {
             (&self.usdc_mint.key, trader_token_account)
         };
 
-        let mut context: RefMut<ProgramTestContext> = self.context.borrow_mut();
         let withdraw_ix: Instruction = withdraw_instruction(
             &self.market.key,
             &keypair.pubkey(),
@@ -383,19 +358,14 @@ impl TestFixture {
             spl_token::id(),
         );
 
-        let withdraw_tx: Transaction = {
-            Transaction::new_signed_with_payer(
-                &[withdraw_ix],
-                Some(&keypair.pubkey()),
-                &[keypair],
-                context.get_new_latest_blockhash().await?,
-            )
-        };
-
-        context
-            .banks_client
-            .process_transaction(withdraw_tx)
-            .await?;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[withdraw_ix],
+            Some(&keypair.pubkey()),
+            &[&keypair.insecure_clone()],
+        )
+        .await
+        .unwrap();
         Ok(())
     }
 }
@@ -517,44 +487,42 @@ impl MintFixture {
         mint_keypair: Option<Keypair>,
         mint_decimals: Option<u8>,
     ) -> MintFixture {
-        let context_ref: Rc<RefCell<ProgramTestContext>> = Rc::clone(&context);
-        let keypair: Keypair = mint_keypair.unwrap_or_else(Keypair::new);
-        let mut context: RefMut<ProgramTestContext> = context.borrow_mut();
+        let payer_pubkey: Pubkey = context.borrow().payer.pubkey();
+        let payer: Keypair = context.borrow().payer.insecure_clone();
 
-        let rent: Rent = context.banks_client.get_rent().await.unwrap();
+        let mint_keypair: Keypair = mint_keypair.unwrap_or_else(Keypair::new);
+
+        let rent: Rent = context.borrow_mut().banks_client.get_rent().await.unwrap();
 
         let init_account_ix: Instruction = create_account(
-            &context.payer.pubkey(),
-            &keypair.pubkey(),
+            &context.borrow().payer.pubkey(),
+            &mint_keypair.pubkey(),
             rent.minimum_balance(spl_token::state::Mint::LEN),
             spl_token::state::Mint::LEN as u64,
             &spl_token::id(),
         );
         let init_mint_ix: Instruction = spl_token::instruction::initialize_mint(
             &spl_token::id(),
-            &keypair.pubkey(),
-            &context.payer.pubkey(),
+            &mint_keypair.pubkey(),
+            &context.borrow().payer.pubkey(),
             None,
             mint_decimals.unwrap_or(6),
         )
         .unwrap();
 
-        let initialize_mint_tx: Transaction = Transaction::new_signed_with_payer(
+        send_tx_with_retry(
+            Rc::clone(&context),
             &[init_account_ix, init_mint_ix],
-            Some(&context.payer.pubkey()),
-            &[&context.payer.insecure_clone(), &keypair],
-            context.get_new_latest_blockhash().await.unwrap(),
-        );
+            Some(&payer_pubkey),
+            &[&mint_keypair.insecure_clone(), &payer],
+        )
+        .await
+        .unwrap();
 
-        context
-            .banks_client
-            .process_transaction(initialize_mint_tx)
-            .await
-            .unwrap();
-
+        let context_ref: Rc<RefCell<ProgramTestContext>> = Rc::clone(&context);
         MintFixture {
             context: context_ref,
-            key: keypair.pubkey(),
+            key: mint_keypair.pubkey(),
         }
     }
 
@@ -567,7 +535,8 @@ impl MintFixture {
             Some(&payer_keypair.pubkey()),
             &[&payer_keypair],
         )
-        .await;
+        .await
+        .unwrap();
     }
 
     fn make_mint_to_ix(&self, dest: &Pubkey, amount: u64) -> Instruction {
@@ -622,18 +591,15 @@ impl TokenAccountFixture {
         owner_pk: &Pubkey,
         keypair: &Keypair,
     ) -> Self {
-        let mut program_test_context: RefMut<ProgramTestContext> = context.borrow_mut();
-
-        let rent: Rent = program_test_context.banks_client.get_rent().await.unwrap();
+        let rent: Rent = context.borrow_mut().banks_client.get_rent().await.unwrap();
         let instructions: [Instruction; 2] = Self::create_ixs(
             rent,
             mint_pk,
-            &program_test_context.payer.pubkey(),
+            &context.borrow().payer.pubkey(),
             owner_pk,
             keypair,
         )
         .await;
-        drop(program_test_context);
 
         let payer_keypair: Keypair = context.borrow().payer.insecure_clone();
         send_tx_with_retry(
@@ -642,7 +608,8 @@ impl TokenAccountFixture {
             Some(&payer_keypair.pubkey()),
             &[&payer_keypair, keypair],
         )
-        .await;
+        .await
+        .unwrap();
 
         Self {
             key: keypair.pubkey(),
@@ -659,14 +626,13 @@ impl TokenAccountFixture {
     }
 }
 
-// TODO: Make the TestFixture use this.
 pub(crate) async fn send_tx_with_retry(
     context: Rc<RefCell<ProgramTestContext>>,
     instructions: &[Instruction],
     payer: Option<&Pubkey>,
     signers: &[&Keypair],
-) {
-    let mut context: std::cell::RefMut<ProgramTestContext> = context.borrow_mut();
+) -> Result<(), BanksClientError> {
+    let mut context: RefMut<ProgramTestContext> = context.borrow_mut();
 
     loop {
         let blockhash_or: Result<Hash, Error> = context.get_new_latest_blockhash().await;
@@ -686,10 +652,15 @@ pub(crate) async fn send_tx_with_retry(
                 // Retry on rpc errors.
                 continue;
             }
+            BanksClientError::Io(_io_err) => {
+                // Retry on io errors.
+                continue;
+            }
             _ => {
                 println!("Unexpected error: {:?}", error);
-                assert!(false);
+                return Err(error);
             }
         }
     }
+    Ok(())
 }
