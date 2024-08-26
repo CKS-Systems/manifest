@@ -34,11 +34,8 @@ pub enum OrderType {
     // Fails if would cross the orderbook.
     PostOnly = 2,
 
-    // Like a post only but slides to a zero spread rather than fail.
-    PostOnlySlide = 3,
-
     // Global orders are post only but use funds from the global account.
-    Global = 4,
+    Global = 3,
 }
 unsafe impl bytemuck::Zeroable for OrderType {}
 unsafe impl bytemuck::Pod for OrderType {}

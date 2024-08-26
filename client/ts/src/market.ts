@@ -349,8 +349,7 @@ export class Market {
     offset += 4;
 
     // _padding2: [u32; 3],
-    // _padding3: [u64; 32],
-    // _padding4: [u64; 8],
+    // _padding3: [u64; 8],
 
     const bids: RestingOrder[] =
       bidsRootIndex != NIL
