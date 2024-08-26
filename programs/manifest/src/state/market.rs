@@ -106,7 +106,7 @@ pub struct MarketFixed {
 
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
-    
+
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
