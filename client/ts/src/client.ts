@@ -39,7 +39,7 @@ import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 
 export class ManifestClient {
-    private constructor(
+  private constructor(
     public connection: Connection,
     public wrapper: Wrapper,
     public market: Market,
