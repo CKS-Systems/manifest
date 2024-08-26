@@ -1,0 +1,16 @@
+{
+    "dependencies": {
+        "@metaplex-foundation/rustbin": "^0.3.1",
+        "@metaplex-foundation/solita": "^0.19.4",
+        "bs58": "^6.0.0",
+        "keccak256": "^1.0.6"
+    },
+    "prettier": {
+        "singleQuote": true,
+        "trailingComma": "all",
+        "semi": true
+    },
+    "devDependencies": {
+        "prettier": "^3.3.2"
+    }
+}
