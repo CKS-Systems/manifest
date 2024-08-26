@@ -6168,6 +6168,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "wrapper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh 0.9.3",
+ "bytemuck",
+ "hypertree",
+ "manifest",
+ "num_enum 0.5.9",
+ "shank",
+ "solana-logger",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "static_assertions",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "x509-parser"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
