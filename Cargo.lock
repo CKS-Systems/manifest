@@ -6372,7 +6372,6 @@ dependencies = [
  "tap",
 ]
 
-[[package]]
 name = "x509-parser"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
