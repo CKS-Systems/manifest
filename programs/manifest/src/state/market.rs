@@ -901,7 +901,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         }
         remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)?;
 
-        // TODO: Assert that the trader_index is the owner of the order
         Ok(())
     }
 }
