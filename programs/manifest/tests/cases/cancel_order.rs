@@ -80,8 +80,8 @@ async fn cancel_order_sequence_number_not_exist_test() -> anyhow::Result<()> {
         .place_order(Side::Ask, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
-    // Sequence number does not exist, but it fails open.
-    test_fixture.cancel_order(1234).await?;
+    // Sequence number does not exist. It fails closed.
+    assert!(test_fixture.cancel_order(1234).await.is_err());
 
     Ok(())
 }
