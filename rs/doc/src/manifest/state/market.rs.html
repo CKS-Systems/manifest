@@ -1173,9 +1173,11 @@
     <span class="doccomment">/// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     </span>free_list_head_index: DataIndex,
 
-    _padding2: [u32; <span class="number">3</span>],
-    _padding3: [u64; <span class="number">32</span>],
-    _padding4: [u64; <span class="number">8</span>],
+    <span class="comment">// Unused padding. Saved in case a later version wants to be backwards
+    // compatible. Also, it is nice to have the fixed size be a round number,
+    // 256 bytes.
+    </span>_padding2: [u32; <span class="number">3</span>],
+    _padding3: [u64; <span class="number">8</span>],
 }
 <span class="macro">const_assert_eq!</span>(
     size_of::&lt;MarketFixed&gt;(),
@@ -1200,7 +1202,6 @@
     </span><span class="number">4 </span>+   <span class="comment">// claimed_seats_best_index
     </span><span class="number">4 </span>+   <span class="comment">// free_list_head_index
     </span><span class="number">8 </span>+   <span class="comment">// padding2
-    </span><span class="number">256 </span>+ <span class="comment">// padding3
     </span><span class="number">64 </span><span class="comment">// padding4
 </span>);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;MarketFixed&gt;(), MARKET_FIXED_SIZE);
@@ -1235,8 +1236,7 @@
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
             _padding2: [<span class="number">0</span>; <span class="number">3</span>],
-            _padding3: [<span class="number">0</span>; <span class="number">32</span>],
-            _padding4: [<span class="number">0</span>; <span class="number">8</span>],
+            _padding3: [<span class="number">0</span>; <span class="number">8</span>],
         }
     }
 
