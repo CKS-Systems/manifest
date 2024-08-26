@@ -1229,9 +1229,6 @@
             "name": "PostOnly"
           },
           {
-            "name": "PostOnlySlide"
-          },
-          {
             "name": "Global"
           }
         ]
