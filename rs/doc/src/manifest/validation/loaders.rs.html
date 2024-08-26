@@ -644,8 +644,6 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -746,16 +744,14 @@
     }
 }
 
-<span class="comment">// TODO: rename to ExpandMarketContext to be clear that this only expands
-// market, does not work for expanding global.
-</span><span class="doccomment">/// ExpandContext account infos
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ExpandContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+<span class="doccomment">/// ExpandMarketContext account infos
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ExpandMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
     <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; ExpandContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; ExpandMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 

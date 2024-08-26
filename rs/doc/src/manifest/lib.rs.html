@@ -94,6 +94,7 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Manifest is a limit order book exchange on the Solana blockchain.
 //!
 
@@ -106,10 +107,11 @@
 
 <span class="kw">use </span>program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
-    create_market::process_create_market, deposit::process_deposit, expand::process_expand,
-    global_add_trader::process_global_add_trader, global_claim_seat::process_global_claim_seat,
-    global_create::process_global_create, global_deposit::process_global_deposit, process_swap,
-    withdraw::process_withdraw, ManifestInstruction,
+    create_market::process_create_market, deposit::process_deposit,
+    expand_market::process_expand_market, global_add_trader::process_global_add_trader,
+    global_claim_seat::process_global_claim_seat, global_create::process_global_create,
+    global_deposit::process_global_deposit, process_swap, withdraw::process_withdraw,
+    ManifestInstruction,
 };
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
@@ -167,7 +169,7 @@
             process_swap(program_id, accounts, data)<span class="question-mark">?</span>;
         }
         ManifestInstruction::Expand =&gt; {
-            process_expand(program_id, accounts, data)<span class="question-mark">?</span>;
+            process_expand_market(program_id, accounts, data)<span class="question-mark">?</span>;
         }
         ManifestInstruction::BatchUpdate =&gt; {
             process_batch_update(program_id, accounts, data)<span class="question-mark">?</span>;
