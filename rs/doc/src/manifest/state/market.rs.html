@@ -1064,16 +1064,6 @@
 <a href="#1062" id="1062">1062</a>
 <a href="#1063" id="1063">1063</a>
 <a href="#1064" id="1064">1064</a>
-<a href="#1065" id="1065">1065</a>
-<a href="#1066" id="1066">1066</a>
-<a href="#1067" id="1067">1067</a>
-<a href="#1068" id="1068">1068</a>
-<a href="#1069" id="1069">1069</a>
-<a href="#1070" id="1070">1070</a>
-<a href="#1071" id="1071">1071</a>
-<a href="#1072" id="1072">1072</a>
-<a href="#1073" id="1073">1073</a>
-<a href="#1074" id="1074">1074</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
@@ -1590,10 +1580,6 @@
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
-        <span class="comment">// Most of the time this is the price the user inputs, but on a
-        // PostOnlySlide, it gets updated.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>maker_price: QuoteAtomsPerBaseAtom = price;
-
         <span class="kw">let </span><span class="kw-2">mut </span>current_order_index: DataIndex = <span class="kw">if </span>is_bid {
             fixed.asks_best_index
         } <span class="kw">else </span>{
@@ -1661,12 +1647,6 @@
 
             <span class="comment">// Got a match. First make sure we are allowed to match.
             </span>assert_can_take(order_type)<span class="question-mark">?</span>;
-
-            <span class="kw">if </span>order_type == OrderType::PostOnlySlide {
-                <span class="comment">// Post only slide creates a zero spread book.
-                </span>maker_price = other_order.get_price();
-                <span class="kw">break</span>;
-            }
 
             <span class="comment">// Match the order
             </span><span class="kw">let </span>other_trader_index: DataIndex = other_order.get_trader_index();
@@ -1854,7 +1834,7 @@
         <span class="kw">let </span>resting_order: RestingOrder = RestingOrder::new(
             trader_index,
             remaining_base_atoms,
-            maker_price,
+            price,
             order_sequence_number,
             last_valid_slot,
             is_bid,
@@ -1877,7 +1857,7 @@
                 !is_bid,
                 <span class="bool-val">false</span>,
                 <span class="kw">if </span>is_bid {
-                    (remaining_base_atoms.checked_mul(maker_price, <span class="bool-val">false</span>))
+                    (remaining_base_atoms.checked_mul(price, <span class="bool-val">false</span>))
                         .unwrap()
                         .into()
                 } <span class="kw">else </span>{
