@@ -19,7 +19,7 @@ async fn cancel_order_test() -> anyhow::Result<()> {
     test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
 
     test_fixture
-        .place_order(Side::Ask, 1, 1.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Ask, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
     // First order always has order sequence number of zero.
@@ -35,7 +35,7 @@ async fn cancel_order_bid_test() -> anyhow::Result<()> {
     test_fixture.deposit(Token::USDC, USDC_UNIT_SIZE).await?;
 
     test_fixture
-        .place_order(Side::Bid, 1, 1.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Bid, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
     // First order always has order sequence number of zero.
@@ -59,7 +59,8 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1,
-            1.0,
+            1,
+            0,
             u32::MAX,
             OrderType::Limit,
             &second_keypair,
@@ -91,7 +92,7 @@ async fn cancel_order_sequence_number_not_exist_test() -> anyhow::Result<()> {
 
     test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
     test_fixture
-        .place_order(Side::Ask, 1, 1.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Ask, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
     // Sequence number does not exist, but it fails open.
@@ -109,10 +110,10 @@ async fn cancel_order_multiple_bid_on_orderbook_test() -> anyhow::Result<()> {
         .await?;
 
     test_fixture
-        .place_order(Side::Bid, 1, 1.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Bid, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
     test_fixture
-        .place_order(Side::Bid, 2, 2.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Bid, 2, 2, 0, u32::MAX, OrderType::Limit)
         .await?;
 
     // First order always has order sequence number of zero.
@@ -128,7 +129,7 @@ async fn cancel_order_with_hint_test() -> anyhow::Result<()> {
     test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
 
     test_fixture
-        .place_order(Side::Ask, 1, 1.0, u32::MAX, OrderType::Limit)
+        .place_order(Side::Ask, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
     // First order always has order sequence number of zero.

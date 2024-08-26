@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
     program::{assert_with_msg, ManifestError},
-    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
         BLOCK_SIZE,
@@ -11,7 +11,7 @@ use crate::{
     validation::loaders::BatchUpdateContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{DataIndex, PodBool};
+use hypertree::{trace, DataIndex, PodBool};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data, pubkey::Pubkey,
 };
@@ -48,7 +48,8 @@ impl CancelOrderParams {
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct PlaceOrderParams {
     base_atoms: u64,
-    price: f64, // TODO: change type to u32 mantissa + i8 decimal exponent to save on bytes
+    price_mantissa: u32,
+    price_exponent: i8,
     is_bid: bool,
     last_valid_slot: u32,
     order_type: OrderType,
@@ -57,14 +58,16 @@ pub struct PlaceOrderParams {
 impl PlaceOrderParams {
     pub fn new(
         base_atoms: u64,
-        price: f64,
+        price_mantissa: u32,
+        price_exponent: i8,
         is_bid: bool,
         order_type: OrderType,
         last_valid_slot: u32,
     ) -> Self {
         PlaceOrderParams {
             base_atoms,
-            price,
+            price_mantissa,
+            price_exponent,
             is_bid,
             order_type,
             last_valid_slot,
@@ -73,8 +76,11 @@ impl PlaceOrderParams {
     pub fn base_atoms(&self) -> u64 {
         self.base_atoms
     }
-    pub fn price(&self) -> f64 {
-        self.price
+    pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+            self.price_mantissa,
+            self.price_exponent,
+        )
     }
     pub fn is_bid(&self) -> bool {
         self.is_bid
@@ -133,6 +139,8 @@ pub(crate) fn process_batch_update(
         cancels,
         orders,
     } = BatchUpdateParams::try_from_slice(data)?;
+
+    trace!("batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}");
 
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
@@ -202,8 +210,7 @@ pub(crate) fn process_batch_update(
     for place_order in orders {
         {
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
-            let price: QuoteAtomsPerBaseAtom =
-                QuoteAtomsPerBaseAtom::try_from(place_order.price()).unwrap();
+            let price: QuoteAtomsPerBaseAtom = place_order.try_price()?;
             let order_type: OrderType = place_order.order_type();
             let last_valid_slot: u32 = place_order.last_valid_slot();
 

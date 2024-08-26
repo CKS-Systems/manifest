@@ -19,7 +19,8 @@ async fn batch_update_test() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 1 * SOL_UNIT_SIZE,
-                1.0,
+                1,
+                0,
                 false,
                 OrderType::Limit,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -34,7 +35,8 @@ async fn batch_update_test() -> anyhow::Result<()> {
             vec![CancelOrderParams::new(0)],
             vec![PlaceOrderParams::new(
                 1 * SOL_UNIT_SIZE,
-                1.0,
+                1,
+                0,
                 false,
                 OrderType::Limit,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -76,7 +78,8 @@ async fn batch_update_fill_test() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 1 * SOL_UNIT_SIZE,
-                1.0,
+                1,
+                0,
                 false,
                 OrderType::Limit,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -91,7 +94,8 @@ async fn batch_update_fill_test() -> anyhow::Result<()> {
             vec![CancelOrderParams::new(0)],
             vec![PlaceOrderParams::new(
                 1 * SOL_UNIT_SIZE,
-                1.0,
+                1,
+                0,
                 true,
                 OrderType::Limit,
                 NO_EXPIRATION_LAST_VALID_SLOT,

@@ -163,7 +163,8 @@ async fn global_place_order() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 10,
-                1.0,
+                1,
+                0,
                 true,
                 OrderType::Global,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -209,7 +210,8 @@ async fn global_place_order_only_global_quote() -> anyhow::Result<()> {
         vec![],
         vec![PlaceOrderParams::new(
             10,
-            1.0,
+            1,
+            0,
             true,
             OrderType::Global,
             NO_EXPIRATION_LAST_VALID_SLOT,
@@ -265,7 +267,8 @@ async fn global_cancel_order() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 10,
-                1.0,
+                1,
+                0,
                 true,
                 OrderType::Global,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -318,7 +321,8 @@ async fn global_match_order() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 100,
-                1.0,
+                1,
+                0,
                 true,
                 OrderType::Global,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -335,7 +339,8 @@ async fn global_match_order() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 100,
-                0.9,
+                9,
+                -1,
                 false,
                 OrderType::Limit,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -509,7 +514,8 @@ async fn global_match_22() -> anyhow::Result<()> {
         vec![],
         vec![PlaceOrderParams::new(
             1_000_000,
-            1.0,
+            1,
+            0,
             true,
             OrderType::Global,
             NO_EXPIRATION_LAST_VALID_SLOT,
