@@ -107,9 +107,11 @@ pub struct MarketFixed {
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
+    // Unused padding. Saved in case a later version wants to be backwards
+    // compatible. Also, it is nice to have the fixed size be a round number,
+    // 256 bytes.
     _padding2: [u32; 3],
-    _padding3: [u64; 32],
-    _padding4: [u64; 8],
+    _padding3: [u64; 8],
 }
 const_assert_eq!(
     size_of::<MarketFixed>(),
@@ -134,7 +136,6 @@ const_assert_eq!(
     4 +   // claimed_seats_best_index
     4 +   // free_list_head_index
     8 +   // padding2
-    256 + // padding3
     64 // padding4
 );
 const_assert_eq!(size_of::<MarketFixed>(), MARKET_FIXED_SIZE);
@@ -169,8 +170,7 @@ impl MarketFixed {
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
             _padding2: [0; 3],
-            _padding3: [0; 32],
-            _padding4: [0; 8],
+            _padding3: [0; 8],
         }
     }
 
