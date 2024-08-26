@@ -39,7 +39,7 @@ import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 
 export class ManifestClient {
-  private constructor(
+    private constructor(
     public connection: Connection,
     public wrapper: Wrapper,
     public market: Market,
@@ -210,7 +210,7 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction
    */
-  public static createMarketIx(
+  private static createMarketIx(
     payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
@@ -485,8 +485,6 @@ function toWrapperPlaceOrderParams(
   }
   priceMantissa = Math.floor(priceMantissa);
 
-  // TODO: Fix this
-  // @ts-ignore
   return {
     ...wrapperPlaceOrderParamsExternal,
     priceMantissa,
