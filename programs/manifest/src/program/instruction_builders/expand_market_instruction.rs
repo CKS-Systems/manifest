@@ -5,7 +5,7 @@ use solana_program::{
     system_program,
 };
 
-pub fn expand_instruction(market: &Pubkey, payer: &Pubkey) -> Instruction {
+pub fn expand_market_instruction(market: &Pubkey, payer: &Pubkey) -> Instruction {
     Instruction {
         program_id: crate::id(),
         accounts: vec![

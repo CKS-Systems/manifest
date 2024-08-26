@@ -98,16 +98,14 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
     }
 }
 
-// TODO: rename to ExpandMarketContext to be clear that this only expands
-// market, does not work for expanding global.
-/// ExpandContext account infos
-pub(crate) struct ExpandContext<'a, 'info> {
+/// ExpandMarketContext account infos
+pub(crate) struct ExpandMarketContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
     pub system_program: Program<'a, 'info>,
 }
 
-impl<'a, 'info> ExpandContext<'a, 'info> {
+impl<'a, 'info> ExpandMarketContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
