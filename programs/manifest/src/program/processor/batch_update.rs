@@ -205,8 +205,7 @@ pub(crate) fn process_batch_update(
     };
 
     // Result is a vector of (order_sequence_number, data_index)
-    // TODO: Do not use a vector and just write as we go.
-    let mut result: Vec<(u64, DataIndex)> = Vec::new();
+    let mut result: Vec<(u64, DataIndex)> = Vec::with_capacity(orders.len());
     for place_order in orders {
         {
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
@@ -253,8 +252,8 @@ pub(crate) fn process_batch_update(
         expand_market_if_needed(&payer, &market, &system_program)?;
     }
 
+    let mut buffer: Vec<u8> = Vec::with_capacity(result.len());
     let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
-    let mut buffer: Vec<u8> = Vec::new();
     return_data.serialize(&mut buffer).unwrap();
     set_return_data(&buffer[..]);
 
