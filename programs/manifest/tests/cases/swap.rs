@@ -46,7 +46,8 @@ async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -57,7 +58,8 @@ async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             10,
             OrderType::Limit,
             &second_keypair,
@@ -68,7 +70,8 @@ async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             2 * SOL_UNIT_SIZE,
-            0.5,
+            5,
+            -1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -121,7 +124,8 @@ async fn swap_full_match_test_sell_exact_out() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -132,7 +136,8 @@ async fn swap_full_match_test_sell_exact_out() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             10,
             OrderType::Limit,
             &second_keypair,
@@ -143,7 +148,8 @@ async fn swap_full_match_test_sell_exact_out() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             2 * SOL_UNIT_SIZE,
-            0.5,
+            5,
+            -1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -196,7 +202,8 @@ async fn swap_full_match_test_buy_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -207,7 +214,8 @@ async fn swap_full_match_test_buy_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             10,
             OrderType::Limit,
             &second_keypair,
@@ -218,7 +226,8 @@ async fn swap_full_match_test_buy_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            2.0,
+            2,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -275,7 +284,8 @@ async fn swap_already_has_deposits() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -595,7 +605,8 @@ async fn swap_fail_insufficient_funds_sell() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Bid,
             2 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -650,7 +661,8 @@ async fn swap_fail_insufficient_funds_buy() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             2_000 * USDC_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -758,7 +770,8 @@ async fn swap_global() -> anyhow::Result<()> {
         vec![],
         vec![PlaceOrderParams::new(
             1 * SOL_UNIT_SIZE,
-            1.0,
+            1,
+            0,
             true,
             OrderType::Global,
             NO_EXPIRATION_LAST_VALID_SLOT,
