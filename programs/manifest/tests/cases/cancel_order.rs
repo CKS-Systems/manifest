@@ -1,11 +1,14 @@
 use std::cell::RefMut;
 
+use hypertree::DataIndex;
 use manifest::{
     program::{batch_update::CancelOrderParams, batch_update_instruction},
     state::{OrderType, BLOCK_SIZE},
 };
 use solana_program_test::{tokio, ProgramTestContext};
-use solana_sdk::{instruction::Instruction, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    instruction::Instruction, signature::Keypair, signer::Signer, transaction::Transaction,
+};
 
 use crate::{Side, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
@@ -47,8 +50,7 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     // Should succeed. It was funded with infinite lamports.
-    let second_keypair: solana_sdk::signature::Keypair =
-        test_fixture.second_keypair.insecure_clone();
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     test_fixture.claim_seat_for_keypair(&second_keypair).await?;
     test_fixture
         .deposit_for_keypair(Token::SOL, 2 * SOL_UNIT_SIZE, &second_keypair)
@@ -66,6 +68,19 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
         .await?;
 
     assert!(test_fixture.cancel_order(0).await.is_err());
+
+    assert!(test_fixture
+        .batch_update_for_keypair(
+            None,
+            vec![CancelOrderParams::new_with_hint(
+                0,
+                Some((BLOCK_SIZE * 2) as DataIndex)
+            )],
+            vec![],
+            &test_fixture.payer_keypair()
+        )
+        .await
+        .is_err());
 
     Ok(())
 }
