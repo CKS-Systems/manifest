@@ -48,12 +48,17 @@ async function main() {
         { stdio: 'inherit' },
       );
 
-      // TODO: Also do the wrapper constant.
-      // Make sure the client has the correct fixed header size. Copy any
-      // other constants over as needed.
+      // Make sure the client has the correct fixed header size.
       spawnSync(
         "ORIGINAL_LINE=$(awk '/export const FIXED_MANIFEST_HEADER_SIZE: number = [-.0-9]+;/' client/ts/src/constants.ts); " +
           'NEW_LINE=$(echo "export const FIXED_MANIFEST_HEADER_SIZE: number = ")$(awk \'/pub const MARKET_FIXED_SIZE: usize = [-.0-9]+;/\' programs/manifest/src/state/constants.rs | tr -d -c 0-9)$(echo ";"); ' +
+          'sed --debug -i "s/${ORIGINAL_LINE}/${NEW_LINE}/" client/ts/src/constants.ts',
+        [],
+        { stdio: 'inherit' },
+      );
+      spawnSync(
+        "ORIGINAL_LINE=$(awk '/export const FIXED_WRAPPER_HEADER_SIZE: number = [-.0-9]+;/' client/ts/src/constants.ts); " +
+          'NEW_LINE=$(echo "export const FIXED_WRAPPER_HEADER_SIZE: number = ")$(awk \'/pub const WRAPPER_FIXED_SIZE: usize = [-.0-9]+;/\' programs/wrapper/src/wrapper_state.rs | tr -d -c 0-9)$(echo ";"); ' +
           'sed --debug -i "s/${ORIGINAL_LINE}/${NEW_LINE}/" client/ts/src/constants.ts',
         [],
         { stdio: 'inherit' },
