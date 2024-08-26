@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig",
+    "compilerOptions": {
+      "declaration": true,
+      "declarationMap": false,
+      "module": "commonjs",
+      "outDir": "dist/cjs",
+      "sourceMap": false
+    },
+    "include": [
+      "client/ts/src",
+    ]
+}
