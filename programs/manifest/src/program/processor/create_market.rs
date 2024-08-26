@@ -104,10 +104,14 @@ pub(crate) fn process_create_market(
             }
         }
 
-        // Do not need to initialize with the system program because it is assumed
-        // that it is done already and loaded with rent.
+        // Do not need to initialize with the system program because it is
+        // assumed that it is done already and loaded with rent. That is not at
+        // a PDA because we do not want to be restricted to a single market for
+        // a pair. If there is lock contention and hotspotting for one market,
+        // it could be useful to have a second where it is easier to land
+        // transactions. That protection is worth the possibility that users
+        // would use an inactive market when multiple exist.
 
-        // TODO: Make the market be at a PDA to enforce only 1 market per Base/Quote pair.
         // Setup the empty market
         let empty_market_fixed: MarketFixed =
             MarketFixed::new_empty(&base_mint, &quote_mint, market.key);

@@ -1229,9 +1229,6 @@
             "name": "PostOnly"
           },
           {
-            "name": "PostOnlySlide"
-          },
-          {
             "name": "Global"
           }
         ]
@@ -1323,6 +1320,11 @@
       "code": 16,
       "name": "GlobalInsufficient",
       "msg": "Insufficient funds on global account to rest an order"
+    },
+    {
+      "code": 17,
+      "name": "IncorrectAccount",
+      "msg": "Account key did not match expected"
     }
   ],
   "metadata": {

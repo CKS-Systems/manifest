@@ -24,7 +24,7 @@ use crate::{
 
 use super::{
     claimed_seat::ClaimedSeat,
-    constants::{BLOCK_SIZE, MARKET_FIXED_SIZE},
+    constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
     order_type_can_rest,
     utils::{assert_not_already_expired, get_now_slot, try_to_add_to_global},
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
@@ -107,9 +107,11 @@ pub struct MarketFixed {
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
+    // Unused padding. Saved in case a later version wants to be backwards
+    // compatible. Also, it is nice to have the fixed size be a round number,
+    // 256 bytes.
     _padding2: [u32; 3],
-    _padding3: [u64; 32],
-    _padding4: [u64; 8],
+    _padding3: [u64; 8],
 }
 const_assert_eq!(
     size_of::<MarketFixed>(),
@@ -134,7 +136,6 @@ const_assert_eq!(
     4 +   // claimed_seats_best_index
     4 +   // free_list_head_index
     8 +   // padding2
-    256 + // padding3
     64 // padding4
 );
 const_assert_eq!(size_of::<MarketFixed>(), MARKET_FIXED_SIZE);
@@ -169,8 +170,7 @@ impl MarketFixed {
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
             _padding2: [0; 3],
-            _padding3: [0; 32],
-            _padding4: [0; 8],
+            _padding3: [0; 8],
         }
     }
 
@@ -403,7 +403,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             FreeList::new(dynamic, fixed.free_list_head_index);
 
         free_list.add(fixed.num_bytes_allocated);
-        fixed.num_bytes_allocated += BLOCK_SIZE as u32;
+        fixed.num_bytes_allocated += MARKET_BLOCK_SIZE as u32;
         fixed.free_list_head_index = free_list.get_head();
         Ok(())
     }
@@ -514,10 +514,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
-        // Most of the time this is the price the user inputs, but on a
-        // PostOnlySlide, it gets updated.
-        let mut maker_price: QuoteAtomsPerBaseAtom = price;
-
         let mut current_order_index: DataIndex = if is_bid {
             fixed.asks_best_index
         } else {
@@ -585,12 +581,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
             // Got a match. First make sure we are allowed to match.
             assert_can_take(order_type)?;
-
-            if order_type == OrderType::PostOnlySlide {
-                // Post only slide creates a zero spread book.
-                maker_price = other_order.get_price();
-                break;
-            }
 
             // Match the order
             let other_trader_index: DataIndex = other_order.get_trader_index();
@@ -778,7 +768,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let resting_order: RestingOrder = RestingOrder::new(
             trader_index,
             remaining_base_atoms,
-            maker_price,
+            price,
             order_sequence_number,
             last_valid_slot,
             is_bid,
@@ -801,7 +791,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 !is_bid,
                 false,
                 if is_bid {
-                    (remaining_base_atoms.checked_mul(maker_price, false))
+                    (remaining_base_atoms.checked_mul(price, false))
                         .unwrap()
                         .into()
                 } else {
