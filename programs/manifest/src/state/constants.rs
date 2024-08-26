@@ -1,6 +1,6 @@
 use hypertree::RBTREE_OVERHEAD_BYTES;
 
-pub const MARKET_FIXED_SIZE: usize = 512;
+pub const MARKET_FIXED_SIZE: usize = 256;
 pub const GLOBAL_FIXED_SIZE: usize = 88;
 
 // Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
