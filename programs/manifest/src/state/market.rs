@@ -861,10 +861,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
         }
 
-        // TODO: Remove the silent failures
-        // Silently fails because order could have matched before our cancel got
-        // there and that is correct behavior in that case.
-        Ok(())
+        // Do not fail silently.
+        Err(ManifestError::InvalidCancel.into())
     }
 
     pub fn cancel_order_by_index(
