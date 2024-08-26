@@ -12,3 +12,5 @@ ignore:
   - "client/ts/src/manifest/instructions/Withdraw.ts"
   # Infinite loop and variability in other messages makes it difficult to cover fill feed
   - "client/ts/src/fillFeed.ts"
+  # Not hermetic
+  - "client/ts/src/utils/solana.ts"
