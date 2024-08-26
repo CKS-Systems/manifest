@@ -1,11 +1,10 @@
-use std::{cell::RefMut, mem::size_of, rc::Rc};
+use std::{mem::size_of, rc::Rc};
 
 use hypertree::{get_helper, DataIndex, RBNode, TreeReadOperations, NIL};
 use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType};
-use solana_program_test::{tokio, ProgramTestContext};
+use solana_program_test::tokio;
 use solana_sdk::{
     account::Account, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
-    transaction::Transaction,
 };
 use wrapper::{
     instruction_builders::{batch_update_instruction, create_wrapper_instructions},
@@ -27,7 +26,6 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let mut program_test_context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
     // There is no order 0 for the cancel to get, but it will fail silently and continue on.
     let batch_update_ix: Instruction = batch_update_instruction(
@@ -48,19 +46,13 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
         )],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     // Cancel and place, so we have enough funds for the second one.
     let batch_update_ix: Instruction = batch_update_instruction(
@@ -81,19 +73,13 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
         )],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     Ok(())
 }
@@ -106,7 +92,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let mut program_test_context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
     // All the orders have the same client order id.
     let batch_update_ix: Instruction = batch_update_instruction(
@@ -169,19 +154,13 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
         ],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     // Cancel order 0 which is all of them
     let batch_update_ix: Instruction = batch_update_instruction(
@@ -193,22 +172,18 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
         vec![],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     // Assert that there are no more orders on the book.
-    let mut wrapper_account: Account = program_test_context
+    let mut wrapper_account: Account = test_fixture
+        .context
+        .borrow_mut()
         .banks_client
         .get_account(test_fixture.wrapper.key)
         .await
@@ -262,7 +237,7 @@ async fn sync_remove_test() -> anyhow::Result<()> {
         Some(&second_payer),
         &[&second_payer_keypair, &second_wrapper_keypair],
     )
-    .await;
+    .await?;
 
     test_fixture
         .claim_seat_for_keypair_with_wrapper(
@@ -278,8 +253,6 @@ async fn sync_remove_test() -> anyhow::Result<()> {
             &second_wrapper_keypair.pubkey(),
         )
         .await?;
-
-    let mut program_test_context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -299,19 +272,13 @@ async fn sync_remove_test() -> anyhow::Result<()> {
         )],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -331,19 +298,13 @@ async fn sync_remove_test() -> anyhow::Result<()> {
         )],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&second_payer),
-            &[&second_payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&second_payer),
+        &[&second_payer_keypair],
+    )
+    .await?;
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -354,22 +315,18 @@ async fn sync_remove_test() -> anyhow::Result<()> {
         vec![],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     // Assert that there are no more orders on the book.
-    let mut wrapper_account: Account = program_test_context
+    let mut wrapper_account: Account = test_fixture
+        .context
+        .borrow_mut()
         .banks_client
         .get_account(test_fixture.wrapper.key)
         .await
@@ -405,7 +362,6 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let mut program_test_context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -425,19 +381,13 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
         )],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -448,22 +398,18 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
         vec![],
         None,
     );
-    let batch_update_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[batch_update_ix],
-            Some(&payer),
-            &[&payer_keypair],
-            program_test_context.get_new_latest_blockhash().await?,
-        )
-    };
-
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     // Assert that there are no more orders on the book.
-    let mut wrapper_account: Account = program_test_context
+    let mut wrapper_account: Account = test_fixture
+        .context
+        .borrow_mut()
         .banks_client
         .get_account(test_fixture.wrapper.key)
         .await
@@ -498,7 +444,6 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let mut program_test_context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &test_fixture.market.key,
@@ -518,16 +463,13 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
         )],
         Some(0),
     );
-    let batch_update_tx: Transaction = Transaction::new_signed_with_payer(
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
         &[batch_update_ix],
         Some(&payer),
         &[&payer_keypair],
-        program_test_context.get_new_latest_blockhash().await?,
-    );
-    program_test_context
-        .banks_client
-        .process_transaction(batch_update_tx)
-        .await?;
+    )
+    .await?;
 
     Ok(())
 }
