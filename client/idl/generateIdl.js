@@ -87,8 +87,6 @@ function modifyIdlCore(programName) {
       }
     }
 
-    // TODO: Override u128 price in the output for QuoteAtomsPerBaseAtom
-
     for (const idlAccount of idl.accounts) {
       if (idlAccount.type && idlAccount.type.fields) {
         idlAccount.type.fields = idlAccount.type.fields.map((field) => {

@@ -28,7 +28,9 @@ export function convertU128(n: bignum): number {
   } else {
     // can only initialize up to 2**53, but need to divide by 10**20.
     const divisor = new BN(10 ** 10);
-    // TODO: This may lose decimals, so after the first divide, convert to number.
+    if (n.div(divisor) < new BN(2 ** 53 - 1)) {
+      return n.div(divisor).toNumber() / 10 ** 10;
+    }
     target = n.div(divisor).div(divisor).toNumber();
   }
   return target;
