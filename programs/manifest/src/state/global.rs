@@ -24,8 +24,8 @@ use crate::{
 };
 
 use super::{
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, BLOCK_SIZE,
-    FREE_LIST_BLOCK_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
+    GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE,
     GLOBAL_TRADER_MARKET_INFO_SIZE, GLOBAL_TRADER_SIZE,
 };
 
@@ -282,7 +282,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             FreeList::new(dynamic, fixed.free_list_head_index);
 
         free_list.add(fixed.num_bytes_allocated);
-        fixed.num_bytes_allocated += BLOCK_SIZE as u32;
+        fixed.num_bytes_allocated += GLOBAL_BLOCK_SIZE as u32;
         fixed.free_list_head_index = free_list.get_head();
         Ok(())
     }

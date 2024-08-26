@@ -207,7 +207,8 @@ mod test {
         quantities::{BaseAtoms, GlobalAtoms},
         state::{
             constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, GlobalFixed,
-            GlobalValue, OrderType, BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_FIXED_SIZE,
+            GlobalValue, OrderType, GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_BLOCK_SIZE,
+            MARKET_FIXED_SIZE,
         },
         validation::{
             loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
@@ -273,7 +274,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -434,7 +435,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -611,7 +612,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint_info, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -625,7 +626,7 @@ mod test {
         let global_account_info: AccountInfo = {
             let mut global_value: DynamicAccount<GlobalFixed, Vec<u8>> = GlobalValue {
                 fixed: GlobalFixed::new_empty(&quote_mint_key),
-                dynamic: vec![0; BLOCK_SIZE * 2],
+                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 2],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(&trader_key).unwrap();

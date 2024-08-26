@@ -1,6 +1,6 @@
 use manifest::{
     program::batch_update::{CancelOrderParams, PlaceOrderParams},
-    state::{OrderType, BLOCK_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{OrderType, MARKET_BLOCK_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
 };
 use solana_program_test::tokio;
 
@@ -51,7 +51,7 @@ async fn batch_update_test() -> anyhow::Result<()> {
             Some(0),
             vec![CancelOrderParams::new_with_hint(
                 0,
-                Some((BLOCK_SIZE * 1).try_into().unwrap()),
+                Some((MARKET_BLOCK_SIZE * 1).try_into().unwrap()),
             )],
             vec![],
             &test_fixture.payer_keypair(),

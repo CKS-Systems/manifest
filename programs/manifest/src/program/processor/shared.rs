@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    state::{constants::BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
+    state::{constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
@@ -52,7 +52,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     // Account types were already validated, so do not need to reverify that the
     // accounts are in order: payer, expandable_account, system_program, ...
     let expandable_account: &AccountInfo = manifest_account.info;
-    let new_size: usize = expandable_account.data_len() + BLOCK_SIZE;
+    let new_size: usize = expandable_account.data_len() + MARKET_BLOCK_SIZE;
 
     let rent: Rent = Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
