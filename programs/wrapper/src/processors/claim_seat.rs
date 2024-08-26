@@ -2,7 +2,7 @@ use std::{cell::RefMut, mem::size_of};
 
 use hypertree::{get_mut_helper, DataIndex, FreeList, TreeReadOperations, NIL};
 use manifest::{
-    program::{claim_seat_instruction, expand_instruction, get_mut_dynamic_account},
+    program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account},
     state::{MarketFixed, MarketRefMut},
     validation::ManifestAccountInfo,
 };
@@ -42,7 +42,7 @@ pub(crate) fn process_claim_seat(
 
     // Call the Expand CPI
     invoke(
-        &expand_instruction(market.key, payer.key),
+        &expand_market_instruction(market.key, payer.key),
         &[
             manifest_program.info.clone(),
             owner.info.clone(),
