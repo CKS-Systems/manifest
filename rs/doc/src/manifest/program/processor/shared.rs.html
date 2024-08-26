@@ -152,7 +152,7 @@
 };
 
 <span class="kw">use crate</span>::{
-    state::{constants::BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
+    state::{constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 <span class="kw">use </span>bytemuck::Pod;
@@ -200,7 +200,7 @@
     <span class="comment">// Account types were already validated, so do not need to reverify that the
     // accounts are in order: payer, expandable_account, system_program, ...
     </span><span class="kw">let </span>expandable_account: <span class="kw-2">&amp;</span>AccountInfo = manifest_account.info;
-    <span class="kw">let </span>new_size: usize = expandable_account.data_len() + BLOCK_SIZE;
+    <span class="kw">let </span>new_size: usize = expandable_account.data_len() + MARKET_BLOCK_SIZE;
 
     <span class="kw">let </span>rent: Rent = Rent::get()<span class="question-mark">?</span>;
     <span class="kw">let </span>new_minimum_balance: u64 = rent.minimum_balance(new_size);

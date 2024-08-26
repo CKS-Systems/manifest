@@ -270,7 +270,7 @@
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
-        BLOCK_SIZE,
+        MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -446,7 +446,7 @@
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     </span>assert_with_msg(
-                        trader_index % (BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0
+                        trader_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0
                             </span>&amp;&amp; trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
                         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_cancel_index),

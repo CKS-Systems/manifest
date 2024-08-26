@@ -807,6 +807,7 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
@@ -1016,7 +1017,8 @@
         quantities::{BaseAtoms, GlobalAtoms},
         state::{
             constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, GlobalFixed,
-            GlobalValue, OrderType, BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_FIXED_SIZE,
+            GlobalValue, OrderType, GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_BLOCK_SIZE,
+            MARKET_FIXED_SIZE,
         },
         validation::{
             loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
@@ -1082,7 +1084,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>market_value: DynamicAccount&lt;MarketFixed, Vec&lt;u8&gt;&gt; = MarketValue {
             fixed: MarketFixed::new_empty(<span class="kw-2">&amp;</span>base_mint, <span class="kw-2">&amp;</span>quote_mint, <span class="kw-2">&amp;</span>market_key),
             <span class="comment">// 4 because 1 extra, 1 seat, 2 orders.
-            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; BLOCK_SIZE * <span class="number">4</span>],
+            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; MARKET_BLOCK_SIZE * <span class="number">4</span>],
         };
         <span class="kw">let </span>trader_key: Pubkey =
             Pubkey::from_str(<span class="string">"GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc"</span>).unwrap();
@@ -1243,7 +1245,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>market_value: DynamicAccount&lt;MarketFixed, Vec&lt;u8&gt;&gt; = MarketValue {
             fixed: MarketFixed::new_empty(<span class="kw-2">&amp;</span>base_mint, <span class="kw-2">&amp;</span>quote_mint, <span class="kw-2">&amp;</span>market_key),
             <span class="comment">// 4 because 1 extra, 1 seat, 2 orders.
-            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; BLOCK_SIZE * <span class="number">4</span>],
+            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; MARKET_BLOCK_SIZE * <span class="number">4</span>],
         };
         <span class="kw">let </span>trader_key: Pubkey =
             Pubkey::from_str(<span class="string">"GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc"</span>).unwrap();
@@ -1420,7 +1422,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>market_value: DynamicAccount&lt;MarketFixed, Vec&lt;u8&gt;&gt; = MarketValue {
             fixed: MarketFixed::new_empty(<span class="kw-2">&amp;</span>base_mint, <span class="kw-2">&amp;</span>quote_mint_info, <span class="kw-2">&amp;</span>market_key),
             <span class="comment">// 4 because 1 extra, 1 seat, 2 orders.
-            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; BLOCK_SIZE * <span class="number">4</span>],
+            </span>dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; MARKET_BLOCK_SIZE * <span class="number">4</span>],
         };
         <span class="kw">let </span>trader_key: Pubkey =
             Pubkey::from_str(<span class="string">"GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc"</span>).unwrap();
@@ -1434,7 +1436,7 @@
         <span class="kw">let </span>global_account_info: AccountInfo = {
             <span class="kw">let </span><span class="kw-2">mut </span>global_value: DynamicAccount&lt;GlobalFixed, Vec&lt;u8&gt;&gt; = GlobalValue {
                 fixed: GlobalFixed::new_empty(<span class="kw-2">&amp;</span>quote_mint_key),
-                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; BLOCK_SIZE * <span class="number">2</span>],
+                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; GLOBAL_BLOCK_SIZE * <span class="number">2</span>],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(<span class="kw-2">&amp;</span>trader_key).unwrap();
