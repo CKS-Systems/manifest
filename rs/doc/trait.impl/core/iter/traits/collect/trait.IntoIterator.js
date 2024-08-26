@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"hypertree":[["impl&lt;'a, V: <a class=\"trait\" href=\"hypertree/red_black_tree/trait.TreeValue.html\" title=\"trait hypertree::red_black_tree::TreeValue\">TreeValue</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.78.0/core/iter/traits/collect/trait.IntoIterator.html\" title=\"trait core::iter::traits::collect::IntoIterator\">IntoIterator</a> for <a class=\"struct\" href=\"hypertree/red_black_tree/struct.RedBlackTree.html\" title=\"struct hypertree::red_black_tree::RedBlackTree\">RedBlackTree</a>&lt;'a, V&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

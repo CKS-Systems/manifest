@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_dynamic_account","get_dynamic_value","get_mut_dynamic_account"]};

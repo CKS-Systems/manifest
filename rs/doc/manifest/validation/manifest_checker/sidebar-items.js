@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_global_address"],"struct":["ManifestAccountInfo"],"trait":["ManifestAccount"]};

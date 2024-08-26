@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["emit_stack"],"struct":["CancelOrderLog","ClaimSeatLog","CreateMarketLog","DepositLog","FillLog","GlobalAddTraderLog","GlobalClaimSeatLog","GlobalCreateLog","GlobalDepositLog","PlaceOrderLog","WithdrawLog"],"trait":["Discriminant"]};

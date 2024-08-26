@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AddOrderToMarketArgs","AddOrderToMarketResult","MarketFixed"],"type":["Bookside","BooksideReadOnly","ClaimedSeatTree","ClaimedSeatTreeReadOnly","MarketRef","MarketRefMut","MarketValue"]};

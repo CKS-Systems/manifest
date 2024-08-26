@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"manifest":[["impl TryFromPrimitive for <a class=\"enum\" href=\"manifest/program/instruction/enum.ManifestInstruction.html\" title=\"enum manifest::program::instruction::ManifestInstruction\">ManifestInstruction</a>"],["impl TryFromPrimitive for <a class=\"enum\" href=\"manifest/state/resting_order/enum.OrderType.html\" title=\"enum manifest::state::resting_order::OrderType\">OrderType</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

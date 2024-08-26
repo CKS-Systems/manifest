@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["batch_update_instruction"]};

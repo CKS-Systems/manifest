@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["batch_update","claim_seat","create_market","deposit","expand","global_add_trader","global_claim_seat","global_create","global_deposit","shared","swap","withdraw"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["EmptyAccount","Program","Signer","TokenProgram"]};
