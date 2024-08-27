@@ -632,9 +632,6 @@ mod test {
             global_value.add_trader(&trader_key).unwrap();
             global_value.global_expand().unwrap();
             global_value
-                .claim_seat_on_market(&trader_key, &market_key)
-                .unwrap();
-            global_value
                 .deposit_global(&trader_key, GlobalAtoms::new(1_000_000_000_000))
                 .unwrap();
             let mut header_bytes: [u8; GLOBAL_FIXED_SIZE] = [0; GLOBAL_FIXED_SIZE];

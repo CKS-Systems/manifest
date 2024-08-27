@@ -557,7 +557,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     } else {
                         &global_trade_accounts_opts[0]
                     };
-                    try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms_to_return)?
+                    try_to_remove_from_global(&global_trade_accounts_opt)?
                 } else {
                     update_balance_by_trader_index(
                         dynamic,
@@ -883,7 +883,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms)?
+            try_to_remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
