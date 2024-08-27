@@ -323,9 +323,6 @@ pub struct RBNode<V> {
     right: DataIndex,
     parent: DataIndex,
     color: Color,
-    // TODO: include an integer that the program can use for identifying types
-    // of nodes. This will prevent the attack where a hinted action maliciously
-    // uses a different type of node.
     value: V,
 }
 unsafe impl<V: TreeValue> Pod for RBNode<V> {}

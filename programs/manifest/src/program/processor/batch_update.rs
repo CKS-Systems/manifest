@@ -145,10 +145,32 @@ pub(crate) fn process_batch_update(
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        
+        // hint usage is safe here and in cancel. Note that we do not use hints
+        // for deposit or withdraw. We check that the hint aligns with block
+        // boundaries, so the attack would have to be either giving a wrong
+        // order or claimed seat. We verify signer on trader hint and trader on
+        // resting order hint. That just leaves the case where the types are
+        // crossed. If a user maliciously gives a RestingOrder instead of a
+        // valid hint to their seat, then they would need to make the first 32
+        // bytes (effective price and price), match a pubkey they controlled, we
+        // assume statistically impossible. It is simple to make either the
+        // effective price or price match a pubkey that you control, but then
+        // you have a 1/2**64 chance the other matches.  If they managed to do
+        // that though, they could place a large order that they are on the
+        // other side of at a good price and cause loss of funds.
 
+        // On the reverse case, you could grind pubkeys theoretically til you
+        // match an order, but then the attack is only cancelling an order, not
+        // worth the work to grind a key that matches the u32 for trader index.
         let trader_index: DataIndex = match trader_index_hint {
             None => dynamic_account.get_trader_index(payer.key),
             Some(hinted_index) => {
+                assert_with_msg(
+                    hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
+                    ManifestError::WrongIndexHintParams,
+                    &format!("Invalid hint index {}", hinted_index),
+                )?;
                 assert_with_msg(
                     payer
                         .key
@@ -174,8 +196,6 @@ pub(crate) fn process_batch_update(
                     )?;
                 }
                 Some(hinted_cancel_index) => {
-                    // TODO: Verify that it is an order at the index, not a
-                    // ClaimedSeat that a malicious user pretended was a seat.
                     let order: &RestingOrder =
                         dynamic_account.get_order_by_index(hinted_cancel_index);
                     // Simple sanity check on the hint given. Make sure that it
