@@ -43,11 +43,7 @@ pub(crate) fn try_to_remove_from_global(
         "Missing global accounts when cancelling a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts {
-        global,
-        trader,
-        ..
-    } = global_trade_accounts;
+    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
     global_dynamic_account.remove_order(trader)?;
@@ -64,11 +60,7 @@ pub(crate) fn try_to_add_to_global(
         "Missing global accounts when adding a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts {
-        global,
-        trader,
-        ..
-    } = global_trade_accounts;
+    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
     global_dynamic_account.add_order(resting_order, trader)?;

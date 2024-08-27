@@ -3,14 +3,11 @@ use std::rc::Rc;
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, global_add_trader_instruction,
-        global_deposit_instruction, swap_instruction,
+        batch_update_instruction, global_add_trader_instruction, global_deposit_instruction,
+        swap_instruction,
     },
     quantities::{GlobalAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        DynamicAccount, GlobalFixed,
-        OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{DynamicAccount, GlobalFixed, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT},
 };
 use solana_program_test::tokio;
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair};
@@ -387,7 +384,15 @@ async fn global_match_22() -> anyhow::Result<()> {
     .await;
     market_fixture.reload().await;
 
-    test_fixture.claim_seat().await?;
+    let claim_seat_ix: Instruction =
+        manifest::program::claim_seat_instruction(&market_fixture.key, &payer);
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[claim_seat_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
 
     let batch_update_ix: Instruction = batch_update_instruction(
         &market_fixture.key,

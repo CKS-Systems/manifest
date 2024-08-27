@@ -22,8 +22,7 @@ use crate::{
 
 use super::{
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
-    GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE,
-    GLOBAL_TRADER_SIZE,
+    GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_TRADER_SIZE,
 };
 
 #[repr(C)]
@@ -87,10 +86,9 @@ pub struct GlobalTrader {
     /// Token balance in the global account for this trader. The tokens received
     /// in trades stay in the market.
     balance_atoms: GlobalAtoms,
-    
+
     // TODO: Track number of orders so there is an amount of gas prepayments
     // known to be returned if this seat gets purged.
-
     /// unused padding
     _padding: [u64; 1],
 }
@@ -259,11 +257,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     }
 
     /// Add global order to the global account and specific market.
-    pub fn add_order(
-        &mut self,
-        resting_order: &RestingOrder,
-        trader: &Pubkey,
-    ) -> ProgramResult {
+    pub fn add_order(&mut self, resting_order: &RestingOrder, trader: &Pubkey) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
         let global_trader: &GlobalTrader = get_global_trader(fixed, dynamic, trader)?;
         let global_atoms_deposited: GlobalAtoms = global_trader.balance_atoms;
@@ -291,10 +285,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     }
 
     /// Remove global order. Update the GlobalTraderMarketInfo.
-    pub fn remove_order(
-        &mut self,
-        _trader: &Pubkey,
-    ) -> ProgramResult {
+    pub fn remove_order(&mut self, _trader: &Pubkey) -> ProgramResult {
         // TODO: Return gas prepayment to the trader
 
         Ok(())

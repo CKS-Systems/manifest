@@ -4,8 +4,7 @@ use borsh::BorshSerialize;
 use manifest::{
     program::{
         batch_update::PlaceOrderParams, batch_update_instruction, global_add_trader_instruction,
-        global_deposit_instruction, swap_instruction,
-        ManifestInstruction, SwapParams,
+        global_deposit_instruction, swap_instruction, ManifestInstruction, SwapParams,
     },
     state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType},
     validation::get_vault_address,
