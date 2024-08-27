@@ -1,0 +1,75 @@
+name: Benchmark
+on:
+  push:
+    branches: ['main']
+    paths:
+      [
+        'lib/**',
+        'programs/**',
+      ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  SOLANA_VERSION: '1.18.22'
+  RUST_TOOLCHAIN: '1.78.0'
+
+jobs:
+  benchmark:
+    name: Benchmark CU
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout benchmarking repo
+        uses: actions/checkout@v4
+        with:
+          repository: CKS-Systems/manifest-private
+          token: ${{ secrets.MANIFEST_PAT }}
+          path: manifest-private
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set Rust version
+        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+          export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
+          solana --version
+          echo "Generating keypair..."
+          solana-keygen new -o "$HOME/.config/solana/id.json" --no-passphrase --silent
+
+      - run: rustup toolchain update nightly && rustup default nightly
+
+      - name: Run benchmark
+        run: cd $GITHUB_WORKSPACE/manifest-private; sh benchmarking/benchmark.sh
+
+      - name: Move benchmark results
+        run: |
+          mv $GITHUB_WORKSPACE/manifest-private/output.txt $GITHUB_WORKSPACE/output.txt
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: CU Benchmark
+          tool: 'customSmallerIsBetter'
+          output-file-path: output.txt
+          fail-on-alert: true
+          summary-always: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-on-alert: true
+
+          # Push and deploy GitHub pages branch automatically
+          auto-push: true
+
+      # TODO: Change the results to include all the data in one graph
