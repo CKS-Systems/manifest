@@ -6,6 +6,7 @@
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
+[![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
 
 
 Manifest is the next generation liquidity primitive on Solana.
@@ -28,8 +29,7 @@ Maximal freedom to exchange risk.
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
 | Swap accounts| 10 | 8 | 7 |
-| CU | | |
-| Instruction size | | | |
+| [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: |:heavy_check_mark: | :heavy_check_mark: :heavy_check_mark: |
 | Silent failures | Yes| Yes| No|
 | Token 22 | No| No| Yes|
 | Composable wrapper| No| No| Yes|
