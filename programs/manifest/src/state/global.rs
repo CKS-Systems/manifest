@@ -21,8 +21,8 @@ use crate::{
 };
 
 use super::{
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
-    GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_TRADER_SIZE,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, GLOBAL_BLOCK_SIZE,
+    GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_FREE_LIST_BLOCK_SIZE, GLOBAL_TRADER_SIZE,
 };
 
 #[repr(C)]
@@ -67,13 +67,13 @@ const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 struct GlobalUnusedFreeListPadding {
-    _padding: [u64; 9],
+    _padding: [u64; 7],
     _padding2: [u8; 4],
 }
 // 4 bytes are for the free list, rest is payload.
 const_assert_eq!(
     size_of::<GlobalUnusedFreeListPadding>(),
-    FREE_LIST_BLOCK_SIZE
+    GLOBAL_FREE_LIST_BLOCK_SIZE
 );
 // Does not need to align to word boundaries because does not deserialize.
 

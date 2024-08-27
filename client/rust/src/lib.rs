@@ -626,11 +626,10 @@ mod test {
         let global_account_info: AccountInfo = {
             let mut global_value: DynamicAccount<GlobalFixed, Vec<u8>> = GlobalValue {
                 fixed: GlobalFixed::new_empty(&quote_mint_key),
-                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 2],
+                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 1],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(&trader_key).unwrap();
-            global_value.global_expand().unwrap();
             global_value
                 .deposit_global(&trader_key, GlobalAtoms::new(1_000_000_000_000))
                 .unwrap();

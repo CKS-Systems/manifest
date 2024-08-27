@@ -27,8 +27,8 @@ use super::{
     constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
     order_type_can_rest,
     utils::{assert_not_already_expired, get_now_slot, try_to_add_to_global},
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
-    MARKET_FIXED_DISCRIMINANT,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 pub struct AddOrderToMarketArgs<'a, 'info> {
@@ -58,7 +58,7 @@ struct MarketUnusedFreeListPadding {
 // 4 bytes are for the free list, rest is payload.
 const_assert_eq!(
     size_of::<MarketUnusedFreeListPadding>(),
-    FREE_LIST_BLOCK_SIZE
+    MARKET_FREE_LIST_BLOCK_SIZE
 );
 // Does not need to align to word boundaries because does not deserialize.
 
