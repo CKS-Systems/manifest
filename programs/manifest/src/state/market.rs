@@ -9,7 +9,7 @@ use std::mem::size_of;
 
 use crate::{
     logs::{emit_stack, FillLog},
-    program::{assert_with_msg, ManifestError},
+    program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         utils::{
@@ -437,6 +437,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         claimed_seats_tree.insert(free_address, claimed_seat);
         fixed.claimed_seats_root_index = claimed_seats_tree.get_root_index();
 
+        get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
         Ok(())
     }
 
@@ -800,6 +802,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             )?;
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, &resting_order);
+
+        get_mut_helper::<RBNode<RestingOrder>>(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
 
         Ok(AddOrderToMarketResult {
             order_sequence_number,
