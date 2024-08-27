@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
@@ -9,8 +9,15 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke,
+    program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+};
+use spl_token_2022::{
+    extension::{
+        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
+        BaseStateWithExtensions, StateWithExtensions,
+    },
+    state::Mint,
 };
 
 pub(crate) fn process_create_market(
@@ -38,6 +45,25 @@ pub(crate) fn process_create_market(
         ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
+
+    for mint in [base_mint.as_ref(), quote_mint.as_ref()] {
+        if *mint.owner == spl_token_2022::id() {
+            let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+            let pool_mint: StateWithExtensions<'_, Mint> =
+                StateWithExtensions::<Mint>::unpack(&mint_data)?;
+            // Closable mints can be replaced with different ones, breaking some saved info on the market.
+            if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
+                let close_authority: Option<Pubkey> = extension.close_authority.into();
+                if close_authority.is_some() {
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            }
+            // Transfer fees make the amounts on withdraw and deposit not match what is expected.
+            if let Ok(_extension) = pool_mint.get_extension::<TransferFeeConfig>() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+        }
+    }
 
     {
         // Create the base and quote vaults of this market
