@@ -29,7 +29,7 @@ Maximal freedom to exchange risk.
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
 | Swap accounts| 10 | 8 | 7 |
-| [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: |:heavy_check_mark: | :heavy_check_mark: :heavy_check_mark: |
+| [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Silent failures | Yes| Yes| No|
 | Token 22 | No| No| Yes|
 | Composable wrapper| No| No| Yes|
