@@ -178,7 +178,6 @@ pub(crate) fn process_batch_update(
                     ManifestError::WrongIndexHintParams,
                     "Invalid trader hint",
                 )?;
-                drop(dynamic_account);
                 hinted_index
             }
         };
