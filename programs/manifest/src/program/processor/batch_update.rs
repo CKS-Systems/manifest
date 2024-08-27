@@ -145,7 +145,7 @@ pub(crate) fn process_batch_update(
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-        
+
         // hint usage is safe here and in cancel. Note that we do not use hints
         // for deposit or withdraw. We check that the hint aligns with block
         // boundaries, so the attack would have to be either giving a wrong
