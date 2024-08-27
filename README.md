@@ -23,16 +23,16 @@ Maximal freedom to exchange risk.
 | Crankless |No |Yes |Yes |
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
-| Anchor |Yes |Yes |No|
+| Anchor |Yes |No|No|
 | Rent|2 SOL |2 SOL |.002 SOL|
 | License|GPL |Business |GPL|
-| OpenOrders separation for read locking| Yes | No | Yes |
+| Read optimized| Yes | No | Yes |
 | Swap accounts| 10 | 8 | 7 |
 | CU | | |
-|Instruction size | | | |
-|Silent failures | Yes| Yes| No|
-|Token 22 | No| No| Yes|
-|Customizable wrapper| No| No| Yes|
+| Instruction size | | | |
+| Silent failures | Yes| Yes| No|
+| Token 22 | No| No| Yes|
+| Composable wrapper| No| No| Yes|
 
 ### Details:
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
