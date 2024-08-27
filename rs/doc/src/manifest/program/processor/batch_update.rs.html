@@ -261,7 +261,6 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -469,8 +468,7 @@
     };
 
     <span class="comment">// Result is a vector of (order_sequence_number, data_index)
-    // TODO: Do not use a vector and just write as we go.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;(u64, DataIndex)&gt; = Vec::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;(u64, DataIndex)&gt; = Vec::with_capacity(orders.len());
     <span class="kw">for </span>place_order <span class="kw">in </span>orders {
         {
             <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
@@ -517,8 +515,8 @@
         expand_market_if_needed(<span class="kw-2">&amp;</span>payer, <span class="kw-2">&amp;</span>market, <span class="kw-2">&amp;</span>system_program)<span class="question-mark">?</span>;
     }
 
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; = Vec::with_capacity(result.len());
     <span class="kw">let </span>return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
-    <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; = Vec::new();
     return_data.serialize(<span class="kw-2">&amp;mut </span>buffer).unwrap();
     set_return_data(<span class="kw-2">&amp;</span>buffer[..]);
 
