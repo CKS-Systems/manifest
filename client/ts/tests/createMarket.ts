@@ -61,7 +61,7 @@ export async function createMarket(
     programId: PROGRAM_ID,
   });
 
-  const createMarketIx = ManifestClient.createMarketIx(
+  const createMarketIx = ManifestClient['createMarketIx'](
     payerKeypair.publicKey,
     baseMint,
     quoteMint,

@@ -210,7 +210,7 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction
    */
-  public static createMarketIx(
+  private static createMarketIx(
     payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
@@ -468,7 +468,7 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
   /** Used in fill or kill orders. Set to zero otherwise. */
-  minOutAtoms: bignum;
+  minOutAtoms?: bignum;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
 };
@@ -485,11 +485,10 @@ function toWrapperPlaceOrderParams(
   }
   priceMantissa = Math.floor(priceMantissa);
 
-  // TODO: Fix this
-  // @ts-ignore
   return {
     ...wrapperPlaceOrderParamsExternal,
     priceMantissa,
     priceExponent,
+    minOutAtoms: wrapperPlaceOrderParamsExternal.minOutAtoms ?? 0,
   };
 }

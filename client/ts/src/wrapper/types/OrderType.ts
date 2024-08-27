@@ -14,8 +14,7 @@ export enum OrderType {
   Limit,
   ImmediateOrCancel,
   PostOnly,
-  PostOnlySlide,
-  FillOrKill,
+  Global,
 }
 
 /**

@@ -250,10 +250,7 @@ function modifyIdlCore(programName) {
             name: 'PostOnly',
           },
           {
-            name: 'PostOnlySlide',
-          },
-          {
-            name: 'FillOrKill',
+            name: 'Global',
           },
         ],
       },

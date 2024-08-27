@@ -474,10 +474,7 @@
             "name": "PostOnly"
           },
           {
-            "name": "PostOnlySlide"
-          },
-          {
-            "name": "FillOrKill"
+            "name": "Global"
           }
         ]
       }
