@@ -468,7 +468,7 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
   /** Used in fill or kill orders. Set to zero otherwise. */
-  minOutAtoms: bignum;
+  minOutAtoms?: bignum;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
 };
@@ -489,5 +489,6 @@ function toWrapperPlaceOrderParams(
     ...wrapperPlaceOrderParamsExternal,
     priceMantissa,
     priceExponent,
+    minOutAtoms: wrapperPlaceOrderParamsExternal.minOutAtoms ?? 0,
   };
 }
