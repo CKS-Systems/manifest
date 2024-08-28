@@ -29,8 +29,8 @@ use super::{
     utils::{
         assert_already_has_seat, assert_not_already_expired, get_now_slot, try_to_add_to_global,
     },
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
-    MARKET_FIXED_DISCRIMINANT,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 pub struct AddOrderToMarketArgs<'a, 'info> {
@@ -1064,7 +1064,7 @@ fn remove_expired(
         } else {
             &global_trade_accounts_opts[0]
         };
-        try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms_to_return)?
+        try_to_remove_from_global(&global_trade_accounts_opt)?
     } else {
         update_balance_by_trader_index(
             dynamic,
