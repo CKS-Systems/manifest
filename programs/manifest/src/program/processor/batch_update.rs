@@ -156,7 +156,7 @@ pub(crate) fn process_batch_update(
         // bytes (effective price and price), match a pubkey they controlled, we
         // assume statistically impossible. It is simple to make either the
         // effective price or price match a pubkey that you control, but then
-        // you have a 1/2**64 chance the other matches.  If they managed to do
+        // you have a 1/2**128 chance the other matches.  If they managed to do
         // that though, they could place a large order that they are on the
         // other side of at a good price and cause loss of funds.
 
