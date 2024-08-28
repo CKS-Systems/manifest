@@ -495,18 +495,18 @@ function toWrapperPlaceOrderParams(
   market: Market,
   wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
 ): WrapperPlaceOrderParams {
-  const quoteAtoms = 10 ** market.quoteDecimals();
-  const baseAtoms = 10 ** market.baseDecimals();
+  const quoteAtomsPerToken = 10 ** market.quoteDecimals();
+  const baseAtomsPerToken = 10 ** market.baseDecimals();
   // Converts token price to atom price since not always equal
   // Ex. BONK/USDC = 0.00001854 USDC tokens/BONK tokens -> 0.0001854 USDC Atoms/BONK Atoms
   const priceQuoteAtomsPerBaseAtoms =
-    wrapperPlaceOrderParamsExternal.price * (quoteAtoms / baseAtoms);
+    wrapperPlaceOrderParamsExternal.price * (quoteAtomsPerToken / baseAtomsPerToken);
   // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
   );
   const numBaseAtoms: bignum =
-    wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtoms;
+    wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken;
 
   return {
     ...wrapperPlaceOrderParamsExternal,
