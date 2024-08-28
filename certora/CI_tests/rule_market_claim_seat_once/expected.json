@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_market_claim_seat_once": "SUCCESS"
+       }
+}

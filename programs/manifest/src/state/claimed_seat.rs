@@ -1,6 +1,8 @@
 use std::mem::size_of;
 
 use crate::quantities::{BaseAtoms, QuoteAtoms};
+#[cfg(feature = "certora")]
+use crate::quantities::WrapperU64;
 use bytemuck::{Pod, Zeroable};
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
@@ -38,6 +40,19 @@ impl ClaimedSeat {
         ClaimedSeat {
             trader,
             ..Default::default()
+        }
+    }
+}
+
+#[cfg(feature = "certora")]
+impl nondet::Nondet for ClaimedSeat {
+    fn nondet() -> Self {
+        ClaimedSeat {
+            trader: nondet::nondet(),
+            base_withdrawable_balance: BaseAtoms::new(nondet::nondet()),
+            quote_withdrawable_balance: QuoteAtoms::new(nondet::nondet()),
+            quote_volume: QuoteAtoms::new(nondet::nondet()),
+            _padding: [0; 8]
         }
     }
 }

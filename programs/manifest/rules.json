@@ -1,0 +1,256 @@
+{
+  "rules": [
+    {
+      "name": "rule_market_empty",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_market_deposit",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_deposit_deposits",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_withdraw_withdraws",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_withdraw_does_not_revert",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_update_balance",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_deposit_base",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_deposit_quote",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_withdraw_base",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_withdraw_quote",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_by_index_bid",
+      "expected_result": "Violated",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_by_index_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_bid",
+      "expected_result": "Violated",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_trader_integrity_bid",
+      "expected_result": "Violated",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_trader_integrity_ask",
+      "expected_result": "Violated",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_by_index_no_revert_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_cancel_order_by_index_no_revert_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_canceled_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_canceled_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_unmatched_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_unmatched_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_full_match_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_full_match_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_partial_match_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_place_single_order_partial_match_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_market_claim_seat_once",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_market_claim_seat_twice_same_trader",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_market_claim_seat_twice_different_trader",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_rest_remaining_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_rest_remaining_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_market_release_seat",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_cancel_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_cancel_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_cancel_hint_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_cancel_hint_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_place_order_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_integrity_of_batch_update_place_order_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_base_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_base_not_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },	
+    {
+      "name": "rule_swap_quote_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },	
+    {
+      "name": "rule_swap_quote_not_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    }	     
+  ]
+}

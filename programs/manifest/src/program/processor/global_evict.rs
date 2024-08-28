@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};

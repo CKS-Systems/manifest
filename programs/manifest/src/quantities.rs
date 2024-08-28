@@ -227,7 +227,7 @@ basic_u64!(GlobalAtoms);
 #[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
 #[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
-    inner: [u64; 2],
+    pub inner: [u64; 2],
 }
 
 // These conversions are necessary, bc. the compiler forces 16 byte alignment
@@ -290,7 +290,11 @@ const_assert_eq!(
 const_assert!(DECIMAL_CONSTANTS[0] * (u32::MAX as u128) < u128::MAX);
 const_assert!(D18 * (u64::MAX as u128) < u128::MAX);
 
-// Prices
+#[cfg(feature = "certora")]
+#[path = "quantities_certora.rs"]
+mod quantities_certora;
+
+#[cfg(not(feature = "certora"))]
 impl QuoteAtomsPerBaseAtom {
     pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: [0; 2] };
     pub const MIN: Self = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, Self::MIN_EXP);
@@ -526,6 +530,33 @@ impl BaseAtoms {
         other.checked_quote_for_base(self, round_up)
     }
 }
+
+#[cfg(feature = "certora")] 
+mod nondet {
+    use super::*;
+
+    impl ::nondet::Nondet for BaseAtoms {
+        fn nondet() -> Self {
+            Self::new(::nondet::nondet())
+        }
+    }
+
+    impl ::nondet::Nondet for QuoteAtoms {
+        fn nondet() -> Self {
+            Self::new(::nondet::nondet())
+        }
+    }
+
+    impl ::nondet::Nondet for QuoteAtomsPerBaseAtom {
+        fn nondet() -> Self {
+            Self { inner : [::nondet::nondet(), ::nondet::nondet()] }
+        }
+    }
+}
+
+
+
+
 
 #[test]
 fn test_new_constructor_macro() {

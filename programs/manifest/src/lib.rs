@@ -8,6 +8,9 @@ pub mod state;
 pub mod utils;
 pub mod validation;
 
+#[cfg(feature = "certora")]
+pub mod certora;
+
 use hypertree::trace;
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,

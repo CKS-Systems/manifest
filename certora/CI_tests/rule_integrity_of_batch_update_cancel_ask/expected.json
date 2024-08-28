@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_integrity_of_batch_update_cancel_ask": "SUCCESS"
+       }
+}

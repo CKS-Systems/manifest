@@ -56,6 +56,17 @@ impl From<ManifestError> for ProgramError {
     }
 }
 
+
+#[cfg(feature = "certora")]
+#[macro_export]
+macro_rules! require {
+  ($test:expr, $err:expr, $($arg:tt)*) => {{
+       ::cvt::cvt_assume!($test);
+       Ok::<(), crate::ProgramError>(())
+  }};
+}
+
+#[cfg(not(feature = "certora"))]
 #[macro_export]
 macro_rules! require {
   ($test:expr, $err:expr, $($arg:tt)*) => {
