@@ -345,7 +345,7 @@ export class ManifestClient {
         params: {
           cancels: [],
           cancelAll: false,
-          orders: [toWrapperPlaceOrderParams(params)],
+          orders: [toWrapperPlaceOrderParams(this.market, params)],
           traderIndexHint: null,
         },
       },
@@ -462,7 +462,7 @@ export class ManifestClient {
           cancels: cancelParams,
           cancelAll,
           orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-            toWrapperPlaceOrderParams(params),
+            toWrapperPlaceOrderParams(this.market, params),
           ),
           traderIndexHint: null,
         },
@@ -477,7 +477,7 @@ export class ManifestClient {
 export type WrapperPlaceOrderParamsExternal = {
   /** Number of base atoms in the order. */
   baseAtoms: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
+  /** Price as float in quote tokens per base tokens. */
   price: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
@@ -492,11 +492,17 @@ export type WrapperPlaceOrderParamsExternal = {
 };
 
 function toWrapperPlaceOrderParams(
+  market: Market,
   wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
 ): WrapperPlaceOrderParams {
+  const quoteAtoms = 10 ** market.quoteDecimals();
+  const baseAtoms = 10 ** market.baseDecimals();
+  // Converts token price to atom price since not always equal
+  // Ex. BONK/USDC = 0.00001854 USDC tokens/BONK tokens -> 0.0001854 USDC Atoms/BONK Atoms
+  const priceQuoteAtomsPerBaseAtoms = wrapperPlaceOrderParamsExternal.price * (quoteAtoms / baseAtoms);
   // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
-    wrapperPlaceOrderParamsExternal.price,
+    priceQuoteAtomsPerBaseAtoms
   );
 
   return {
