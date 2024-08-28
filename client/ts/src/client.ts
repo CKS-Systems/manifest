@@ -500,7 +500,8 @@ function toWrapperPlaceOrderParams(
   // Converts token price to atom price since not always equal
   // Ex. BONK/USDC = 0.00001854 USDC tokens/BONK tokens -> 0.0001854 USDC Atoms/BONK Atoms
   const priceQuoteAtomsPerBaseAtoms =
-    wrapperPlaceOrderParamsExternal.price * (quoteAtomsPerToken / baseAtomsPerToken);
+    wrapperPlaceOrderParamsExternal.price *
+    (quoteAtomsPerToken / baseAtomsPerToken);
   // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
