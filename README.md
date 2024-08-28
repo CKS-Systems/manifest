@@ -28,11 +28,12 @@ Maximal freedom to exchange risk.
 | Rent|2 SOL |2 SOL |.002 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
-| Swap accounts| 10 | 8 | 7 |
+| Swap accounts| 16 | 8 | 7 |
 | [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Silent failures | Yes| Yes| No|
 | Token 22 | No| No| Yes|
 | Composable wrapper| No| No| Yes|
+| Capital Efficient | No| No| Yes|
 
 ### Details:
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
@@ -47,6 +48,7 @@ Maximal freedom to exchange risk.
 - Silent failures are an unfortunate feature request from market makers because of how solana transactions work. Manifest rejects this at the infra level, but still allows those who need it to handle in the wrapper.
 - Token 22 is the new version of token program. While it is not useful for defi and will make orderbooks less efficient, there are some notable tokens that will use it. Manifest only takes the performance hit to support token22 precisely when needed and moving token22 tokens, and only then.
 - A new core vs. wrapper program architecture enables greater composability for traders and exchange interfaces. Customize feature sets and distribution for any market requirement.
+- Capital efficient order type that allows market making on multiple markets while reusing capital across them.
 
 ## Design Overview
 ### Data Structure
