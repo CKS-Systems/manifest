@@ -222,15 +222,15 @@
                     return '\n' + data.commit.message + '\n\n' + data.commit.timestamp + ' committed by @' + data.commit.committer.username + '\n';
                   },
                   label: item => {
-                    let {label, index, datasetIndex} = item;
+                    let {value , index, datasetIndex} = item;
                     const dataSetName = dataSetNames[datasetIndex];
                     const data = datasets[0].dataSet.get(dataSetName)[index];
                     const { range, unit } = data.bench;
-                    label += ' ' + unit;
+                    value += ' ' + unit;
                     if (range) {
-                      label += ' (' + range + ')';
+                      value += ' (' + range + ')';
                     }
-                    return label;
+                    return value;
                   },
                   afterLabel: item => {
                     let {label, index, datasetIndex} = item;
@@ -253,7 +253,6 @@
               },
             };
 
-            console.log(data)
             new Chart(canvas, {
               type: 'line',
               data,
