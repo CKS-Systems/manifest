@@ -170,22 +170,26 @@
 
         function renderAllChars(dataSets) {
 
-          function renderGraph(parent, name, dataset) {
+          function renderGraph(parent, datasets) {
+            // datasets: {name, dataSet: Map(PHX_50 ==> data)}[]
             const canvas = document.createElement('canvas');
             canvas.className = 'benchmark-chart';
             parent.appendChild(canvas);
 
-            const color = toolColors[dataset.length > 0 ? dataset[0].tool : '_'];
+            const labels = Array.from(datasets[0].dataSet.values())[0].map((data) => { return data.commit.id.slice(0, 7); });
+
+            const dataSetNames = Array.from(datasets[0].dataSet.keys());
             const data = {
-              labels: dataset.map(d => d.commit.id.slice(0, 7)),
-              datasets: [
-                {
-                  label: name,
-                  data: dataset.map(d => d.bench.value),
-                  borderColor: color,
-                  backgroundColor: color + '60', // Add alpha for #rrggbbaa
-                }
-              ],
+              labels: labels,
+              datasets: dataSetNames.map((dataSetName) => {
+                const data = datasets[0].dataSet.get(dataSetName).map((values) => { return values.bench.value; });
+                return {
+                  label: dataSetName,
+                  data: data,
+                  borderColor: Object.values(toolColors)[dataSetNames.indexOf(dataSetName)],
+                  backgroundColor: Object.values(toolColors)[dataSetNames.indexOf(dataSetName)] + '60', // Add alpha for #rrggbbaa
+                };
+              })
             };
             const options = {
               scales: {
@@ -201,7 +205,7 @@
                   {
                     scaleLabel: {
                       display: true,
-                      labelString: dataset.length > 0 ? dataset[0].bench.unit : '',
+                      labelString: datasets[0].dataSet.values().length > 0 ? datasets[0].dataSet.values().bench.unit : '',
                     },
                     ticks: {
                       beginAtZero: true,
@@ -212,13 +216,16 @@
               tooltips: {
                 callbacks: {
                   afterTitle: items => {
-                    const {index} = items[0];
-                    const data = dataset[index];
+                    const {index, datasetIndex} = items[0];
+                    const dataSetName = dataSetNames[datasetIndex];
+                    const data = datasets[0].dataSet.get(dataSetName)[index];
                     return '\n' + data.commit.message + '\n\n' + data.commit.timestamp + ' committed by @' + data.commit.committer.username + '\n';
                   },
                   label: item => {
-                    let label = item.value;
-                    const { range, unit } = dataset[item.index].bench;
+                    let {label, index, datasetIndex} = item;
+                    const dataSetName = dataSetNames[datasetIndex];
+                    const data = datasets[0].dataSet.get(dataSetName)[index];
+                    const { range, unit } = data.bench;
                     label += ' ' + unit;
                     if (range) {
                       label += ' (' + range + ')';
@@ -226,7 +233,10 @@
                     return label;
                   },
                   afterLabel: item => {
-                    const { extra } = dataset[item.index].bench;
+                    let {label, index, datasetIndex} = item;
+                    const dataSetName = dataSetNames[datasetIndex];
+                    const data = datasets[0].dataSet.get(dataSetName)[index];
+                    const { extra } = data.bench;
                     return extra ? '\n' + extra : '';
                   }
                 }
@@ -237,11 +247,13 @@
                 }
                 // XXX: Undocumented. How can we know the index?
                 const index = activeElems[0]._index;
-                const url = dataset[index].commit.url;
+                const data = Array.from(datasets[0].dataSet.values())[index][0];
+                const url = data.commit.url;
                 window.open(url, '_blank');
               },
             };
 
+            console.log(data)
             new Chart(canvas, {
               type: 'line',
               data,
@@ -249,29 +261,29 @@
             });
           }
 
-          function renderBenchSet(name, benchSet, main) {
+          function renderBenchSet(benchSets, main) {
+            // const {name, dataSet} of benchSets
+            // benchSets: {name, dataSet}[]
             const setElem = document.createElement('div');
             setElem.className = 'benchmark-set';
             main.appendChild(setElem);
 
             const nameElem = document.createElement('h1');
             nameElem.className = 'benchmark-title';
-            nameElem.textContent = name;
+            nameElem.textContent = benchSets[0].name;
             setElem.appendChild(nameElem);
 
             const graphsElem = document.createElement('div');
             graphsElem.className = 'benchmark-graphs';
             setElem.appendChild(graphsElem);
 
-            for (const [benchName, benches] of benchSet.entries()) {
-              renderGraph(graphsElem, benchName, benches)
-            }
+            //for (const [benchName, benches] of benchSet.entries()) {
+            renderGraph(graphsElem, benchSets)
+            //}
           }
 
           const main = document.getElementById('main');
-          for (const {name, dataSet} of dataSets) {
-            renderBenchSet(name, dataSet, main);
-          }
+          renderBenchSet(dataSets, main);
         }
 
         renderAllChars(init()); // Start
