@@ -21,8 +21,14 @@ async function testUtils(): Promise<void> {
 }
 
 function testToMantissaAndExponent(): void {
-  assert(toMantissaAndExponent(3).priceExponent == -9);
-  assert(toMantissaAndExponent(3).priceMantissa == 3_000_000_000);
+  assert(
+    toMantissaAndExponent(3).priceExponent == -9,
+    `Unexpected exponent ${toMantissaAndExponent(3).priceExponent}`,
+  );
+  assert(
+    toMantissaAndExponent(3).priceMantissa == 3_000_000_000,
+    `Unexpected exponent ${toMantissaAndExponent(3).priceMantissa}`,
+  );
 }
 
 describe('Utils test', () => {
