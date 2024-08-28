@@ -51,7 +51,7 @@ Maximal freedom to exchange risk.
 ## Design Overview
 ### Data Structure
 
-The innovation that allows this next leap in onchain trading is the hypertree [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
+The innovation that allows this next leap in onchain trading is the [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
 
 The market account holds all relevant information. It begins with a header that stores all of the fixed information for the market like BaseMint, QuoteMint. All variable data (RestingOrders and ClaimedSeats) are in the dynamic
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,
