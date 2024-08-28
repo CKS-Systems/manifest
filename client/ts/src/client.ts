@@ -513,7 +513,8 @@ export function toMantissaAndExponent(input: number): {
 } {
   let priceExponent = 0;
   let priceMantissa = input;
-  while (priceExponent > -20 && priceMantissa < 4_294_967_295 / 100) {
+  const uInt32Max = 4_294_967_296;
+  while (priceExponent > -20 && priceMantissa < uInt32Max / 100) {
     priceExponent -= 1;
     priceMantissa *= 10;
   }
