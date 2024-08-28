@@ -494,7 +494,6 @@ export type WrapperPlaceOrderParamsExternal = {
 function toWrapperPlaceOrderParams(
   wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
 ): WrapperPlaceOrderParams {
-  // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     wrapperPlaceOrderParamsExternal.price,
   );
