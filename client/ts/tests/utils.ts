@@ -22,12 +22,12 @@ async function testUtils(): Promise<void> {
 
 function testToMantissaAndExponent(): void {
   assert(
-    toMantissaAndExponent(3).priceExponent == -9,
+    toMantissaAndExponent(3).priceExponent == -8,
     `Unexpected exponent ${toMantissaAndExponent(3).priceExponent}`,
   );
   assert(
-    toMantissaAndExponent(3).priceMantissa == 3_000_000_000,
-    `Unexpected exponent ${toMantissaAndExponent(3).priceMantissa}`,
+    toMantissaAndExponent(3).priceMantissa == 300_000_000,
+    `Unexpected manitssa ${toMantissaAndExponent(3).priceMantissa}`,
   );
 }
 
