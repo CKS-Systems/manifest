@@ -27,8 +27,8 @@ use super::{
     constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
     order_type_can_rest,
     utils::{assert_not_already_expired, get_now_slot, try_to_add_to_global},
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, FREE_LIST_BLOCK_SIZE,
-    MARKET_FIXED_DISCRIMINANT,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 pub struct AddOrderToMarketArgs<'a, 'info> {
@@ -58,7 +58,7 @@ struct MarketUnusedFreeListPadding {
 // 4 bytes are for the free list, rest is payload.
 const_assert_eq!(
     size_of::<MarketUnusedFreeListPadding>(),
-    FREE_LIST_BLOCK_SIZE
+    MARKET_FREE_LIST_BLOCK_SIZE
 );
 // Does not need to align to word boundaries because does not deserialize.
 
@@ -557,7 +557,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     } else {
                         &global_trade_accounts_opts[0]
                     };
-                    try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms_to_return)?
+                    try_to_remove_from_global(&global_trade_accounts_opt)?
                 } else {
                     update_balance_by_trader_index(
                         dynamic,
@@ -883,7 +883,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms)?
+            try_to_remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
