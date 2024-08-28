@@ -5,8 +5,8 @@ use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut,
-        OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult,
+        MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -152,6 +152,7 @@ pub(crate) fn process_batch_update(
 
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+        let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
         let trader_index: DataIndex = match trader_index_hint {
             None => {
@@ -165,12 +166,12 @@ pub(crate) fn process_batch_update(
                     &format!("Invalid trader hint index {}", hinted_index),
                 )?;
                 assert_with_msg(
-                    get_helper::<RBNode<ClaimedSeat>>(market_data, hinted_index).get_payload_type()
+                    get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
+                        .get_payload_type()
                         == MarketDataTreeNodeType::ClaimedSeat as u8,
                     ManifestError::WrongIndexHintParams,
                     &format!("Invalid trader hint index {}", hinted_index),
                 )?;
-                let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
                 assert_with_msg(
                     payer
                         .key
@@ -182,13 +183,13 @@ pub(crate) fn process_batch_update(
             }
         };
 
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         for cancel in cancels {
             // Hinted is preferred because that is O(1) to find and O(log n) to
             // remove. Without the hint, we lookup by order_sequence_number and
             // that is O(n) lookup and O(log n) delete.
             match cancel.order_index_hint() {
                 None => {
-                    let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
                     // Cancels must succeed otherwise we fail the tx.
                     dynamic_account.cancel_order(
                         trader_index,
@@ -206,13 +207,15 @@ pub(crate) fn process_batch_update(
                         &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;
                     assert_with_msg(
-                        get_helper::<RBNode<RestingOrder>>(market_data, hinted_cancel_index)
-                            .get_payload_type()
+                        get_helper::<RBNode<ClaimedSeat>>(
+                            &dynamic_account.dynamic,
+                            hinted_cancel_index,
+                        )
+                        .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder as u8,
                         ManifestError::WrongIndexHintParams,
                         &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;
-                    let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
                     let order: &RestingOrder =
                         dynamic_account.get_order_by_index(hinted_cancel_index);
                     assert_with_msg(

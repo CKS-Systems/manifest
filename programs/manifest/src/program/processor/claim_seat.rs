@@ -35,7 +35,6 @@ pub(crate) fn process_claim_seat_internal<'a, 'info>(
 ) -> ProgramResult {
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-
     dynamic_account.claim_seat(payer.key)?;
 
     emit_stack(ClaimSeatLog {
