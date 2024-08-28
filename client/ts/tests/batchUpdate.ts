@@ -57,7 +57,7 @@ async function batchUpdate(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
-  baseAtoms: number,
+  numBaseTokens: number,
   price: number,
   isBid: boolean,
   orderType: OrderType,
@@ -74,7 +74,7 @@ async function batchUpdate(
   const placeOrderIx = client.batchUpdateIx(
     [
       {
-        baseAtoms,
+        numBaseTokens,
         price,
         isBid,
         lastValidSlot: lastValidSlot,

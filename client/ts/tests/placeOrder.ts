@@ -67,7 +67,7 @@ export async function placeOrder(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
-  baseAtoms: number,
+  numBaseTokens: number,
   price: number,
   isBid: boolean,
   orderType: OrderType,
@@ -82,7 +82,7 @@ export async function placeOrder(
   );
 
   const placeOrderIx = client.placeOrderIx({
-    baseAtoms,
+    numBaseTokens,
     price,
     isBid,
     lastValidSlot: lastValidSlot,
