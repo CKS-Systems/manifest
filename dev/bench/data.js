@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724807694513,
+  "lastUpdate": 1724884223508,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -61,6 +61,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 12095,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a0284f2030b2b074af17a54f9bc6b5dd95f30330",
+          "message": "Make global only one level of tree (#30)\n\n* first step of overhauling global to be resistant to squatting\r\n\r\n* global cleanup\r\n\r\n* test fix",
+          "timestamp": "2024-08-28T18:13:30-04:00",
+          "tree_id": "b875573a46bef7e8406f85d9318b064aa394805c",
+          "url": "https://github.com/CKS-Systems/manifest/commit/a0284f2030b2b074af17a54f9bc6b5dd95f30330"
+        },
+        "date": 1724884222388,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 7021,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13230,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13938,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 7353,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 10705,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 12093,
             "unit": "CU",
             "range": "",
             "extra": ""
