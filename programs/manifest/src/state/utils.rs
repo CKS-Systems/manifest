@@ -6,6 +6,7 @@ use crate::{
     quantities::{GlobalAtoms, WrapperU64},
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
 };
+use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
 use solana_program::sysvar::Sysvar;
 use solana_program::{entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey};
@@ -84,6 +85,15 @@ pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) ->
             "Placing an already expired order. now: {} last_valid: {}",
             now_slot, last_valid_slot
         ),
+    )?;
+    Ok(())
+}
+
+pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult {
+    assert_with_msg(
+        trader_index != NIL,
+        ManifestError::AlreadyClaimedSeat,
+        "Need to claim a seat first",
     )?;
     Ok(())
 }

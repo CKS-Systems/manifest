@@ -26,7 +26,9 @@ use super::{
     claimed_seat::ClaimedSeat,
     constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
     order_type_can_rest,
-    utils::{assert_not_already_expired, get_now_slot, try_to_add_to_global},
+    utils::{
+        assert_already_has_seat, assert_not_already_expired, get_now_slot, try_to_add_to_global,
+    },
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
     MARKET_FREE_LIST_BLOCK_SIZE,
 };
@@ -504,11 +506,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             order_type,
             global_trade_accounts_opts,
         } = args;
-        assert_with_msg(
-            trader_index != NIL,
-            ManifestError::AlreadyClaimedSeat,
-            "Need to claim a seat first",
-        )?;
+        assert_already_has_seat(trader_index)?;
         let now_slot: u32 = get_now_slot();
         assert_not_already_expired(last_valid_slot, now_slot)?;
 
@@ -535,39 +533,15 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
             let other_order: &RestingOrder =
                 get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
-            trace!("PRE MATCH rem:{remaining_base_atoms} now:{now_slot} order:{other_order:?}");
 
-            // Remove the other order if expired.
+            // Remove the resting order if expired.
             if other_order.is_expired(now_slot) {
-                let other_is_bid: bool = other_order.get_is_bid();
-
-                let amount_atoms_to_return: u64 = if other_is_bid {
-                    other_order
-                        .get_price()
-                        .checked_quote_for_base(other_order.get_num_base_atoms(), false)?
-                        .as_u64()
-                } else {
-                    other_order.get_num_base_atoms().as_u64()
-                };
-
-                // Global order balances are accounted for on the global accounts, not on the market.
-                if other_order.is_global() {
-                    let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if other_is_bid {
-                        &global_trade_accounts_opts[1]
-                    } else {
-                        &global_trade_accounts_opts[0]
-                    };
-                    try_to_remove_from_global(&global_trade_accounts_opt)?
-                } else {
-                    update_balance_by_trader_index(
-                        dynamic,
-                        other_order.get_trader_index(),
-                        !other_is_bid,
-                        true,
-                        amount_atoms_to_return,
-                    )?;
-                }
-                remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
+                remove_expired(
+                    fixed,
+                    dynamic,
+                    current_order_index,
+                    global_trade_accounts_opts,
+                )?;
                 current_order_index = next_order_index;
                 continue;
             }
@@ -579,14 +553,15 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 break;
             }
 
-            // Got a match. First make sure we are allowed to match.
+            // Got a match. First make sure we are allowed to match. We check
+            // inside the matching rather than skipping the matching altogether
+            // because post only orders should fail, not produce a crossed book.
             assert_can_take(order_type)?;
 
-            // Match the order
             let other_trader_index: DataIndex = other_order.get_trader_index();
             let did_fully_match_resting_order: bool =
                 remaining_base_atoms >= other_order.get_num_base_atoms();
-            let matched_num_base_atoms: BaseAtoms = if did_fully_match_resting_order {
+            let base_atoms_traded: BaseAtoms = if did_fully_match_resting_order {
                 other_order.get_num_base_atoms()
             } else {
                 remaining_base_atoms
@@ -597,17 +572,19 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // Round in favor of the maker. There is a later check that this
             // rounding still results in a price that is fine for the taker.
             let quote_atoms_traded: QuoteAtoms =
-                matched_price.checked_quote_for_base(matched_num_base_atoms, is_bid)?;
-
-            trace!("MATCH base:{matched_num_base_atoms} price:{matched_price} quote:{quote_atoms_traded}");
+                matched_price.checked_quote_for_base(base_atoms_traded, is_bid)?;
 
             // If it is a global order, just in time bring the funds over, or
             // remove from the tree and continue on to the next order.
+            let maker: Pubkey =
+                get_helper::<RBNode<ClaimedSeat>>(dynamic, other_order.get_trader_index())
+                    .get_value()
+                    .trader;
+            let taker: Pubkey = get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
+                .get_value()
+                .trader;
+
             if other_order.is_global() {
-                let resting_order_trader: Pubkey =
-                    get_helper::<RBNode<ClaimedSeat>>(dynamic, other_order.get_trader_index())
-                        .get_value()
-                        .trader;
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
                     &global_trade_accounts_opts[0]
                 } else {
@@ -615,57 +592,51 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 };
                 move_global_tokens_and_modify_resting_order(
                     global_trade_accounts_opt,
-                    &resting_order_trader,
-                    // TODO: Fix for rounding
+                    &maker,
                     GlobalAtoms::new(if is_bid {
                         quote_atoms_traded.as_u64()
                     } else {
-                        matched_num_base_atoms.as_u64()
+                        base_atoms_traded.as_u64()
                     }),
                 )?;
+                // TODO: Handle the case where there are not enough funds
             }
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
 
-            total_base_atoms_traded += matched_num_base_atoms;
+            total_base_atoms_traded += base_atoms_traded;
             total_quote_atoms_traded += quote_atoms_traded;
-
-            // These are only used when is_bid, included up here for borrow checker reasons.
-            let previous_maker_quote_atoms_allocated: QuoteAtoms =
-                matched_price.checked_quote_for_base(other_order.get_num_base_atoms(), false)?;
-            let new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
-                .checked_quote_for_base(
-                    other_order
-                        .get_num_base_atoms()
-                        .checked_sub(matched_num_base_atoms)?,
-                    false,
-                )?;
-            // Use a cloned version to avoid borrow checker issues.
-            let mut cloned_other_order: RestingOrder = other_order.clone();
-
-            // Increase maker from the matched amount in the trade.
-            update_balance_by_trader_index(
-                dynamic,
-                other_trader_index,
-                !is_bid,
-                true,
-                if is_bid {
-                    quote_atoms_traded.into()
-                } else {
-                    matched_num_base_atoms.into()
-                },
-            )?;
 
             // Possibly increase bonus atom maker gets from the rounding the
             // quote in their favor. They will get one less than expected when
             // cancelling because of rounding, this counters that. This ensures
             // that the amount of quote that the maker has credit for when they
             // cancel/expire is always the maximum amount that could have been
-            // used in matching that order. This atom is not lost, it just is
-            // now sitting in the RestingOrder.
+            // used in matching that order.
+            // Example:
+            // Maker deposits 11            | Balance: 0 base 11 quote | Orders: []
+            // Maker bid for 10@1.15        | Balance: 0 base 0 quote  | Orders: [bid 10@1.15]
+            // Swap    5 base <--> 5 quote  | Balance: 5 base 0 quote  | Orders: [bid 5@1.15]
+            //     <this code block>        | Balance: 5 base 1 quote  | Orders: [bid 5@1.15]
+            // Maker cancel                 | Balance: 5 base 6 quote  | Orders: []
+            //
+            // The swapper deposited 5 base and withdrew 5 quote. The maker deposited 11 quote.
+            // If we didnt do this adjustment, there would be an unaccounted for
+            // quote atom.
+            // Note that we do not have to do this on the other direction
+            // because the amount of atoms that a maker needs to support an ask
+            // is exact. The rounding is always on quote.
             if !is_bid {
-                // !is_bid means the maker is a bid, so we need to adjust quote
-                // for rounding.
+                // These are only used when is_bid, included up here for borrow checker reasons.
+                let other_order: &RestingOrder =
+                    get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
+                let previous_maker_quote_atoms_allocated: QuoteAtoms = matched_price
+                    .checked_quote_for_base(other_order.get_num_base_atoms(), false)?;
+                let new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
+                    .checked_quote_for_base(
+                        other_order
+                            .get_num_base_atoms()
+                            .checked_sub(base_atoms_traded)?,
+                        false,
+                    )?;
                 update_balance_by_trader_index(
                     dynamic,
                     other_trader_index,
@@ -678,6 +649,19 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 )?;
             }
 
+            // Increase maker from the matched amount in the trade.
+            update_balance_by_trader_index(
+                dynamic,
+                other_trader_index,
+                !is_bid,
+                true,
+                if is_bid {
+                    quote_atoms_traded.into()
+                } else {
+                    base_atoms_traded.into()
+                },
+            )?;
+
             // Decrease taker
             update_balance_by_trader_index(
                 dynamic,
@@ -687,7 +671,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 if is_bid {
                     quote_atoms_traded.into()
                 } else {
-                    matched_num_base_atoms.into()
+                    base_atoms_traded.into()
                 },
             )?;
             // Increase taker
@@ -697,24 +681,17 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 is_bid,
                 true,
                 if is_bid {
-                    matched_num_base_atoms.into()
+                    base_atoms_traded.into()
                 } else {
                     quote_atoms_traded.into()
                 },
             )?;
 
-            // Lookup on every match. This is relatively cheap and fills can
-            // afford the CU of repeated lookups.
-            let trader: Pubkey = get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
-                .get_value()
-                .trader;
             emit_stack(FillLog {
                 market,
-                maker: get_helper::<RBNode<ClaimedSeat>>(dynamic, other_trader_index)
-                    .get_value()
-                    .trader,
-                taker: trader,
-                base_atoms: matched_num_base_atoms,
+                maker,
+                taker,
+                base_atoms: base_atoms_traded,
                 quote_atoms: quote_atoms_traded,
                 price: matched_price,
                 taker_is_buy: PodBool::from(is_bid),
@@ -722,17 +699,17 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             })?;
 
             if did_fully_match_resting_order {
-                trace!("FULL MATCH");
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
-                remaining_base_atoms = remaining_base_atoms.checked_sub(matched_num_base_atoms)?;
+                remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_order_index = next_order_index;
             } else {
-                trace!(
-                    "PART MATCH -> reduce {} by {matched_num_base_atoms}",
-                    cloned_other_order.get_num_base_atoms()
-                );
-
-                cloned_other_order.reduce(matched_num_base_atoms)?;
+                let mut cloned_other_order: RestingOrder =
+                    get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
+                        .get_value()
+                        .clone();
+                cloned_other_order.reduce(base_atoms_traded)?;
+                // Remove and reinsert the other order. Their effective price
+                // and thus their sorting in the orderbook may have changed.
                 remove_order_from_tree(fixed, dynamic, current_order_index, !is_bid)?;
                 insert_order_into_tree(
                     !is_bid,
@@ -742,15 +719,11 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     &cloned_other_order,
                 );
                 remaining_base_atoms = BaseAtoms::ZERO;
-
-                trace!(
-                    "PART MATCH -> reduced to {}",
-                    cloned_other_order.get_num_base_atoms()
-                );
                 break;
             }
         }
 
+        // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
             return Ok(AddOrderToMarketResult {
                 order_sequence_number,
@@ -759,8 +732,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 quote_atoms_traded: total_quote_atoms_traded,
             });
         }
-
-        let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
         // Put the remaining in an order on the other bookside.
         let free_address: DataIndex = get_free_address_on_market_fixed(fixed, dynamic);
@@ -895,14 +866,14 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
 fn remove_order_from_tree(
     fixed: &mut MarketFixed,
-    data: &mut [u8],
+    dynamic: &mut [u8],
     order_index: DataIndex,
     is_bids: bool,
 ) -> ProgramResult {
     let mut tree: Bookside = if is_bids {
-        Bookside::new(data, fixed.bids_root_index, fixed.bids_best_index)
+        Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
     } else {
-        Bookside::new(data, fixed.asks_root_index, fixed.asks_best_index)
+        Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
     };
     tree.remove_by_index(order_index);
 
@@ -934,27 +905,27 @@ fn remove_order_from_tree(
 // Remove order from the tree, free the block.
 fn remove_order_from_tree_and_free(
     fixed: &mut MarketFixed,
-    data: &mut [u8],
+    dynamic: &mut [u8],
     order_index: DataIndex,
     is_bids: bool,
 ) -> ProgramResult {
-    remove_order_from_tree(fixed, data, order_index, is_bids)?;
+    remove_order_from_tree(fixed, dynamic, order_index, is_bids)?;
     let mut free_list: FreeList<MarketUnusedFreeListPadding> =
-        FreeList::new(data, fixed.free_list_head_index);
+        FreeList::new(dynamic, fixed.free_list_head_index);
     free_list.add(order_index);
     fixed.free_list_head_index = order_index;
     Ok(())
 }
 
 fn update_balance_by_trader_index(
-    data: &mut [u8],
+    dynamic: &mut [u8],
     trader_index: DataIndex,
     is_base: bool,
     is_increase: bool,
     amount_atoms: u64,
 ) -> ProgramResult {
     let claimed_seat: &mut ClaimedSeat =
-        get_mut_helper::<RBNode<ClaimedSeat>>(data, trader_index).get_mut_value();
+        get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
 
     trace!("update_balance_by_trader_index idx:{trader_index} base:{is_base} inc:{is_increase} amount:{amount_atoms}");
     if is_base {
@@ -999,14 +970,14 @@ fn update_balance_by_trader_index(
 fn insert_order_into_tree(
     is_bid: bool,
     fixed: &mut MarketFixed,
-    data: &mut [u8],
+    dynamic: &mut [u8],
     free_address: DataIndex,
     resting_order: &RestingOrder,
 ) {
     let mut tree: Bookside = if is_bid {
-        Bookside::new(data, fixed.bids_root_index, fixed.bids_best_index)
+        Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
     } else {
-        Bookside::new(data, fixed.asks_root_index, fixed.asks_best_index)
+        Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
     };
     tree.insert(free_address, *resting_order);
     if is_bid {
@@ -1036,19 +1007,19 @@ fn insert_order_into_tree(
 
 fn get_next_candidate_match_index(
     fixed: &MarketFixed,
-    data: &[u8],
+    dynamic: &[u8],
     current_order_index: DataIndex,
     is_bid: bool,
 ) -> DataIndex {
     if is_bid {
         let tree: BooksideReadOnly =
-            BooksideReadOnly::new(data, fixed.asks_root_index, fixed.asks_best_index);
+            BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         let next_order_index: DataIndex =
             tree.get_predecessor_index::<RestingOrder>(current_order_index);
         next_order_index
     } else {
         let tree: BooksideReadOnly =
-            BooksideReadOnly::new(data, fixed.bids_root_index, fixed.bids_best_index);
+            BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         let next_order_index: DataIndex =
             tree.get_predecessor_index::<RestingOrder>(current_order_index);
         next_order_index
@@ -1061,4 +1032,48 @@ fn get_free_address_on_market_fixed(fixed: &mut MarketFixed, dynamic: &mut [u8])
     let free_address: DataIndex = free_list.remove();
     fixed.free_list_head_index = free_list.get_head();
     free_address
+}
+
+fn remove_expired(
+    fixed: &mut MarketFixed,
+    dynamic: &mut [u8],
+    order_to_remove_index: DataIndex,
+    global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+) -> ProgramResult {
+    let other_order: &RestingOrder =
+        get_helper::<RBNode<RestingOrder>>(dynamic, order_to_remove_index).get_value();
+    let other_is_bid: bool = other_order.get_is_bid();
+
+    // Return the exact number of atoms if the resting order is an
+    // ask. If the resting order is bid, multiply by price and round
+    // in favor of the maker which here means down. The maker places
+    // the minimum number of atoms required.
+    let amount_atoms_to_return: u64 = if other_is_bid {
+        other_order
+            .get_price()
+            .checked_quote_for_base(other_order.get_num_base_atoms(), false)?
+            .as_u64()
+    } else {
+        other_order.get_num_base_atoms().as_u64()
+    };
+
+    // Global order balances are accounted for on the global accounts, not on the market.
+    if other_order.is_global() {
+        let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if other_is_bid {
+            &global_trade_accounts_opts[1]
+        } else {
+            &global_trade_accounts_opts[0]
+        };
+        try_to_remove_from_global(&global_trade_accounts_opt)?
+    } else {
+        update_balance_by_trader_index(
+            dynamic,
+            other_order.get_trader_index(),
+            !other_is_bid,
+            true,
+            amount_atoms_to_return,
+        )?;
+    }
+    remove_order_from_tree_and_free(fixed, dynamic, order_to_remove_index, other_is_bid)?;
+    Ok(())
 }
