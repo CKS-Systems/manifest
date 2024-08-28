@@ -806,7 +806,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         get_mut_helper::<RBNode<RestingOrder>>(dynamic, free_address)
             .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
         solana_program::msg!("added at {:?}", free_address);
-        solana_program::msg!("{}", get_helper::<RBNode<RestingOrder>>(dynamic, free_address).get_payload_type() as u8);
+        solana_program::msg!(
+            "{}",
+            get_helper::<RBNode<RestingOrder>>(dynamic, free_address).get_payload_type() as u8
+        );
 
         Ok(AddOrderToMarketResult {
             order_sequence_number,

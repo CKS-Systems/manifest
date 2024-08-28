@@ -6,9 +6,7 @@ use manifest::{
     state::{OrderType, MARKET_BLOCK_SIZE},
 };
 use solana_program_test::tokio;
-use solana_sdk::{
-    instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
-};
+use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer};
 
 use crate::{send_tx_with_retry, Side, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 

@@ -5,8 +5,8 @@ use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult,
-        MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut,
+        OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
