@@ -39,6 +39,8 @@ import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 
 export class ManifestClient {
+  private isBase22: boolean;
+  private isQuote22: boolean;
   private constructor(
     public connection: Connection,
     public wrapper: Wrapper,
@@ -46,7 +48,10 @@ export class ManifestClient {
     private payer: PublicKey,
     private baseMint: Mint,
     private quoteMint: Mint,
-  ) {}
+  ) {
+    this.isBase22 = baseMint.tlvData.length > 0;
+    this.isQuote22 = quoteMint.tlvData.length > 0;
+  }
 
   /**
    * Create a new client which creates a wrapper and claims seat if needed.
@@ -68,7 +73,6 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    // TODO: Maybe update for token22.
     const baseMint: Mint = await getMint(connection, baseMintPk);
     const quoteMint: Mint = await getMint(connection, quoteMintPk);
 
@@ -248,6 +252,10 @@ export class ManifestClient {
       mint,
       payer,
     );
+    const is22: boolean =
+      (mint == this.baseMint.address && this.isBase22) ||
+      (mint == this.baseMint.address && this.isBase22);
+
     return createDepositInstruction(
       {
         payer,
@@ -258,6 +266,7 @@ export class ManifestClient {
         owner: this.payer,
         wrapperState: this.wrapper.address,
         mint,
+        tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
       },
       {
         params: {
@@ -287,6 +296,10 @@ export class ManifestClient {
       mint,
       payer,
     );
+    const is22: boolean =
+      (mint == this.baseMint.address && this.isBase22) ||
+      (mint == this.baseMint.address && this.isBase22);
+
     return createWithdrawInstruction(
       {
         payer,
@@ -297,6 +310,7 @@ export class ManifestClient {
         owner: this.payer,
         wrapperState: this.wrapper.address,
         mint,
+        tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
       },
       {
         params: {
@@ -377,9 +391,13 @@ export class ManifestClient {
         traderQuote,
         baseVault,
         quoteVault,
-        tokenProgramBase: TOKEN_PROGRAM_ID,
+        tokenProgramBase: this.isBase22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
         baseMint: this.baseMint.address,
-        tokenProgramQuote: TOKEN_PROGRAM_ID,
+        tokenProgramQuote: this.isQuote22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
         quoteMint: this.quoteMint.address,
       },
       {
@@ -477,18 +495,33 @@ function toWrapperPlaceOrderParams(
   wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
 ): WrapperPlaceOrderParams {
   // TODO: Make a helper and test it for this logic.
-  let priceExponent = 0;
-  let priceMantissa = wrapperPlaceOrderParamsExternal.price;
-  while (priceExponent > -20 && priceMantissa < 4294967295 / 100) {
-    priceExponent -= 1;
-    priceMantissa *= 10;
-  }
-  priceMantissa = Math.floor(priceMantissa);
+  const { priceMantissa, priceExponent } = toMantissaAndExponent(
+    wrapperPlaceOrderParamsExternal.price,
+  );
 
   return {
     ...wrapperPlaceOrderParamsExternal,
     priceMantissa,
     priceExponent,
     minOutAtoms: wrapperPlaceOrderParamsExternal.minOutAtoms ?? 0,
+  };
+}
+
+export function toMantissaAndExponent(input: number): {
+  priceMantissa: number;
+  priceExponent: number;
+} {
+  let priceExponent = 0;
+  let priceMantissa = input;
+  const uInt32Max = 4_294_967_296;
+  while (priceExponent > -20 && priceMantissa < uInt32Max / 100) {
+    priceExponent -= 1;
+    priceMantissa *= 10;
+  }
+  priceMantissa = Math.floor(priceMantissa);
+
+  return {
+    priceMantissa,
+    priceExponent,
   };
 }
