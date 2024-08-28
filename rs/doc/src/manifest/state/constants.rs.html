@@ -29,16 +29,16 @@
 
 <span class="comment">// Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
 // 64 bytes for a RestingOrder or ClaimedSeat.
-</span><span class="kw">pub const </span>GLOBAL_BLOCK_SIZE: usize = <span class="number">80</span>;
+</span><span class="kw">pub const </span>GLOBAL_BLOCK_SIZE: usize = <span class="number">64</span>;
 <span class="kw">pub const </span>MARKET_BLOCK_SIZE: usize = <span class="number">80</span>;
 <span class="kw">const </span>MARKET_BLOCK_PAYLOAD_SIZE: usize = MARKET_BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 <span class="kw">pub const </span>RESTING_ORDER_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;
 <span class="kw">pub const </span>CLAIMED_SEAT_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;
 <span class="kw">const </span>GLOBAL_BLOCK_PAYLOAD_SIZE: usize = GLOBAL_BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 <span class="kw">pub const </span>GLOBAL_TRADER_SIZE: usize = GLOBAL_BLOCK_PAYLOAD_SIZE;
-<span class="kw">pub const </span>GLOBAL_TRADER_MARKET_INFO_SIZE: usize = GLOBAL_BLOCK_PAYLOAD_SIZE;
 <span class="kw">const </span>FREE_LIST_OVERHEAD: usize = <span class="number">4</span>;
-<span class="kw">pub const </span>FREE_LIST_BLOCK_SIZE: usize = MARKET_BLOCK_SIZE - FREE_LIST_OVERHEAD;
+<span class="kw">pub const </span>MARKET_FREE_LIST_BLOCK_SIZE: usize = MARKET_BLOCK_SIZE - FREE_LIST_OVERHEAD;
+<span class="kw">pub const </span>GLOBAL_FREE_LIST_BLOCK_SIZE: usize = GLOBAL_BLOCK_SIZE - FREE_LIST_OVERHEAD;
 
 <span class="kw">pub const </span>NO_EXPIRATION_LAST_VALID_SLOT: u32 = <span class="number">0</span>;
 

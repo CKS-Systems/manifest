@@ -147,12 +147,6 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>num_enum::TryFromPrimitive;
 <span class="kw">use </span>shank::ShankInstruction;
 
@@ -254,13 +248,6 @@
     #[account(<span class="number">2</span>, name = <span class="string">"system_program"</span>, desc = <span class="string">"System program"</span>)]
     </span>GlobalAddTrader = <span class="number">8</span>,
 
-    <span class="doccomment">/// Claim seat on a market.
-    </span><span class="attr">#[account(<span class="number">0</span>, writable, signer, name = <span class="string">"payer"</span>, desc = <span class="string">"Payer"</span>)]
-    #[account(<span class="number">1</span>, writable, name = <span class="string">"global"</span>, desc = <span class="string">"Global account"</span>)]
-    #[account(<span class="number">2</span>, name = <span class="string">"system_program"</span>, desc = <span class="string">"System program"</span>)]
-    #[account(<span class="number">3</span>, writable, name = <span class="string">"market"</span>, desc = <span class="string">"Account holding all market state"</span>)]
-    </span>GlobalClaimSeat = <span class="number">9</span>,
-    
     <span class="doccomment">/// Create global account for a given token.
     </span><span class="attr">#[account(<span class="number">0</span>, writable, signer, name = <span class="string">"payer"</span>, desc = <span class="string">"Payer"</span>)]
     #[account(<span class="number">1</span>, writable, name = <span class="string">"global"</span>, desc = <span class="string">"Global account"</span>)]
@@ -268,12 +255,13 @@
     #[account(<span class="number">3</span>, name = <span class="string">"global_vault"</span>, desc = <span class="string">"Global vault"</span>)]
     #[account(<span class="number">4</span>, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
     #[account(<span class="number">5</span>, name = <span class="string">"token_program"</span>, desc = <span class="string">"Token program(22)"</span>)]
-    </span>GlobalDeposit = <span class="number">10</span>,
+    </span>GlobalDeposit = <span class="number">9</span>,
 
     <span class="comment">// TODO: Implement this. Users can clean another users unbacked or expired
     // orders off the orderbook.
     //#[account(0, writable, signer, name = "payer", desc = "Payer")]
     // GlobalCleanOrder = 11,
+    // GlobalPurgeTrader = 12,
 </span>}
 
 <span class="kw">impl </span>ManifestInstruction {
@@ -284,7 +272,7 @@
 
 <span class="attr">#[test]
 </span><span class="kw">fn </span>test_instruction_serialization() {
-    <span class="kw">let </span>num_instructions: u8 = <span class="number">10</span>;
+    <span class="kw">let </span>num_instructions: u8 = <span class="number">9</span>;
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..=<span class="number">255 </span>{
         <span class="kw">let </span>instruction: ManifestInstruction = <span class="kw">match </span>ManifestInstruction::try_from(i) {
             <span class="prelude-val">Ok</span>(j) =&gt; {

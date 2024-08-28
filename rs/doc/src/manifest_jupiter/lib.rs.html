@@ -804,10 +804,6 @@
 <a href="#802" id="802">802</a>
 <a href="#803" id="803">803</a>
 <a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
@@ -1436,14 +1432,10 @@
         <span class="kw">let </span>global_account_info: AccountInfo = {
             <span class="kw">let </span><span class="kw-2">mut </span>global_value: DynamicAccount&lt;GlobalFixed, Vec&lt;u8&gt;&gt; = GlobalValue {
                 fixed: GlobalFixed::new_empty(<span class="kw-2">&amp;</span>quote_mint_key),
-                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; GLOBAL_BLOCK_SIZE * <span class="number">2</span>],
+                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; GLOBAL_BLOCK_SIZE * <span class="number">1</span>],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(<span class="kw-2">&amp;</span>trader_key).unwrap();
-            global_value.global_expand().unwrap();
-            global_value
-                .claim_seat_on_market(<span class="kw-2">&amp;</span>trader_key, <span class="kw-2">&amp;</span>market_key)
-                .unwrap();
             global_value
                 .deposit_global(<span class="kw-2">&amp;</span>trader_key, GlobalAtoms::new(<span class="number">1_000_000_000_000</span>))
                 .unwrap();

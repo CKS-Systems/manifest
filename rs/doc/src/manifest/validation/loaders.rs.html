@@ -616,34 +616,6 @@
 <a href="#614" id="614">614</a>
 <a href="#615" id="615">615</a>
 <a href="#616" id="616">616</a>
-<a href="#617" id="617">617</a>
-<a href="#618" id="618">618</a>
-<a href="#619" id="619">619</a>
-<a href="#620" id="620">620</a>
-<a href="#621" id="621">621</a>
-<a href="#622" id="622">622</a>
-<a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
-<a href="#626" id="626">626</a>
-<a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
-<a href="#630" id="630">630</a>
-<a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -1210,34 +1182,6 @@
             payer,
             global,
             system_program,
-        })
-    }
-}
-
-<span class="doccomment">/// Global claim seat on a market and on the global.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GlobalClaimSeatContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
-    <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    <span class="kw">pub </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
-    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; GlobalClaimSeatContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
-    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
-        <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
-
-        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
-            ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>system_program: Program =
-            Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
-        <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
-            ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            payer,
-            global,
-            system_program,
-            market,
         })
     }
 }
