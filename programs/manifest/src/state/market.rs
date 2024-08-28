@@ -60,7 +60,7 @@ struct MarketUnusedFreeListPadding {
 // 4 bytes are for the free list, rest is payload.
 const_assert_eq!(
     size_of::<MarketUnusedFreeListPadding>(),
-    FREE_LIST_BLOCK_SIZE
+    MARKET_FREE_LIST_BLOCK_SIZE
 );
 // Does not need to align to word boundaries because does not deserialize.
 
@@ -854,7 +854,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt, amount_atoms)?
+            try_to_remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }

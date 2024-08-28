@@ -37,7 +37,6 @@ pub(crate) fn get_now_slot() -> u32 {
 
 pub(crate) fn try_to_remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
-    amount_atoms: u64,
 ) -> ProgramResult {
     assert_with_msg(
         global_trade_accounts_opt.is_some(),
@@ -45,15 +44,10 @@ pub(crate) fn try_to_remove_from_global(
         "Missing global accounts when cancelling a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts {
-        global,
-        market,
-        trader,
-        ..
-    } = global_trade_accounts;
+    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.remove_order(trader, market, GlobalAtoms::new(amount_atoms))?;
+    global_dynamic_account.remove_order(trader)?;
     Ok(())
 }
 
@@ -67,15 +61,10 @@ pub(crate) fn try_to_add_to_global(
         "Missing global accounts when adding a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts {
-        global,
-        market,
-        trader,
-        ..
-    } = global_trade_accounts;
+    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.add_order(resting_order, trader, market)?;
+    global_dynamic_account.add_order(resting_order, trader)?;
     Ok(())
 }
 
@@ -122,7 +111,6 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,
-        market,
         mint,
         global_vault,
         market_vault,
@@ -142,7 +130,7 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;
-    global_dynamic_account.remove_order(resting_order_trader, market, desired_global_atoms)?;
+    global_dynamic_account.remove_order(resting_order_trader)?;
 
     let mint_key: &Pubkey = global_dynamic_account.fixed.get_mint();
 
