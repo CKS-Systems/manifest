@@ -495,18 +495,32 @@ function toWrapperPlaceOrderParams(
   wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
 ): WrapperPlaceOrderParams {
   // TODO: Make a helper and test it for this logic.
-  let priceExponent = 0;
-  let priceMantissa = wrapperPlaceOrderParamsExternal.price;
-  while (priceExponent > -20 && priceMantissa < 4294967295 / 100) {
-    priceExponent -= 1;
-    priceMantissa *= 10;
-  }
-  priceMantissa = Math.floor(priceMantissa);
+  const { priceMantissa, priceExponent } = toMantissaAndExponent(
+    wrapperPlaceOrderParamsExternal.price,
+  );
 
   return {
     ...wrapperPlaceOrderParamsExternal,
     priceMantissa,
     priceExponent,
     minOutAtoms: wrapperPlaceOrderParamsExternal.minOutAtoms ?? 0,
+  };
+}
+
+export function toMantissaAndExponent(input: number): {
+  priceMantissa: number;
+  priceExponent: number;
+} {
+  let priceExponent = 0;
+  let priceMantissa = input;
+  while (priceExponent > -20 && priceMantissa < 4_294_967_295 / 100) {
+    priceExponent -= 1;
+    priceMantissa *= 10;
+  }
+  priceMantissa = Math.floor(priceMantissa);
+
+  return {
+    priceMantissa,
+    priceExponent,
   };
 }
