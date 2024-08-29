@@ -54,11 +54,15 @@ impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
         }
     }
 
-    /// Sorted iterator starting from the min.
+    /// Sorted iterator starting from the max.
     pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: if self.max_index == NIL {
+                self.get_max_index()
+            } else {
+                self.max_index
+            },
         }
     }
 }
@@ -964,12 +968,15 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
     }
 
-    // TODO: Go from max to min because that would be cheaper as we already store max
-    /// Sorted iterator starting from the min.
+    /// Sorted iterator starting from the max.
     pub fn iter(&self) -> RedBlackTreeIterator<V> {
         RedBlackTreeIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: if self.max_index == NIL {
+                self.get_max_index()
+            } else {
+                self.max_index
+            },
         }
     }
 
@@ -1098,12 +1105,12 @@ impl<'a, V: TreeValue> Iterator for RedBlackTreeIterator<'a, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let predecessor_index: DataIndex = self.tree.get_predecessor_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
+            self.index = predecessor_index;
             Some((index, result))
         }
     }
@@ -1119,12 +1126,12 @@ impl<'a, V: TreeValue> Iterator for RedBlackTreeReadOnlyIterator<'a, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let predecessor_index: DataIndex = self.tree.get_predecessor_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
+            self.index = predecessor_index;
             Some((index, result))
         }
     }
