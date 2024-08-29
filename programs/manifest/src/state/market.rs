@@ -536,7 +536,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
             // Remove the resting order if expired.
             if other_order.is_expired(now_slot) {
-                remove_expired(
+                remove_and_update_balances(
                     fixed,
                     dynamic,
                     current_order_index,
@@ -590,7 +590,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 } else {
                     &global_trade_accounts_opts[1]
                 };
-                move_global_tokens_and_modify_resting_order(
+                let has_enough_tokens: bool = move_global_tokens_and_modify_resting_order(
                     global_trade_accounts_opt,
                     &maker,
                     GlobalAtoms::new(if is_bid {
@@ -599,7 +599,16 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                         base_atoms_traded.as_u64()
                     }),
                 )?;
-                // TODO: Handle the case where there are not enough funds
+                if !has_enough_tokens {
+                    remove_and_update_balances(
+                        fixed,
+                        dynamic,
+                        current_order_index,
+                        global_trade_accounts_opts,
+                    )?;
+                    current_order_index = next_order_index;
+                    continue;
+                }
             }
 
             total_base_atoms_traded += base_atoms_traded;
@@ -1034,7 +1043,7 @@ fn get_free_address_on_market_fixed(fixed: &mut MarketFixed, dynamic: &mut [u8])
     free_address
 }
 
-fn remove_expired(
+fn remove_and_update_balances(
     fixed: &mut MarketFixed,
     dynamic: &mut [u8],
     order_to_remove_index: DataIndex,
