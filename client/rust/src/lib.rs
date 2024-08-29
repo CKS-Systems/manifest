@@ -211,8 +211,8 @@ mod test {
             MARKET_FIXED_SIZE,
         },
         validation::{
-            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
-            TokenProgram,
+            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, Signer,
+            TokenAccountInfo, TokenProgram,
         },
     };
     use solana_sdk::{account::Account, account_info::AccountInfo};
@@ -696,6 +696,18 @@ mod test {
         // Bid for 10 SOL
         market_value.market_expand().unwrap();
 
+        let mut lamports: u64 = 100_000;
+        let trader_account_info: AccountInfo<'_> = AccountInfo {
+            key: &base_mint_key,
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut [])),
+            owner: &Pubkey::new_unique(),
+            rent_epoch: 0,
+            is_signer: true,
+            is_writable: false,
+            executable: false,
+        };
+
         let quote_global_trade_account: GlobalTradeAccounts = GlobalTradeAccounts {
             mint: Some(quote_mint_info.clone()),
             global: ManifestAccountInfo::new(&global_account_info).unwrap(),
@@ -704,7 +716,7 @@ mod test {
             market_vault: TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key)
                 .unwrap(),
             token_program: TokenProgram::new(&token_program_account_info).unwrap(),
-            trader: trader_key.clone(),
+            trader: Signer::new(&trader_account_info).unwrap(),
             market: market_key.clone(),
         };
 

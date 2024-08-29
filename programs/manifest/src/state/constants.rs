@@ -20,3 +20,7 @@ pub const NO_EXPIRATION_LAST_VALID_SLOT: u32 = 0;
 
 pub const MARKET_FIXED_DISCRIMINANT: u64 = 4859840929024028656;
 pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
+
+// Amount of gas deposited for every global order. This is done to as an
+// economic disincentive to spam.
+pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;

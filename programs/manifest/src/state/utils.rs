@@ -14,7 +14,8 @@ use solana_program::{
 };
 
 use super::{
-    order_type_can_take, GlobalRefMut, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
+    order_type_can_take, GlobalRefMut, OrderType, RestingOrder, GAS_DEPOSIT_LAMPORTS,
+    NO_EXPIRATION_LAST_VALID_SLOT,
 };
 
 pub(crate) fn get_now_slot() -> u32 {
@@ -49,7 +50,8 @@ pub(crate) fn try_to_remove_from_global(
     let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.remove_order(trader)?;
+    global_dynamic_account.remove_order(trader.key, global_trade_accounts)?;
+
     Ok(())
 }
 
@@ -64,9 +66,29 @@ pub(crate) fn try_to_add_to_global(
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
-    let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.add_order(resting_order, trader)?;
+
+    {
+        let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+        let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
+        global_dynamic_account.add_order(resting_order, trader.key)?;
+    }
+
+    // Need to CPI because otherwise we get:
+    //
+    // instruction spent from the balance of an account it does not own
+    //
+    // Done here instead of inside the object because the borrow checker needs
+    // to get the data on global which it cannot while there is a mut self
+    // reference.
+    solana_program::program::invoke(
+        &solana_program::system_instruction::transfer(
+            &trader.info.key,
+            &global.key,
+            GAS_DEPOSIT_LAMPORTS,
+        ),
+        &[trader.info.clone(), global.info.clone()],
+    )?;
+
     Ok(())
 }
 
@@ -132,7 +154,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;
-    global_dynamic_account.remove_order(resting_order_trader)?;
+    global_dynamic_account.remove_order(resting_order_trader, global_trade_accounts)?;
 
     let mint_key: &Pubkey = global_dynamic_account.fixed.get_mint();
 
