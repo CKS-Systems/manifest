@@ -4,8 +4,7 @@ use borsh::BorshSerialize;
 use manifest::{
     program::{
         batch_update::PlaceOrderParams, batch_update_instruction, global_add_trader_instruction,
-        global_claim_seat_instruction, global_deposit_instruction, swap_instruction,
-        ManifestInstruction, SwapParams,
+        global_deposit_instruction, swap_instruction, ManifestInstruction, SwapParams,
     },
     state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType},
     validation::get_vault_address,
@@ -719,18 +718,6 @@ async fn swap_global() -> anyhow::Result<()> {
             &test_fixture.global_fixture.key,
             &second_keypair.pubkey(),
         )],
-        Some(&second_keypair.pubkey()),
-        &[&second_keypair],
-    )
-    .await?;
-    let global_claim_seat_ix: Instruction = global_claim_seat_instruction(
-        &test_fixture.global_fixture.key,
-        &second_keypair.pubkey(),
-        &test_fixture.market_fixture.key,
-    );
-    send_tx_with_retry(
-        Rc::clone(&test_fixture.context),
-        &[global_claim_seat_ix],
         Some(&second_keypair.pubkey()),
         &[&second_keypair],
     )
