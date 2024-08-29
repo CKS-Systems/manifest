@@ -1,0 +1,47 @@
+{
+    "compilerOptions": {
+        "baseUrl": "src",
+        "module": "esnext",
+        "target": "esnext",
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "strict": true,
+        "noEmit": true,
+        "noImplicitAny": false,
+        "skipLibCheck": true,
+        "strictNullChecks": true,
+        "types": [
+            "mocha",
+            "node"
+        ],
+        "paths": {
+            "@instructions/*": [
+                "instructions/*",
+                "wrapper/instructions/*"
+            ],
+            "@types/*": [
+                "types/*",
+                "wrapper/types/*"
+            ],
+            "@errors/*": [
+                "errors/*"
+            ],
+            "@accounts/*": [
+                "accounts/*"
+            ]
+        },
+    },
+    "ts-node": {
+        // these options are overrides used only by ts-node
+        // same as the --compilerOptions flag and the TS_NODE_COMPILER_OPTIONS environment variable
+        "compilerOptions": {
+          "module": "commonjs"
+        }
+      },
+    "include": [
+        "client/ts/src/**/*.ts",
+        "client/ts/tests/**/*.ts",
+    ]
+}

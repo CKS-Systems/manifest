@@ -14,7 +14,7 @@ use crate::{
     validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
 };
 
-use super::{ManifestAccountInfo, TokenProgram};
+use super::{get_vault_address, ManifestAccountInfo, TokenProgram};
 
 /// CreateMarket account infos
 pub(crate) struct CreateMarketContext<'a, 'info> {
@@ -40,9 +40,24 @@ impl<'a, 'info> CreateMarketContext<'a, 'info> {
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let base_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
         let quote_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
-        // TODO: Verify that the vaults are at the PDAs that they are expected.
         let base_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
         let quote_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
+
+        let (expected_base_vault, _base_vault_bump) =
+            get_vault_address(market.key, base_mint.info.key);
+        let (expected_quote_vault, _quote_vault_bump) =
+            get_vault_address(market.key, quote_mint.info.key);
+
+        assert_with_msg(
+            expected_base_vault == *base_vault.info.key,
+            ManifestError::IncorrectAccount,
+            "Incorrect base vault account",
+        )?;
+        assert_with_msg(
+            expected_quote_vault == *quote_vault.info.key,
+            ManifestError::IncorrectAccount,
+            "Incorrect quote vault account",
+        )?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         let token_program_22: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
@@ -83,16 +98,14 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
     }
 }
 
-// TODO: rename to ExpandMarketContext to be clear that this only expands
-// market, does not work for expanding global.
-/// ExpandContext account infos
-pub(crate) struct ExpandContext<'a, 'info> {
+/// ExpandMarketContext account infos
+pub(crate) struct ExpandMarketContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
     pub system_program: Program<'a, 'info>,
 }
 
-impl<'a, 'info> ExpandContext<'a, 'info> {
+impl<'a, 'info> ExpandMarketContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
@@ -555,34 +568,6 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
     }
 }
 
-/// Global claim seat on a market and on the global.
-pub(crate) struct GlobalClaimSeatContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub system_program: Program<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-}
-
-impl<'a, 'info> GlobalClaimSeatContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
-
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
-        let global: ManifestAccountInfo<GlobalFixed> =
-            ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        Ok(Self {
-            payer,
-            global,
-            system_program,
-            market,
-        })
-    }
-}
-
 /// Global deposit
 pub(crate) struct GlobalDepositContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
@@ -594,6 +579,53 @@ pub(crate) struct GlobalDepositContext<'a, 'info> {
 }
 
 impl<'a, 'info> GlobalDepositContext<'a, 'info> {
+    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+
+        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let global: ManifestAccountInfo<GlobalFixed> =
+            ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+
+        let mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
+
+        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+        let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
+
+        let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
+            next_account_info(account_iter)?,
+            mint.info.key,
+            &expected_global_vault_address,
+            &expected_global_vault_address,
+        )?;
+        drop(global_data);
+
+        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let trader_token: TokenAccountInfo =
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
+        let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
+        Ok(Self {
+            payer,
+            global,
+            mint,
+            global_vault,
+            trader_token,
+            token_program,
+        })
+    }
+}
+
+/// Global withdraw
+pub(crate) struct GlobalWithdrawContext<'a, 'info> {
+    pub payer: Signer<'a, 'info>,
+    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
+    pub mint: MintAccountInfo<'a, 'info>,
+    pub global_vault: TokenAccountInfo<'a, 'info>,
+    pub trader_token: TokenAccountInfo<'a, 'info>,
+    pub token_program: TokenProgram<'a, 'info>,
+}
+
+impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 

@@ -1,0 +1,488 @@
+{
+  "version": "0.1.0",
+  "name": "wrapper",
+  "instructions": [
+    {
+      "name": "CreateWrapper",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "ClaimSeat",
+      "accounts": [
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "Deposit",
+      "accounts": [
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "traderTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Vault PDA, seeds are [b'vault', market_address, mint_address]"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint, needed for token 22"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "DepositParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "Withdraw",
+      "accounts": [
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "traderTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Vault PDA, seeds are [b'vault', market_address, mint_address]"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint, needed for token 22"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "WithdrawParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "BatchUpdate",
+      "accounts": [
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "WrapperBatchUpdateParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "WrapperPlaceOrderParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "clientOrderId",
+            "type": "u64"
+          },
+          {
+            "name": "baseAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "priceMantissa",
+            "type": "u32"
+          },
+          {
+            "name": "priceExponent",
+            "type": "i8"
+          },
+          {
+            "name": "isBid",
+            "type": "bool"
+          },
+          {
+            "name": "lastValidSlot",
+            "type": "u32"
+          },
+          {
+            "name": "orderType",
+            "type": {
+              "defined": "OrderType"
+            }
+          },
+          {
+            "name": "minOutAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperCancelOrderParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "clientOrderId",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperBatchUpdateParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "cancels",
+            "type": {
+              "vec": {
+                "defined": "WrapperCancelOrderParams"
+              }
+            }
+          },
+          {
+            "name": "cancelAll",
+            "type": "bool"
+          },
+          {
+            "name": "orders",
+            "type": {
+              "vec": {
+                "defined": "WrapperPlaceOrderParams"
+              }
+            }
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Limit"
+          },
+          {
+            "name": "ImmediateOrCancel"
+          },
+          {
+            "name": "PostOnly"
+          },
+          {
+            "name": "Global"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "origin": "shank",
+    "address": "wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL"
+  },
+  "events": []
+}

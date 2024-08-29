@@ -6,7 +6,7 @@ use crate::{
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
-        BLOCK_SIZE,
+        MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -173,22 +173,23 @@ pub(crate) fn process_batch_update(
                         &global_trade_accounts_opts,
                     )?;
                 }
-                Some(hinted_index) => {
+                Some(hinted_cancel_index) => {
                     // TODO: Verify that it is an order at the index, not a
                     // ClaimedSeat that a malicious user pretended was a seat.
-                    let order: &RestingOrder = dynamic_account.get_order_by_index(hinted_index);
+                    let order: &RestingOrder =
+                        dynamic_account.get_order_by_index(hinted_cancel_index);
                     // Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     assert_with_msg(
-                        trader_index % (BLOCK_SIZE as DataIndex) == 0
+                        trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0
                             && trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_index),
+                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
-                        hinted_index,
+                        hinted_cancel_index,
                         &global_trade_accounts_opts,
                     )?;
                 }
@@ -204,8 +205,7 @@ pub(crate) fn process_batch_update(
     };
 
     // Result is a vector of (order_sequence_number, data_index)
-    // TODO: Do not use a vector and just write as we go.
-    let mut result: Vec<(u64, DataIndex)> = Vec::new();
+    let mut result: Vec<(u64, DataIndex)> = Vec::with_capacity(orders.len());
     for place_order in orders {
         {
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
@@ -252,8 +252,8 @@ pub(crate) fn process_batch_update(
         expand_market_if_needed(&payer, &market, &system_program)?;
     }
 
+    let mut buffer: Vec<u8> = Vec::with_capacity(result.len());
     let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
-    let mut buffer: Vec<u8> = Vec::new();
     return_data.serialize(&mut buffer).unwrap();
     set_return_data(&buffer[..]);
 

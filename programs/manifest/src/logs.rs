@@ -128,6 +128,14 @@ pub struct GlobalDepositLog {
     pub global_atoms: GlobalAtoms,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+pub struct GlobalWithdrawLog {
+    pub global: Pubkey,
+    pub trader: Pubkey,
+    pub global_atoms: GlobalAtoms,
+}
+
 pub trait Discriminant {
     fn discriminant() -> [u8; 8];
 }
@@ -161,6 +169,7 @@ const GLOBAL_CREATE_LOG_DISCRIMINANT: [u8; 8] = [188, 25, 199, 77, 26, 15, 142, 
 const GLOBAL_ADD_TRADER_LOG_DISCRIMINANT: [u8; 8] = [129, 246, 90, 94, 87, 186, 242, 7];
 const GLOBAL_CLAIM_SEAT_LOG_DISCRIMINANT: [u8; 8] = [164, 46, 227, 175, 3, 143, 73, 86];
 const GLOBAL_DEPOSIT_LOG_DISCRIMINANT: [u8; 8] = [16, 26, 72, 1, 145, 232, 182, 71];
+const GLOBAL_WITHDRAW_LOG_DISCRIMINANT: [u8; 8] = [206, 118, 67, 64, 124, 109, 157, 201];
 
 discriminant!(
     CreateMarketLog,
@@ -204,4 +213,9 @@ discriminant!(
     GlobalDepositLog,
     GLOBAL_DEPOSIT_LOG_DISCRIMINANT,
     test_global_deposit_log
+);
+discriminant!(
+    GlobalWithdrawLog,
+    GLOBAL_WITHDRAW_LOG_DISCRIMINANT,
+    test_global_withdraw_log
 );

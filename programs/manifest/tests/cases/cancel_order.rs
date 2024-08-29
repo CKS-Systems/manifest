@@ -1,11 +1,14 @@
 use std::cell::RefMut;
 
+use hypertree::DataIndex;
 use manifest::{
     program::{batch_update::CancelOrderParams, batch_update_instruction},
-    state::{OrderType, BLOCK_SIZE},
+    state::{OrderType, MARKET_BLOCK_SIZE},
 };
 use solana_program_test::{tokio, ProgramTestContext};
-use solana_sdk::{instruction::Instruction, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    instruction::Instruction, signature::Keypair, signer::Signer, transaction::Transaction,
+};
 
 use crate::{Side, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
@@ -47,8 +50,7 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     // Should succeed. It was funded with infinite lamports.
-    let second_keypair: solana_sdk::signature::Keypair =
-        test_fixture.second_keypair.insecure_clone();
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     test_fixture.claim_seat_for_keypair(&second_keypair).await?;
     test_fixture
         .deposit_for_keypair(Token::SOL, 2 * SOL_UNIT_SIZE, &second_keypair)
@@ -67,6 +69,19 @@ async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
 
     assert!(test_fixture.cancel_order(0).await.is_err());
 
+    assert!(test_fixture
+        .batch_update_for_keypair(
+            None,
+            vec![CancelOrderParams::new_with_hint(
+                0,
+                Some((MARKET_BLOCK_SIZE * 2) as DataIndex)
+            )],
+            vec![],
+            &test_fixture.payer_keypair()
+        )
+        .await
+        .is_err());
+
     Ok(())
 }
 
@@ -80,8 +95,8 @@ async fn cancel_order_sequence_number_not_exist_test() -> anyhow::Result<()> {
         .place_order(Side::Ask, 1, 1, 0, u32::MAX, OrderType::Limit)
         .await?;
 
-    // Sequence number does not exist, but it fails open.
-    test_fixture.cancel_order(1234).await?;
+    // Sequence number does not exist. It fails closed.
+    assert!(test_fixture.cancel_order(1234).await.is_err());
 
     Ok(())
 }
@@ -127,7 +142,7 @@ async fn cancel_order_with_hint_test() -> anyhow::Result<()> {
         None,
         vec![
             // 0 is ClaimedSeat, next is the order
-            CancelOrderParams::new_with_hint(0, Some((1 * BLOCK_SIZE).try_into().unwrap())),
+            CancelOrderParams::new_with_hint(0, Some((1 * MARKET_BLOCK_SIZE).try_into().unwrap())),
         ],
         vec![],
         None,

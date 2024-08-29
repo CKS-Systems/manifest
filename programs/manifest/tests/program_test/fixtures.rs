@@ -10,9 +10,10 @@ use manifest::{
         batch_update_instruction,
         claim_seat_instruction::claim_seat_instruction,
         create_market_instructions, deposit_instruction, get_dynamic_value,
-        global_add_trader_instruction, global_claim_seat_instruction,
+        global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
-        global_deposit_instruction, swap_instruction, withdraw_instruction,
+        global_deposit_instruction, global_withdraw_instruction, swap_instruction,
+        withdraw_instruction,
     },
     quantities::WrapperU64,
     state::{
@@ -212,29 +213,6 @@ impl TestFixture {
         .await
     }
 
-    pub async fn global_claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
-        self.global_claim_seat_for_keypair(&self.payer_keypair())
-            .await
-    }
-
-    pub async fn global_claim_seat_for_keypair(
-        &self,
-        keypair: &Keypair,
-    ) -> anyhow::Result<(), BanksClientError> {
-        let global_claim_seat_ix: Instruction = global_claim_seat_instruction(
-            &self.global_fixture.key,
-            &keypair.pubkey(),
-            &self.market_fixture.key,
-        );
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &[global_claim_seat_ix],
-            Some(&keypair.pubkey()),
-            &[keypair],
-        )
-        .await
-    }
-
     pub async fn global_deposit(&mut self, num_atoms: u64) -> anyhow::Result<(), BanksClientError> {
         self.global_deposit_for_keypair(&self.payer_keypair(), num_atoms)
             .await
@@ -260,6 +238,46 @@ impl TestFixture {
         send_tx_with_retry(
             Rc::clone(&self.context),
             &[global_deposit_instruction(
+                &self.global_fixture.mint_key,
+                &keypair.pubkey(),
+                &token_account_fixture.key,
+                &spl_token::id(),
+                num_atoms,
+            )],
+            Some(&keypair.pubkey()),
+            &[&keypair],
+        )
+        .await
+    }
+
+    pub async fn global_withdraw(
+        &mut self,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        self.global_withdraw_for_keypair(&self.payer_keypair(), num_atoms)
+            .await
+    }
+
+    pub async fn global_withdraw_for_keypair(
+        &mut self,
+        keypair: &Keypair,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        // Make a throw away token account
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+            Rc::clone(&self.context),
+            &self.global_fixture.mint_key,
+            &keypair.pubkey(),
+            &token_account_keypair,
+        )
+        .await;
+        self.usdc_mint_fixture
+            .mint_to(&token_account_fixture.key, num_atoms)
+            .await;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[global_withdraw_instruction(
                 &self.global_fixture.mint_key,
                 &keypair.pubkey(),
                 &token_account_fixture.key,
@@ -1191,6 +1209,10 @@ pub async fn send_tx_with_retry(
         match error {
             BanksClientError::RpcError(_rpc_err) => {
                 // Retry on rpc errors.
+                continue;
+            }
+            BanksClientError::Io(_io_err) => {
+                // Retry on io errors.
                 continue;
             }
             _ => {

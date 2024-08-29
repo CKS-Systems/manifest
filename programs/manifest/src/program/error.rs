@@ -38,6 +38,10 @@ pub enum ManifestError {
     MissingGlobal = 15,
     #[error("Insufficient funds on global account to rest an order")]
     GlobalInsufficient = 16,
+    #[error("Account key did not match expected")]
+    IncorrectAccount = 17,
+    #[error("Mint not allowed for market")]
+    InvalidMint = 18,
 }
 
 impl From<ManifestError> for ProgramError {

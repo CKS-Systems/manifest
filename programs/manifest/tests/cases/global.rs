@@ -1,17 +1,13 @@
 use std::rc::Rc;
 
-use hypertree::NIL;
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, global_add_trader_instruction, global_claim_seat_instruction,
-        global_deposit_instruction, swap_instruction,
+        batch_update_instruction, global_add_trader_instruction, global_deposit_instruction,
+        swap_instruction,
     },
     quantities::{GlobalAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        get_global_trader_market_info, DynamicAccount, GlobalFixed, GlobalTrader, GlobalTraderTree,
-        OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{DynamicAccount, GlobalFixed, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT},
 };
 use solana_program_test::tokio;
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair};
@@ -71,80 +67,20 @@ async fn global_deposit() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn global_claim_seat_not_yet_has_seat() -> anyhow::Result<()> {
+async fn global_withdraw() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
+    let payer: Pubkey = test_fixture.payer();
     test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+    test_fixture.global_withdraw(1_000_000).await?;
 
-    test_fixture.market_fixture.reload().await;
     test_fixture.global_fixture.reload().await;
-    assert!(
-        test_fixture
-            .market_fixture
-            .market
-            .get_trader_index(&test_fixture.payer())
-            != NIL,
-        "Seat on market got claimed"
-    );
+    let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> =
+        test_fixture.global_fixture.global;
 
-    let global_traders: Vec<GlobalTrader> = GlobalTraderTree::new(
-        test_fixture.global_fixture.global.dynamic.as_mut_slice(),
-        test_fixture
-            .global_fixture
-            .global
-            .fixed
-            .get_global_traders_root_index(),
-        NIL,
-    )
-    .iter()
-    .map(|f| *f.1.get_value())
-    .collect();
-    assert_eq!(global_traders.len(), 1, "Adding global trader to global");
-    assert_eq!(
-        *global_traders.get(0).unwrap().get_trader(),
-        test_fixture.payer(),
-        "Adding global trader to global"
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn global_claim_seat_already_has_seat() -> anyhow::Result<()> {
-    let mut test_fixture: TestFixture = TestFixture::new().await;
-    test_fixture.claim_seat().await?;
-
-    test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
-
-    test_fixture.market_fixture.reload().await;
-    test_fixture.global_fixture.reload().await;
-    assert!(
-        test_fixture
-            .market_fixture
-            .market
-            .get_trader_index(&test_fixture.payer())
-            != NIL,
-        "Seat on market got claimed"
-    );
-
-    let global_traders: Vec<GlobalTrader> = GlobalTraderTree::new(
-        test_fixture.global_fixture.global.dynamic.as_mut_slice(),
-        test_fixture
-            .global_fixture
-            .global
-            .fixed
-            .get_global_traders_root_index(),
-        NIL,
-    )
-    .iter()
-    .map(|f| *f.1.get_value())
-    .collect();
-    assert_eq!(global_traders.len(), 1, "Adding global trader to global");
-    assert_eq!(
-        *global_traders.get(0).unwrap().get_trader(),
-        test_fixture.payer(),
-        "Adding global trader to global"
-    );
+    // Verifying that the account exists and that there are tokens there.
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    assert_eq!(balance_atoms, GlobalAtoms::new(0));
     Ok(())
 }
 
@@ -154,7 +90,6 @@ async fn global_place_order() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
     test_fixture.global_deposit(1_000_000).await?;
 
     test_fixture
@@ -177,20 +112,6 @@ async fn global_place_order() -> anyhow::Result<()> {
     let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
     assert_eq!(orders.len(), 1, "Could not find resting order");
 
-    test_fixture.global_fixture.reload().await;
-    assert_eq!(
-        get_global_trader_market_info(
-            &test_fixture.global_fixture.global.fixed,
-            test_fixture.global_fixture.global.dynamic.as_slice(),
-            &test_fixture.payer(),
-            &test_fixture.market_fixture.key,
-        )
-        .unwrap()
-        .get_num_atoms(),
-        GlobalAtoms::new(10),
-        "Market atoms accounting wrong"
-    );
-
     Ok(())
 }
 
@@ -200,7 +121,6 @@ async fn global_place_order_only_global_quote() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
     test_fixture.global_deposit(1_000_000).await?;
 
     let batch_update_ix: Instruction = batch_update_instruction(
@@ -258,7 +178,6 @@ async fn global_cancel_order() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
     test_fixture.global_deposit(1_000_000).await?;
 
     test_fixture
@@ -290,18 +209,6 @@ async fn global_cancel_order() -> anyhow::Result<()> {
     let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
     assert_eq!(orders.len(), 0, "Did not cancel");
     test_fixture.global_fixture.reload().await;
-    assert_eq!(
-        get_global_trader_market_info(
-            &test_fixture.global_fixture.global.fixed,
-            test_fixture.global_fixture.global.dynamic.as_slice(),
-            &test_fixture.payer(),
-            &test_fixture.market_fixture.key,
-        )
-        .unwrap()
-        .get_num_atoms(),
-        GlobalAtoms::new(0),
-        "Market atoms accounting wrong"
-    );
 
     Ok(())
 }
@@ -312,7 +219,6 @@ async fn global_match_order() -> anyhow::Result<()> {
     test_fixture.claim_seat().await?;
 
     test_fixture.global_add_trader().await?;
-    test_fixture.global_claim_seat().await?;
     test_fixture.global_deposit(1_000_000).await?;
 
     test_fixture
@@ -496,12 +402,11 @@ async fn global_match_22() -> anyhow::Result<()> {
     .await;
     market_fixture.reload().await;
 
-    let global_claim_seat_ix: Instruction =
-        global_claim_seat_instruction(&global_fixture.key, &payer, &market_fixture.key);
-
+    let claim_seat_ix: Instruction =
+        manifest::program::claim_seat_instruction(&market_fixture.key, &payer);
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
-        &[global_claim_seat_ix],
+        &[claim_seat_ix],
         Some(&payer),
         &[&payer_keypair],
     )
@@ -574,5 +479,81 @@ async fn global_match_22() -> anyhow::Result<()> {
     // Zero because swaps reset the amounts, even if it is a self trade.
     assert_eq!(market_fixture.get_base_balance_atoms(&payer).await, 0);
     assert_eq!(market_fixture.get_quote_balance_atoms(&payer).await, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_insufficient() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.global_withdraw(1_000_000).await?;
+
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                9,
+                -1,
+                false,
+                OrderType::ImmediateOrCancel,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // Remove unbacked global order.
+    assert_eq!(orders.len(), 0, "Order still on orderbook");
+
+    // No trade happened.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        0
+    );
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.payer())
+            .unwrap(),
+        0
+    );
+
     Ok(())
 }

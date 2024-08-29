@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "lib",
+  "client/rust",
   "programs/*",
 ]
 
@@ -44,6 +45,3 @@ debug = false
 codegen-units = 1
 overflow-checks = true
 strip = "debuginfo"
-
-[patch.crates-io]
-ahash = { git = "https://github.com/mschneider/aHash.git", branch = "patch" }
