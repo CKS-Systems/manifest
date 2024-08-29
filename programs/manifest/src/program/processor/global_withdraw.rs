@@ -56,7 +56,7 @@ pub(crate) fn process_global_withdraw(
                 global_vault.key,
                 mint.info.key,
                 trader_token_account.key,
-                payer.key,
+                global_vault.key,
                 &[],
                 amount_atoms,
                 mint.mint.decimals,
@@ -66,7 +66,6 @@ pub(crate) fn process_global_withdraw(
                 trader_token_account.as_ref().clone(),
                 mint.as_ref().clone(),
                 global_vault.as_ref().clone(),
-                payer.as_ref().clone(),
             ],
             global_vault_seeds_with_bump!(mint.info.key, bump),
         )?;
@@ -74,17 +73,16 @@ pub(crate) fn process_global_withdraw(
         invoke_signed(
             &spl_token::instruction::transfer(
                 token_program.key,
-                payer.key,
                 global_vault.key,
                 trader_token_account.key,
+                global_vault.key,
                 &[],
                 amount_atoms,
             )?,
             &[
                 token_program.as_ref().clone(),
-                trader_token_account.as_ref().clone(),
                 global_vault.as_ref().clone(),
-                payer.as_ref().clone(),
+                trader_token_account.as_ref().clone(),
             ],
             global_vault_seeds_with_bump!(mint.info.key, bump),
         )?;
