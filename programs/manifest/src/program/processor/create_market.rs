@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
@@ -11,6 +11,13 @@ use hypertree::{get_mut_helper, trace};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
     pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+};
+use spl_token_2022::{
+    extension::{
+        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
+        BaseStateWithExtensions, StateWithExtensions,
+    },
+    state::Mint,
 };
 
 pub(crate) fn process_create_market(
@@ -38,6 +45,29 @@ pub(crate) fn process_create_market(
         ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
+
+    for mint in [base_mint.as_ref(), quote_mint.as_ref()] {
+        if *mint.owner == spl_token_2022::id() {
+            let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+            let pool_mint: StateWithExtensions<'_, Mint> =
+                StateWithExtensions::<Mint>::unpack(&mint_data)?;
+            // Closable mints can be replaced with different ones, breaking some saved info on the market.
+            if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
+                let close_authority: Option<Pubkey> = extension.close_authority.into();
+                assert_with_msg(
+                    close_authority.is_none(),
+                    ManifestError::InvalidMint,
+                    "Closable mints are not allowed",
+                )?;
+            }
+            // Transfer fees make the amounts on withdraw and deposit not match what is expected.
+            assert_with_msg(
+                pool_mint.get_extension::<TransferFeeConfig>().is_err(),
+                ManifestError::InvalidMint,
+                "Transfer fee mints are not allowed",
+            )?;
+        }
+    }
 
     {
         // Create the base and quote vaults of this market

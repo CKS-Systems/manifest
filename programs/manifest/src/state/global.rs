@@ -299,6 +299,16 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         Ok(())
     }
+
+    /// Withdraw from global account.
+    pub fn withdraw_global(&mut self, trader: &Pubkey, num_atoms: GlobalAtoms) -> ProgramResult {
+        let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
+        let global_trader: &mut GlobalTrader = get_mut_global_trader(fixed, dynamic, trader)?;
+        // Checked sub makes sure there are enough funds.
+        global_trader.balance_atoms = global_trader.balance_atoms.checked_sub(num_atoms)?;
+
+        Ok(())
+    }
 }
 
 fn get_free_address_on_global_fixed(fixed: &mut GlobalFixed, dynamic: &mut [u8]) -> DataIndex {

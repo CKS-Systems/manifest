@@ -40,6 +40,8 @@ pub enum ManifestError {
     GlobalInsufficient = 16,
     #[error("Account key did not match expected")]
     IncorrectAccount = 17,
+    #[error("Mint not allowed for market")]
+    InvalidMint = 18,
 }
 
 impl From<ManifestError> for ProgramError {
