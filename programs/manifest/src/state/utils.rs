@@ -42,7 +42,6 @@ pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
     global_trade_owner: &Pubkey,
 ) -> ProgramResult {
-    solana_program::msg!("removing from global");
     assert_with_msg(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
@@ -56,9 +55,12 @@ pub(crate) fn remove_from_global(
         global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
     }
 
+    solana_program::msg!("global {:?}", global.lamports.borrow());
+    solana_program::msg!("trader {:?}", trader.lamports.borrow());
     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
-    solana_program::msg!("done removing from global");
+    solana_program::msg!("global {:?}", global.lamports.borrow());
+    solana_program::msg!("trader {:?}", trader.lamports.borrow());
 
     Ok(())
 }

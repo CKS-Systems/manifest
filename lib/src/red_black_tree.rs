@@ -719,7 +719,6 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             self.rotate_left(grandparent_index);
             self.set_color(index_to_fix, grandparent_color);
             self.set_color(grandparent_index, index_to_fix_color);
-
         }
     }
 
