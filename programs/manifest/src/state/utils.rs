@@ -40,7 +40,9 @@ pub(crate) fn get_now_slot() -> u32 {
 
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
+    global_trade_owner: &Pubkey,
 ) -> ProgramResult {
+    solana_program::msg!("removing from global");
     assert_with_msg(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
@@ -51,11 +53,12 @@ pub(crate) fn remove_from_global(
     {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.remove_order(trader.key, global_trade_accounts)?;
+        global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
     }
 
     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+    solana_program::msg!("done removing from global");
 
     Ok(())
 }

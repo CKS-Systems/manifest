@@ -717,7 +717,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     } else {
                         &global_trade_accounts_opts[1]
                     };
-                    remove_from_global(&global_trade_accounts_opt)?;
+                    remove_from_global(&global_trade_accounts_opt, &maker)?;
                 }
 
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
@@ -875,7 +875,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            remove_from_global(&global_trade_accounts_opt)?
+            let trader: &Pubkey = &get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
+                .get_value()
+                .trader;
+            remove_from_global(&global_trade_accounts_opt, trader)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1085,7 +1088,11 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        remove_from_global(&global_trade_accounts_opt)?;
+        let maker: &Pubkey =
+            &get_helper::<RBNode<ClaimedSeat>>(dynamic, other_order.get_trader_index())
+                .get_value()
+                .trader;
+        remove_from_global(&global_trade_accounts_opt, maker)?;
     } else {
         update_balance_by_trader_index(
             dynamic,
