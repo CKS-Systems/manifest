@@ -1952,6 +1952,8 @@ mod test {
             parent: NIL,
             color: Color::Red,
             value: TestOrderAsk::new(0),
+            payload_type: 0,
+            _unused_padding: 0,
         };
         *get_mut_helper(&mut data, 1 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -1959,6 +1961,8 @@ mod test {
             parent: 0 * TEST_BLOCK_WIDTH,
             color: Color::Black,
             value: TestOrderAsk::new(0),
+            payload_type: 0,
+            _unused_padding: 0,
         };
         *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
             left: 4 * TEST_BLOCK_WIDTH,
@@ -1966,6 +1970,8 @@ mod test {
             parent: 0 * TEST_BLOCK_WIDTH,
             color: Color::Black,
             value: TestOrderAsk::new(0),
+            payload_type: 0,
+            _unused_padding: 0,
         };
         *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -1973,6 +1979,8 @@ mod test {
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Red,
             value: TestOrderAsk::new(0),
+            payload_type: 0,
+            _unused_padding: 0,
         };
         *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -1980,6 +1988,8 @@ mod test {
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Red,
             value: TestOrderAsk::new(1),
+            payload_type: 0,
+            _unused_padding: 0,
         };
         let mut tree: RedBlackTree<TestOrderAsk> =
             RedBlackTree::new(&mut data, 0 * TEST_BLOCK_WIDTH, 1 * TEST_BLOCK_WIDTH);
