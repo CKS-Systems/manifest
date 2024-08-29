@@ -698,9 +698,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case III: Uncle is black, left right
         if parent_is_left && !current_is_left {
             self.rotate_left(parent_index);
-            self.rotate_right(grandparent_index);
-            self.set_color(grandparent_index, index_to_fix_color);
             self.set_color(index_to_fix, grandparent_color);
+            if grandparent_index != NIL {
+                self.rotate_right(grandparent_index);
+                self.set_color(grandparent_index, index_to_fix_color);
+            }
         }
         // Case IV: Uncle is black, right right
         if !parent_is_left && !current_is_left {
@@ -711,9 +713,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case V: Uncle is black, right left
         if !parent_is_left && current_is_left {
             self.rotate_right(parent_index);
-            self.rotate_left(grandparent_index);
-            self.set_color(grandparent_index, index_to_fix_color);
             self.set_color(index_to_fix, grandparent_color);
+            if grandparent_index != NIL {
+                self.rotate_left(grandparent_index);
+                self.set_color(grandparent_index, index_to_fix_color);
+            }
         }
     }
 
@@ -986,7 +990,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
 
             row_str += &"  ".repeat(self.depth(index) as usize);
 
-            let str = &format!("{index}:{node}");
+            let color = if node.color == Color::Black { 'B' } else { 'R' };
+            let str = &format!("{color}:{index}:{node}");
             if node.color == Color::Red {
                 // Cannot use with sbf. Enable when debugging
                 // locally without sbf.
@@ -997,7 +1002,7 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
                 }
                 #[cfg(not(colored))]
                 {
-                    row_str += &str.to_string();
+                    row_str += str;
                 }
             } else {
                 row_str += str;
