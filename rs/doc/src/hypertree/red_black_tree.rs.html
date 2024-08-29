@@ -1935,13 +1935,6 @@
 <a href="#1933" id="1933">1933</a>
 <a href="#1934" id="1934">1934</a>
 <a href="#1935" id="1935">1935</a>
-<a href="#1936" id="1936">1936</a>
-<a href="#1937" id="1937">1937</a>
-<a href="#1938" id="1938">1938</a>
-<a href="#1939" id="1939">1939</a>
-<a href="#1940" id="1940">1940</a>
-<a href="#1941" id="1941">1941</a>
-<a href="#1942" id="1942">1942</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::{cmp::Ordering, fmt::Display};
 
@@ -1998,15 +1991,11 @@
         }
     }
 
-    <span class="doccomment">/// Sorted iterator starting from the max.
+    <span class="doccomment">/// Sorted iterator starting from the min.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;V&gt; {
         RedBlackTreeReadOnlyIterator {
             tree: <span class="self">self</span>,
-            index: <span class="kw">if </span><span class="self">self</span>.max_index == NIL {
-                <span class="self">self</span>.get_max_index()
-            } <span class="kw">else </span>{
-                <span class="self">self</span>.max_index
-            },
+            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
         }
     }
 }
@@ -2912,15 +2901,12 @@
         }
     }
 
-    <span class="doccomment">/// Sorted iterator starting from the max.
+    <span class="comment">// TODO: Go from max to min because that would be cheaper as we already store max
+    </span><span class="doccomment">/// Sorted iterator starting from the min.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeIterator&lt;V&gt; {
         RedBlackTreeIterator {
             tree: <span class="self">self</span>,
-            index: <span class="kw">if </span><span class="self">self</span>.max_index == NIL {
-                <span class="self">self</span>.get_max_index()
-            } <span class="kw">else </span>{
-                <span class="self">self</span>.max_index
-            },
+            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
         }
     }
 
@@ -3049,12 +3035,12 @@
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>predecessor_index: DataIndex = <span class="self">self</span>.tree.get_predecessor_index::&lt;V&gt;(<span class="self">self</span>.index);
+        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
         <span class="kw">if </span>index == NIL {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data, index);
-            <span class="self">self</span>.index = predecessor_index;
+            <span class="self">self</span>.index = successor_index;
             <span class="prelude-val">Some</span>((index, result))
         }
     }
@@ -3070,12 +3056,12 @@
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>predecessor_index: DataIndex = <span class="self">self</span>.tree.get_predecessor_index::&lt;V&gt;(<span class="self">self</span>.index);
+        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
         <span class="kw">if </span>index == NIL {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data, index);
-            <span class="self">self</span>.index = predecessor_index;
+            <span class="self">self</span>.index = successor_index;
             <span class="prelude-val">Some</span>((index, result))
         }
     }
