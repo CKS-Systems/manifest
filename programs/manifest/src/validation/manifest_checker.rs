@@ -120,13 +120,6 @@ macro_rules! global_seeds {
     };
 }
 
-#[macro_export]
-macro_rules! global_seeds_with_bump {
-    ( $mint:expr, $bump:expr ) => {
-        &[&[b"global", $mint.as_ref(), &[$bump]]]
-    };
-}
-
 pub fn get_global_address(mint: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(global_seeds!(mint), &crate::ID)
 }

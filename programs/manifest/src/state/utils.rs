@@ -1,7 +1,7 @@
 use std::cell::RefMut;
 
 use crate::{
-    global_seeds_with_bump, global_vault_seeds_with_bump,
+    global_vault_seeds_with_bump,
     program::{assert_with_msg, get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
@@ -48,42 +48,14 @@ pub(crate) fn try_to_remove_from_global(
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
-    let (mint, global_bump) = {
+    {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
         global_dynamic_account.remove_order(trader.key, global_trade_accounts)?;
-        (
-            *global_dynamic_account.fixed.get_mint(),
-            global_dynamic_account.fixed.get_global_bump(),
-        )
-    };
+    }
 
-    solana_program::msg!("global {:?}", global.lamports.borrow_mut());
-    solana_program::msg!("trader {:?}", trader.lamports.borrow_mut());
     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
-    solana_program::msg!("global {:?}", global.lamports.borrow_mut());
-    solana_program::msg!("trader {:?}", trader.lamports.borrow_mut());
-    // Need to CPI because otherwise we get:
-    //
-    // failed: sum of account balances before and after instruction do not match
-    //
-    // Done here instead of inside the object because the borrow checker needs
-    // to get the data on global which it cannot while there is a mut self
-    // reference.
-    /*
-    solana_program::msg!("cancelling");
-    solana_program::program::invoke_signed(
-        &solana_program::system_instruction::transfer(
-            &global.key,
-            &trader.info.key,
-            GAS_DEPOSIT_LAMPORTS,
-        ),
-        &[global.info.clone(), trader.info.clone()],
-        global_seeds_with_bump!(mint, global_bump),
-    )?;
-    solana_program::msg!("done cancelling");
-    */
 
     Ok(())
 }

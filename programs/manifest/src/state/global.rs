@@ -17,7 +17,7 @@ use static_assertions::const_assert_eq;
 use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
-    validation::{get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount},
+    validation::{get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount},
 };
 
 use super::{
@@ -47,9 +47,8 @@ pub struct GlobalFixed {
     num_bytes_allocated: DataIndex,
 
     vault_bump: u8,
-    global_bump: u8,
 
-    _unused_padding: [u8; 2],
+    _unused_padding: [u8; 3],
 }
 const_assert_eq!(
     size_of::<GlobalFixed>(),
@@ -60,8 +59,7 @@ const_assert_eq!(
     4 +   // free_list_head_index
     4 +   // num_bytes_allocated
     1 +   // vault_bump
-    1 +   // global_bump
-    2 // unused_padding
+    3 // unused_padding
 );
 const_assert_eq!(size_of::<GlobalFixed>(), GLOBAL_FIXED_SIZE);
 const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
@@ -126,7 +124,6 @@ impl std::fmt::Display for GlobalTrader {
 impl GlobalFixed {
     pub fn new_empty(mint: &Pubkey) -> Self {
         let (vault, vault_bump) = get_global_vault_address(mint);
-        let (_, global_bump) = get_global_address(mint);
         GlobalFixed {
             discriminant: GLOBAL_FIXED_DISCRIMINANT,
             mint: *mint,
@@ -135,8 +132,7 @@ impl GlobalFixed {
             free_list_head_index: NIL,
             num_bytes_allocated: 0,
             vault_bump,
-            global_bump,
-            _unused_padding: [0; 2],
+            _unused_padding: [0; 3],
         }
     }
     pub fn get_global_traders_root_index(&self) -> DataIndex {
@@ -150,9 +146,6 @@ impl GlobalFixed {
     }
     pub fn get_vault_bump(&self) -> u8 {
         self.vault_bump
-    }
-    pub fn get_global_bump(&self) -> u8 {
-        self.global_bump
     }
 }
 
