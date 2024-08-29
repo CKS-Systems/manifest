@@ -12,9 +12,7 @@ use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{
-            assert_can_take, try_to_move_global_tokens, try_to_remove_from_global,
-        },
+        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
         OrderType,
     },
     validation::{
