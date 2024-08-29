@@ -568,34 +568,6 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
     }
 }
 
-/// Global claim seat on a market and on the global.
-pub(crate) struct GlobalClaimSeatContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub system_program: Program<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-}
-
-impl<'a, 'info> GlobalClaimSeatContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
-
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
-        let global: ManifestAccountInfo<GlobalFixed> =
-            ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        Ok(Self {
-            payer,
-            global,
-            system_program,
-            market,
-        })
-    }
-}
-
 /// Global deposit
 pub(crate) struct GlobalDepositContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,

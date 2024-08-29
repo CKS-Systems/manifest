@@ -10,7 +10,7 @@ use manifest::{
         batch_update_instruction,
         claim_seat_instruction::claim_seat_instruction,
         create_market_instructions, deposit_instruction, get_dynamic_value,
-        global_add_trader_instruction, global_claim_seat_instruction,
+        global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
         global_deposit_instruction, swap_instruction, withdraw_instruction,
     },
@@ -208,29 +208,6 @@ impl TestFixture {
             )],
             Some(&keypair.pubkey()),
             &[&keypair],
-        )
-        .await
-    }
-
-    pub async fn global_claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
-        self.global_claim_seat_for_keypair(&self.payer_keypair())
-            .await
-    }
-
-    pub async fn global_claim_seat_for_keypair(
-        &self,
-        keypair: &Keypair,
-    ) -> anyhow::Result<(), BanksClientError> {
-        let global_claim_seat_ix: Instruction = global_claim_seat_instruction(
-            &self.global_fixture.key,
-            &keypair.pubkey(),
-            &self.market_fixture.key,
-        );
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &[global_claim_seat_ix],
-            Some(&keypair.pubkey()),
-            &[keypair],
         )
         .await
     }
