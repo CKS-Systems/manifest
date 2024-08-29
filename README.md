@@ -6,6 +6,7 @@
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
+[![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
 
 
 Manifest is the next generation liquidity primitive on Solana.
@@ -27,12 +28,12 @@ Maximal freedom to exchange risk.
 | Rent|2 SOL |2 SOL |.002 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
-| Swap accounts| 10 | 8 | 7 |
-| CU | | |
-| Instruction size | | | |
+| Swap accounts| 16 | 8 | 7 |
+| [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Silent failures | Yes| Yes| No|
 | Token 22 | No| No| Yes|
 | Composable wrapper| No| No| Yes|
+| Capital Efficient | No| No| Yes|
 
 ### Details:
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
@@ -47,11 +48,12 @@ Maximal freedom to exchange risk.
 - Silent failures are an unfortunate feature request from market makers because of how solana transactions work. Manifest rejects this at the infra level, but still allows those who need it to handle in the wrapper.
 - Token 22 is the new version of token program. While it is not useful for defi and will make orderbooks less efficient, there are some notable tokens that will use it. Manifest only takes the performance hit to support token22 precisely when needed and moving token22 tokens, and only then.
 - A new core vs. wrapper program architecture enables greater composability for traders and exchange interfaces. Customize feature sets and distribution for any market requirement.
+- Capital efficient order type that allows market making on multiple markets while reusing capital across them.
 
 ## Design Overview
 ### Data Structure
 
-The innovation that allows this next leap in onchain trading is the hypertree [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
+The innovation that allows this next leap in onchain trading is the [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
 
 The market account holds all relevant information. It begins with a header that stores all of the fixed information for the market like BaseMint, QuoteMint. All variable data (RestingOrders and ClaimedSeats) are in the dynamic
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,

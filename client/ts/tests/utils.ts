@@ -1,6 +1,7 @@
 import { Connection } from '@solana/web3.js';
 import { assert } from 'chai';
 import { getClusterFromConnection } from '../src/utils/solana';
+import { toMantissaAndExponent } from '../src';
 
 async function testUtils(): Promise<void> {
   const localnetConnection: Connection = new Connection(
@@ -19,8 +20,22 @@ async function testUtils(): Promise<void> {
   //assert((await getClusterFromConnection(mainnetConnection)) == 'mainnet-beta');
 }
 
+function testToMantissaAndExponent(): void {
+  assert(
+    toMantissaAndExponent(3).priceExponent == -8,
+    `Unexpected exponent ${toMantissaAndExponent(3).priceExponent}`,
+  );
+  assert(
+    toMantissaAndExponent(3).priceMantissa == 300_000_000,
+    `Unexpected manitssa ${toMantissaAndExponent(3).priceMantissa}`,
+  );
+}
+
 describe('Utils test', () => {
   it('Utils', async () => {
     await testUtils();
+  });
+  it('Pricing', async () => {
+    testToMantissaAndExponent();
   });
 });
