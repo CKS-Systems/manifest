@@ -12,7 +12,8 @@ use manifest::{
         create_market_instructions, deposit_instruction, get_dynamic_value,
         global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
-        global_deposit_instruction, swap_instruction, withdraw_instruction,
+        global_deposit_instruction, global_withdraw_instruction, swap_instruction,
+        withdraw_instruction,
     },
     quantities::WrapperU64,
     state::{
@@ -237,6 +238,46 @@ impl TestFixture {
         send_tx_with_retry(
             Rc::clone(&self.context),
             &[global_deposit_instruction(
+                &self.global_fixture.mint_key,
+                &keypair.pubkey(),
+                &token_account_fixture.key,
+                &spl_token::id(),
+                num_atoms,
+            )],
+            Some(&keypair.pubkey()),
+            &[&keypair],
+        )
+        .await
+    }
+
+    pub async fn global_withdraw(
+        &mut self,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        self.global_withdraw_for_keypair(&self.payer_keypair(), num_atoms)
+            .await
+    }
+
+    pub async fn global_withdraw_for_keypair(
+        &mut self,
+        keypair: &Keypair,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        // Make a throw away token account
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+            Rc::clone(&self.context),
+            &self.global_fixture.mint_key,
+            &keypair.pubkey(),
+            &token_account_keypair,
+        )
+        .await;
+        self.usdc_mint_fixture
+            .mint_to(&token_account_fixture.key, num_atoms)
+            .await;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[global_withdraw_instruction(
                 &self.global_fixture.mint_key,
                 &keypair.pubkey(),
                 &token_account_fixture.key,

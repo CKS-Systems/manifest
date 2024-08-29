@@ -67,6 +67,24 @@ async fn global_deposit() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn global_withdraw() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    let payer: Pubkey = test_fixture.payer();
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+    test_fixture.global_withdraw(1_000_000).await?;
+
+    test_fixture.global_fixture.reload().await;
+    let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> =
+        test_fixture.global_fixture.global;
+
+    // Verifying that the account exists and that there are tokens there.
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    assert_eq!(balance_atoms, GlobalAtoms::new(0));
+    Ok(())
+}
+
+#[tokio::test]
 async fn global_place_order() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
@@ -461,5 +479,80 @@ async fn global_match_22() -> anyhow::Result<()> {
     // Zero because swaps reset the amounts, even if it is a self trade.
     assert_eq!(market_fixture.get_base_balance_atoms(&payer).await, 0);
     assert_eq!(market_fixture.get_quote_balance_atoms(&payer).await, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_insufficient() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.global_withdraw(1_000_000).await?;
+
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                9,
+                -1,
+                false,
+                OrderType::ImmediateOrCancel,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // Remove unbacked global order.
+    assert_eq!(orders.len(), 0, "Order still on orderbook");
+
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        100
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000
+    );
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.payer())
+            .unwrap(),
+        0
+    );
+
     Ok(())
 }
