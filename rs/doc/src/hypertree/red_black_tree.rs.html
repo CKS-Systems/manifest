@@ -1935,6 +1935,84 @@
 <a href="#1933" id="1933">1933</a>
 <a href="#1934" id="1934">1934</a>
 <a href="#1935" id="1935">1935</a>
+<a href="#1936" id="1936">1936</a>
+<a href="#1937" id="1937">1937</a>
+<a href="#1938" id="1938">1938</a>
+<a href="#1939" id="1939">1939</a>
+<a href="#1940" id="1940">1940</a>
+<a href="#1941" id="1941">1941</a>
+<a href="#1942" id="1942">1942</a>
+<a href="#1943" id="1943">1943</a>
+<a href="#1944" id="1944">1944</a>
+<a href="#1945" id="1945">1945</a>
+<a href="#1946" id="1946">1946</a>
+<a href="#1947" id="1947">1947</a>
+<a href="#1948" id="1948">1948</a>
+<a href="#1949" id="1949">1949</a>
+<a href="#1950" id="1950">1950</a>
+<a href="#1951" id="1951">1951</a>
+<a href="#1952" id="1952">1952</a>
+<a href="#1953" id="1953">1953</a>
+<a href="#1954" id="1954">1954</a>
+<a href="#1955" id="1955">1955</a>
+<a href="#1956" id="1956">1956</a>
+<a href="#1957" id="1957">1957</a>
+<a href="#1958" id="1958">1958</a>
+<a href="#1959" id="1959">1959</a>
+<a href="#1960" id="1960">1960</a>
+<a href="#1961" id="1961">1961</a>
+<a href="#1962" id="1962">1962</a>
+<a href="#1963" id="1963">1963</a>
+<a href="#1964" id="1964">1964</a>
+<a href="#1965" id="1965">1965</a>
+<a href="#1966" id="1966">1966</a>
+<a href="#1967" id="1967">1967</a>
+<a href="#1968" id="1968">1968</a>
+<a href="#1969" id="1969">1969</a>
+<a href="#1970" id="1970">1970</a>
+<a href="#1971" id="1971">1971</a>
+<a href="#1972" id="1972">1972</a>
+<a href="#1973" id="1973">1973</a>
+<a href="#1974" id="1974">1974</a>
+<a href="#1975" id="1975">1975</a>
+<a href="#1976" id="1976">1976</a>
+<a href="#1977" id="1977">1977</a>
+<a href="#1978" id="1978">1978</a>
+<a href="#1979" id="1979">1979</a>
+<a href="#1980" id="1980">1980</a>
+<a href="#1981" id="1981">1981</a>
+<a href="#1982" id="1982">1982</a>
+<a href="#1983" id="1983">1983</a>
+<a href="#1984" id="1984">1984</a>
+<a href="#1985" id="1985">1985</a>
+<a href="#1986" id="1986">1986</a>
+<a href="#1987" id="1987">1987</a>
+<a href="#1988" id="1988">1988</a>
+<a href="#1989" id="1989">1989</a>
+<a href="#1990" id="1990">1990</a>
+<a href="#1991" id="1991">1991</a>
+<a href="#1992" id="1992">1992</a>
+<a href="#1993" id="1993">1993</a>
+<a href="#1994" id="1994">1994</a>
+<a href="#1995" id="1995">1995</a>
+<a href="#1996" id="1996">1996</a>
+<a href="#1997" id="1997">1997</a>
+<a href="#1998" id="1998">1998</a>
+<a href="#1999" id="1999">1999</a>
+<a href="#2000" id="2000">2000</a>
+<a href="#2001" id="2001">2001</a>
+<a href="#2002" id="2002">2002</a>
+<a href="#2003" id="2003">2003</a>
+<a href="#2004" id="2004">2004</a>
+<a href="#2005" id="2005">2005</a>
+<a href="#2006" id="2006">2006</a>
+<a href="#2007" id="2007">2007</a>
+<a href="#2008" id="2008">2008</a>
+<a href="#2009" id="2009">2009</a>
+<a href="#2010" id="2010">2010</a>
+<a href="#2011" id="2011">2011</a>
+<a href="#2012" id="2012">2012</a>
+<a href="#2013" id="2013">2013</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::{cmp::Ordering, fmt::Display};
 
@@ -2605,6 +2683,8 @@
         };
         <span class="kw">let </span>uncle_color: Color = <span class="self">self</span>.get_color::&lt;V&gt;(uncle_index);
 
+        <span class="macro">trace!</span>(<span class="string">"FIX uncle index={uncle_index} color={uncle_color:?}"</span>);
+
         <span class="comment">// Case I: Uncle is red
         </span><span class="kw">if </span>uncle_color == Color::Red {
             <span class="self">self</span>.set_color(parent_index, Color::Black);
@@ -2621,6 +2701,8 @@
         <span class="kw">let </span>parent_is_left: bool = <span class="self">self</span>.is_left_child::&lt;V&gt;(parent_index);
         <span class="kw">let </span>current_is_left: bool = <span class="self">self</span>.is_left_child::&lt;V&gt;(index_to_fix);
 
+        <span class="macro">trace!</span>(<span class="string">"FIX G=[{grandparent_index}:{grandparent_color:?}] P=[{parent_index}:{parent_color:?}] Pi={parent_is_left} Ci={current_is_left}"</span>);
+
         <span class="comment">// Case II: Uncle is black, left left
         </span><span class="kw">if </span>parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right(grandparent_index);
@@ -2631,9 +2713,11 @@
         <span class="comment">// Case III: Uncle is black, left right
         </span><span class="kw">if </span>parent_is_left &amp;&amp; !current_is_left {
             <span class="self">self</span>.rotate_left(parent_index);
-            <span class="self">self</span>.rotate_right(grandparent_index);
-            <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
             <span class="self">self</span>.set_color(index_to_fix, grandparent_color);
+            <span class="kw">if </span>grandparent_index != NIL {
+                <span class="self">self</span>.rotate_right(grandparent_index);
+                <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
+            }
         }
         <span class="comment">// Case IV: Uncle is black, right right
         </span><span class="kw">if </span>!parent_is_left &amp;&amp; !current_is_left {
@@ -2644,9 +2728,11 @@
         <span class="comment">// Case V: Uncle is black, right left
         </span><span class="kw">if </span>!parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right(parent_index);
-            <span class="self">self</span>.rotate_left(grandparent_index);
-            <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
             <span class="self">self</span>.set_color(index_to_fix, grandparent_color);
+            <span class="kw">if </span>grandparent_index != NIL {
+                <span class="self">self</span>.rotate_left(grandparent_index);
+                <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
+            }
         }
     }
 
@@ -2910,8 +2996,40 @@
         }
     }
 
+    <span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
+    </span><span class="kw">pub fn </span>pretty_print(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="macro">trace!</span>(<span class="string">"====== Hypertree ======"</span>);
+
+        <span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.iter() {
+            <span class="kw">let </span><span class="kw-2">mut </span>row_str: String = String::new();
+
+            row_str += <span class="kw-2">&amp;</span><span class="string">"  "</span>.repeat(<span class="self">self</span>.depth(index) <span class="kw">as </span>usize);
+
+            <span class="kw">let </span>color = <span class="kw">if </span>node.color == Color::Black { <span class="string">'B' </span>} <span class="kw">else </span>{ <span class="string">'R' </span>};
+            <span class="kw">let </span>str = <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{color}:{index}:{node}"</span>);
+            <span class="kw">if </span>node.color == Color::Red {
+                <span class="comment">// Cannot use with sbf. Enable when debugging
+                // locally without sbf.
+                </span><span class="attr">#[cfg(colored)]
+                </span>{
+                    <span class="kw">use </span>colored::Colorize;
+                    row_str += <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, str.red());
+                }
+                <span class="attr">#[cfg(not(colored))]
+                </span>{
+                    row_str += str;
+                }
+            } <span class="kw">else </span>{
+                row_str += str;
+            }
+            <span class="macro">trace!</span>(<span class="string">"{}"</span>, row_str);
+        }
+
+        <span class="macro">trace!</span>(<span class="string">"======================="</span>);
+    }
+
     <span class="comment">// Only used in pretty printing, so can be slow
-    </span><span class="attr">#[cfg(test)]
+    </span><span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
     </span><span class="kw">fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; i32 {
         <span class="kw">let </span><span class="kw-2">mut </span>depth = -<span class="number">1</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = index;
@@ -2921,77 +3039,9 @@
         }
         depth
     }
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">fn </span>max_depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
-        <span class="kw">let </span>max_depth: i32 = <span class="self">self</span>.iter().fold(<span class="number">0</span>, |a, b| a.max(<span class="self">self</span>.depth(b.<span class="number">0</span>)));
-        max_depth
-    }
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">fn </span>x(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; i32 {
-        <span class="comment">// Max depth
-        </span><span class="kw">let </span>max_depth: i32 = <span class="self">self</span>.max_depth();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>x: i32 = <span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = index;
-        <span class="kw">while </span>current_index != NIL {
-            <span class="kw">if </span><span class="self">self</span>.is_left_child::&lt;V&gt;(current_index) {
-                x -= i32::pow(<span class="number">2</span>, (max_depth - <span class="self">self</span>.depth(current_index)) <span class="kw">as </span>u32);
-            }
-            <span class="kw">if </span><span class="self">self</span>.is_right_child::&lt;V&gt;(current_index) {
-                x += i32::pow(<span class="number">2</span>, (max_depth - <span class="self">self</span>.depth(current_index)) <span class="kw">as </span>u32);
-            }
-            current_index = <span class="self">self</span>.get_parent_index::&lt;V&gt;(current_index);
-        }
-        x
-    }
-
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pretty_print(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="comment">// Get the max depth and max / min X
-        </span><span class="kw">let </span>max_depth: i32 = <span class="self">self</span>.iter().fold(<span class="number">0</span>, |a, b| a.max(<span class="self">self</span>.depth(b.<span class="number">0</span>)));
-        <span class="kw">let </span>max_x: i32 = <span class="self">self</span>.iter().fold(<span class="number">0</span>, |a, b| a.max(<span class="self">self</span>.x(b.<span class="number">0</span>)));
-        <span class="kw">let </span>min_x: i32 = <span class="self">self</span>.iter().fold(<span class="number">0</span>, |a, b| a.min(<span class="self">self</span>.x(b.<span class="number">0</span>)));
-        <span class="macro">solana_program::msg!</span>(<span class="string">"=========Pretty Print==========="</span>);
-        <span class="kw">for </span>y <span class="kw">in </span><span class="number">0</span>..(max_depth + <span class="number">1</span>) {
-            <span class="kw">let </span><span class="kw-2">mut </span>row_str: String = String::new();
-            <span class="kw">for </span>x <span class="kw">in </span>(min_x)..(max_x + <span class="number">1</span>) {
-                <span class="kw">let </span><span class="kw-2">mut </span>found: bool = <span class="bool-val">false</span>;
-                <span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.iter() {
-                    <span class="kw">if </span><span class="self">self</span>.depth(index) == y &amp;&amp; <span class="self">self</span>.x(index) == x {
-                        found = <span class="bool-val">true</span>;
-                        <span class="kw">let </span>str = <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:&lt;5}"</span>, node);
-                        <span class="kw">if </span>node.color == Color::Red {
-                            <span class="comment">// Cannot use with sbf. Enable when debugging
-                            // locally without sbf.
-                            </span><span class="attr">#[cfg(colored)]
-                            </span>{
-                                <span class="kw">use </span>colored::Colorize;
-                                row_str += <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, str.red());
-                            }
-                            <span class="attr">#[cfg(not(colored))]
-                            </span>{
-                                row_str += <span class="kw-2">&amp;</span>str.to_string();
-                            }
-                        } <span class="kw">else </span>{
-                            row_str += str;
-                        }
-                    }
-                }
-                <span class="kw">if </span>!found {
-                    row_str += <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:&lt;5}"</span>, <span class="string">""</span>);
-                }
-            }
-            <span class="macro">solana_program::msg!</span>(<span class="string">"{}"</span>, row_str);
-        }
-        <span class="kw">let </span><span class="kw-2">mut </span>end: String = String::new();
-        <span class="kw">for </span>_x <span class="kw">in </span>(min_x)..(max_x + <span class="number">1</span>) {
-            end += <span class="string">"====="</span>;
-        }
-        <span class="macro">solana_program::msg!</span>(<span class="string">"{}"</span>, end);
-    }
-
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>verify_rb_tree(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
+    </span><span class="kw">pub fn </span>verify_rb_tree(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="comment">// Verify that all red nodes only have black children
         </span><span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.iter() {
             <span class="kw">if </span>node.color == Color::Red {
@@ -3010,7 +3060,8 @@
             }
         }
     }
-    <span class="attr">#[cfg(test)]
+
+    <span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
     </span><span class="kw">fn </span>num_black_nodes_through_root(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; i32 {
         <span class="kw">let </span><span class="kw-2">mut </span>num_black_nodes: i32 = <span class="number">0</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = index;
@@ -3116,45 +3167,88 @@
 
     <span class="attr">#[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    </span><span class="kw">struct </span>TestOrder {
+    </span><span class="kw">struct </span>TestOrderBid {
         order_id: u64,
         padding: [u8; <span class="number">128</span>],
     }
 
-    <span class="kw">impl </span>Ord <span class="kw">for </span>TestOrder {
+    <span class="kw">impl </span>Ord <span class="kw">for </span>TestOrderBid {
         <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Ordering {
             (<span class="self">self</span>.order_id).cmp(<span class="kw-2">&amp;</span>(other.order_id))
         }
     }
 
-    <span class="kw">impl </span>PartialOrd <span class="kw">for </span>TestOrder {
+    <span class="kw">impl </span>PartialOrd <span class="kw">for </span>TestOrderBid {
         <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ordering&gt; {
             <span class="prelude-val">Some</span>(<span class="self">self</span>.cmp(other))
         }
     }
 
-    <span class="kw">impl </span>PartialEq <span class="kw">for </span>TestOrder {
+    <span class="kw">impl </span>PartialEq <span class="kw">for </span>TestOrderBid {
         <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
             (<span class="self">self</span>.order_id) == (other.order_id)
         }
     }
 
-    <span class="kw">impl </span>Eq <span class="kw">for </span>TestOrder {}
+    <span class="kw">impl </span>Eq <span class="kw">for </span>TestOrderBid {}
 
-    <span class="kw">impl </span>Display <span class="kw">for </span>TestOrder {
+    <span class="kw">impl </span>Display <span class="kw">for </span>TestOrderBid {
         <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
             <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.order_id)
         }
     }
 
-    <span class="kw">impl </span>TestOrder {
+    <span class="kw">impl </span>TestOrderBid {
         <span class="kw">fn </span>new(order_id: u64) -&gt; <span class="self">Self </span>{
-            TestOrder {
+            TestOrderBid {
                 order_id,
                 padding: [<span class="number">0</span>; <span class="number">128</span>],
             }
         }
     }
+
+    <span class="attr">#[derive(Copy, Clone, Pod, Zeroable, Debug)]
+    #[repr(C)]
+    </span><span class="kw">struct </span>TestOrderAsk {
+        order_id: u64,
+        padding: [u8; <span class="number">128</span>],
+    }
+
+    <span class="kw">impl </span>Ord <span class="kw">for </span>TestOrderAsk {
+        <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Ordering {
+            other.order_id.cmp(<span class="kw-2">&amp;</span><span class="self">self</span>.order_id)
+        }
+    }
+
+    <span class="kw">impl </span>PartialOrd <span class="kw">for </span>TestOrderAsk {
+        <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ordering&gt; {
+            <span class="prelude-val">Some</span>(<span class="self">self</span>.cmp(other))
+        }
+    }
+
+    <span class="kw">impl </span>PartialEq <span class="kw">for </span>TestOrderAsk {
+        <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+            (<span class="self">self</span>.order_id) == (other.order_id)
+        }
+    }
+
+    <span class="kw">impl </span>Eq <span class="kw">for </span>TestOrderAsk {}
+
+    <span class="kw">impl </span>Display <span class="kw">for </span>TestOrderAsk {
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.order_id)
+        }
+    }
+
+    <span class="kw">impl </span>TestOrderAsk {
+        <span class="kw">fn </span>new(order_id: u64) -&gt; <span class="self">Self </span>{
+            TestOrderAsk {
+                order_id,
+                padding: [<span class="number">0</span>; <span class="number">128</span>],
+            }
+        }
+    }
+
     <span class="comment">// Blocks are
     // Left: DataIndex
     // Right: DataIndex
@@ -3167,23 +3261,23 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_basic() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">1111</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">1234</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">1000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">2000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">3000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrder::new(<span class="number">4000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrder::new(<span class="number">5000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrder::new(<span class="number">6000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">1111</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">1234</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">2000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">3000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrderBid::new(<span class="number">4000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrderBid::new(<span class="number">5000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrderBid::new(<span class="number">6000</span>));
     }
 
-    <span class="kw">fn </span>init_simple_tree(data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; RedBlackTree&lt;TestOrder&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(data, NIL, NIL);
+    <span class="kw">fn </span>init_simple_tree(data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; RedBlackTree&lt;TestOrderBid&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(data, NIL, NIL);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..<span class="number">12 </span>{
-            tree.insert(TEST_BLOCK_WIDTH * i, TestOrder::new((i * <span class="number">1_000</span>).into()));
+            tree.insert(TEST_BLOCK_WIDTH * i, TestOrderBid::new((i * <span class="number">1_000</span>).into()));
         }
         tree
     }
@@ -3191,19 +3285,19 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_pretty_print() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
         tree.pretty_print();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_fix() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
 
         <span class="comment">// Should go left and right through the tree
         </span>tree.insert(
             TEST_BLOCK_WIDTH * <span class="number">32</span>,
-            TestOrder::new((<span class="number">15_900</span>).try_into().unwrap()),
+            TestOrderBid::new((<span class="number">15_900</span>).try_into().unwrap()),
         );
         tree.verify_rb_tree();
     }
@@ -3211,10 +3305,10 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_fix() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..<span class="number">12 </span>{
-            tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(i * <span class="number">1_000</span>));
+            tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(i * <span class="number">1_000</span>));
         }
         tree.verify_rb_tree();
     }
@@ -3222,52 +3316,52 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_fix_internal_successor_is_left() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">7 </span>* <span class="number">1_000</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">7 </span>* <span class="number">1_000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_fix_internal_right_right_parent_red() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">6 </span>* <span class="number">1_000</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">6 </span>* <span class="number">1_000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_fix_internal_successor_is_right_child() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">2 </span>* <span class="number">1_000</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">2 </span>* <span class="number">1_000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_only_has_right_after_swap() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">5 </span>* <span class="number">1_000</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">4 </span>* <span class="number">1_000</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">5 </span>* <span class="number">1_000</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">4 </span>* <span class="number">1_000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_only_has_left_after_swap() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">11 </span>* <span class="number">1_000</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">10 </span>* <span class="number">1_000</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">11 </span>* <span class="number">1_000</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">10 </span>* <span class="number">1_000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_internal_remove() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">4</span>..<span class="number">8 </span>{
-            tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(i * <span class="number">1_000</span>));
+            tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(i * <span class="number">1_000</span>));
             tree.verify_rb_tree();
         }
     }
@@ -3275,12 +3369,12 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_rotate_right() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..<span class="number">12 </span>{
             tree.insert(
                 TEST_BLOCK_WIDTH * i,
-                TestOrder::new(((<span class="number">12 </span>- i) * <span class="number">1_000</span>).into()),
+                TestOrderBid::new(((<span class="number">12 </span>- i) * <span class="number">1_000</span>).into()),
             );
         }
         tree.verify_rb_tree();
@@ -3289,159 +3383,159 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_into_iter() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
         <span class="kw">for </span>(_index, _node) <span class="kw">in </span>tree {}
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_nil() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
         <span class="comment">// Does not exist in the tree. Should fail silently.
-        </span>tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">99999</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">1</span>));
+        </span>tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">99999</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">1</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_min_max() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
         <span class="macro">assert_eq!</span>(tree.get_max_index(), TEST_BLOCK_WIDTH * <span class="number">11</span>);
-        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrder&gt;(), TEST_BLOCK_WIDTH);
+        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrderBid&gt;(), TEST_BLOCK_WIDTH);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_right_left() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">100</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">200</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">300</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">150</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">125</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">100</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">200</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">300</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">150</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">125</span>));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_left_left() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">40</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">30</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">25</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">20</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">15</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">40</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">25</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">20</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">15</span>));
 
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">40</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">40</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_right_left() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">20</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">30</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">40</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">35</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">20</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">40</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">35</span>));
 
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">20</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">20</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_left_right() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">20</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">30</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">40</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">25</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">20</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">40</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">25</span>));
 
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">40</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">40</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_red_left_sibling() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">30</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">20</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">15</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">10</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">5</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">20</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">15</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">10</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">5</span>));
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrder::new(<span class="number">1</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">1</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrderBid::new(<span class="number">1</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">1</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">30</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_remove_red_right_sibling() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">10</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">20</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">25</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">30</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">35</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">10</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">20</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">25</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">30</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">35</span>));
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrder::new(<span class="number">45</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">45</span>));
-        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrder::new(<span class="number">10</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrderBid::new(<span class="number">45</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">45</span>));
+        tree.remove_by_value(<span class="kw-2">&amp;</span>TestOrderBid::new(<span class="number">10</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_left_right() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">100</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">200</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">300</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">250</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">275</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">100</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">200</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">300</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">250</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">275</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_left_right_onto_empty() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">12</span>, TestOrder::new(<span class="number">4500</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">13</span>, TestOrder::new(<span class="number">5500</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">12</span>, TestOrderBid::new(<span class="number">4500</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">13</span>, TestOrderBid::new(<span class="number">5500</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_get_predecessor_index() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        <span class="macro">assert_eq!</span>(tree.get_predecessor_index::&lt;TestOrder&gt;(NIL), NIL);
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="macro">assert_eq!</span>(tree.get_predecessor_index::&lt;TestOrderBid&gt;(NIL), NIL);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH * <span class="number">6</span>),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">6</span>),
             TEST_BLOCK_WIDTH * <span class="number">5
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH * <span class="number">5</span>),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">5</span>),
             TEST_BLOCK_WIDTH * <span class="number">4
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH * <span class="number">4</span>),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">4</span>),
             TEST_BLOCK_WIDTH * <span class="number">3
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH * <span class="number">3</span>),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">3</span>),
             TEST_BLOCK_WIDTH * <span class="number">2
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH * <span class="number">2</span>),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">2</span>),
             TEST_BLOCK_WIDTH
         );
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrder&gt;(TEST_BLOCK_WIDTH),
+            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree();
@@ -3450,8 +3544,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_empty_min_max() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrder&gt;(), NIL);
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrderBid&gt;(), NIL);
         <span class="macro">assert_eq!</span>(tree.get_max_index(), NIL);
         tree.verify_rb_tree();
     }
@@ -3460,40 +3554,40 @@
     </span><span class="kw">fn </span>test_node_equality() {
         <span class="kw">let </span><span class="kw-2">mut </span>data1: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>data2: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>_tree1: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data1);
-        <span class="kw">let </span>_tree2: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data2);
+        <span class="kw">let </span>_tree1: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data1);
+        <span class="kw">let </span>_tree2: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data2);
         <span class="macro">assert_ne!</span>(
-            get_helper::&lt;RBNode&lt;TestOrder&gt;&gt;(<span class="kw-2">&amp;mut </span>data1, <span class="number">1 </span>* TEST_BLOCK_WIDTH),
-            get_helper::&lt;RBNode&lt;TestOrder&gt;&gt;(<span class="kw-2">&amp;mut </span>data2, <span class="number">2 </span>* TEST_BLOCK_WIDTH)
+            get_helper::&lt;RBNode&lt;TestOrderBid&gt;&gt;(<span class="kw-2">&amp;mut </span>data1, <span class="number">1 </span>* TEST_BLOCK_WIDTH),
+            get_helper::&lt;RBNode&lt;TestOrderBid&gt;&gt;(<span class="kw-2">&amp;mut </span>data2, <span class="number">2 </span>* TEST_BLOCK_WIDTH)
         );
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_equal() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">12</span>, TestOrder::new(<span class="number">4000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">13</span>, TestOrder::new(<span class="number">5000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">14</span>, TestOrder::new(<span class="number">1000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">15</span>, TestOrder::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">12</span>, TestOrderBid::new(<span class="number">4000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">13</span>, TestOrderBid::new(<span class="number">5000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">14</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">15</span>, TestOrderBid::new(<span class="number">1000</span>));
         tree.verify_rb_tree();
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_and_remove_complex() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">0</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">1</span>, TestOrder::new(<span class="number">1064</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">4128</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">2192</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">5256</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrder::new(<span class="number">3320</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrder::new(<span class="number">8384</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrder::new(<span class="number">7448</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">8</span>, TestOrder::new(<span class="number">6512</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">0</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">1</span>, TestOrderBid::new(<span class="number">1064</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">4128</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">2192</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">5256</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrderBid::new(<span class="number">3320</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrderBid::new(<span class="number">8384</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrderBid::new(<span class="number">7448</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">8</span>, TestOrderBid::new(<span class="number">6512</span>));
         tree.remove_by_index(TEST_BLOCK_WIDTH * <span class="number">6</span>);
         tree.remove_by_index(TEST_BLOCK_WIDTH * <span class="number">7</span>);
         tree.remove_by_index(TEST_BLOCK_WIDTH * <span class="number">8</span>);
@@ -3527,59 +3621,59 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">1</span>),
+            value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">1 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">2</span>),
+            value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">3</span>),
+            value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">3 </span>* TEST_BLOCK_WIDTH,
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">4</span>),
+            value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">5</span>),
+            value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">6</span>),
+            value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">7</span>),
+            value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">8</span>),
+            value: TestOrderBid::new(<span class="number">8</span>),
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; =
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; =
             RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -3612,59 +3706,59 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">1</span>),
+            value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">1 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">2</span>),
+            value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">3</span>),
+            value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">3 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">4</span>),
+            value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">5</span>),
+            value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">6</span>),
+            value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">7</span>),
+            value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             right: NIL,
             parent: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">8</span>),
+            value: TestOrderBid::new(<span class="number">8</span>),
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; =
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; =
             RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -3701,79 +3795,79 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">1</span>),
+            value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">1 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">2</span>),
+            value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">3</span>),
+            value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">3 </span>* TEST_BLOCK_WIDTH,
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">4</span>),
+            value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">5</span>),
+            value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">6</span>),
+            value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">7</span>),
+            value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: <span class="number">9 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">8</span>),
+            value: TestOrderBid::new(<span class="number">8</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">9 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(<span class="number">9</span>),
+            value: TestOrderBid::new(<span class="number">9</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">10 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             right: <span class="number">11 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">10</span>),
+            value: TestOrderBid::new(<span class="number">10</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">11 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(<span class="number">11</span>),
+            value: TestOrderBid::new(<span class="number">11</span>),
         };
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; =
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; =
             RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -3782,23 +3876,85 @@
         tree.verify_rb_tree();
     }
 
+    <span class="comment">// This case would try to rotate beyond the root of the tree in the second
+    // iteration of the rebalance step.
+    //
+    // indent spaces = depth*2
+    // R/B = node color
+    // 0-5 = index in backing array / TEST_BLOCK_WIDTH
+    // 0-1 = node value
+    //
+    //     R:4:1
+    //     * B:5:0
+    //   B:2:0
+    //     R:3:0
+    // R:0:0
+    //   B:1:0
+    // Add (*)
+    </span><span class="attr">#[test]
+    </span><span class="kw">fn </span>test_regression_4() {
+        <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
+        <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">0 </span>* TEST_BLOCK_WIDTH) = RBNode {
+            left: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
+            right: <span class="number">1 </span>* TEST_BLOCK_WIDTH,
+            parent: NIL,
+            color: Color::Red,
+            value: TestOrderAsk::new(<span class="number">0</span>),
+        };
+        <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">1 </span>* TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: <span class="number">0 </span>* TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            value: TestOrderAsk::new(<span class="number">0</span>),
+        };
+        <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
+            left: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
+            right: <span class="number">3 </span>* TEST_BLOCK_WIDTH,
+            parent: <span class="number">0 </span>* TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            value: TestOrderAsk::new(<span class="number">0</span>),
+        };
+        <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            value: TestOrderAsk::new(<span class="number">0</span>),
+        };
+        <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            value: TestOrderAsk::new(<span class="number">1</span>),
+        };
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderAsk&gt; =
+            RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, <span class="number">0 </span>* TEST_BLOCK_WIDTH, <span class="number">1 </span>* TEST_BLOCK_WIDTH);
+        tree.verify_rb_tree();
+        tree.pretty_print();
+
+        tree.insert(<span class="number">5 </span>* TEST_BLOCK_WIDTH, TestOrderAsk::new(<span class="number">0</span>));
+        tree.verify_rb_tree();
+    }
+
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_read_only() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrder&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrder::new(<span class="number">1111</span>));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(<span class="number">1234</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrder::new(<span class="number">1000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrder::new(<span class="number">2000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrder::new(<span class="number">3000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrder::new(<span class="number">4000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrder::new(<span class="number">5000</span>));
-        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrder::new(<span class="number">6000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">0</span>, TestOrderBid::new(<span class="number">1111</span>));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(<span class="number">1234</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">2</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">3</span>, TestOrderBid::new(<span class="number">2000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">4</span>, TestOrderBid::new(<span class="number">3000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">5</span>, TestOrderBid::new(<span class="number">4000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">6</span>, TestOrderBid::new(<span class="number">5000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">7</span>, TestOrderBid::new(<span class="number">6000</span>));
         <span class="kw">let </span>root_index: DataIndex = tree.get_root_index();
         drop(tree);
 
-        <span class="kw">let </span>tree: RedBlackTreeReadOnly&lt;TestOrder&gt; =
+        <span class="kw">let </span>tree: RedBlackTreeReadOnly&lt;TestOrderBid&gt; =
             RedBlackTreeReadOnly::new(<span class="kw-2">&amp;</span>data, root_index, NIL);
         <span class="kw">for _ in </span>tree.iter() {
             <span class="macro">println!</span>(<span class="string">"Iteration in read only tree"</span>);
