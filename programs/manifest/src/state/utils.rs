@@ -9,7 +9,9 @@ use crate::{
 use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
 use solana_program::sysvar::Sysvar;
-use solana_program::{entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey};
+use solana_program::{
+    entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+};
 
 use super::{
     order_type_can_take, GlobalRefMut, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
@@ -98,11 +100,11 @@ pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult 
     Ok(())
 }
 
-pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
+pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
-) -> ProgramResult {
+) -> Result<bool, ProgramError> {
     assert_with_msg(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
@@ -123,10 +125,10 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
 
     let num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader)?;
-    let num_atoms_to_move: GlobalAtoms = GlobalAtoms::new(std::cmp::min(
-        desired_global_atoms.as_u64(),
-        num_deposited_atoms.as_u64(),
-    ));
+    if desired_global_atoms > num_deposited_atoms {
+        return Ok(false);
+    }
+    // TODO: Allow matching against a global that can only partially fill the order.
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;
@@ -150,7 +152,7 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
                 market_vault.key,
                 global_vault.key,
                 &[],
-                num_atoms_to_move.as_u64(),
+                desired_global_atoms.as_u64(),
                 mint_account_info.mint.decimals,
             )?,
             &[
@@ -169,7 +171,7 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
                 market_vault.key,
                 global_vault.key,
                 &[],
-                num_atoms_to_move.as_u64(),
+                desired_global_atoms.as_u64(),
             )?,
             &[
                 token_program.as_ref().clone(),
@@ -180,5 +182,5 @@ pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
         )?;
     }
 
-    Ok(())
+    Ok(true)
 }
