@@ -701,6 +701,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
 
         trace!("FIX G=[{grandparent_index}:{grandparent_color:?}] P=[{parent_index}:{parent_color:?}] Pi={parent_is_left} Ci={current_is_left}");
 
+        if grandparent_index == NIL && parent_color == Color::Red {
+            self.set_color(parent_index, Color::Black);
+            return;
+        }
+
         // Case II: Uncle is black, left left
         if parent_is_left && current_is_left {
             self.rotate_right(grandparent_index);
@@ -711,11 +716,9 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case III: Uncle is black, left right
         if parent_is_left && !current_is_left {
             self.rotate_left(parent_index);
+            self.rotate_right(grandparent_index);
             self.set_color(index_to_fix, grandparent_color);
-            if grandparent_index != NIL {
-                self.rotate_right(grandparent_index);
-                self.set_color(grandparent_index, index_to_fix_color);
-            }
+            self.set_color(grandparent_index, index_to_fix_color);
         }
         // Case IV: Uncle is black, right right
         if !parent_is_left && !current_is_left {
@@ -726,11 +729,10 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case V: Uncle is black, right left
         if !parent_is_left && current_is_left {
             self.rotate_right(parent_index);
+            self.rotate_left(grandparent_index);
             self.set_color(index_to_fix, grandparent_color);
-            if grandparent_index != NIL {
-                self.rotate_left(grandparent_index);
-                self.set_color(grandparent_index, index_to_fix_color);
-            }
+            self.set_color(grandparent_index, index_to_fix_color);
+
         }
     }
 
