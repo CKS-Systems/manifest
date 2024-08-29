@@ -2015,6 +2015,83 @@
 <a href="#2013" id="2013">2013</a>
 <a href="#2014" id="2014">2014</a>
 <a href="#2015" id="2015">2015</a>
+<a href="#2016" id="2016">2016</a>
+<a href="#2017" id="2017">2017</a>
+<a href="#2018" id="2018">2018</a>
+<a href="#2019" id="2019">2019</a>
+<a href="#2020" id="2020">2020</a>
+<a href="#2021" id="2021">2021</a>
+<a href="#2022" id="2022">2022</a>
+<a href="#2023" id="2023">2023</a>
+<a href="#2024" id="2024">2024</a>
+<a href="#2025" id="2025">2025</a>
+<a href="#2026" id="2026">2026</a>
+<a href="#2027" id="2027">2027</a>
+<a href="#2028" id="2028">2028</a>
+<a href="#2029" id="2029">2029</a>
+<a href="#2030" id="2030">2030</a>
+<a href="#2031" id="2031">2031</a>
+<a href="#2032" id="2032">2032</a>
+<a href="#2033" id="2033">2033</a>
+<a href="#2034" id="2034">2034</a>
+<a href="#2035" id="2035">2035</a>
+<a href="#2036" id="2036">2036</a>
+<a href="#2037" id="2037">2037</a>
+<a href="#2038" id="2038">2038</a>
+<a href="#2039" id="2039">2039</a>
+<a href="#2040" id="2040">2040</a>
+<a href="#2041" id="2041">2041</a>
+<a href="#2042" id="2042">2042</a>
+<a href="#2043" id="2043">2043</a>
+<a href="#2044" id="2044">2044</a>
+<a href="#2045" id="2045">2045</a>
+<a href="#2046" id="2046">2046</a>
+<a href="#2047" id="2047">2047</a>
+<a href="#2048" id="2048">2048</a>
+<a href="#2049" id="2049">2049</a>
+<a href="#2050" id="2050">2050</a>
+<a href="#2051" id="2051">2051</a>
+<a href="#2052" id="2052">2052</a>
+<a href="#2053" id="2053">2053</a>
+<a href="#2054" id="2054">2054</a>
+<a href="#2055" id="2055">2055</a>
+<a href="#2056" id="2056">2056</a>
+<a href="#2057" id="2057">2057</a>
+<a href="#2058" id="2058">2058</a>
+<a href="#2059" id="2059">2059</a>
+<a href="#2060" id="2060">2060</a>
+<a href="#2061" id="2061">2061</a>
+<a href="#2062" id="2062">2062</a>
+<a href="#2063" id="2063">2063</a>
+<a href="#2064" id="2064">2064</a>
+<a href="#2065" id="2065">2065</a>
+<a href="#2066" id="2066">2066</a>
+<a href="#2067" id="2067">2067</a>
+<a href="#2068" id="2068">2068</a>
+<a href="#2069" id="2069">2069</a>
+<a href="#2070" id="2070">2070</a>
+<a href="#2071" id="2071">2071</a>
+<a href="#2072" id="2072">2072</a>
+<a href="#2073" id="2073">2073</a>
+<a href="#2074" id="2074">2074</a>
+<a href="#2075" id="2075">2075</a>
+<a href="#2076" id="2076">2076</a>
+<a href="#2077" id="2077">2077</a>
+<a href="#2078" id="2078">2078</a>
+<a href="#2079" id="2079">2079</a>
+<a href="#2080" id="2080">2080</a>
+<a href="#2081" id="2081">2081</a>
+<a href="#2082" id="2082">2082</a>
+<a href="#2083" id="2083">2083</a>
+<a href="#2084" id="2084">2084</a>
+<a href="#2085" id="2085">2085</a>
+<a href="#2086" id="2086">2086</a>
+<a href="#2087" id="2087">2087</a>
+<a href="#2088" id="2088">2088</a>
+<a href="#2089" id="2089">2089</a>
+<a href="#2090" id="2090">2090</a>
+<a href="#2091" id="2091">2091</a>
+<a href="#2092" id="2092">2092</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::{cmp::Ordering, fmt::Display};
 
@@ -2317,7 +2394,7 @@
     }
 }
 
-<span class="attr">#[repr(u32)]
+<span class="attr">#[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 </span><span class="kw">enum </span>Color {
     <span class="attr">#[default]
@@ -2340,10 +2417,13 @@
     right: DataIndex,
     parent: DataIndex,
     color: Color,
-    <span class="comment">// TODO: include an integer that the program can use for identifying types
-    // of nodes. This will prevent the attack where a hinted action maliciously
-    // uses a different type of node.
-    </span>value: V,
+
+    <span class="comment">// Optional enum controlled by the application to identify the type of node.
+    // Defaults to zero.
+    </span>payload_type: u8,
+
+    _unused_padding: u16,
+    value: V,
 }
 <span class="kw">unsafe impl</span>&lt;V: TreeValue&gt; Pod <span class="kw">for </span>RBNode&lt;V&gt; {}
 
@@ -2380,6 +2460,12 @@
     <span class="kw">fn </span>get_right_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
         <span class="self">self</span>.right
     }
+    <span class="kw">pub fn </span>get_payload_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
+        <span class="self">self</span>.payload_type
+    }
+    <span class="kw">pub fn </span>set_payload_type(<span class="kw-2">&amp;mut </span><span class="self">self</span>, payload_type: u8) {
+        <span class="self">self</span>.payload_type = payload_type;
+    }
     <span class="kw">pub fn </span>get_mut_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>V {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.value
     }
@@ -2415,6 +2501,8 @@
                 parent: NIL,
                 color: Color::Black,
                 value,
+                payload_type: <span class="number">0</span>,
+                _unused_padding: <span class="number">0</span>,
             };
             <span class="kw-2">*</span>root_node = new_node;
             <span class="kw">return</span>;
@@ -2427,6 +2515,8 @@
             parent: NIL,
             color: Color::Red,
             value,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
 
         <span class="kw">if </span><span class="self">self</span>.max_index != NIL &amp;&amp; <span class="kw-2">*</span>get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data, <span class="self">self</span>.max_index) &lt; new_node {
@@ -3625,6 +3715,8 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3632,6 +3724,8 @@
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3639,6 +3733,8 @@
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3646,6 +3742,8 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3653,6 +3751,8 @@
             right: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3660,6 +3760,8 @@
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3667,6 +3769,8 @@
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3674,6 +3778,8 @@
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">8</span>),
         };
 
@@ -3710,6 +3816,8 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3717,6 +3825,8 @@
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3724,6 +3834,8 @@
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3731,6 +3843,8 @@
             right: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3738,6 +3852,8 @@
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3745,6 +3861,8 @@
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3752,6 +3870,8 @@
             right: NIL,
             parent: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3759,6 +3879,8 @@
             right: NIL,
             parent: <span class="number">6 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">8</span>),
         };
 
@@ -3799,6 +3921,8 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">1</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3806,6 +3930,8 @@
             right: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">2</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3813,6 +3939,8 @@
             right: NIL,
             parent: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">3</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3820,6 +3948,8 @@
             right: NIL,
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">4</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">5 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3827,6 +3957,8 @@
             right: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">5</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">6 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3834,6 +3966,8 @@
             right: NIL,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">6</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">7 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3841,6 +3975,8 @@
             right: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">7</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">8 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3848,6 +3984,8 @@
             right: <span class="number">9 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">7 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">8</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">9 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3855,6 +3993,8 @@
             right: NIL,
             parent: <span class="number">8 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">9</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">10 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3862,6 +4002,8 @@
             right: <span class="number">11 </span>* TEST_BLOCK_WIDTH,
             parent: <span class="number">5 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">10</span>),
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">11 </span>* TEST_BLOCK_WIDTH) = RBNode {
@@ -3869,6 +4011,8 @@
             right: NIL,
             parent: <span class="number">10 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
             value: TestOrderBid::new(<span class="number">11</span>),
         };
         <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; =
@@ -3904,6 +4048,8 @@
             parent: NIL,
             color: Color::Red,
             value: TestOrderAsk::new(<span class="number">0</span>),
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">1 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -3911,6 +4057,8 @@
             parent: <span class="number">0 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
             value: TestOrderAsk::new(<span class="number">0</span>),
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">2 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: <span class="number">4 </span>* TEST_BLOCK_WIDTH,
@@ -3918,6 +4066,8 @@
             parent: <span class="number">0 </span>* TEST_BLOCK_WIDTH,
             color: Color::Black,
             value: TestOrderAsk::new(<span class="number">0</span>),
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">3 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -3925,6 +4075,8 @@
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
             value: TestOrderAsk::new(<span class="number">0</span>),
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
         <span class="kw-2">*</span>get_mut_helper(<span class="kw-2">&amp;mut </span>data, <span class="number">4 </span>* TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
@@ -3932,6 +4084,8 @@
             parent: <span class="number">2 </span>* TEST_BLOCK_WIDTH,
             color: Color::Red,
             value: TestOrderAsk::new(<span class="number">1</span>),
+            payload_type: <span class="number">0</span>,
+            _unused_padding: <span class="number">0</span>,
         };
         <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderAsk&gt; =
             RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, <span class="number">0 </span>* TEST_BLOCK_WIDTH, <span class="number">1 </span>* TEST_BLOCK_WIDTH);

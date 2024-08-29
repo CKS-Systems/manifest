@@ -1086,6 +1086,11 @@
 <a href="#1084" id="1084">1084</a>
 <a href="#1085" id="1085">1085</a>
 <a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
@@ -1097,7 +1102,7 @@
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, FillLog},
-    program::{assert_with_msg, ManifestError},
+    program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
@@ -1525,6 +1530,8 @@
         claimed_seats_tree.insert(free_address, claimed_seat);
         fixed.claimed_seats_root_index = claimed_seats_tree.get_root_index();
 
+        get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::ClaimedSeat <span class="kw">as </span>u8);
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1866,6 +1873,9 @@
             )<span class="question-mark">?</span>;
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, <span class="kw-2">&amp;</span>resting_order);
+
+        get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8);
 
         <span class="prelude-val">Ok</span>(AddOrderToMarketResult {
             order_sequence_number,

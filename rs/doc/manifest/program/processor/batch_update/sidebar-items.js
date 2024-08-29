@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["BatchUpdateParams","BatchUpdateReturn","CancelOrderParams","PlaceOrderParams"]};
+window.SIDEBAR_ITEMS = {"enum":["MarketDataTreeNodeType"],"struct":["BatchUpdateParams","BatchUpdateReturn","CancelOrderParams","PlaceOrderParams"]};
