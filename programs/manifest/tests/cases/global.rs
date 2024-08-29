@@ -530,19 +530,20 @@ async fn global_insufficient() -> anyhow::Result<()> {
     // Remove unbacked global order.
     assert_eq!(orders.len(), 0, "Order still on orderbook");
 
+    // No trade happened.
     assert_eq!(
         test_fixture
             .market_fixture
             .get_base_balance_atoms(&test_fixture.payer())
             .await,
-        100
+        1_000_000
     );
     assert_eq!(
         test_fixture
             .market_fixture
             .get_quote_balance_atoms(&test_fixture.payer())
             .await,
-        1_000_000
+        0
     );
     test_fixture.global_fixture.reload().await;
     assert_eq!(
