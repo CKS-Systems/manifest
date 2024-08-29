@@ -43,7 +43,7 @@ async function testMarket(): Promise<void> {
 
   // Market withdrawable balance not init
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, true) == 0,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
     'Get withdrawable balance with no seat',
   );
 
@@ -60,11 +60,11 @@ async function testMarket(): Promise<void> {
     payerKeypair,
     marketAddress,
     market.quoteMint(),
-    10_000_000_000,
+    10,
   );
   // Market withdrawable balance after deposit
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, false) == 0,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'Get withdrawable balance after deposit',
   );
 
@@ -72,18 +72,12 @@ async function testMarket(): Promise<void> {
   assert(market.quoteDecimals() == 6, 'quote decimals');
 
   // Put orders on both sides to test pretty printing.
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000,
+    0.005,
     5,
     false,
     OrderType.Limit,
@@ -93,7 +87,7 @@ async function testMarket(): Promise<void> {
     connection,
     payerKeypair,
     marketAddress,
-    5_000,
+    0.005,
     5,
     true,
     OrderType.Limit,

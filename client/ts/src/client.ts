@@ -238,14 +238,14 @@ export class ManifestClient {
    *
    * @param payer PublicKey of the trader
    * @param mint PublicKey for deposit mint. Must be either the base or quote
-   * @param amountAtoms Number of atoms to deposit.
+   * @param amountTokens Number of tokens to deposit.
    *
    * @returns TransactionInstruction
    */
   public depositIx(
     payer: PublicKey,
     mint: PublicKey,
-    amountAtoms: number,
+    amountTokens: number,
   ): TransactionInstruction {
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
@@ -255,6 +255,7 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
+    const amountAtoms = amountTokens * 10 ** this.market.baseDecimals();
 
     return createDepositInstruction(
       {
@@ -282,14 +283,14 @@ export class ManifestClient {
    * @param payer PublicKey of the trader
    * @param market PublicKey of the market
    * @param mint PublicKey for withdraw mint. Must be either the base or quote
-   * @param amountAtoms Number of atoms to withdraw.
+   * @param amountTokens Number of tokens to withdraw.
    *
    * @returns TransactionInstruction
    */
   public withdrawIx(
     payer: PublicKey,
     mint: PublicKey,
-    amountAtoms: number,
+    amountTokens: number,
   ): TransactionInstruction {
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
@@ -299,6 +300,7 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
+    const amountAtoms = amountTokens * 10 ** this.market.baseDecimals();
 
     return createWithdrawInstruction(
       {
@@ -486,9 +488,9 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
   /** Used in fill or kill orders. Set to zero otherwise. */
-  minOutAtoms?: bignum;
+  minOutTokens?: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
-  clientOrderId: bignum;
+  clientOrderId: number;
 };
 
 function toWrapperPlaceOrderParams(
@@ -509,12 +511,18 @@ function toWrapperPlaceOrderParams(
   const numBaseAtoms: bignum =
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken;
 
+  const minOutTokens = wrapperPlaceOrderParamsExternal.minOutTokens ?? 0;
+
+  const minOutAtoms = wrapperPlaceOrderParamsExternal.isBid
+    ? minOutTokens * baseAtomsPerToken
+    : minOutTokens * quoteAtomsPerToken;
+
   return {
     ...wrapperPlaceOrderParamsExternal,
     baseAtoms: numBaseAtoms,
     priceMantissa,
     priceExponent,
-    minOutAtoms: wrapperPlaceOrderParamsExternal.minOutAtoms ?? 0,
+    minOutAtoms,
   };
 }
 

@@ -80,18 +80,12 @@ async function testWrapper(): Promise<void> {
   );
 
   // Place an order to get more coverage on the pretty print.
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,

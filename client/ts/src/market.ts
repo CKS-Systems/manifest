@@ -181,6 +181,32 @@ export class Market {
   }
 
   /**
+   * Get the amount in tokens of balance that is deposited on the exchange, does
+   * not include tokens currently in open orders.
+   *
+   * @param trader PublicKey of the trader to check balance of
+   * @param isBase boolean for whether this is checking base or quote
+   *
+   * @returns number in tokens
+   */
+  public getWithdrawableBalanceTokens(
+    trader: PublicKey,
+    isBase: boolean,
+  ): number {
+    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
+      return claimedSeat.publicKey.toBase58() == trader.toBase58();
+    });
+    // No seat claimed.
+    if (filteredSeats.length == 0) {
+      return 0;
+    }
+    const seat: ClaimedSeat = filteredSeats[0];
+    return isBase
+      ? toNum(seat.baseBalance) * 10 ** this.baseDecimals()
+      : toNum(seat.quoteBalance) * 10 ** this.quoteDecimals();
+  }
+
+  /**
    * Gets the base mint of the market
    *
    * @returns PublicKey

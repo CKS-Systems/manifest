@@ -19,25 +19,19 @@ async function testFillFeed(): Promise<void> {
   });
 
   // Deposit and place the first order.
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await deposit(
     connection,
     payerKeypair,
     marketAddress,
     market.quoteMint(),
-    10_000_000_000,
+    10,
   );
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,

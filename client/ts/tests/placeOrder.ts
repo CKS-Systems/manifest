@@ -22,18 +22,12 @@ async function testPlaceOrder(): Promise<void> {
     address: marketAddress,
   });
 
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,
@@ -43,7 +37,7 @@ async function testPlaceOrder(): Promise<void> {
     connection,
     payerKeypair,
     marketAddress,
-    3_000_000_000,
+    3,
     3,
     false,
     OrderType.Limit,
@@ -72,7 +66,7 @@ export async function placeOrder(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutAtoms: number = 0,
+  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -87,7 +81,7 @@ export async function placeOrder(
     isBid,
     lastValidSlot: lastValidSlot,
     orderType: orderType,
-    minOutAtoms,
+    minOutTokens,
     clientOrderId,
   });
 
