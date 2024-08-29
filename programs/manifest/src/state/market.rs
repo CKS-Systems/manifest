@@ -13,7 +13,7 @@ use crate::{
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         utils::{
-            assert_can_take, move_global_tokens_and_modify_resting_order, try_to_remove_from_global,
+            assert_can_take, try_to_move_global_tokens, try_to_remove_from_global,
         },
         OrderType,
     },
@@ -590,7 +590,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 } else {
                     &global_trade_accounts_opts[1]
                 };
-                let has_enough_tokens: bool = move_global_tokens_and_modify_resting_order(
+                let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
                     GlobalAtoms::new(if is_bid {

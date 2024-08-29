@@ -100,7 +100,7 @@ pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult 
     Ok(())
 }
 
-pub(crate) fn move_global_tokens_and_modify_resting_order<'a, 'info>(
+pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
