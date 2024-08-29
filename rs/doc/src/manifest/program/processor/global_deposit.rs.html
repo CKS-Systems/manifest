@@ -95,12 +95,9 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
-<span class="kw">use </span>hypertree::trace;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
 };
@@ -129,7 +126,6 @@
     accounts: <span class="kw-2">&amp;</span>[AccountInfo],
     data: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; ProgramResult {
-    <span class="macro">trace!</span>(<span class="string">"process_global_claim_seat accs={accounts:?}"</span>);
     <span class="kw">let </span>global_deposit_context: GlobalDepositContext = GlobalDepositContext::load(accounts)<span class="question-mark">?</span>;
     <span class="kw">let </span>GlobalDepositParams { amount_atoms } = GlobalDepositParams::try_from_slice(data)<span class="question-mark">?</span>;
 

@@ -184,6 +184,8 @@
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -195,7 +197,9 @@
 <span class="kw">use </span>hypertree::{DataIndex, NIL};
 <span class="attr">#[cfg(not(feature = <span class="string">"no-clock"</span>))]
 </span><span class="kw">use </span>solana_program::sysvar::Sysvar;
-<span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey};
+<span class="kw">use </span>solana_program::{
+    entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+};
 
 <span class="kw">use super</span>::{
     order_type_can_take, GlobalRefMut, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT,
@@ -284,11 +288,11 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>move_global_tokens_and_modify_resting_order&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_to_move_global_tokens&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
     global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
     resting_order_trader: <span class="kw-2">&amp;</span>Pubkey,
     desired_global_atoms: GlobalAtoms,
-) -&gt; ProgramResult {
+) -&gt; <span class="prelude-ty">Result</span>&lt;bool, ProgramError&gt; {
     assert_with_msg(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
@@ -309,12 +313,12 @@
 
     <span class="kw">let </span>num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader)<span class="question-mark">?</span>;
-    <span class="kw">let </span>num_atoms_to_move: GlobalAtoms = GlobalAtoms::new(std::cmp::min(
-        desired_global_atoms.as_u64(),
-        num_deposited_atoms.as_u64(),
-    ));
+    <span class="kw">if </span>desired_global_atoms &gt; num_deposited_atoms {
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+    }
+    <span class="comment">// TODO: Allow matching against a global that can only partially fill the order.
 
-    <span class="comment">// Update the GlobalTrader
+    // Update the GlobalTrader
     </span>global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)<span class="question-mark">?</span>;
     global_dynamic_account.remove_order(resting_order_trader)<span class="question-mark">?</span>;
 
@@ -336,7 +340,7 @@
                 market_vault.key,
                 global_vault.key,
                 <span class="kw-2">&amp;</span>[],
-                num_atoms_to_move.as_u64(),
+                desired_global_atoms.as_u64(),
                 mint_account_info.mint.decimals,
             )<span class="question-mark">?</span>,
             <span class="kw-2">&amp;</span>[
@@ -355,7 +359,7 @@
                 market_vault.key,
                 global_vault.key,
                 <span class="kw-2">&amp;</span>[],
-                num_atoms_to_move.as_u64(),
+                desired_global_atoms.as_u64(),
             )<span class="question-mark">?</span>,
             <span class="kw-2">&amp;</span>[
                 token_program.as_ref().clone(),
@@ -366,6 +370,6 @@
         )<span class="question-mark">?</span>;
     }
 
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 }
 </code></pre></div></section></main></body></html>

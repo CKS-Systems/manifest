@@ -1079,6 +1079,13 @@
 <a href="#1077" id="1077">1077</a>
 <a href="#1078" id="1078">1078</a>
 <a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
@@ -1093,9 +1100,7 @@
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{
-            assert_can_take, move_global_tokens_and_modify_resting_order, try_to_remove_from_global,
-        },
+        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
         OrderType,
     },
     validation::{
@@ -1617,7 +1622,7 @@
 
             <span class="comment">// Remove the resting order if expired.
             </span><span class="kw">if </span>other_order.is_expired(now_slot) {
-                remove_expired(
+                remove_and_update_balances(
                     fixed,
                     dynamic,
                     current_order_index,
@@ -1671,7 +1676,7 @@
                 } <span class="kw">else </span>{
                     <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
                 };
-                move_global_tokens_and_modify_resting_order(
+                <span class="kw">let </span>has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     <span class="kw-2">&amp;</span>maker,
                     GlobalAtoms::new(<span class="kw">if </span>is_bid {
@@ -1680,8 +1685,17 @@
                         base_atoms_traded.as_u64()
                     }),
                 )<span class="question-mark">?</span>;
-                <span class="comment">// TODO: Handle the case where there are not enough funds
-            </span>}
+                <span class="kw">if </span>!has_enough_tokens {
+                    remove_and_update_balances(
+                        fixed,
+                        dynamic,
+                        current_order_index,
+                        global_trade_accounts_opts,
+                    )<span class="question-mark">?</span>;
+                    current_order_index = next_order_index;
+                    <span class="kw">continue</span>;
+                }
+            }
 
             total_base_atoms_traded += base_atoms_traded;
             total_quote_atoms_traded += quote_atoms_traded;
@@ -2115,7 +2129,7 @@
     free_address
 }
 
-<span class="kw">fn </span>remove_expired(
+<span class="kw">fn </span>remove_and_update_balances(
     fixed: <span class="kw-2">&amp;mut </span>MarketFixed,
     dynamic: <span class="kw-2">&amp;mut </span>[u8],
     order_to_remove_index: DataIndex,

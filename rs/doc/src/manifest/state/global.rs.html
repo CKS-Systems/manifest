@@ -367,6 +367,16 @@
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -665,6 +675,16 @@
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
         <span class="kw">let </span>global_trader: <span class="kw-2">&amp;mut </span>GlobalTrader = get_mut_global_trader(fixed, dynamic, trader)<span class="question-mark">?</span>;
         global_trader.balance_atoms = global_trader.balance_atoms.checked_add(num_atoms)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Withdraw from global account.
+    </span><span class="kw">pub fn </span>withdraw_global(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey, num_atoms: GlobalAtoms) -&gt; ProgramResult {
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
+        <span class="kw">let </span>global_trader: <span class="kw-2">&amp;mut </span>GlobalTrader = get_mut_global_trader(fixed, dynamic, trader)<span class="question-mark">?</span>;
+        <span class="comment">// Checked sub makes sure there are enough funds.
+        </span>global_trader.balance_atoms = global_trader.balance_atoms.checked_sub(num_atoms)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
