@@ -1861,6 +1861,14 @@ mod test {
         tree.verify_rb_tree();
     }
 
+    // This case would try to rotate beyond the root of the tree in the second
+    // iteration of the rebalance step.
+    //
+    // indent spaces = depth*2
+    // R/B = node color
+    // 0-5 = index in backing array / TEST_BLOCK_WIDTH
+    // 0-1 = node value
+    //
     //     R:4:1
     //     * B:5:0
     //   B:2:0
