@@ -12,7 +12,7 @@ use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
+        utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
     },
     validation::{
@@ -706,6 +706,20 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             })?;
 
             if did_fully_match_resting_order {
+                // Get paid for removing a global order.
+                if get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
+                    .get_value()
+                    .get_order_type()
+                    == OrderType::Global
+                {
+                    let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                        &global_trade_accounts_opts[0]
+                    } else {
+                        &global_trade_accounts_opts[1]
+                    };
+                    remove_from_global(&global_trade_accounts_opt)?;
+                }
+
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_order_index = next_order_index;
@@ -861,7 +875,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt)?
+            remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1071,7 +1085,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        try_to_remove_from_global(&global_trade_accounts_opt)?
+        remove_from_global(&global_trade_accounts_opt)?;
     } else {
         update_balance_by_trader_index(
             dynamic,

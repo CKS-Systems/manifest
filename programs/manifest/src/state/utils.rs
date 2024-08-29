@@ -38,7 +38,7 @@ pub(crate) fn get_now_slot() -> u32 {
     now_slot as u32
 }
 
-pub(crate) fn try_to_remove_from_global(
+pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
 ) -> ProgramResult {
     assert_with_msg(
