@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724948818992,
+  "lastUpdate": 1724954075975,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -129,6 +129,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 12096,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2c0cfb8bb089f0ec8e3740fbee1fa664fb78897b",
+          "message": "add regression for hypertree bug (#46)\n\nrebalance on insert would crash on uneven tree depths bc. the grand parent node would be beyond the root.\r\nadded defensive checks in rebalance for this case.\r\n\r\nalso: made verfication and debug tools accessible from fuzzer to ease integration",
+          "timestamp": "2024-08-29T18:37:49+01:00",
+          "tree_id": "c0c8c7c8f50cacef4f28acaaa784a94400f2cf28",
+          "url": "https://github.com/CKS-Systems/manifest/commit/2c0cfb8bb089f0ec8e3740fbee1fa664fb78897b"
+        },
+        "date": 1724954075242,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 7021,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13230,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13938,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 7352,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 10710,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 12105,
             "unit": "CU",
             "range": "",
             "extra": ""
