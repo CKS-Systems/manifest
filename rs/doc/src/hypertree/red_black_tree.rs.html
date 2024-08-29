@@ -2013,6 +2013,8 @@
 <a href="#2011" id="2011">2011</a>
 <a href="#2012" id="2012">2012</a>
 <a href="#2013" id="2013">2013</a>
+<a href="#2014" id="2014">2014</a>
+<a href="#2015" id="2015">2015</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::{cmp::Ordering, fmt::Display};
 
@@ -2703,6 +2705,11 @@
 
         <span class="macro">trace!</span>(<span class="string">"FIX G=[{grandparent_index}:{grandparent_color:?}] P=[{parent_index}:{parent_color:?}] Pi={parent_is_left} Ci={current_is_left}"</span>);
 
+        <span class="kw">if </span>grandparent_index == NIL &amp;&amp; parent_color == Color::Red {
+            <span class="self">self</span>.set_color(parent_index, Color::Black);
+            <span class="kw">return</span>;
+        }
+
         <span class="comment">// Case II: Uncle is black, left left
         </span><span class="kw">if </span>parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right(grandparent_index);
@@ -2713,11 +2720,9 @@
         <span class="comment">// Case III: Uncle is black, left right
         </span><span class="kw">if </span>parent_is_left &amp;&amp; !current_is_left {
             <span class="self">self</span>.rotate_left(parent_index);
+            <span class="self">self</span>.rotate_right(grandparent_index);
             <span class="self">self</span>.set_color(index_to_fix, grandparent_color);
-            <span class="kw">if </span>grandparent_index != NIL {
-                <span class="self">self</span>.rotate_right(grandparent_index);
-                <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
-            }
+            <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
         }
         <span class="comment">// Case IV: Uncle is black, right right
         </span><span class="kw">if </span>!parent_is_left &amp;&amp; !current_is_left {
@@ -2728,11 +2733,10 @@
         <span class="comment">// Case V: Uncle is black, right left
         </span><span class="kw">if </span>!parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right(parent_index);
+            <span class="self">self</span>.rotate_left(grandparent_index);
             <span class="self">self</span>.set_color(index_to_fix, grandparent_color);
-            <span class="kw">if </span>grandparent_index != NIL {
-                <span class="self">self</span>.rotate_left(grandparent_index);
-                <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
-            }
+            <span class="self">self</span>.set_color(grandparent_index, index_to_fix_color);
+
         }
     }
 
