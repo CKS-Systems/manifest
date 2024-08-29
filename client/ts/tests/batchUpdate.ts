@@ -27,13 +27,13 @@ async function testBatchUpdate(): Promise<void> {
     payerKeypair,
     marketAddress,
     market.baseMint(),
-    10_000_000_000,
+    10,
   );
   await batchUpdate(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,
