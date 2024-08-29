@@ -668,6 +668,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         };
         let uncle_color: Color = self.get_color::<V>(uncle_index);
 
+        trace!("FIX uncle index={uncle_index} color={uncle_color:?}");
+
         // Case I: Uncle is red
         if uncle_color == Color::Red {
             self.set_color(parent_index, Color::Black);
@@ -684,6 +686,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         let parent_is_left: bool = self.is_left_child::<V>(parent_index);
         let current_is_left: bool = self.is_left_child::<V>(index_to_fix);
 
+        trace!("FIX G=[{grandparent_index}:{grandparent_color:?}] P=[{parent_index}:{parent_color:?}] Pi={parent_is_left} Ci={current_is_left}");
+
         // Case II: Uncle is black, left left
         if parent_is_left && current_is_left {
             self.rotate_right(grandparent_index);
@@ -694,9 +698,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case III: Uncle is black, left right
         if parent_is_left && !current_is_left {
             self.rotate_left(parent_index);
-            self.rotate_right(grandparent_index);
-            self.set_color(grandparent_index, index_to_fix_color);
             self.set_color(index_to_fix, grandparent_color);
+            if grandparent_index != NIL {
+                self.rotate_right(grandparent_index);
+                self.set_color(grandparent_index, index_to_fix_color);
+            }
         }
         // Case IV: Uncle is black, right right
         if !parent_is_left && !current_is_left {
@@ -707,9 +713,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // Case V: Uncle is black, right left
         if !parent_is_left && current_is_left {
             self.rotate_right(parent_index);
-            self.rotate_left(grandparent_index);
-            self.set_color(grandparent_index, index_to_fix_color);
             self.set_color(index_to_fix, grandparent_color);
+            if grandparent_index != NIL {
+                self.rotate_left(grandparent_index);
+                self.set_color(grandparent_index, index_to_fix_color);
+            }
         }
     }
 
@@ -973,8 +981,40 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
     }
 
+    #[cfg(any(test, feature = "fuzz"))]
+    pub fn pretty_print(&self) {
+        trace!("====== Hypertree ======");
+
+        for (index, node) in self.iter() {
+            let mut row_str: String = String::new();
+
+            row_str += &"  ".repeat(self.depth(index) as usize);
+
+            let color = if node.color == Color::Black { 'B' } else { 'R' };
+            let str = &format!("{color}:{index}:{node}");
+            if node.color == Color::Red {
+                // Cannot use with sbf. Enable when debugging
+                // locally without sbf.
+                #[cfg(colored)]
+                {
+                    use colored::Colorize;
+                    row_str += &format!("{}", str.red());
+                }
+                #[cfg(not(colored))]
+                {
+                    row_str += str;
+                }
+            } else {
+                row_str += str;
+            }
+            trace!("{}", row_str);
+        }
+
+        trace!("=======================");
+    }
+
     // Only used in pretty printing, so can be slow
-    #[cfg(test)]
+    #[cfg(any(test, feature = "fuzz"))]
     fn depth(&self, index: DataIndex) -> i32 {
         let mut depth = -1;
         let mut current_index: DataIndex = index;
@@ -984,77 +1024,9 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
         depth
     }
-    #[cfg(test)]
-    fn max_depth(&self) -> i32 {
-        let max_depth: i32 = self.iter().fold(0, |a, b| a.max(self.depth(b.0)));
-        max_depth
-    }
-    #[cfg(test)]
-    fn x(&self, index: DataIndex) -> i32 {
-        // Max depth
-        let max_depth: i32 = self.max_depth();
 
-        let mut x: i32 = 0;
-        let mut current_index: DataIndex = index;
-        while current_index != NIL {
-            if self.is_left_child::<V>(current_index) {
-                x -= i32::pow(2, (max_depth - self.depth(current_index)) as u32);
-            }
-            if self.is_right_child::<V>(current_index) {
-                x += i32::pow(2, (max_depth - self.depth(current_index)) as u32);
-            }
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        x
-    }
-
-    #[cfg(test)]
-    pub(crate) fn pretty_print(&self) {
-        // Get the max depth and max / min X
-        let max_depth: i32 = self.iter().fold(0, |a, b| a.max(self.depth(b.0)));
-        let max_x: i32 = self.iter().fold(0, |a, b| a.max(self.x(b.0)));
-        let min_x: i32 = self.iter().fold(0, |a, b| a.min(self.x(b.0)));
-        solana_program::msg!("=========Pretty Print===========");
-        for y in 0..(max_depth + 1) {
-            let mut row_str: String = String::new();
-            for x in (min_x)..(max_x + 1) {
-                let mut found: bool = false;
-                for (index, node) in self.iter() {
-                    if self.depth(index) == y && self.x(index) == x {
-                        found = true;
-                        let str = &format!("{:<5}", node);
-                        if node.color == Color::Red {
-                            // Cannot use with sbf. Enable when debugging
-                            // locally without sbf.
-                            #[cfg(colored)]
-                            {
-                                use colored::Colorize;
-                                row_str += &format!("{}", str.red());
-                            }
-                            #[cfg(not(colored))]
-                            {
-                                row_str += &str.to_string();
-                            }
-                        } else {
-                            row_str += str;
-                        }
-                    }
-                }
-                if !found {
-                    row_str += &format!("{:<5}", "");
-                }
-            }
-            solana_program::msg!("{}", row_str);
-        }
-        let mut end: String = String::new();
-        for _x in (min_x)..(max_x + 1) {
-            end += "=====";
-        }
-        solana_program::msg!("{}", end);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn verify_rb_tree(&self) {
+    #[cfg(any(test, feature = "fuzz"))]
+    pub fn verify_rb_tree(&self) {
         // Verify that all red nodes only have black children
         for (index, node) in self.iter() {
             if node.color == Color::Red {
@@ -1073,7 +1045,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             }
         }
     }
-    #[cfg(test)]
+
+    #[cfg(any(test, feature = "fuzz"))]
     fn num_black_nodes_through_root(&self, index: DataIndex) -> i32 {
         let mut num_black_nodes: i32 = 0;
         let mut current_index: DataIndex = index;
@@ -1179,45 +1152,88 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrder {
+    struct TestOrderBid {
         order_id: u64,
         padding: [u8; 128],
     }
 
-    impl Ord for TestOrder {
+    impl Ord for TestOrderBid {
         fn cmp(&self, other: &Self) -> Ordering {
             (self.order_id).cmp(&(other.order_id))
         }
     }
 
-    impl PartialOrd for TestOrder {
+    impl PartialOrd for TestOrderBid {
         fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
             Some(self.cmp(other))
         }
     }
 
-    impl PartialEq for TestOrder {
+    impl PartialEq for TestOrderBid {
         fn eq(&self, other: &Self) -> bool {
             (self.order_id) == (other.order_id)
         }
     }
 
-    impl Eq for TestOrder {}
+    impl Eq for TestOrderBid {}
 
-    impl Display for TestOrder {
+    impl Display for TestOrderBid {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(f, "{}", self.order_id)
         }
     }
 
-    impl TestOrder {
+    impl TestOrderBid {
         fn new(order_id: u64) -> Self {
-            TestOrder {
+            TestOrderBid {
                 order_id,
                 padding: [0; 128],
             }
         }
     }
+
+    #[derive(Copy, Clone, Pod, Zeroable, Debug)]
+    #[repr(C)]
+    struct TestOrderAsk {
+        order_id: u64,
+        padding: [u8; 128],
+    }
+
+    impl Ord for TestOrderAsk {
+        fn cmp(&self, other: &Self) -> Ordering {
+            other.order_id.cmp(&self.order_id)
+        }
+    }
+
+    impl PartialOrd for TestOrderAsk {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl PartialEq for TestOrderAsk {
+        fn eq(&self, other: &Self) -> bool {
+            (self.order_id) == (other.order_id)
+        }
+    }
+
+    impl Eq for TestOrderAsk {}
+
+    impl Display for TestOrderAsk {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "{}", self.order_id)
+        }
+    }
+
+    impl TestOrderAsk {
+        fn new(order_id: u64) -> Self {
+            TestOrderAsk {
+                order_id,
+                padding: [0; 128],
+            }
+        }
+    }
+
     // Blocks are
     // Left: DataIndex
     // Right: DataIndex
@@ -1230,23 +1246,23 @@ mod test {
     #[test]
     fn test_insert_basic() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(1111));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(1234));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(1000));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(2000));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(3000));
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder::new(4000));
-        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrder::new(5000));
-        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrder::new(6000));
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(1111));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(1234));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(2000));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(3000));
+        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(4000));
+        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrderBid::new(5000));
+        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrderBid::new(6000));
     }
 
-    fn init_simple_tree(data: &mut [u8]) -> RedBlackTree<TestOrder> {
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(data, NIL, NIL);
+    fn init_simple_tree(data: &mut [u8]) -> RedBlackTree<TestOrderBid> {
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(data, NIL, NIL);
 
         for i in 1..12 {
-            tree.insert(TEST_BLOCK_WIDTH * i, TestOrder::new((i * 1_000).into()));
+            tree.insert(TEST_BLOCK_WIDTH * i, TestOrderBid::new((i * 1_000).into()));
         }
         tree
     }
@@ -1254,19 +1270,19 @@ mod test {
     #[test]
     fn test_pretty_print() {
         let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.pretty_print();
     }
 
     #[test]
     fn test_insert_fix() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
 
         // Should go left and right through the tree
         tree.insert(
             TEST_BLOCK_WIDTH * 32,
-            TestOrder::new((15_900).try_into().unwrap()),
+            TestOrderBid::new((15_900).try_into().unwrap()),
         );
         tree.verify_rb_tree();
     }
@@ -1274,10 +1290,10 @@ mod test {
     #[test]
     fn test_remove_fix() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
 
         for i in 1..12 {
-            tree.remove_by_value(&TestOrder::new(i * 1_000));
+            tree.remove_by_value(&TestOrderBid::new(i * 1_000));
         }
         tree.verify_rb_tree();
     }
@@ -1285,52 +1301,52 @@ mod test {
     #[test]
     fn test_remove_fix_internal_successor_is_left() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.remove_by_value(&TestOrder::new(7 * 1_000));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.remove_by_value(&TestOrderBid::new(7 * 1_000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_fix_internal_right_right_parent_red() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.remove_by_value(&TestOrder::new(6 * 1_000));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.remove_by_value(&TestOrderBid::new(6 * 1_000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_fix_internal_successor_is_right_child() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.remove_by_value(&TestOrder::new(2 * 1_000));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.remove_by_value(&TestOrderBid::new(2 * 1_000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_only_has_right_after_swap() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.remove_by_value(&TestOrder::new(5 * 1_000));
-        tree.remove_by_value(&TestOrder::new(4 * 1_000));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.remove_by_value(&TestOrderBid::new(5 * 1_000));
+        tree.remove_by_value(&TestOrderBid::new(4 * 1_000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_only_has_left_after_swap() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.remove_by_value(&TestOrder::new(11 * 1_000));
-        tree.remove_by_value(&TestOrder::new(10 * 1_000));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.remove_by_value(&TestOrderBid::new(11 * 1_000));
+        tree.remove_by_value(&TestOrderBid::new(10 * 1_000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_internal_remove() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
 
         for i in 4..8 {
-            tree.remove_by_value(&TestOrder::new(i * 1_000));
+            tree.remove_by_value(&TestOrderBid::new(i * 1_000));
             tree.verify_rb_tree();
         }
     }
@@ -1338,12 +1354,12 @@ mod test {
     #[test]
     fn test_rotate_right() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
 
         for i in 1..12 {
             tree.insert(
                 TEST_BLOCK_WIDTH * i,
-                TestOrder::new(((12 - i) * 1_000).into()),
+                TestOrderBid::new(((12 - i) * 1_000).into()),
             );
         }
         tree.verify_rb_tree();
@@ -1352,159 +1368,159 @@ mod test {
     #[test]
     fn test_into_iter() {
         let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         for (_index, _node) in tree {}
     }
 
     #[test]
     fn test_remove_nil() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         // Does not exist in the tree. Should fail silently.
-        tree.remove_by_value(&TestOrder::new(99999));
-        tree.remove_by_value(&TestOrder::new(1));
+        tree.remove_by_value(&TestOrderBid::new(99999));
+        tree.remove_by_value(&TestOrderBid::new(1));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_min_max() {
         let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrder>(), TEST_BLOCK_WIDTH);
+        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
     fn test_insert_right_left() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(100));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(200));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(300));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(150));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(125));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(100));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(200));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(300));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(150));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(125));
     }
 
     #[test]
     fn test_remove_left_left() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(40));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(30));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(25));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(20));
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(15));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(40));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(30));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(25));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(20));
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(15));
 
-        tree.remove_by_value(&TestOrder::new(40));
+        tree.remove_by_value(&TestOrderBid::new(40));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_right_left() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(20));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(30));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(40));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(35));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(20));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(30));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(40));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(35));
 
-        tree.remove_by_value(&TestOrder::new(20));
+        tree.remove_by_value(&TestOrderBid::new(20));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_left_right() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(20));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(30));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(40));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(25));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(20));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(30));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(40));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(25));
 
-        tree.remove_by_value(&TestOrder::new(40));
+        tree.remove_by_value(&TestOrderBid::new(40));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_red_left_sibling() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(30));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(20));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(15));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(10));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(5));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(30));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(20));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(15));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(10));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(5));
 
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder::new(1));
-        tree.remove_by_value(&TestOrder::new(1));
-        tree.remove_by_value(&TestOrder::new(30));
+        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(1));
+        tree.remove_by_value(&TestOrderBid::new(1));
+        tree.remove_by_value(&TestOrderBid::new(30));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_remove_red_right_sibling() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(10));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(20));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(25));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(30));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(35));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(10));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(20));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(25));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(30));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(35));
 
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder::new(45));
-        tree.remove_by_value(&TestOrder::new(45));
-        tree.remove_by_value(&TestOrder::new(10));
+        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(45));
+        tree.remove_by_value(&TestOrderBid::new(45));
+        tree.remove_by_value(&TestOrderBid::new(10));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_insert_left_right() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(100));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(200));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(300));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(250));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(275));
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(100));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(200));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(300));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(250));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(275));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_insert_left_right_onto_empty() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        tree.insert(TEST_BLOCK_WIDTH * 12, TestOrder::new(4500));
-        tree.insert(TEST_BLOCK_WIDTH * 13, TestOrder::new(5500));
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.insert(TEST_BLOCK_WIDTH * 12, TestOrderBid::new(4500));
+        tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5500));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_get_predecessor_index() {
         let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_predecessor_index::<TestOrder>(NIL), NIL);
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        assert_eq!(tree.get_predecessor_index::<TestOrderBid>(NIL), NIL);
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH * 6),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
             TEST_BLOCK_WIDTH * 5
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH * 5),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
             TEST_BLOCK_WIDTH * 4
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH * 4),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
             TEST_BLOCK_WIDTH * 3
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH * 3),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
             TEST_BLOCK_WIDTH * 2
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH * 2),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
             TEST_BLOCK_WIDTH
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrder>(TEST_BLOCK_WIDTH),
+            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree();
@@ -1513,8 +1529,8 @@ mod test {
     #[test]
     fn test_empty_min_max() {
         let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrder>(), NIL);
+        let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
+        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
         tree.verify_rb_tree();
     }
@@ -1523,40 +1539,40 @@ mod test {
     fn test_node_equality() {
         let mut data1: [u8; 100000] = [0; 100000];
         let mut data2: [u8; 100000] = [0; 100000];
-        let _tree1: RedBlackTree<TestOrder> = init_simple_tree(&mut data1);
-        let _tree2: RedBlackTree<TestOrder> = init_simple_tree(&mut data2);
+        let _tree1: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data1);
+        let _tree2: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data2);
         assert_ne!(
-            get_helper::<RBNode<TestOrder>>(&mut data1, 1 * TEST_BLOCK_WIDTH),
-            get_helper::<RBNode<TestOrder>>(&mut data2, 2 * TEST_BLOCK_WIDTH)
+            get_helper::<RBNode<TestOrderBid>>(&mut data1, 1 * TEST_BLOCK_WIDTH),
+            get_helper::<RBNode<TestOrderBid>>(&mut data2, 2 * TEST_BLOCK_WIDTH)
         );
     }
 
     #[test]
     fn test_insert_equal() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = init_simple_tree(&mut data);
+        let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
 
-        tree.insert(TEST_BLOCK_WIDTH * 12, TestOrder::new(4000));
-        tree.insert(TEST_BLOCK_WIDTH * 13, TestOrder::new(5000));
-        tree.insert(TEST_BLOCK_WIDTH * 14, TestOrder::new(1000));
-        tree.insert(TEST_BLOCK_WIDTH * 15, TestOrder::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 12, TestOrderBid::new(4000));
+        tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5000));
+        tree.insert(TEST_BLOCK_WIDTH * 14, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 15, TestOrderBid::new(1000));
         tree.verify_rb_tree();
     }
 
     #[test]
     fn test_insert_and_remove_complex() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(0));
-        tree.insert(TEST_BLOCK_WIDTH * 1, TestOrder::new(1064));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(4128));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(2192));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(5256));
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder::new(3320));
-        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrder::new(8384));
-        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrder::new(7448));
-        tree.insert(TEST_BLOCK_WIDTH * 8, TestOrder::new(6512));
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(0));
+        tree.insert(TEST_BLOCK_WIDTH * 1, TestOrderBid::new(1064));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(4128));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(2192));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(5256));
+        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(3320));
+        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrderBid::new(8384));
+        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrderBid::new(7448));
+        tree.insert(TEST_BLOCK_WIDTH * 8, TestOrderBid::new(6512));
         tree.remove_by_index(TEST_BLOCK_WIDTH * 6);
         tree.remove_by_index(TEST_BLOCK_WIDTH * 7);
         tree.remove_by_index(TEST_BLOCK_WIDTH * 8);
@@ -1590,59 +1606,59 @@ mod test {
             right: NIL,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(1),
+            value: TestOrderBid::new(1),
         };
         *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
             left: 1 * TEST_BLOCK_WIDTH,
             right: 4 * TEST_BLOCK_WIDTH,
             parent: 5 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(2),
+            value: TestOrderBid::new(2),
         };
         *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 4 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(3),
+            value: TestOrderBid::new(3),
         };
         *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
             left: 3 * TEST_BLOCK_WIDTH,
             right: NIL,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(4),
+            value: TestOrderBid::new(4),
         };
         *get_mut_helper(&mut data, 5 * TEST_BLOCK_WIDTH) = RBNode {
             left: 2 * TEST_BLOCK_WIDTH,
             right: 7 * TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(5),
+            value: TestOrderBid::new(5),
         };
         *get_mut_helper(&mut data, 6 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 7 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(6),
+            value: TestOrderBid::new(6),
         };
         *get_mut_helper(&mut data, 7 * TEST_BLOCK_WIDTH) = RBNode {
             left: 6 * TEST_BLOCK_WIDTH,
             right: 8 * TEST_BLOCK_WIDTH,
             parent: 5 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(7),
+            value: TestOrderBid::new(7),
         };
         *get_mut_helper(&mut data, 8 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 7 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(8),
+            value: TestOrderBid::new(8),
         };
 
-        let mut tree: RedBlackTree<TestOrder> =
+        let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -1675,59 +1691,59 @@ mod test {
             right: NIL,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(1),
+            value: TestOrderBid::new(1),
         };
         *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
             left: 1 * TEST_BLOCK_WIDTH,
             right: 4 * TEST_BLOCK_WIDTH,
             parent: 6 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(2),
+            value: TestOrderBid::new(2),
         };
         *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 4 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(3),
+            value: TestOrderBid::new(3),
         };
         *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
             left: 3 * TEST_BLOCK_WIDTH,
             right: 5 * TEST_BLOCK_WIDTH,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(4),
+            value: TestOrderBid::new(4),
         };
         *get_mut_helper(&mut data, 5 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 4 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(5),
+            value: TestOrderBid::new(5),
         };
         *get_mut_helper(&mut data, 6 * TEST_BLOCK_WIDTH) = RBNode {
             left: 2 * TEST_BLOCK_WIDTH,
             right: 8 * TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(6),
+            value: TestOrderBid::new(6),
         };
         *get_mut_helper(&mut data, 7 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 8 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(7),
+            value: TestOrderBid::new(7),
         };
         *get_mut_helper(&mut data, 8 * TEST_BLOCK_WIDTH) = RBNode {
             left: 7 * TEST_BLOCK_WIDTH,
             right: NIL,
             parent: 6 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(8),
+            value: TestOrderBid::new(8),
         };
 
-        let mut tree: RedBlackTree<TestOrder> =
+        let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 6 * TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -1764,79 +1780,79 @@ mod test {
             right: NIL,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(1),
+            value: TestOrderBid::new(1),
         };
         *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
             left: 1 * TEST_BLOCK_WIDTH,
             right: 4 * TEST_BLOCK_WIDTH,
             parent: 5 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(2),
+            value: TestOrderBid::new(2),
         };
         *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 4 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(3),
+            value: TestOrderBid::new(3),
         };
         *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
             left: 3 * TEST_BLOCK_WIDTH,
             right: NIL,
             parent: 2 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(4),
+            value: TestOrderBid::new(4),
         };
         *get_mut_helper(&mut data, 5 * TEST_BLOCK_WIDTH) = RBNode {
             left: 2 * TEST_BLOCK_WIDTH,
             right: 10 * TEST_BLOCK_WIDTH,
             parent: NIL,
             color: Color::Black,
-            value: TestOrder::new(5),
+            value: TestOrderBid::new(5),
         };
         *get_mut_helper(&mut data, 6 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 7 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(6),
+            value: TestOrderBid::new(6),
         };
         *get_mut_helper(&mut data, 7 * TEST_BLOCK_WIDTH) = RBNode {
             left: 6 * TEST_BLOCK_WIDTH,
             right: 8 * TEST_BLOCK_WIDTH,
             parent: 10 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(7),
+            value: TestOrderBid::new(7),
         };
         *get_mut_helper(&mut data, 8 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: 9 * TEST_BLOCK_WIDTH,
             parent: 7 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(8),
+            value: TestOrderBid::new(8),
         };
         *get_mut_helper(&mut data, 9 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 8 * TEST_BLOCK_WIDTH,
             color: Color::Red,
-            value: TestOrder::new(9),
+            value: TestOrderBid::new(9),
         };
         *get_mut_helper(&mut data, 10 * TEST_BLOCK_WIDTH) = RBNode {
             left: 7 * TEST_BLOCK_WIDTH,
             right: 11 * TEST_BLOCK_WIDTH,
             parent: 5 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(10),
+            value: TestOrderBid::new(10),
         };
         *get_mut_helper(&mut data, 11 * TEST_BLOCK_WIDTH) = RBNode {
             left: NIL,
             right: NIL,
             parent: 10 * TEST_BLOCK_WIDTH,
             color: Color::Black,
-            value: TestOrder::new(11),
+            value: TestOrderBid::new(11),
         };
-        let mut tree: RedBlackTree<TestOrder> =
+        let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
         tree.verify_rb_tree();
 
@@ -1845,23 +1861,85 @@ mod test {
         tree.verify_rb_tree();
     }
 
+    // This case would try to rotate beyond the root of the tree in the second
+    // iteration of the rebalance step.
+    //
+    // indent spaces = depth*2
+    // R/B = node color
+    // 0-5 = index in backing array / TEST_BLOCK_WIDTH
+    // 0-1 = node value
+    //
+    //     R:4:1
+    //     * B:5:0
+    //   B:2:0
+    //     R:3:0
+    // R:0:0
+    //   B:1:0
+    // Add (*)
+    #[test]
+    fn test_regression_4() {
+        let mut data: [u8; 100000] = [0; 100000];
+        *get_mut_helper(&mut data, 0 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 2 * TEST_BLOCK_WIDTH,
+            right: 1 * TEST_BLOCK_WIDTH,
+            parent: NIL,
+            color: Color::Red,
+            value: TestOrderAsk::new(0),
+        };
+        *get_mut_helper(&mut data, 1 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 0 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            value: TestOrderAsk::new(0),
+        };
+        *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 4 * TEST_BLOCK_WIDTH,
+            right: 3 * TEST_BLOCK_WIDTH,
+            parent: 0 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            value: TestOrderAsk::new(0),
+        };
+        *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            value: TestOrderAsk::new(0),
+        };
+        *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            value: TestOrderAsk::new(1),
+        };
+        let mut tree: RedBlackTree<TestOrderAsk> =
+            RedBlackTree::new(&mut data, 0 * TEST_BLOCK_WIDTH, 1 * TEST_BLOCK_WIDTH);
+        tree.verify_rb_tree();
+        tree.pretty_print();
+
+        tree.insert(5 * TEST_BLOCK_WIDTH, TestOrderAsk::new(0));
+        tree.verify_rb_tree();
+    }
+
     #[test]
     fn test_read_only() {
         let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: RedBlackTree<TestOrder> = RedBlackTree::new(&mut data, NIL, NIL);
+        let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
 
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder::new(1111));
-        tree.insert(TEST_BLOCK_WIDTH, TestOrder::new(1234));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder::new(1000));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder::new(2000));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder::new(3000));
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder::new(4000));
-        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrder::new(5000));
-        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrder::new(6000));
+        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(1111));
+        tree.insert(TEST_BLOCK_WIDTH, TestOrderBid::new(1234));
+        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(2000));
+        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(3000));
+        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(4000));
+        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrderBid::new(5000));
+        tree.insert(TEST_BLOCK_WIDTH * 7, TestOrderBid::new(6000));
         let root_index: DataIndex = tree.get_root_index();
         drop(tree);
 
-        let tree: RedBlackTreeReadOnly<TestOrder> =
+        let tree: RedBlackTreeReadOnly<TestOrderBid> =
             RedBlackTreeReadOnly::new(&data, root_index, NIL);
         for _ in tree.iter() {
             println!("Iteration in read only tree");
