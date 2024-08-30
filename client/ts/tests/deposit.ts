@@ -9,6 +9,7 @@ import { ManifestClient } from '../src/client';
 import {
   mintTo,
   createAssociatedTokenAccountIdempotent,
+  getMint,
 } from '@solana/spl-token';
 import { createMarket } from './createMarket';
 import { Market } from '../src/market';
@@ -62,8 +63,9 @@ export async function deposit(
     mint,
     payerKeypair.publicKey,
   );
-  // Use a sufficiently large exponent for atoms
-  const amountAtoms = amountTokens * 10 ** 9;
+
+  const mintDecimals = (await getMint(connection, mint)).decimals;
+  const amountAtoms = amountTokens * 10 ** mintDecimals;
   const mintSig = await mintTo(
     connection,
     payerKeypair,
@@ -73,7 +75,7 @@ export async function deposit(
     amountAtoms,
   );
   console.log(
-    `Minted ${amountTokens} atoms to ${traderTokenAccount} in ${mintSig}`,
+    `Minted ${amountTokens} tokens to ${traderTokenAccount} in ${mintSig}`,
   );
 
   const signature = await sendAndConfirmTransaction(
