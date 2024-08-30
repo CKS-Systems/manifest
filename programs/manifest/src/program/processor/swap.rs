@@ -113,9 +113,15 @@ pub(crate) fn process_swap(
         QuoteAtomsPerBaseAtom::MAX
     };
     let (price_mantissa, price_exponent) = if is_base_in {
-        (0_u32, -20)
+        (1_u32, -20)
     } else {
-        (u32::MAX, 10)
+        // This doesnt quite get to the max price, but close enough such that
+        // maker rounding on any ridiculous pricing will result in effectively
+        // infinite price.
+
+        // u128::MAX; = 340_282_366_920_938_463_463_374_607_431_768_211_455u128 ~= 3.4 * 10**35
+        // u32::MAX;  = 4_294_967_295u32  ~= 4 * 10**9
+        (3_402_823_669, 6)
     };
     let last_valid_slot: u32 = NO_EXPIRATION_LAST_VALID_SLOT;
     let order_type: OrderType = OrderType::ImmediateOrCancel;
