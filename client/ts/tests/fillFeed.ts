@@ -72,7 +72,7 @@ async function checkForFillMessage(
     connection,
     payerKeypair,
     marketAddress,
-    5_000,
+    5,
     5,
     true,
     OrderType.Limit,

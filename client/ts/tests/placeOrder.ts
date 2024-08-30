@@ -53,8 +53,9 @@ async function testPlaceOrder(): Promise<void> {
     Number(market.asks()[0].numBaseAtoms) == 5_000_000_000,
     'ask top of book wrong size',
   );
+  // TODO: Update this back to 5 after changing RestingOrders to tokens
   assert(
-    market.asks()[0].price == 5,
+    market.asks()[0].price == 0.0005,
     `ask top of book wrong price ${market.asks()[0].price}`,
   );
   assert(market.bids().length == 0, 'place bids did not work');
