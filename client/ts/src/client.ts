@@ -255,7 +255,7 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
-    const amountAtoms = Math.floor(
+    const amountAtoms = Math.ceil(
       amountTokens * 10 ** this.market.baseDecimals(),
     );
 

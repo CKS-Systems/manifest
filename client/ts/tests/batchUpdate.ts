@@ -43,7 +43,10 @@ async function testBatchUpdate(): Promise<void> {
     Number(market.asks()[0].numBaseAtoms) == 5_000_000_000,
     'ask top of book wrong size',
   );
-  assert(market.asks()[0].price == 5, 'ask top of book wrong price');
+  assert(
+    market.asks()[0].price == 5,
+    `ask top of book wrong price ${market.asks()[0].price}`,
+  );
   assert(market.bids().length == 0, 'place bids did not work');
 }
 
