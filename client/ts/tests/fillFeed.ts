@@ -25,7 +25,7 @@ async function testFillFeed(): Promise<void> {
     payerKeypair,
     marketAddress,
     market.quoteMint(),
-    10,
+    25,
   );
   await placeOrder(
     connection,
@@ -52,7 +52,7 @@ async function checkForFillMessage(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
-) {
+): Promise<void> {
   const ws = new WebSocket('ws://localhost:1234');
 
   ws.on('open', () => {

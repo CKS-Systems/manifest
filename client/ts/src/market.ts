@@ -27,14 +27,14 @@ export type RestingOrderInternal = {
 export type RestingOrder = {
   /** Trader public key. */
   trader: PublicKey;
-  /** Number of base atoms remaining in the order. */
-  numBaseAtoms: bignum;
+  /** Number of base tokens remaining in the order. */
+  numBaseTokens: bignum;
   /** Last slot before this order is invalid and will be removed. */
   lastValidSlot: bignum;
   /** Exchange defined sequenceNumber for this order, guaranteed to be unique. */
   sequenceNumber: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
-  price: number;
+  /** Price as float in tokens of quote per tokens of base. */
+  tokenPrice: number;
 };
 
 /**
@@ -298,13 +298,13 @@ export class Market {
     console.log('Bids:');
     this.data.bids.forEach((bid) => {
       console.log(
-        `trader: ${bid.trader} numBaseAtoms: ${bid.numBaseAtoms} price: ${bid.price} lastValidSlot: ${bid.lastValidSlot} sequenceNumber: ${bid.sequenceNumber}`,
+        `trader: ${bid.trader} numBaseTokens: ${bid.numBaseTokens} token price: ${bid.tokenPrice} lastValidSlot: ${bid.lastValidSlot} sequenceNumber: ${bid.sequenceNumber}`,
       );
     });
     console.log('Asks:');
     this.data.asks.forEach((ask) => {
       console.log(
-        `trader: ${ask.trader} numBaseAtoms: ${ask.numBaseAtoms} price: ${ask.price} lastValidSlot: ${ask.lastValidSlot} sequenceNumber: ${ask.sequenceNumber}`,
+        `trader: ${ask.trader} numBaseTokens: ${ask.numBaseTokens} token price: ${ask.tokenPrice} lastValidSlot: ${ask.lastValidSlot} sequenceNumber: ${ask.sequenceNumber}`,
       );
     });
     console.log('ClaimedSeats:');
@@ -385,7 +385,6 @@ export class Market {
             restingOrderBeet,
           ).map((restingOrderInternal: RestingOrderInternal) => {
             return {
-              ...restingOrderInternal,
               trader: publicKeyBeet.deserialize(
                 data.subarray(
                   Number(restingOrderInternal.traderIndex) +
@@ -396,7 +395,9 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: convertU128(restingOrderInternal.price),
+              numBaseTokens: toNum(restingOrderInternal.numBaseAtoms) / 10 ** baseMintDecimals,
+              tokenPrice: convertU128(restingOrderInternal.price) * 10 ** (baseMintDecimals - quoteMintDecimals),
+              ...restingOrderInternal,
             };
           })
         : [];
@@ -409,7 +410,6 @@ export class Market {
             restingOrderBeet,
           ).map((restingOrderInternal: RestingOrderInternal) => {
             return {
-              ...restingOrderInternal,
               trader: publicKeyBeet.deserialize(
                 data.subarray(
                   Number(restingOrderInternal.traderIndex) +
@@ -420,7 +420,9 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: convertU128(restingOrderInternal.price),
+              numBaseTokens: toNum(restingOrderInternal.numBaseAtoms) / 10 ** baseMintDecimals,
+              tokenPrice: convertU128(restingOrderInternal.price) * 10 ** (baseMintDecimals - quoteMintDecimals),
+              ...restingOrderInternal,
             };
           })
         : [];

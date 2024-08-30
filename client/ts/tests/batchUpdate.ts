@@ -40,13 +40,12 @@ async function testBatchUpdate(): Promise<void> {
   // Asks are sorted worst to best.
   assert(market.asks().length == 1, 'batch update did not work');
   assert(
-    Number(market.asks()[0].numBaseAtoms) == 5_000_000_000,
+    Number(market.asks()[0].numBaseTokens) == 5,
     'ask top of book wrong size',
   );
-  // TODO: Update this back to 5 after changing RestingOrders to tokens
   assert(
-    market.asks()[0].price == 0.0005,
-    `ask top of book wrong price ${market.asks()[0].price}`,
+    market.asks()[0].tokenPrice == 5,
+    `ask top of book wrong price ${market.asks()[0].tokenPrice}`,
   );
   assert(market.bids().length == 0, 'place bids did not work');
 }
