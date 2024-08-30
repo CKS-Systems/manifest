@@ -256,10 +256,17 @@ export class ManifestClient {
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
     const mintDecimals =
-      this.market.quoteMint() === mint
+      this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
         : this.market.baseDecimals();
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+    console.log(
+      'DEPOSIT IX',
+      mintDecimals,
+      amountAtoms,
+      this.market.quoteMint().toBase58(),
+      mint.toBase58(),
+    );
 
     return createDepositInstruction(
       {
@@ -305,7 +312,7 @@ export class ManifestClient {
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
     const mintDecimals =
-      this.market.quoteMint() === mint
+      this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
         : this.market.baseDecimals();
     const amountAtoms = Math.floor(amountTokens * 10 ** mintDecimals);

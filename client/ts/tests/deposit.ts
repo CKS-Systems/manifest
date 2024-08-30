@@ -75,7 +75,7 @@ export async function deposit(
     amountAtoms,
   );
   console.log(
-    `Minted ${amountTokens} tokens to ${traderTokenAccount} in ${mintSig}`,
+    `Minted ${amountTokens} tokens to ${traderTokenAccount} in ${mintSig}, Decimals ${mintDecimals}, Atoms ${amountAtoms}`,
   );
 
   const signature = await sendAndConfirmTransaction(
