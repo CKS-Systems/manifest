@@ -401,7 +401,7 @@ impl std::fmt::Display for EffectivePrice {
 
 impl std::fmt::Debug for EffectivePrice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("QuoteAtomsPerBaseAtom")
+        f.debug_struct("EffectivePrice")
             .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
             .finish()
     }
