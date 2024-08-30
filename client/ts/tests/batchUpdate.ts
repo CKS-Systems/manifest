@@ -22,13 +22,7 @@ async function testBatchUpdate(): Promise<void> {
     address: marketAddress,
   });
 
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await batchUpdate(
     connection,
     payerKeypair,
