@@ -395,8 +395,12 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              numBaseTokens: toNum(restingOrderInternal.numBaseAtoms) / 10 ** baseMintDecimals,
-              tokenPrice: convertU128(restingOrderInternal.price) * 10 ** (baseMintDecimals - quoteMintDecimals),
+              numBaseTokens:
+                toNum(restingOrderInternal.numBaseAtoms) /
+                10 ** baseMintDecimals,
+              tokenPrice:
+                convertU128(restingOrderInternal.price) *
+                10 ** (baseMintDecimals - quoteMintDecimals),
               ...restingOrderInternal,
             };
           })
@@ -420,8 +424,12 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              numBaseTokens: toNum(restingOrderInternal.numBaseAtoms) / 10 ** baseMintDecimals,
-              tokenPrice: convertU128(restingOrderInternal.price) * 10 ** (baseMintDecimals - quoteMintDecimals),
+              numBaseTokens:
+                toNum(restingOrderInternal.numBaseAtoms) /
+                10 ** baseMintDecimals,
+              tokenPrice:
+                convertU128(restingOrderInternal.price) *
+                10 ** (baseMintDecimals - quoteMintDecimals),
               ...restingOrderInternal,
             };
           })

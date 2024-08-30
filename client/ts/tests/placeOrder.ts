@@ -50,7 +50,7 @@ async function testPlaceOrder(): Promise<void> {
   // Asks are sorted worst to best.
   assert(market.asks().length == 2, 'place asks did not work');
   assert(
-    Number(market.asks()[0].numBaseTokens) == 5_000_000_000,
+    Number(market.asks()[0].numBaseTokens) == 5,
     'ask top of book wrong size',
   );
   assert(

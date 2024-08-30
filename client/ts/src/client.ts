@@ -255,9 +255,11 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
-    const amountAtoms = Math.ceil(
-      amountTokens * 10 ** this.market.baseDecimals(),
-    );
+    const mintDecimals =
+      this.market.quoteMint() === mint
+        ? this.market.quoteDecimals()
+        : this.market.baseDecimals();
+    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
     return createDepositInstruction(
       {
@@ -302,9 +304,11 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
-    const amountAtoms = Math.floor(
-      amountTokens * 10 ** this.market.baseDecimals(),
-    );
+    const mintDecimals =
+      this.market.quoteMint() === mint
+        ? this.market.quoteDecimals()
+        : this.market.baseDecimals();
+    const amountAtoms = Math.floor(amountTokens * 10 ** mintDecimals);
 
     return createWithdrawInstruction(
       {
