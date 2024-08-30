@@ -62,16 +62,19 @@ export async function deposit(
     mint,
     payerKeypair.publicKey,
   );
-
+  // Use a sufficiently large exponent for atoms
+  const amountAtoms = amountTokens * 10 ** 9;
   const mintSig = await mintTo(
     connection,
     payerKeypair,
     mint,
     traderTokenAccount,
     payerKeypair.publicKey,
-    amountTokens,
+    amountAtoms,
   );
-  console.log(`Minted ${amountTokens} to ${traderTokenAccount} in ${mintSig}`);
+  console.log(
+    `Minted ${amountTokens} atoms to ${traderTokenAccount} in ${mintSig}`,
+  );
 
   const signature = await sendAndConfirmTransaction(
     connection,
