@@ -510,7 +510,18 @@ function toWrapperPlaceOrderParams(
   );
   const numBaseAtoms: bignum =
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken;
-
+  console.log(
+    'DEBUG',
+    market.quoteDecimals(),
+    quoteAtomsPerToken,
+    market.baseDecimals(),
+    baseAtomsPerToken,
+    wrapperPlaceOrderParamsExternal.price,
+    priceQuoteAtomsPerBaseAtoms,
+    priceMantissa,
+    priceExponent,
+    numBaseAtoms,
+  );
   const minOutTokens = wrapperPlaceOrderParamsExternal.minOutTokens ?? 0;
 
   const minOutAtoms = wrapperPlaceOrderParamsExternal.isBid

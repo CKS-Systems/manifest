@@ -286,7 +286,7 @@ export class Market {
   /**
    * Print all information loaded about the market in a human readable format.
    */
-  public prettyPrint() {
+  public prettyPrint(): void {
     console.log('');
     console.log(`Market: ${this.address}`);
     console.log(`========================`);
