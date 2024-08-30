@@ -255,7 +255,9 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
-    const amountAtoms = amountTokens * 10 ** this.market.baseDecimals();
+    const amountAtoms = Math.floor(
+      amountTokens * 10 ** this.market.baseDecimals(),
+    );
 
     return createDepositInstruction(
       {
@@ -300,7 +302,9 @@ export class ManifestClient {
     const is22: boolean =
       (mint == this.baseMint.address && this.isBase22) ||
       (mint == this.baseMint.address && this.isBase22);
-    const amountAtoms = amountTokens * 10 ** this.market.baseDecimals();
+    const amountAtoms = Math.floor(
+      amountTokens * 10 ** this.market.baseDecimals(),
+    );
 
     return createWithdrawInstruction(
       {
@@ -508,14 +512,15 @@ function toWrapperPlaceOrderParams(
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
   );
-  const numBaseAtoms: bignum =
-    wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken;
+  const numBaseAtoms: bignum = Math.floor(
+    wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken,
+  );
 
   const minOutTokens = wrapperPlaceOrderParamsExternal.minOutTokens ?? 0;
 
   const minOutAtoms = wrapperPlaceOrderParamsExternal.isBid
-    ? minOutTokens * baseAtomsPerToken
-    : minOutTokens * quoteAtomsPerToken;
+    ? Math.floor(minOutTokens * baseAtomsPerToken)
+    : Math.floor(minOutTokens * quoteAtomsPerToken);
 
   return {
     ...wrapperPlaceOrderParamsExternal,

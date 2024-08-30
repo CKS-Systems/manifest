@@ -65,7 +65,7 @@ export async function deposit(
   );
 
   const mintDecimals = (await getMint(connection, mint)).decimals;
-  const amountAtoms = amountTokens * 10 ** mintDecimals;
+  const amountAtoms = Math.floor(amountTokens * 10 ** mintDecimals);
   const mintSig = await mintTo(
     connection,
     payerKeypair,

@@ -202,8 +202,8 @@ export class Market {
     }
     const seat: ClaimedSeat = filteredSeats[0];
     return isBase
-      ? toNum(seat.baseBalance) * 10 ** this.baseDecimals()
-      : toNum(seat.quoteBalance) * 10 ** this.quoteDecimals();
+      ? toNum(seat.baseBalance) / 10 ** this.baseDecimals()
+      : toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
   }
 
   /**
