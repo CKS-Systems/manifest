@@ -35,7 +35,8 @@ pub struct AddOrderToMarketArgs<'a, 'info> {
     pub market: Pubkey,
     pub trader_index: DataIndex,
     pub num_base_atoms: BaseAtoms,
-    pub price: QuoteAtomsPerBaseAtom,
+    pub price_mantissa: u32,
+    pub price_exponent: i8,
     pub is_bid: bool,
     pub last_valid_slot: u32,
     pub order_type: OrderType,
@@ -52,7 +53,7 @@ pub struct AddOrderToMarketResult {
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 struct MarketUnusedFreeListPadding {
-    _padding: [u64; 9],
+    _padding: [u64; 7],
     _padding2: [u8; 4],
 }
 // 4 bytes are for the free list, rest is payload.
@@ -500,12 +501,15 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             market,
             trader_index,
             num_base_atoms,
-            price,
+            price_mantissa,
+            price_exponent,
             is_bid,
             last_valid_slot,
             order_type,
             global_trade_accounts_opts,
         } = args;
+        let price: QuoteAtomsPerBaseAtom =
+            QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(price_mantissa, price_exponent)?;
         assert_already_has_seat(trader_index)?;
         let now_slot: u32 = get_now_slot();
         assert_not_already_expired(last_valid_slot, now_slot)?;
@@ -748,7 +752,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let resting_order: RestingOrder = RestingOrder::new(
             trader_index,
             remaining_base_atoms,
-            price,
+            price_mantissa,
+            price_exponent,
             order_sequence_number,
             last_valid_slot,
             is_bid,

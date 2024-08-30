@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
+use crate::quantities::{BaseAtoms, EffectivePrice, QuoteAtomsPerBaseAtom};
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};
@@ -56,29 +56,31 @@ pub fn order_type_can_take(order_type: OrderType) -> bool {
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 pub struct RestingOrder {
-    price: QuoteAtomsPerBaseAtom,
     // Sort key is the worst effective price someone could get by
     // trading with me due to the rounding being in my favor as a maker.
-    effective_price: QuoteAtomsPerBaseAtom,
+    effective_price: EffectivePrice,
     num_base_atoms: BaseAtoms,
     sequence_number: u64,
     trader_index: DataIndex,
     last_valid_slot: u32,
+    price_mantissa: u32,
+    price_exponent: i8,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; 6],
+    _padding: [u8; 1],
 }
 
-// 16 +  // price
 // 16 +  // effective_price
 //  8 +  // num_base_atoms
 //  8 +  // sequence_number
 //  4 +  // trader_index
 //  4 +  // last_valid_slot
+//  4 +  // price_mantissa
+//  1 +  // price_exponent
 //  1 +  // is_bid
 //  1 +  // order_type
-//  6    // padding
-// = 64
+//  1    // padding
+// = 48
 const_assert_eq!(size_of::<RestingOrder>(), RESTING_ORDER_SIZE);
 const_assert_eq!(size_of::<RestingOrder>() % 8, 0);
 
@@ -86,7 +88,8 @@ impl RestingOrder {
     pub fn new(
         trader_index: DataIndex,
         num_base_atoms: BaseAtoms,
-        price: QuoteAtomsPerBaseAtom,
+        price_mantissa: u32,
+        price_exponent: i8,
         sequence_number: u64,
         last_valid_slot: u32,
         is_bid: bool,
@@ -96,12 +99,19 @@ impl RestingOrder {
             trader_index,
             num_base_atoms,
             last_valid_slot,
-            price,
-            effective_price: price.checked_effective_price(num_base_atoms, is_bid)?,
+            price_mantissa,
+            price_exponent,
+            effective_price: QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+                price_mantissa,
+                price_exponent,
+            )
+            .unwrap()
+            .checked_effective_price(num_base_atoms, is_bid)?
+            .to_effective_price(),
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
-            _padding: [0; 6],
+            _padding: [0; 1],
         })
     }
 
@@ -114,7 +124,11 @@ impl RestingOrder {
     }
 
     pub fn get_price(&self) -> QuoteAtomsPerBaseAtom {
-        self.price
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+            self.price_mantissa,
+            self.price_exponent,
+        )
+        .unwrap()
     }
 
     #[cfg(any(test, feature = "no-clock"))]
@@ -148,9 +162,11 @@ impl RestingOrder {
 
     pub fn reduce(&mut self, size: BaseAtoms) -> ProgramResult {
         self.num_base_atoms = self.num_base_atoms.checked_sub(size)?;
+
         self.effective_price = self
-            .price
-            .checked_effective_price(self.num_base_atoms, self.get_is_bid())?;
+            .get_price()
+            .checked_effective_price(self.num_base_atoms, self.get_is_bid())?
+            .to_effective_price();
         Ok(())
     }
 }
@@ -177,7 +193,7 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.price) == (other.price)
+        (self.effective_price) == (other.effective_price)
     }
 }
 
@@ -185,7 +201,7 @@ impl Eq for RestingOrder {}
 
 impl std::fmt::Display for RestingOrder {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}@{}", self.num_base_atoms, self.price)
+        write!(f, "{}@{}", self.num_base_atoms, self.get_price())
     }
 }
 
@@ -204,7 +220,8 @@ mod test {
         let resting_order: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::ZERO,
-            QuoteAtomsPerBaseAtom::ZERO,
+            1,
+            0,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             true,
@@ -219,7 +236,8 @@ mod test {
         let resting_order_1: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1),
-            QuoteAtomsPerBaseAtom::try_from(1.0).unwrap(),
+            1,
+            0,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
@@ -230,7 +248,8 @@ mod test {
         let resting_order_2: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1_000_000_000),
-            QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
+            101,
+            -2,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
@@ -243,7 +262,8 @@ mod test {
         let resting_order_1: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1),
-            QuoteAtomsPerBaseAtom::try_from(1.00000000000001).unwrap(),
+            1_000_000_001,
+            -9,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
@@ -254,7 +274,8 @@ mod test {
         let resting_order_2: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1_000_000_000),
-            QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
+            101,
+            -2,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
@@ -270,7 +291,8 @@ mod test {
         let mut resting_order: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::ZERO,
-            QuoteAtomsPerBaseAtom::ZERO,
+            1,
+            0,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
             true,

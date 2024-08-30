@@ -91,6 +91,12 @@ impl PlaceOrderParams {
     pub fn order_type(&self) -> OrderType {
         self.order_type
     }
+    pub fn price_mantissa(&self) -> u32 {
+        self.price_mantissa
+    }
+    pub fn price_exponent(&self) -> i8 {
+        self.price_exponent
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -258,7 +264,8 @@ pub(crate) fn process_batch_update(
                     market: *market.key,
                     trader_index,
                     num_base_atoms: base_atoms,
-                    price,
+                    price_mantissa: place_order.price_mantissa,
+                    price_exponent: place_order.price_exponent,
                     is_bid: place_order.is_bid(),
                     last_valid_slot,
                     order_type,

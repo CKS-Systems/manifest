@@ -215,6 +215,10 @@ impl QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
 
+    pub fn to_effective_price(&self) -> EffectivePrice {
+        EffectivePrice { inner: self.inner }
+    }
+
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
@@ -358,11 +362,55 @@ impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     }
 }
 
+// Sort key usage only. Does not implement math operations.
+#[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
+#[repr(C)]
+pub struct EffectivePrice {
+    inner: [u64; 2],
+}
+
+impl Ord for EffectivePrice {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (u64_slice_to_u128(self.inner)).cmp(&u64_slice_to_u128(other.inner))
+    }
+}
+
+impl PartialOrd for EffectivePrice {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for EffectivePrice {
+    fn eq(&self, other: &Self) -> bool {
+        (self.inner) == (other.inner)
+    }
+}
+impl Eq for EffectivePrice {}
+
+impl std::fmt::Display for EffectivePrice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}",
+            &(u64_slice_to_u128(self.inner) as f64 / D20F)
+        ))
+    }
+}
+
+impl std::fmt::Debug for EffectivePrice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QuoteAtomsPerBaseAtom")
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
+            .finish()
+    }
+}
+
 #[derive(Debug)]
 pub struct PriceConversionError(u32);
 
 const PRICE_CONVERSION_ERROR_BASE: u32 = 100;
 
+// TODO: Move this to manifest error.
 impl From<PriceConversionError> for ProgramError {
     fn from(value: PriceConversionError) -> Self {
         ProgramError::Custom(value.0 + PRICE_CONVERSION_ERROR_BASE)

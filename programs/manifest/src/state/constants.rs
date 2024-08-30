@@ -6,7 +6,7 @@ pub const GLOBAL_FIXED_SIZE: usize = 88;
 // Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
 // 64 bytes for a RestingOrder or ClaimedSeat.
 pub const GLOBAL_BLOCK_SIZE: usize = 64;
-pub const MARKET_BLOCK_SIZE: usize = 80;
+pub const MARKET_BLOCK_SIZE: usize = 64;
 const MARKET_BLOCK_PAYLOAD_SIZE: usize = MARKET_BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 pub const RESTING_ORDER_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;
 pub const CLAIMED_SEAT_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;

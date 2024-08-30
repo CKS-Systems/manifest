@@ -112,6 +112,11 @@ pub(crate) fn process_swap(
     } else {
         QuoteAtomsPerBaseAtom::MAX
     };
+    let (price_mantissa, price_exponent) = if is_base_in {
+        (0_u32, -20)
+    } else {
+        (u32::MAX, 10)
+    };
     let last_valid_slot: u32 = NO_EXPIRATION_LAST_VALID_SLOT;
     let order_type: OrderType = OrderType::ImmediateOrCancel;
 
@@ -126,7 +131,8 @@ pub(crate) fn process_swap(
         market: *market.key,
         trader_index,
         num_base_atoms: base_atoms,
-        price,
+        price_mantissa,
+        price_exponent,
         is_bid: !is_base_in,
         last_valid_slot,
         order_type,
