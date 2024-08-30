@@ -260,13 +260,6 @@ export class ManifestClient {
         ? this.market.quoteDecimals()
         : this.market.baseDecimals();
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
-    console.log(
-      'DEPOSIT IX',
-      mintDecimals,
-      amountAtoms,
-      this.market.quoteMint().toBase58(),
-      mint.toBase58(),
-    );
 
     return createDepositInstruction(
       {
