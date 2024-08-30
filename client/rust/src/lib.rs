@@ -716,6 +716,7 @@ mod test {
             market_vault: TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key)
                 .unwrap(),
             token_program: TokenProgram::new(&token_program_account_info).unwrap(),
+            system_program: None,
             trader: Signer::new(&trader_account_info).unwrap(),
             market: market_key.clone(),
         };

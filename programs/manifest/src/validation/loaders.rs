@@ -388,6 +388,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                 },
                 trader: payer.clone(),
                 market: *market.info.key,
+                system_program: None,
             });
         }
 
@@ -416,6 +417,7 @@ pub struct GlobalTradeAccounts<'a, 'info> {
     pub global_vault: TokenAccountInfo<'a, 'info>,
     pub market_vault: TokenAccountInfo<'a, 'info>,
     pub token_program: TokenProgram<'a, 'info>,
+    pub system_program: Option<Program<'a, 'info>>,
     // Trader is sending or cancelling the order. They are the one who will pay
     // or receive gas prepayments.
     pub trader: Signer<'a, 'info>,
@@ -497,6 +499,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     global_vault,
                     market_vault,
                     token_program,
+                    system_program: Some(system_program.clone()),
                     trader: payer.clone(),
                     market: *market.info.key,
                 })

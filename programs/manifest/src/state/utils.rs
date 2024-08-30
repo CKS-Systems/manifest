@@ -53,14 +53,44 @@ pub(crate) fn remove_from_global(
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
         global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
-    }
+    };
 
-    solana_program::msg!("global {:?}", global.lamports.borrow());
-    solana_program::msg!("trader {:?}", trader.lamports.borrow());
-    **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
-    **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
-    solana_program::msg!("global {:?}", global.lamports.borrow());
-    solana_program::msg!("trader {:?}", trader.lamports.borrow());
+    // The simple implementation gets
+    //
+    //     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+    //     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
+    //
+    // failed: sum of account balances before and after instruction do not match
+    //
+    // doesnt make sense, but thats the solana runtime.
+    //
+    // Done here instead of inside the object because the borrow checker needs
+    // to get the data on global which it cannot while there is a mut self
+    // reference. Note that if it isnt claimed here, then nobody does and it is
+    // lost to the global account.
+    //
+    // Then we tried to do a CPI, but that fails because
+    //
+    // `from` must not carry data
+    //
+    // if let Some(system_program) = &global_trade_accounts.system_program {
+    //     solana_program::program::invoke_signed(
+    //         &solana_program::system_instruction::transfer(
+    //             &global.key,
+    //             &trader.info.key,
+    //             GAS_DEPOSIT_LAMPORTS,
+    //         ),
+    //         &[global.info.clone(), trader.info.clone(), system_program.info.clone()],
+    //         global_seeds_with_bump!(mint, global_bump),
+    //     )?;
+    // }
+    //
+    // Somehow, a hybrid works. Dont know why, but it does.
+    //
+    if global_trade_accounts.system_program.is_some() {
+        **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
+        **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+    }
 
     Ok(())
 }
