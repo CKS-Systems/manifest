@@ -157,30 +157,6 @@ export class Market {
   }
 
   /**
-   * Get the amount in atoms of balance that is deposited on this market, does
-   * not include tokens currently in open orders.
-   *
-   * @param trader PublicKey of the trader to check balance of
-   * @param isBase boolean for whether this is checking base or quote
-   *
-   * @returns number in atoms
-   */
-  public getWithdrawableBalanceAtoms(
-    trader: PublicKey,
-    isBase: boolean,
-  ): number {
-    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
-      return claimedSeat.publicKey.toBase58() == trader.toBase58();
-    });
-    // No seat claimed.
-    if (filteredSeats.length == 0) {
-      return 0;
-    }
-    const seat: ClaimedSeat = filteredSeats[0];
-    return toNum(isBase ? seat.baseBalance : seat.quoteBalance);
-  }
-
-  /**
    * Get the amount in tokens of balance that is deposited on this market, does
    * not include tokens currently in open orders.
    *

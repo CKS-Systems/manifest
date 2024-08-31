@@ -613,7 +613,7 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Used in fill or kill orders. Set to zero otherwise. */
   minOutTokens?: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
-  clientOrderId: number;
+  clientOrderId: bignum;
 };
 
 function toWrapperPlaceOrderParams(
