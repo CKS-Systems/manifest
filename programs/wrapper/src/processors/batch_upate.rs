@@ -4,7 +4,10 @@ use std::{
 };
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{get_helper, get_mut_helper, DataIndex, FreeList, RBNode, TreeReadOperations, TreeWriteOperations, NIL};
+use hypertree::{
+    get_helper, get_mut_helper, DataIndex, FreeList, RBNode, TreeReadOperations,
+    TreeWriteOperations, NIL,
+};
 use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},

@@ -1,6 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree, RedBlackTreeReadOnly, TreeReadOperations, TreeWriteOperations, NIL
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, TreeReadOperations, TreeWriteOperations, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
