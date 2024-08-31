@@ -6,6 +6,7 @@ pub mod expand_market;
 pub mod global_add_trader;
 pub mod global_create;
 pub mod global_deposit;
+pub mod global_withdraw;
 pub mod shared;
 pub mod swap;
 pub mod withdraw;

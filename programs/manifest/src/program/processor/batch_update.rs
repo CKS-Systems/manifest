@@ -5,13 +5,13 @@ use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
-        MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut,
+        OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{trace, DataIndex, PodBool};
+use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data, pubkey::Pubkey,
 };
@@ -121,6 +121,14 @@ pub struct BatchUpdateReturn {
     pub orders: Vec<(u64, DataIndex)>,
 }
 
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+pub enum MarketDataTreeNodeType {
+    #[default]
+    ClaimedSeat = 1,
+    RestingOrder = 2,
+}
+
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -144,11 +152,26 @@ pub(crate) fn process_batch_update(
 
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
         let trader_index: DataIndex = match trader_index_hint {
-            None => dynamic_account.get_trader_index(payer.key),
+            None => {
+                let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+                dynamic_account.get_trader_index(payer.key)
+            }
             Some(hinted_index) => {
+                assert_with_msg(
+                    hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
+                    ManifestError::WrongIndexHintParams,
+                    &format!("Invalid trader hint index {}", hinted_index),
+                )?;
+                assert_with_msg(
+                    get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
+                        .get_payload_type()
+                        == MarketDataTreeNodeType::ClaimedSeat as u8,
+                    ManifestError::WrongIndexHintParams,
+                    &format!("Invalid trader hint index {}", hinted_index),
+                )?;
                 assert_with_msg(
                     payer
                         .key
@@ -160,6 +183,7 @@ pub(crate) fn process_batch_update(
             }
         };
 
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         for cancel in cancels {
             // Hinted is preferred because that is O(1) to find and O(log n) to
             // remove. Without the hint, we lookup by order_sequence_number and
@@ -174,16 +198,28 @@ pub(crate) fn process_batch_update(
                     )?;
                 }
                 Some(hinted_cancel_index) => {
-                    // TODO: Verify that it is an order at the index, not a
-                    // ClaimedSeat that a malicious user pretended was a seat.
-                    let order: &RestingOrder =
-                        dynamic_account.get_order_by_index(hinted_cancel_index);
                     // Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     assert_with_msg(
-                        trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0
-                            && trader_index == order.get_trader_index(),
+                        trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
+                        ManifestError::WrongIndexHintParams,
+                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                    )?;
+                    assert_with_msg(
+                        get_helper::<RBNode<ClaimedSeat>>(
+                            &dynamic_account.dynamic,
+                            hinted_cancel_index,
+                        )
+                        .get_payload_type()
+                            == MarketDataTreeNodeType::RestingOrder as u8,
+                        ManifestError::WrongIndexHintParams,
+                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                    )?;
+                    let order: &RestingOrder =
+                        dynamic_account.get_order_by_index(hinted_cancel_index);
+                    assert_with_msg(
+                        trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
                         &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;

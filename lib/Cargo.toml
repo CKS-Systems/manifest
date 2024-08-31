@@ -8,6 +8,8 @@ description = "Data structures for Manifest"
 license-file = "LICENSE"
 
 [features]
+colored = ["dep:colored"]
+fuzz = ["colored"]
 trace = []
 
 [dependencies]

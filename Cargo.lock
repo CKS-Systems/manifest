@@ -6479,8 +6479,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "ahash"
-version = "0.8.4"
-source = "git+https://github.com/mschneider/aHash.git?branch=patch#276d8777cbe163eeba035e6cdf60e8464d54eb64"
