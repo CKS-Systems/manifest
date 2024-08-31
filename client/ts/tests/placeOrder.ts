@@ -65,7 +65,7 @@ export async function placeOrder(
   payerKeypair: Keypair,
   marketAddress: PublicKey,
   numBaseTokens: number,
-  price: number,
+  tokenPrice: number,
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
@@ -80,7 +80,7 @@ export async function placeOrder(
 
   const placeOrderIx = client.placeOrderIx({
     numBaseTokens,
-    price,
+    tokenPrice,
     isBid,
     lastValidSlot: lastValidSlot,
     orderType: orderType,

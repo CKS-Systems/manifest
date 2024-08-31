@@ -285,7 +285,6 @@ export class ManifestClient {
    * Withdraw instruction
    *
    * @param payer PublicKey of the trader
-   * @param market PublicKey of the market
    * @param mint PublicKey for withdraw mint. Must be either the base or quote
    * @param amountTokens Number of tokens to withdraw.
    *
@@ -488,7 +487,7 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Number of base tokens in the order. */
   numBaseTokens: number;
   /** Price as float in quote tokens per base tokens. */
-  price: number;
+  tokenPrice: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
   /** Last slot before this order is invalid and will be removed. */
@@ -510,7 +509,7 @@ function toWrapperPlaceOrderParams(
   // Converts token price to atom price since not always equal
   // Ex. BONK/USDC = 0.00001854 USDC tokens/BONK tokens -> 0.0001854 USDC Atoms/BONK Atoms
   const priceQuoteAtomsPerBaseAtoms =
-    wrapperPlaceOrderParamsExternal.price *
+    wrapperPlaceOrderParamsExternal.tokenPrice *
     (quoteAtomsPerToken / baseAtomsPerToken);
   // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(

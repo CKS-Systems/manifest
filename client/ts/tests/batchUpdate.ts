@@ -55,7 +55,7 @@ async function batchUpdate(
   payerKeypair: Keypair,
   marketAddress: PublicKey,
   numBaseTokens: number,
-  price: number,
+  tokenPrice: number,
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
@@ -72,7 +72,7 @@ async function batchUpdate(
     [
       {
         numBaseTokens,
-        price,
+        tokenPrice,
         isBid,
         lastValidSlot: lastValidSlot,
         orderType: orderType,
