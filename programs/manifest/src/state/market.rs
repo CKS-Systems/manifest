@@ -731,6 +731,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     current_order_index,
                     &cloned_other_order,
                 );
+                get_mut_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
+                    .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
                 remaining_base_atoms = BaseAtoms::ZERO;
                 break;
             }

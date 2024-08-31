@@ -211,24 +211,24 @@ pub(crate) fn process_batch_update(
                     assert_with_msg(
                         trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        &format!("Invalid cancel hint index due to alignment {}", hinted_cancel_index),
                     )?;
                     assert_with_msg(
-                        get_helper::<RBNode<ClaimedSeat>>(
+                        get_helper::<RBNode<RestingOrder>>(
                             &dynamic_account.dynamic,
                             hinted_cancel_index,
                         )
                         .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder as u8,
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        &format!("Invalid cancel hint index wrong type {}", hinted_cancel_index),
                     )?;
                     let order: &RestingOrder =
                         dynamic_account.get_order_by_index(hinted_cancel_index);
                     assert_with_msg(
                         trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        &format!("Invalid cancel hint index wrong trader {}", hinted_cancel_index),
                     )?;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
