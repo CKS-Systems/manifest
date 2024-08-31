@@ -151,12 +151,13 @@ async fn batch_update_partial_fill_then_cancel_test() -> anyhow::Result<()> {
         )
         .await?;
 
+    // Seat is first, then the first order
     test_fixture
         .batch_update_for_keypair(
             None,
             vec![CancelOrderParams::new_with_hint(
                 0,
-                Some((MARKET_BLOCK_SIZE * 2) as DataIndex),
+                Some((1 * MARKET_BLOCK_SIZE) as DataIndex),
             )],
             vec![PlaceOrderParams::new(
                 1 * SOL_UNIT_SIZE,
