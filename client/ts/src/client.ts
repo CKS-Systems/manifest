@@ -338,27 +338,27 @@ export class ManifestClient {
    */
   public withdrawAllIx(payer: PublicKey): TransactionInstruction[] {
     const withdrawInstructions: TransactionInstruction[] = [];
-  
+
     const baseBalance = this.market.getWithdrawableBalanceTokens(payer, true);
     if (baseBalance > 0) {
       const baseWithdrawIx = this.withdrawIx(
         payer,
         this.market.baseMint(),
-        baseBalance
+        baseBalance,
       );
       withdrawInstructions.push(baseWithdrawIx);
     }
-  
+
     const quoteBalance = this.market.getWithdrawableBalanceTokens(payer, false);
     if (quoteBalance > 0) {
       const quoteWithdrawIx = this.withdrawIx(
         payer,
         this.market.quoteMint(),
-        quoteBalance
+        quoteBalance,
       );
       withdrawInstructions.push(quoteWithdrawIx);
     }
-  
+
     return withdrawInstructions;
   }
 
@@ -408,24 +408,27 @@ export class ManifestClient {
    */
   public placeOrderWithRequiredDepositIx(
     payer: PublicKey,
-    params: WrapperPlaceOrderParamsExternal
+    params: WrapperPlaceOrderParamsExternal,
   ): TransactionInstruction[] {
     const placeOrderIx = this.placeOrderIx(params);
 
-    const currentBalance = this.market.getWithdrawableBalanceTokens(payer, !params.isBid);
+    const currentBalance = this.market.getWithdrawableBalanceTokens(
+      payer,
+      !params.isBid,
+    );
     let depositMint = this.market.baseMint();
     let depositAmount = params.numBaseTokens - currentBalance;
-  
+
     if (params.isBid) {
       depositMint = this.market.quoteMint();
       depositAmount = params.numBaseTokens * params.tokenPrice - currentBalance;
     }
-  
+
     if (depositAmount <= 0) {
       return [placeOrderIx];
     }
     const depositIx = this.depositIx(payer, depositMint, depositAmount);
-  
+
     return [depositIx, placeOrderIx];
   }
 
@@ -545,6 +548,51 @@ export class ManifestClient {
         },
       },
     );
+  }
+
+  /**
+   * CancelAll instruction. Cancels all orders on a market
+   *
+   * @returns TransactionInstruction
+   */
+  public cancelAllIx(): TransactionInstruction {
+    return createBatchUpdateInstruction(
+      {
+        payer: this.payer,
+        market: this.market.address,
+        manifestProgram: MANIFEST_PROGRAM_ID,
+        owner: this.payer,
+        wrapperState: this.wrapper.address,
+      },
+      {
+        params: {
+          cancels: [],
+          cancelAll: true,
+          orders: [],
+          traderIndexHint: null,
+        },
+      },
+    );
+  }
+
+  /**
+   * CancelAllAndWithdrawAllIx instruction. Removes all orders
+   * and balances from the market
+   *
+   * @param payer PublicKey of the trader
+   *
+   * @returns TransactionInstruction
+   */
+  public cancelAllAndWithdrawAllIx(payer: PublicKey): TransactionInstruction[] {
+    const instructions: TransactionInstruction[] = [];
+
+    const cancelAllIx = this.cancelAllIx();
+    instructions.push(cancelAllIx);
+
+    const withdrawInstructions = this.withdrawAllIx(payer);
+    instructions.push(...withdrawInstructions);
+
+    return instructions;
   }
 }
 
