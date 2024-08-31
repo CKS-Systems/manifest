@@ -22,18 +22,12 @@ async function testPlaceOrder(): Promise<void> {
     address: marketAddress,
   });
 
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,
@@ -43,7 +37,7 @@ async function testPlaceOrder(): Promise<void> {
     connection,
     payerKeypair,
     marketAddress,
-    3_000_000_000,
+    3,
     3,
     false,
     OrderType.Limit,
@@ -56,10 +50,13 @@ async function testPlaceOrder(): Promise<void> {
   // Asks are sorted worst to best.
   assert(market.asks().length == 2, 'place asks did not work');
   assert(
-    Number(market.asks()[0].numBaseAtoms) == 5_000_000_000,
+    Number(market.asks()[0].numBaseTokens) == 5,
     'ask top of book wrong size',
   );
-  assert(market.asks()[0].price == 5, 'ask top of book wrong price');
+  assert(
+    market.asks()[0].tokenPrice == 5,
+    `ask top of book wrong price ${market.asks()[0].tokenPrice}`,
+  );
   assert(market.bids().length == 0, 'place bids did not work');
 }
 
@@ -67,12 +64,12 @@ export async function placeOrder(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
-  baseAtoms: number,
-  price: number,
+  numBaseTokens: number,
+  tokenPrice: number,
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutAtoms: number = 0,
+  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -82,12 +79,12 @@ export async function placeOrder(
   );
 
   const placeOrderIx = client.placeOrderIx({
-    baseAtoms,
-    price,
+    numBaseTokens,
+    tokenPrice,
     isBid,
     lastValidSlot: lastValidSlot,
     orderType: orderType,
-    minOutAtoms,
+    minOutTokens,
     clientOrderId,
   });
 
