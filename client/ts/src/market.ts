@@ -157,7 +157,7 @@ export class Market {
   }
 
   /**
-   * Get the amount in atoms of balance that is deposited on the exchange, does
+   * Get the amount in atoms of balance that is deposited on this market, does
    * not include tokens currently in open orders.
    *
    * @param trader PublicKey of the trader to check balance of
@@ -181,7 +181,7 @@ export class Market {
   }
 
   /**
-   * Get the amount in tokens of balance that is deposited on the exchange, does
+   * Get the amount in tokens of balance that is deposited on this market, does
    * not include tokens currently in open orders.
    *
    * @param trader PublicKey of the trader to check balance of

@@ -9,12 +9,10 @@ use std::mem::size_of;
 
 use crate::{
     logs::{emit_stack, FillLog},
-    program::{assert_with_msg, ManifestError},
+    program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{
-            assert_can_take, move_global_tokens_and_modify_resting_order, try_to_remove_from_global,
-        },
+        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
         OrderType,
     },
     validation::{
@@ -439,6 +437,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         claimed_seats_tree.insert(free_address, claimed_seat);
         fixed.claimed_seats_root_index = claimed_seats_tree.get_root_index();
 
+        get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
         Ok(())
     }
 
@@ -536,7 +536,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
             // Remove the resting order if expired.
             if other_order.is_expired(now_slot) {
-                remove_expired(
+                remove_and_update_balances(
                     fixed,
                     dynamic,
                     current_order_index,
@@ -590,7 +590,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 } else {
                     &global_trade_accounts_opts[1]
                 };
-                move_global_tokens_and_modify_resting_order(
+                let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
                     GlobalAtoms::new(if is_bid {
@@ -599,7 +599,16 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                         base_atoms_traded.as_u64()
                     }),
                 )?;
-                // TODO: Handle the case where there are not enough funds
+                if !has_enough_tokens {
+                    remove_and_update_balances(
+                        fixed,
+                        dynamic,
+                        current_order_index,
+                        global_trade_accounts_opts,
+                    )?;
+                    current_order_index = next_order_index;
+                    continue;
+                }
             }
 
             total_base_atoms_traded += base_atoms_traded;
@@ -771,6 +780,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             )?;
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, &resting_order);
+
+        get_mut_helper::<RBNode<RestingOrder>>(dynamic, free_address)
+            .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
 
         Ok(AddOrderToMarketResult {
             order_sequence_number,
@@ -1034,7 +1046,7 @@ fn get_free_address_on_market_fixed(fixed: &mut MarketFixed, dynamic: &mut [u8])
     free_address
 }
 
-fn remove_expired(
+fn remove_and_update_balances(
     fixed: &mut MarketFixed,
     dynamic: &mut [u8],
     order_to_remove_index: DataIndex,
