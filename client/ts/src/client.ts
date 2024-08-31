@@ -362,7 +362,8 @@ export class ManifestClient {
   }
 
   /**
-   * placeOrderWithRequiredDepositIx instruction
+   * PlaceOrderWithRequiredDeposit instruction. Only deposits the appropriate base
+   * or quote tokens if not in the withdrawable balances.
    *
    * @param payer PublicKey of the trader
    * @param params PlaceOrderParamsExternal including all the information for
