@@ -330,6 +330,39 @@ export class ManifestClient {
   }
 
   /**
+   * Withdraw All instruction. Withdraws all available base and quote tokens
+   *
+   * @param payer PublicKey of the trader
+   *
+   * @returns TransactionInstruction[]
+   */
+  public withdrawAllIx(payer: PublicKey): TransactionInstruction[] {
+    const withdrawInstructions: TransactionInstruction[] = [];
+  
+    const baseBalance = this.market.getWithdrawableBalanceTokens(payer, true);
+    if (baseBalance > 0) {
+      const baseWithdrawIx = this.withdrawIx(
+        payer,
+        this.market.baseMint(),
+        baseBalance
+      );
+      withdrawInstructions.push(baseWithdrawIx);
+    }
+  
+    const quoteBalance = this.market.getWithdrawableBalanceTokens(payer, false);
+    if (quoteBalance > 0) {
+      const quoteWithdrawIx = this.withdrawIx(
+        payer,
+        this.market.quoteMint(),
+        quoteBalance
+      );
+      withdrawInstructions.push(quoteWithdrawIx);
+    }
+  
+    return withdrawInstructions;
+  }
+
+  /**
    * PlaceOrder instruction
    *
    * @param params PlaceOrderParamsExternal including all the information for
