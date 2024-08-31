@@ -362,7 +362,7 @@ export class ManifestClient {
   }
 
   /**
-   * depositAndPlaceOrderIx instruction
+   * placeOrderWithRequiredDepositIx instruction
    *
    * @param payer PublicKey of the trader
    * @param params PlaceOrderParamsExternal including all the information for
@@ -372,20 +372,25 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction[]
    */
-  public depositAndPlaceOrderIx(
+  public placeOrderWithRequiredDepositIx(
     payer: PublicKey,
     params: WrapperPlaceOrderParamsExternal
   ): TransactionInstruction[] {
+    const placeOrderIx = this.placeOrderIx(params);
+
+    const currentBalance = this.market.getWithdrawableBalanceTokens(payer, !params.isBid);
     let depositMint = this.market.baseMint();
-    let depositAmount = params.numBaseTokens;
+    let depositAmount = params.numBaseTokens - currentBalance;
   
     if (params.isBid) {
       depositMint = this.market.quoteMint();
-      depositAmount = params.numBaseTokens * params.tokenPrice;
+      depositAmount = params.numBaseTokens * params.tokenPrice - currentBalance;
     }
   
+    if (depositAmount <= 0) {
+      return [placeOrderIx];
+    }
     const depositIx = this.depositIx(payer, depositMint, depositAmount);
-    const placeOrderIx = this.placeOrderIx(params);
   
     return [depositIx, placeOrderIx];
   }
