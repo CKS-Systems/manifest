@@ -177,9 +177,11 @@ export class Market {
       return 0;
     }
     const seat: ClaimedSeat = filteredSeats[0];
-    return isBase
+    const withdrawableBalance = isBase
       ? toNum(seat.baseBalance) / 10 ** this.baseDecimals()
       : toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    console.log('Withdrawable Balance', isBase, withdrawableBalance);
+    return withdrawableBalance;
   }
 
   /**

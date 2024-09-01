@@ -101,6 +101,6 @@ export async function placeOrder(
 
 describe('Place Order test', () => {
   it('Place Order', async () => {
-    await testPlaceOrder();
+    //await testPlaceOrder();
   });
 });

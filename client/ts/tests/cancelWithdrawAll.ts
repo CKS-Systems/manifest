@@ -62,11 +62,11 @@ async function testCancelWithdrawAll(): Promise<void> {
   );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
-    'withdraw withdrawable balance check base',
+    `withdraw withdrawable balance check base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
   );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
-    'withdraw withdrawable balance check quote',
+    `withdraw withdrawable balance check quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
   );
   market.prettyPrint();
 }
