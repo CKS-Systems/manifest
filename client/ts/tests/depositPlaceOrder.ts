@@ -23,6 +23,7 @@ async function testDepositPlaceOrder(): Promise<void> {
   });
 
   await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
+  await market.reload(connection);
   // No deposit should be needed here
   await depositPlaceOrder(
     connection,
