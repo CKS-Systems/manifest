@@ -6,14 +6,13 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
+import { OrderType } from '../src/manifest/types';
 import { createMarket } from './createMarket';
 import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
-import { placeOrder } from './placeOrder';
-import { OrderType } from '../src/manifest/types';
 
-async function testCancelWithdrawAll(): Promise<void> {
+async function testDepositPlaceOrder(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
 
@@ -24,24 +23,18 @@ async function testCancelWithdrawAll(): Promise<void> {
   });
 
   await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
-  await placeOrder(
+  // No deposit should be needed here
+  await depositPlaceOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5,
+    4,
     5,
     false,
     OrderType.Limit,
     0,
   );
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.quoteMint(),
-    10,
-  );
-  await placeOrder(
+  await depositPlaceOrder(
     connection,
     payerKeypair,
     marketAddress,
@@ -51,47 +44,75 @@ async function testCancelWithdrawAll(): Promise<void> {
     OrderType.Limit,
     1,
   );
-  await cancelAndwithdrawAll(connection, payerKeypair, marketAddress);
 
   await market.reload(connection);
-  assert(market.openOrders().length == 0, 'cancel did not cancel all orders');
+  market.prettyPrint();
+
+  // Asks are sorted worst to best.
+  assert(market.asks().length == 1, 'place asks did not work');
   assert(
-    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
+    Number(market.asks()[0].numBaseTokens) == 4,
+    'ask top of book wrong size',
+  );
+  assert(
+    market.asks()[0].tokenPrice == 5,
+    `ask top of book wrong price ${market.asks()[0].tokenPrice}`,
+  );
+  assert(market.bids().length == 1, 'place bids did not work');
+  assert(
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 6,
     'withdraw withdrawable balance check base',
   );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'withdraw withdrawable balance check quote',
   );
-  market.prettyPrint();
 }
 
-// Note this also tests cancelAll and WithdrawAll since this is just a combination of them
-export async function cancelAndwithdrawAll(
+export async function depositPlaceOrder(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
+  numBaseTokens: number,
+  tokenPrice: number,
+  isBid: boolean,
+  orderType: OrderType,
+  clientOrderId: number,
+  minOutTokens: number = 0,
+  lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
     connection,
     marketAddress,
     payerKeypair,
   );
-  const withdrawIx = client.cancelAllAndWithdrawAllIx(payerKeypair.publicKey);
+
+  const depositPlaceOrderIx = client.placeOrderWithRequiredDepositIx(
+    payerKeypair.publicKey,
+    {
+      numBaseTokens,
+      tokenPrice,
+      isBid,
+      lastValidSlot: lastValidSlot,
+      orderType: orderType,
+      minOutTokens,
+      clientOrderId,
+    },
+  );
 
   const signature = await sendAndConfirmTransaction(
     connection,
-    new Transaction().add(...withdrawIx),
+    new Transaction().add(...depositPlaceOrderIx),
     [payerKeypair],
     {
       commitment: 'confirmed',
     },
   );
-  console.log(`Canceled and Withdrew tokens in ${signature}`);
+  console.log(`Required Deposit and Placed order in ${signature}`);
 }
 
-describe('Cancel Withdraw All test', () => {
-  it('CancelWithdrawAll', async () => {
-    await testCancelWithdrawAll();
+describe('Deposit Place Order test', () => {
+  it('Deposit Place Order', async () => {
+    await testDepositPlaceOrder();
   });
 });
