@@ -2,7 +2,8 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData, HyperTreeReadOperations, Payload, HyperTreeWriteOperations, NIL
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData,
+    HyperTreeReadOperations, HyperTreeWriteOperations, Payload, NIL,
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
@@ -102,6 +103,14 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_min_index<V: Payload>(&'a self) -> DataIndex;
     fn is_left_child<V: Payload>(&'a self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&'a self, index: DataIndex) -> bool;
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+    fn get_child_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn is_internal<V: Payload>(&'a self, index: DataIndex) -> bool;
+    fn get_sibling_index<V: Payload>(
+        &'a self,
+        index: DataIndex,
+        parent_index: DataIndex,
+    ) -> DataIndex;
 }
 
 impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
@@ -180,6 +189,44 @@ where
         }
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.get_right_index::<V>(parent_index) == index
+    }
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &'a RBNode<V> {
+        debug_assert_ne!(index, NIL);
+        let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
+        node
+    }
+
+    fn get_child_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+        debug_assert_ne!(index, NIL);
+        // Assert that there are not both. This is getting the unique child.
+        debug_assert!(!(self.has_left::<V>(index) && self.has_right::<V>(index)));
+
+        let left_child_index: DataIndex = self.get_left_index::<V>(index);
+        let child_index: DataIndex = if left_child_index != NIL {
+            left_child_index
+        } else {
+            self.get_right_index::<V>(index)
+        };
+        child_index
+    }
+
+    fn is_internal<V: Payload>(&'a self, index: DataIndex) -> bool {
+        debug_assert_ne!(index, NIL);
+        self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
+    }
+
+    fn get_sibling_index<V: Payload>(
+        &'a self,
+        index: DataIndex,
+        parent_index: DataIndex,
+    ) -> DataIndex {
+        debug_assert_ne!(parent_index, NIL);
+        let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
+        if parent_left_child_index == index {
+            self.get_right_index::<V>(parent_index)
+        } else {
+            parent_left_child_index
+        }
     }
 }
 
@@ -439,7 +486,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         // delete on the successor. We could do either the successor or
         // predecessor. We pick the successor because we would prefer the side
         // of the tree with the max to be sparser.
-        if self.is_internal(index) {
+        if self.is_internal::<V>(index) {
             // Swap nodes
             let successor_index: DataIndex = self.get_successor_index::<V>(index);
             self.swap_nodes(index, successor_index);
@@ -459,14 +506,14 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         };
         if child_color == Color::Red || to_delete_color == Color::Red {
             // Simple case make the new one Black and move the child onto current.
-            let child_index: DataIndex = self.get_child_index(index);
+            let child_index: DataIndex = self.get_child_index::<V>(index);
             self.update_parent_child(index);
             self.set_color(child_index, Color::Black);
             return;
         }
 
         // Actually removes from the tree
-        let child_index: DataIndex = self.get_child_index(index);
+        let child_index: DataIndex = self.get_child_index::<V>(index);
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.update_parent_child(index);
         self.remove_fix(child_index, parent_index);
@@ -503,7 +550,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             return;
         }
 
-        let sibling_index: DataIndex = self.get_sibling_index(current_index, parent_index);
+        let sibling_index: DataIndex = self.get_sibling_index::<V>(current_index, parent_index);
         let sibling_color: Color = self.get_color::<V>(sibling_index);
         let parent_color: Color = self.get_color::<V>(parent_index);
 
@@ -929,19 +976,14 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.set_color(index_0, index_1_color);
         self.set_color(index_1, index_0_color);
     }
-    fn get_node(&self, index: DataIndex) -> &RBNode<V> {
-        debug_assert_ne!(index, NIL);
-        let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data, index);
-        node
-    }
 
     // Take out the node in the middle and fix parent child relationships
     fn update_parent_child(&mut self, index: DataIndex) {
         debug_assert_ne!(index, NIL);
-        debug_assert!(!self.is_internal(index));
+        debug_assert!(!self.is_internal::<V>(index));
 
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
-        let child_index: DataIndex = self.get_child_index(index);
+        let child_index: DataIndex = self.get_child_index::<V>(index);
 
         trace!("TREE update parent child {parent_index}<-{index}<-{child_index}");
         self.set_parent_index(child_index, parent_index);
@@ -952,33 +994,6 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
         if self.root_index == index {
             self.root_index = child_index;
-        }
-    }
-    fn get_child_index(&self, index: DataIndex) -> DataIndex {
-        debug_assert_ne!(index, NIL);
-        // Assert that there are not both. This is getting the unique child.
-        debug_assert!(!(self.has_left::<V>(index) && self.has_right::<V>(index)));
-
-        let left_child_index: DataIndex = self.get_left_index::<V>(index);
-        let child_index: DataIndex = if left_child_index != NIL {
-            left_child_index
-        } else {
-            self.get_right_index::<V>(index)
-        };
-        child_index
-    }
-    fn is_internal(&self, index: DataIndex) -> bool {
-        debug_assert_ne!(index, NIL);
-        self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
-    }
-
-    fn get_sibling_index(&self, index: DataIndex, parent_index: DataIndex) -> DataIndex {
-        debug_assert_ne!(parent_index, NIL);
-        let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
-        if parent_left_child_index == index {
-            self.get_right_index::<V>(parent_index)
-        } else {
-            parent_left_child_index
         }
     }
 

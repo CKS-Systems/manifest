@@ -29,7 +29,8 @@ pub trait HyperTreeWriteOperations<'a, V: Payload> {
     fn remove_by_index(&mut self, index: DataIndex);
 }
 
-// Specific to red black trees and not all data structures.
+// Specific to red black trees and not all data structures. Implementing this
+// gets a lot of other stuff for free.
 pub(crate) trait GetRedBlackReadOnlyData<'a> {
     fn data(&'a self) -> &'a [u8];
     fn root_index(&self) -> DataIndex;

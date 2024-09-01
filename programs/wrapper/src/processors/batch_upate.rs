@@ -5,8 +5,8 @@ use std::{
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, RBNode, HyperTreeReadOperations,
-    HyperTreeWriteOperations, NIL,
+    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeWriteOperations, RBNode, NIL,
 };
 use manifest::{
     program::{

@@ -9,8 +9,8 @@ use crate::{
 };
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, RBNode, RedBlackTree, HyperTreeReadOperations,
-    RedBlackTreeReadOnly, HyperTreeWriteOperations, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
     program::assert_with_msg,
