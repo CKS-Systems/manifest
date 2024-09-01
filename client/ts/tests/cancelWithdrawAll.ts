@@ -54,8 +54,12 @@ async function testCancelWithdrawAll(): Promise<void> {
 
   await market.reload(connection);
   await cancelAndwithdrawAll(connection, payerKeypair, marketAddress);
+  await market.reload(connection);
 
-  assert(market.openOrders().length == 0, 'cancel did not cancel all orders');
+  assert(
+    market.openOrders().length == 0,
+    `cancel did not cancel all orders ${market.openOrders().length}`,
+  );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
     'withdraw withdrawable balance check base',
@@ -78,11 +82,13 @@ export async function cancelAndwithdrawAll(
     marketAddress,
     payerKeypair,
   );
-  const withdrawIx = client.cancelAllAndWithdrawAllIx(payerKeypair.publicKey);
+  const cancelWithdrawIx = client.cancelAllAndWithdrawAllIx(
+    payerKeypair.publicKey,
+  );
 
   const signature = await sendAndConfirmTransaction(
     connection,
-    new Transaction().add(...withdrawIx),
+    new Transaction().add(...cancelWithdrawIx),
     [payerKeypair],
     {
       commitment: 'confirmed',
