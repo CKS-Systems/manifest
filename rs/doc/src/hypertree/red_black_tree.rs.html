@@ -2025,81 +2025,15 @@
 <a href="#2023" id="2023">2023</a>
 <a href="#2024" id="2024">2024</a>
 <a href="#2025" id="2025">2025</a>
-<a href="#2026" id="2026">2026</a>
-<a href="#2027" id="2027">2027</a>
-<a href="#2028" id="2028">2028</a>
-<a href="#2029" id="2029">2029</a>
-<a href="#2030" id="2030">2030</a>
-<a href="#2031" id="2031">2031</a>
-<a href="#2032" id="2032">2032</a>
-<a href="#2033" id="2033">2033</a>
-<a href="#2034" id="2034">2034</a>
-<a href="#2035" id="2035">2035</a>
-<a href="#2036" id="2036">2036</a>
-<a href="#2037" id="2037">2037</a>
-<a href="#2038" id="2038">2038</a>
-<a href="#2039" id="2039">2039</a>
-<a href="#2040" id="2040">2040</a>
-<a href="#2041" id="2041">2041</a>
-<a href="#2042" id="2042">2042</a>
-<a href="#2043" id="2043">2043</a>
-<a href="#2044" id="2044">2044</a>
-<a href="#2045" id="2045">2045</a>
-<a href="#2046" id="2046">2046</a>
-<a href="#2047" id="2047">2047</a>
-<a href="#2048" id="2048">2048</a>
-<a href="#2049" id="2049">2049</a>
-<a href="#2050" id="2050">2050</a>
-<a href="#2051" id="2051">2051</a>
-<a href="#2052" id="2052">2052</a>
-<a href="#2053" id="2053">2053</a>
-<a href="#2054" id="2054">2054</a>
-<a href="#2055" id="2055">2055</a>
-<a href="#2056" id="2056">2056</a>
-<a href="#2057" id="2057">2057</a>
-<a href="#2058" id="2058">2058</a>
-<a href="#2059" id="2059">2059</a>
-<a href="#2060" id="2060">2060</a>
-<a href="#2061" id="2061">2061</a>
-<a href="#2062" id="2062">2062</a>
-<a href="#2063" id="2063">2063</a>
-<a href="#2064" id="2064">2064</a>
-<a href="#2065" id="2065">2065</a>
-<a href="#2066" id="2066">2066</a>
-<a href="#2067" id="2067">2067</a>
-<a href="#2068" id="2068">2068</a>
-<a href="#2069" id="2069">2069</a>
-<a href="#2070" id="2070">2070</a>
-<a href="#2071" id="2071">2071</a>
-<a href="#2072" id="2072">2072</a>
-<a href="#2073" id="2073">2073</a>
-<a href="#2074" id="2074">2074</a>
-<a href="#2075" id="2075">2075</a>
-<a href="#2076" id="2076">2076</a>
-<a href="#2077" id="2077">2077</a>
-<a href="#2078" id="2078">2078</a>
-<a href="#2079" id="2079">2079</a>
-<a href="#2080" id="2080">2080</a>
-<a href="#2081" id="2081">2081</a>
-<a href="#2082" id="2082">2082</a>
-<a href="#2083" id="2083">2083</a>
-<a href="#2084" id="2084">2084</a>
-<a href="#2085" id="2085">2085</a>
-<a href="#2086" id="2086">2086</a>
-<a href="#2087" id="2087">2087</a>
-<a href="#2088" id="2088">2088</a>
-<a href="#2089" id="2089">2089</a>
-<a href="#2090" id="2090">2090</a>
-<a href="#2091" id="2091">2091</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
-<span class="kw">use </span>std::{cmp::Ordering, fmt::Display};
+<span class="kw">use </span>std::cmp::Ordering;
 
-<span class="kw">use crate</span>::{get_helper, get_mut_helper, trace, DataIndex};
+<span class="kw">use crate</span>::{
+    get_helper, get_mut_helper, trace, DataIndex, GetReadOnlyData, TreeReadOperations, TreeValue,
+    TreeWriteOperations, NIL,
+};
 
-<span class="kw">pub const </span>NIL: DataIndex = DataIndex::MAX;
 <span class="kw">pub const </span>RBTREE_OVERHEAD_BYTES: usize = <span class="number">16</span>;
-<span class="kw">pub trait </span>TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-<span class="kw">impl</span>&lt;T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display&gt; TreeValue <span class="kw">for </span>T {}
 
 <span class="doccomment">/// A Red-Black tree which supports random access O(log n), insert O(log n),
 /// delete O(log n), and get max O(1)
@@ -2148,17 +2082,13 @@
     }
 
     <span class="doccomment">/// Sorted iterator starting from the min.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;V&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;RedBlackTreeReadOnly&lt;V&gt;, V&gt; {
         RedBlackTreeReadOnlyIterator {
             tree: <span class="self">self</span>,
             index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
+            phantom: std::marker::PhantomData,
         }
     }
-}
-<span class="kw">trait </span>GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>data(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8];
-    <span class="kw">fn </span>root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
-    <span class="kw">fn </span>max_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, V&gt; {
@@ -2183,7 +2113,7 @@
         <span class="self">self</span>.max_index
     }
 }
-<span class="kw">trait </span>TreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">trait </span>RedBlackTreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>get_value&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V;
     <span class="kw">fn </span>has_left&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; bool;
     <span class="kw">fn </span>has_right&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; bool;
@@ -2196,7 +2126,7 @@
     <span class="kw">fn </span>is_right_child&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; bool;
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; TreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>T
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; RedBlackTreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>T
 <span class="kw">where
     </span>T: GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt;,
 {
@@ -2275,13 +2205,6 @@
     }
 }
 
-<span class="kw">pub trait </span>TreeReadOperations&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>lookup_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>V) -&gt; DataIndex;
-    <span class="kw">fn </span>get_max_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
-    <span class="kw">fn </span>get_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
-    <span class="kw">fn </span>get_predecessor_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
-    <span class="kw">fn </span>get_successor_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
-}
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; TreeReadOperations&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>T
 <span class="kw">where
     </span>T: GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt;,
@@ -2473,20 +2396,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt; {
-    <span class="doccomment">/// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
-    /// data in data is already well formed as a red black tree.
-    </span><span class="kw">pub fn </span>new(data: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[u8], root_index: DataIndex, max_index: DataIndex) -&gt; <span class="self">Self </span>{
-        RedBlackTree::&lt;V&gt; {
-            root_index,
-            data,
-            phantom: std::marker::PhantomData,
-            max_index,
-        }
-    }
-
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; TreeWriteOperations&lt;<span class="lifetime">'a</span>, V&gt; <span class="kw">for </span>RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt; {
     <span class="doccomment">/// Insert and rebalance. The data at index should be already zeroed.
-    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, value: V) {
+    </span><span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, value: V) {
         <span class="macro">trace!</span>(<span class="string">"TREE insert {index}"</span>);
 
         <span class="comment">// Case where this is now the root
@@ -2528,17 +2440,8 @@
         </span><span class="self">self</span>.verify_rb_tree()
     }
 
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">fn </span>remove_by_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>V) {
-        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.lookup_index(value);
-        <span class="kw">if </span>index == NIL {
-            <span class="kw">return</span>;
-        }
-        <span class="self">self</span>.remove_by_index(index);
-    }
-
     <span class="doccomment">/// Remove a node by index and rebalance.
-    </span><span class="kw">pub fn </span>remove_by_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex) {
+    </span><span class="kw">fn </span>remove_by_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex) {
         <span class="macro">trace!</span>(<span class="string">"TREE remove {index}"</span>);
 
         <span class="comment">// Silently fail on removing NIL nodes.
@@ -2589,6 +2492,28 @@
         <span class="kw">let </span>parent_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(index);
         <span class="self">self</span>.update_parent_child(index);
         <span class="self">self</span>.remove_fix(child_index, parent_index);
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt; {
+    <span class="doccomment">/// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
+    /// data in data is already well formed as a red black tree.
+    </span><span class="kw">pub fn </span>new(data: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[u8], root_index: DataIndex, max_index: DataIndex) -&gt; <span class="self">Self </span>{
+        RedBlackTree::&lt;V&gt; {
+            root_index,
+            data,
+            phantom: std::marker::PhantomData,
+            max_index,
+        }
+    }
+
+    <span class="attr">#[cfg(test)]
+    </span><span class="kw">fn </span>remove_by_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>V) {
+        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.lookup_index(value);
+        <span class="kw">if </span>index == NIL {
+            <span class="kw">return</span>;
+        }
+        <span class="self">self</span>.remove_by_index(index);
     }
 
     <span class="kw">fn </span>remove_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, current_index: DataIndex, parent_index: DataIndex) {
@@ -3079,15 +3004,6 @@
         }
     }
 
-    <span class="comment">// TODO: Go from max to min because that would be cheaper as we already store max
-    </span><span class="doccomment">/// Sorted iterator starting from the min.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeIterator&lt;V&gt; {
-        RedBlackTreeIterator {
-            tree: <span class="self">self</span>,
-            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
-        }
-    }
-
     <span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
     </span><span class="kw">pub fn </span>pretty_print(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="macro">trace!</span>(<span class="string">"====== Hypertree ======"</span>);
@@ -3166,81 +3082,38 @@
         }
         num_black_nodes
     }
-}
 
-<span class="kw">pub struct </span>RedBlackTreeIterator&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; {
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt;,
-    index: DataIndex,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; Iterator <span class="kw">for </span>RedBlackTreeIterator&lt;<span class="lifetime">'a</span>, V&gt; {
-    <span class="kw">type </span>Item = (DataIndex, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBNode&lt;V&gt;);
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
-        <span class="kw">if </span>index == NIL {
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data, index);
-            <span class="self">self</span>.index = successor_index;
-            <span class="prelude-val">Some</span>((index, result))
-        }
-    }
-}
-
-<span class="kw">pub struct </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; {
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, V&gt;,
-    index: DataIndex,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; Iterator <span class="kw">for </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, V&gt; {
-    <span class="kw">type </span>Item = (DataIndex, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBNode&lt;V&gt;);
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
-        <span class="kw">if </span>index == NIL {
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data, index);
-            <span class="self">self</span>.index = successor_index;
-            <span class="prelude-val">Some</span>((index, result))
-        }
-    }
-}
-
-<span class="kw">pub struct </span>RedBlackTreeIntoIterator&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; {
-    tree: RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt;,
-    index: DataIndex,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; Iterator <span class="kw">for </span>RedBlackTreeIntoIterator&lt;<span class="lifetime">'a</span>, V&gt; {
-    <span class="kw">type </span>Item = (DataIndex, RBNode&lt;V&gt;);
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
-        <span class="kw">if </span>index == NIL {
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="kw">let </span>result: RBNode&lt;V&gt; = <span class="kw-2">*</span>get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data, <span class="self">self</span>.index);
-            <span class="self">self</span>.index = successor_index;
-            <span class="self">self</span>.tree.remove_by_index(index);
-            <span class="prelude-val">Some</span>((index, result))
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; IntoIterator <span class="kw">for </span>RedBlackTree&lt;<span class="lifetime">'a</span>, V&gt; {
-    <span class="kw">type </span>Item = (DataIndex, RBNode&lt;V&gt;);
-    <span class="kw">type </span>IntoIter = RedBlackTreeIntoIterator&lt;<span class="lifetime">'a</span>, V&gt;;
-
-    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; RedBlackTreeIntoIterator&lt;<span class="lifetime">'a</span>, V&gt; {
-        <span class="kw">let </span>min_index: DataIndex = <span class="self">self</span>.get_min_index::&lt;V&gt;();
-        RedBlackTreeIntoIterator::&lt;V&gt; {
+    <span class="doccomment">/// Sorted iterator starting from the min.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;RedBlackTree&lt;V&gt;, V&gt; {
+        RedBlackTreeReadOnlyIterator {
             tree: <span class="self">self</span>,
-            index: min_index,
+            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+<span class="kw">pub struct </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, T: TreeReadOperations&lt;<span class="lifetime">'a</span>&gt;, V: TreeValue&gt; {
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
+    index: DataIndex,
+
+    phantom: std::marker::PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: TreeReadOperations&lt;<span class="lifetime">'a</span>&gt; + GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt;, V: TreeValue&gt; Iterator
+    <span class="kw">for </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, T, V&gt;
+{
+    <span class="kw">type </span>Item = (DataIndex, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>RBNode&lt;V&gt;);
+
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+        <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
+        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
+        <span class="kw">if </span>index == NIL {
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data(), index);
+            <span class="self">self</span>.index = successor_index;
+            <span class="prelude-val">Some</span>((index, result))
         }
     }
 }
@@ -3249,6 +3122,8 @@
 
 </span><span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
+    <span class="kw">use </span>std::fmt::Display;
+
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="attr">#[test]
@@ -3470,13 +3345,6 @@
             );
         }
         tree.verify_rb_tree();
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_into_iter() {
-        <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        <span class="kw">for </span>(_index, _node) <span class="kw">in </span>tree {}
     }
 
     <span class="attr">#[test]

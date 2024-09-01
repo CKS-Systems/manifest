@@ -1096,7 +1096,7 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, TreeReadOperations, NIL,
+    RedBlackTreeReadOnly, TreeReadOperations, TreeWriteOperations, NIL,
 };
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 <span class="kw">use </span>static_assertions::const_assert_eq;
@@ -1900,10 +1900,10 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>index_to_remove: DataIndex = NIL;
         <span class="kw">for </span>is_searching_bids <span class="kw">in </span>[<span class="bool-val">false</span>, <span class="bool-val">true</span>] {
-            <span class="kw">let </span>tree: Bookside = <span class="kw">if </span>is_searching_bids {
-                Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
+            <span class="kw">let </span>tree: BooksideReadOnly = <span class="kw">if </span>is_searching_bids {
+                BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
             } <span class="kw">else </span>{
-                Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
+                BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
             };
             <span class="kw">for </span>(index, resting_order) <span class="kw">in </span>tree.iter() {
                 <span class="kw">if </span>resting_order.get_value().get_sequence_number() == order_sequence_number {
