@@ -1,6 +1,6 @@
 use std::{mem::size_of, rc::Rc};
 
-use hypertree::{get_helper, DataIndex, RBNode, TreeReadOperations, NIL};
+use hypertree::{get_helper, DataIndex, RBNode, HyperTreeReadOperations, NIL};
 use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType};
 use solana_program_test::tokio;
 use solana_sdk::{

@@ -2,14 +2,14 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData, TreeReadOperations, TreeValue, TreeWriteOperations, NIL
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData, HyperTreeReadOperations, Payload, HyperTreeWriteOperations, NIL
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 
 /// A Red-Black tree which supports random access O(log n), insert O(log n),
 /// delete O(log n), and get max O(1)
-pub struct RedBlackTree<'a, V: TreeValue> {
+pub struct RedBlackTree<'a, V: Payload> {
     /// The address within data that the root node starts.
     root_index: DataIndex,
     /// Unowned byte array which contains all the data for this tree and possibly more.
@@ -26,7 +26,7 @@ pub struct RedBlackTree<'a, V: TreeValue> {
 
 /// A Red-Black tree which supports random access O(log n) and get max O(1),
 /// but does not require the data to be mutable.
-pub struct RedBlackTreeReadOnly<'a, V: TreeValue> {
+pub struct RedBlackTreeReadOnly<'a, V: Payload> {
     /// The address within data that the root node starts.
     root_index: DataIndex,
     /// Unowned byte array which contains all the data for this tree and possibly more.
@@ -41,7 +41,7 @@ pub struct RedBlackTreeReadOnly<'a, V: TreeValue> {
     phantom: std::marker::PhantomData<&'a V>,
 }
 
-impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
+impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
     pub fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
@@ -63,7 +63,7 @@ impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
     }
 }
 
-impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
+impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
     fn data(&'a self) -> &'a [u8] {
         self.data
     }
@@ -74,7 +74,7 @@ impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, 
         self.max_index
     }
 }
-impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
+impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&'a self) -> &'a [u8] {
         self.data
     }
@@ -85,23 +85,23 @@ impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
-impl<'a, V: TreeValue> GetRedBlackData<'a> for RedBlackTree<'a, V> {
+impl<'a, V: Payload> GetRedBlackData<'a> for RedBlackTree<'a, V> {
     fn data(&'a mut self) -> &'a mut [u8] {
         self.data
     }
 }
 
 pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
-    fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V;
-    fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn get_right_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_left_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_color<V: TreeValue>(&'a self, index: DataIndex) -> Color;
-    fn get_parent_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_min_index<V: TreeValue>(&'a self) -> DataIndex;
-    fn is_left_child<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn is_right_child<V: TreeValue>(&'a self, index: DataIndex) -> bool;
+    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
+    fn has_left<V: Payload>(&'a self, index: DataIndex) -> bool;
+    fn has_right<V: Payload>(&'a self, index: DataIndex) -> bool;
+    fn get_right_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_left_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_color<V: Payload>(&'a self, index: DataIndex) -> Color;
+    fn get_parent_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_min_index<V: Payload>(&'a self) -> DataIndex;
+    fn is_left_child<V: Payload>(&'a self, index: DataIndex) -> bool;
+    fn is_right_child<V: Payload>(&'a self, index: DataIndex) -> bool;
 }
 
 impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
@@ -110,43 +110,43 @@ where
 {
     // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
     // when we already know the index is not NIL.
-    fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V {
+    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         &node.value
     }
-    fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn has_left<V: Payload>(&'a self, index: DataIndex) -> bool {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.left != NIL
     }
-    fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn has_right<V: Payload>(&'a self, index: DataIndex) -> bool {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.right != NIL
     }
-    fn get_color<V: TreeValue>(&'a self, index: DataIndex) -> Color {
+    fn get_color<V: Payload>(&'a self, index: DataIndex) -> Color {
         if index == NIL {
             return Color::Black;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.color
     }
-    fn get_right_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_right_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.right
     }
-    fn get_left_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_left_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.left
     }
-    fn get_parent_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_parent_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -154,7 +154,7 @@ where
         node.parent
     }
 
-    fn get_min_index<V: TreeValue>(&'a self) -> DataIndex {
+    fn get_min_index<V: Payload>(&'a self) -> DataIndex {
         if self.root_index() == NIL {
             return NIL;
         }
@@ -165,7 +165,7 @@ where
         current_index
     }
 
-    fn is_left_child<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn is_left_child<V: Payload>(&'a self, index: DataIndex) -> bool {
         // TODO: Explore if we can store is_left_child and is_right_child in the
         // empty bits after color to avoid the compute of checking the parent.
         if index == self.root_index() {
@@ -174,7 +174,7 @@ where
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.get_left_index::<V>(parent_index) == index
     }
-    fn is_right_child<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn is_right_child<V: Payload>(&'a self, index: DataIndex) -> bool {
         if index == self.root_index() {
             return false;
         }
@@ -183,12 +183,12 @@ where
     }
 }
 
-impl<'a, T> TreeReadOperations<'a> for T
+impl<'a, T> HyperTreeReadOperations<'a> for T
 where
     T: GetRedBlackReadOnlyData<'a>,
 {
     /// Lookup the index of a given value.
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex {
+    fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex {
         if self.root_index() == NIL {
             return NIL;
         }
@@ -246,7 +246,7 @@ where
     }
 
     /// Get the previous index. This walks the tree, so does not care about equal keys.
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -270,7 +270,7 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal keys.
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -325,35 +325,35 @@ pub struct RBNode<V> {
     pub(crate) _unused_padding: u16,
     pub(crate) value: V,
 }
-unsafe impl<V: TreeValue> Pod for RBNode<V> {}
+unsafe impl<V: Payload> Pod for RBNode<V> {}
 
-impl<V: TreeValue> Ord for RBNode<V> {
+impl<V: Payload> Ord for RBNode<V> {
     fn cmp(&self, other: &Self) -> Ordering {
         (self.value).cmp(&(other.value))
     }
 }
 
-impl<V: TreeValue> PartialOrd for RBNode<V> {
+impl<V: Payload> PartialOrd for RBNode<V> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<V: TreeValue> PartialEq for RBNode<V> {
+impl<V: Payload> PartialEq for RBNode<V> {
     fn eq(&self, other: &Self) -> bool {
         (self.value) == (other.value)
     }
 }
 
-impl<V: TreeValue> Eq for RBNode<V> {}
+impl<V: Payload> Eq for RBNode<V> {}
 
-impl<V: TreeValue> std::fmt::Display for RBNode<V> {
+impl<V: Payload> std::fmt::Display for RBNode<V> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(fmt, "{}", self.value)
     }
 }
 
-impl<V: TreeValue> RBNode<V> {
+impl<V: Payload> RBNode<V> {
     fn get_left_index(&self) -> DataIndex {
         self.left
     }
@@ -374,7 +374,7 @@ impl<V: TreeValue> RBNode<V> {
     }
 }
 
-impl<'a, V: TreeValue> TreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
+impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
     /// Insert and rebalance. The data at index should be already zeroed.
     fn insert(&mut self, index: DataIndex, value: V) {
         trace!("TREE insert {index}");
@@ -473,7 +473,7 @@ impl<'a, V: TreeValue> TreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
     }
 }
 
-impl<'a, V: TreeValue> RedBlackTree<'a, V> {
+impl<'a, V: Payload> RedBlackTree<'a, V> {
     /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
     pub fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
@@ -1071,14 +1071,14 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
     }
 }
 
-pub struct RedBlackTreeReadOnlyIterator<'a, T: TreeReadOperations<'a>, V: TreeValue> {
+pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
     tree: &'a T,
     index: DataIndex,
 
     phantom: std::marker::PhantomData<&'a V>,
 }
 
-impl<'a, T: TreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: TreeValue> Iterator
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> Iterator
     for RedBlackTreeReadOnlyIterator<'a, T, V>
 {
     type Item = (DataIndex, &'a RBNode<V>);

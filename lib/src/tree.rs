@@ -6,28 +6,30 @@ use crate::DataIndex;
 
 pub const NIL: DataIndex = DataIndex::MAX;
 
-pub trait TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> TreeValue for T {}
+pub trait Payload: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
+impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload for T {}
 
-// TODO: Make this for all possible orderbook data structures (linked list), not just trees
-pub trait TreeReadOperations<'a> {
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex;
+// A HyperTree is any datastructure that does not require contiguous memory and
+// implements max, insert, delete, lookup, iterator, successor, predecessor.
+// Read and write operations can be separated.
+pub trait HyperTreeReadOperations<'a> {
+    fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex;
     fn get_max_index(&self) -> DataIndex;
     fn get_root_index(&self) -> DataIndex;
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
 
     // TODO: Make this implementation generic, difference from what is
     // implemented is that it returns the value, not RBNode<V>
     // fn iter<V: TreeValue, I: Iterator<Item = (DataIndex, &'a V)> + 'a >(&'a self) -> I;
 }
 
-pub trait TreeWriteOperations<'a, V: TreeValue> {
+pub trait HyperTreeWriteOperations<'a, V: Payload> {
     fn insert(&mut self, index: DataIndex, value: V);
     fn remove_by_index(&mut self, index: DataIndex);
 }
 
-// Specific to red black trees and not 
+// Specific to red black trees and not all data structures.
 pub(crate) trait GetRedBlackReadOnlyData<'a> {
     fn data(&'a self) -> &'a [u8];
     fn root_index(&self) -> DataIndex;
