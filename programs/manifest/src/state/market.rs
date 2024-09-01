@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, PodBool, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, TreeReadOperations, NIL,
+    RedBlackTreeReadOnly, TreeReadOperations, TreeWriteOperations, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
@@ -805,10 +805,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let mut index_to_remove: DataIndex = NIL;
         for is_searching_bids in [false, true] {
-            let tree: Bookside = if is_searching_bids {
-                Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
+            let tree: BooksideReadOnly = if is_searching_bids {
+                BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
             } else {
-                Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
+                BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
             };
             for (index, resting_order) in tree.iter() {
                 if resting_order.get_value().get_sequence_number() == order_sequence_number {
