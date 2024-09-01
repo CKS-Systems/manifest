@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725158266404,
+  "lastUpdate": 1725158726730,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -63,6 +63,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 12992,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Britt Cyr",
+            "username": "brittcyr",
+            "email": "cyrbritt@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "77e494f7750eb8f66e0a9bfef7b525210a7d9f67",
+          "message": "fmt and fix payload type when reinserting (#51)\n\n* fmt and fix hint when reinserting\r\n\r\n* test fix",
+          "timestamp": "2024-09-01T02:18:48Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/77e494f7750eb8f66e0a9bfef7b525210a7d9f67"
+        },
+        "date": 1725158726228,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6780,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13220,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13944,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 7801,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 11382,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 12960,
             "unit": "CU",
             "range": "",
             "extra": ""
