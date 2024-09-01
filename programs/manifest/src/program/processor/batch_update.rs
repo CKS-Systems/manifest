@@ -207,7 +207,7 @@ pub(crate) fn process_batch_update(
                         &format!("Invalid cancel hint index {}", hinted_cancel_index),
                     )?;
                     assert_with_msg(
-                        get_helper::<RBNode<ClaimedSeat>>(
+                        get_helper::<RBNode<RestingOrder>>(
                             &dynamic_account.dynamic,
                             hinted_cancel_index,
                         )
