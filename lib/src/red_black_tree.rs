@@ -2,8 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetReadOnlyData, TreeReadOperations, TreeValue,
-    TreeWriteOperations, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData, TreeReadOperations, TreeValue, TreeWriteOperations, NIL
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
@@ -64,7 +63,7 @@ impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
     }
 }
 
-impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
+impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
     fn data(&'a self) -> &'a [u8] {
         self.data
     }
@@ -75,7 +74,7 @@ impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
         self.max_index
     }
 }
-impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTree<'a, V> {
+impl<'a, V: TreeValue> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&'a self) -> &'a [u8] {
         self.data
     }
@@ -86,7 +85,13 @@ impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
-trait RedBlackTreeReadOperationsHelpers<'a> {
+impl<'a, V: TreeValue> GetRedBlackData<'a> for RedBlackTree<'a, V> {
+    fn data(&'a mut self) -> &'a mut [u8] {
+        self.data
+    }
+}
+
+pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V;
     fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool;
     fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool;
@@ -101,7 +106,7 @@ trait RedBlackTreeReadOperationsHelpers<'a> {
 
 impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
-    T: GetReadOnlyData<'a>,
+    T: GetRedBlackReadOnlyData<'a>,
 {
     // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
     // when we already know the index is not NIL.
@@ -180,7 +185,7 @@ where
 
 impl<'a, T> TreeReadOperations<'a> for T
 where
-    T: GetReadOnlyData<'a>,
+    T: GetRedBlackReadOnlyData<'a>,
 {
     /// Lookup the index of a given value.
     fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex {
@@ -291,7 +296,7 @@ where
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
-enum Color {
+pub(crate) enum Color {
     #[default]
     Black = 0,
     Red = 1,
@@ -308,17 +313,17 @@ unsafe impl Zeroable for Color {
 /// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
 /// RedBlack and BST properties, the rest is the payload.
 pub struct RBNode<V> {
-    left: DataIndex,
-    right: DataIndex,
-    parent: DataIndex,
-    color: Color,
+    pub(crate) left: DataIndex,
+    pub(crate) right: DataIndex,
+    pub(crate) parent: DataIndex,
+    pub(crate) color: Color,
 
     // Optional enum controlled by the application to identify the type of node.
     // Defaults to zero.
-    payload_type: u8,
+    pub(crate) payload_type: u8,
 
-    _unused_padding: u16,
-    value: V,
+    pub(crate) _unused_padding: u16,
+    pub(crate) value: V,
 }
 unsafe impl<V: TreeValue> Pod for RBNode<V> {}
 
@@ -1073,7 +1078,7 @@ pub struct RedBlackTreeReadOnlyIterator<'a, T: TreeReadOperations<'a>, V: TreeVa
     phantom: std::marker::PhantomData<&'a V>,
 }
 
-impl<'a, T: TreeReadOperations<'a> + GetReadOnlyData<'a>, V: TreeValue> Iterator
+impl<'a, T: TreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: TreeValue> Iterator
     for RedBlackTreeReadOnlyIterator<'a, T, V>
 {
     type Item = (DataIndex, &'a RBNode<V>);

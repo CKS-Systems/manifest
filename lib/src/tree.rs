@@ -22,13 +22,17 @@ pub trait TreeReadOperations<'a> {
     // fn iter<V: TreeValue, I: Iterator<Item = (DataIndex, &'a V)> + 'a >(&'a self) -> I;
 }
 
-pub(crate) trait GetReadOnlyData<'a> {
+pub trait TreeWriteOperations<'a, V: TreeValue> {
+    fn insert(&mut self, index: DataIndex, value: V);
+    fn remove_by_index(&mut self, index: DataIndex);
+}
+
+// Specific to red black trees and not 
+pub(crate) trait GetRedBlackReadOnlyData<'a> {
     fn data(&'a self) -> &'a [u8];
     fn root_index(&self) -> DataIndex;
     fn max_index(&self) -> DataIndex;
 }
-
-pub trait TreeWriteOperations<'a, V: TreeValue> {
-    fn insert(&mut self, index: DataIndex, value: V);
-    fn remove_by_index(&mut self, index: DataIndex);
+pub(crate) trait GetRedBlackData<'a> {
+    fn data(&'a mut self) -> &'a mut [u8];
 }
