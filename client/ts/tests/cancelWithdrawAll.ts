@@ -54,7 +54,7 @@ async function testCancelWithdrawAll(): Promise<void> {
 
   await market.reload(connection);
   await cancelAndwithdrawAll(connection, payerKeypair, marketAddress);
-  
+
   assert(market.openOrders().length == 0, 'cancel did not cancel all orders');
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,

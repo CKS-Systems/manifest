@@ -11,6 +11,10 @@ import { createMarket } from './createMarket';
 import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
+import {
+  createAssociatedTokenAccountIdempotent,
+  mintTo,
+} from '@solana/spl-token';
 
 async function testDepositPlaceOrder(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
@@ -35,12 +39,31 @@ async function testDepositPlaceOrder(): Promise<void> {
     OrderType.Limit,
     0,
   );
+  const traderTokenAccount = await createAssociatedTokenAccountIdempotent(
+    connection,
+    payerKeypair,
+    market.quoteMint(),
+    payerKeypair.publicKey,
+  );
+  const quoteSize = 3;
+  const quotePrice = 3;
+  const quoteNotional = quotePrice * quoteSize;
+  const amountAtoms = Math.ceil(quoteNotional * 10 ** market.quoteDecimals());
+  const mintSig = await mintTo(
+    connection,
+    payerKeypair,
+    market.quoteMint(),
+    traderTokenAccount,
+    payerKeypair.publicKey,
+    amountAtoms,
+  );
+  console.log('Minted quote tokens', mintSig);
   await depositPlaceOrder(
     connection,
     payerKeypair,
     marketAddress,
-    3,
-    3,
+    quoteSize,
+    quotePrice,
     true,
     OrderType.Limit,
     1,
