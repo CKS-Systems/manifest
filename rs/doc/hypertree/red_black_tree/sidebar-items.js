@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["RBTREE_OVERHEAD_BYTES"],"struct":["RBNode","RedBlackTree","RedBlackTreeReadOnly","RedBlackTreeReadOnlyIterator"]};
+window.SIDEBAR_ITEMS = {"constant":["RBTREE_OVERHEAD_BYTES"],"struct":["RBNode","RedBlackTree","RedBlackTreeReadOnly"],"trait":["GetRedBlackReadOnlyData"]};

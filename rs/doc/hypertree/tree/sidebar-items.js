@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["NIL"],"trait":["TreeReadOperations","TreeValue","TreeWriteOperations"]};
+window.SIDEBAR_ITEMS = {"constant":["NIL"],"struct":["HyperTreeValueReadOnlyIterator"],"trait":["HyperTreeReadOperations","HyperTreeValueIteratorTrait","HyperTreeWriteOperations","Payload"]};

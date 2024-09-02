@@ -34,6 +34,10 @@
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
 <a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Display;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -42,29 +46,33 @@
 
 <span class="kw">pub const </span>NIL: DataIndex = DataIndex::MAX;
 
-<span class="kw">pub trait </span>TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-<span class="kw">impl</span>&lt;T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display&gt; TreeValue <span class="kw">for </span>T {}
+<span class="kw">pub trait </span>Payload: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
+<span class="kw">impl</span>&lt;T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display&gt; Payload <span class="kw">for </span>T {}
 
-<span class="comment">// TODO: Make this for all possible orderbook data structures (linked list), not just trees
-</span><span class="kw">pub trait </span>TreeReadOperations&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>lookup_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>V) -&gt; DataIndex;
+<span class="comment">// A HyperTree is any datastructure that does not require contiguous memory and
+// implements max, insert, delete, lookup, iterator, successor, predecessor.
+// Read and write operations can be separated. Read only iterator is required.
+// It is a separate trait because it wasnt possible to get the rust traits to
+// work with it in the same trait.
+</span><span class="kw">pub trait </span>HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>lookup_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>V) -&gt; DataIndex;
     <span class="kw">fn </span>get_max_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
     <span class="kw">fn </span>get_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
-    <span class="kw">fn </span>get_predecessor_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
-    <span class="kw">fn </span>get_successor_index&lt;V: TreeValue&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
-
-    <span class="comment">// TODO: Make this implementation generic, difference from what is
-    // implemented is that it returns the value, not RBNode&lt;V&gt;
-    // fn iter&lt;V: TreeValue, I: Iterator&lt;Item = (DataIndex, &amp;'a V)&gt; + 'a &gt;(&amp;'a self) -&gt; I;
-</span>}
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>GetReadOnlyData&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>data(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8];
-    <span class="kw">fn </span>root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
-    <span class="kw">fn </span>max_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
+    <span class="kw">fn </span>get_predecessor_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
+    <span class="kw">fn </span>get_successor_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
 }
 
-<span class="kw">pub trait </span>TreeWriteOperations&lt;<span class="lifetime">'a</span>, V: TreeValue&gt; {
+<span class="kw">pub struct </span>HyperTreeValueReadOnlyIterator&lt;<span class="lifetime">'a</span>, T: HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt;, V: Payload&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) index: DataIndex,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) phantom: std::marker::PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;,
+}
+
+<span class="kw">pub trait </span>HyperTreeValueIteratorTrait&lt;<span class="lifetime">'a</span>, T: HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt;&gt; {
+    <span class="kw">fn </span>iter&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; HyperTreeValueReadOnlyIterator&lt;T, V&gt;;
+}
+
+<span class="kw">pub trait </span>HyperTreeWriteOperations&lt;<span class="lifetime">'a</span>, V: Payload&gt; {
     <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, value: V);
     <span class="kw">fn </span>remove_by_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex);
 }
