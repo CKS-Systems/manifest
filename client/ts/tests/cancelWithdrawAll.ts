@@ -82,7 +82,7 @@ export async function cancelAndwithdrawAll(
     marketAddress,
     payerKeypair,
   );
-  const cancelWithdrawIx = client.cancelAllAndWithdrawAllIx(
+  const cancelWithdrawIx = await client.cancelAllAndWithdrawAllIx(
     payerKeypair.publicKey,
   );
 
