@@ -99,6 +99,6 @@ async function testMarket(): Promise<void> {
 
 describe('Market test', () => {
   it('Market', async () => {
-    //await testMarket();
+    await testMarket();
   });
 });

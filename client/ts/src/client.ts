@@ -582,8 +582,8 @@ export class ManifestClient {
   }
 
   /**
-   * ClearOutMarketTxs transactions. Removes all orders
-   * and balances from the market in two transactions
+   * ClearOutMarketTxs transactions. Pulls all orders
+   * and withdraws all balances from the market in two transactions
    *
    * @param payer PublicKey of the trader
    *

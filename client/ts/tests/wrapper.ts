@@ -143,6 +143,6 @@ async function testWrapper(): Promise<void> {
 
 describe('Wrapper test', () => {
   it('Wrapper', async () => {
-    //await testWrapper();
+    await testWrapper();
   });
 });

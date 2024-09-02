@@ -143,6 +143,6 @@ export async function cancelOrder(
 
 describe('Cancel test', () => {
   it('Place and cancel orders', async () => {
-    //await testCancelOrder();
+    await testCancelOrder();
   });
 });

@@ -85,6 +85,6 @@ export async function createMarket(
 
 describe('Create Market test', () => {
   it('Create Market', async () => {
-    //await testCreateMarket();
+    await testCreateMarket();
   });
 });

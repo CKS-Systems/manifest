@@ -36,6 +36,6 @@ describe('Utils test', () => {
     await testUtils();
   });
   it('Pricing', async () => {
-    //testToMantissaAndExponent();
+    testToMantissaAndExponent();
   });
 });
