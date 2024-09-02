@@ -584,11 +584,14 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction
    */
-  public cancelAllAndWithdrawAllIx(payer: PublicKey): TransactionInstruction[] {
+  public async cancelAllAndWithdrawAllIx(
+    payer: PublicKey,
+  ): Promise<TransactionInstruction[]> {
     const instructions: TransactionInstruction[] = [];
 
     const cancelAllIx = this.cancelAllIx();
     instructions.push(cancelAllIx);
+    await this.market.reload(this.connection);
 
     const withdrawInstructions = this.withdrawAllIx(payer);
     instructions.push(...withdrawInstructions);
