@@ -1,10 +1,4 @@
-import {
-  Connection,
-  Keypair,
-  sendAndConfirmTransaction,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
 import { createMarket } from './createMarket';
 import { deposit } from './deposit';
@@ -13,7 +7,7 @@ import { assert } from 'chai';
 import { placeOrder } from './placeOrder';
 import { OrderType } from '../src/manifest/types';
 
-async function testCancelWithdrawAll(): Promise<void> {
+async function testClearOutMarket(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
 
@@ -52,8 +46,7 @@ async function testCancelWithdrawAll(): Promise<void> {
     1,
   );
 
-  await market.reload(connection);
-  await cancelAndwithdrawAll(connection, payerKeypair, marketAddress);
+  await clearOutMarket(connection, payerKeypair, marketAddress);
   await market.reload(connection);
 
   assert(
@@ -72,7 +65,7 @@ async function testCancelWithdrawAll(): Promise<void> {
 }
 
 // Note this also tests cancelAll and WithdrawAll since this is just a combination of them
-export async function cancelAndwithdrawAll(
+export async function clearOutMarket(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
@@ -82,23 +75,14 @@ export async function cancelAndwithdrawAll(
     marketAddress,
     payerKeypair,
   );
-  const cancelWithdrawIx = await client.cancelAllAndWithdrawAllIx(
-    payerKeypair.publicKey,
+  const signatures = await client.clearOutMarketTxs(payerKeypair);
+  console.log(
+    `Canceled and Withdrew tokens in ${signatures[0]} & ${signatures[1]}`,
   );
-
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    new Transaction().add(...cancelWithdrawIx),
-    [payerKeypair],
-    {
-      commitment: 'confirmed',
-    },
-  );
-  console.log(`Canceled and Withdrew tokens in ${signature}`);
 }
 
-describe('Cancel Withdraw All test', () => {
-  it('CancelWithdrawAll', async () => {
-    await testCancelWithdrawAll();
+describe('Clear Out Market test', () => {
+  it('ClearOutMarket', async () => {
+    await testClearOutMarket();
   });
 });

@@ -9,6 +9,7 @@ import {
   sendAndConfirmTransaction,
   GetProgramAccountsResponse,
   AccountInfo,
+  TransactionSignature,
 } from '@solana/web3.js';
 import {
   Mint,
@@ -332,27 +333,31 @@ export class ManifestClient {
   /**
    * Withdraw All instruction. Withdraws all available base and quote tokens
    *
-   * @param payer PublicKey of the trader
-   *
    * @returns TransactionInstruction[]
    */
-  public withdrawAllIx(payer: PublicKey): TransactionInstruction[] {
+  public withdrawAllIx(): TransactionInstruction[] {
     const withdrawInstructions: TransactionInstruction[] = [];
 
-    const baseBalance = this.market.getWithdrawableBalanceTokens(payer, true);
+    const baseBalance = this.market.getWithdrawableBalanceTokens(
+      this.payer,
+      true,
+    );
     if (baseBalance > 0) {
       const baseWithdrawIx = this.withdrawIx(
-        payer,
+        this.payer,
         this.market.baseMint(),
         baseBalance,
       );
       withdrawInstructions.push(baseWithdrawIx);
     }
 
-    const quoteBalance = this.market.getWithdrawableBalanceTokens(payer, false);
+    const quoteBalance = this.market.getWithdrawableBalanceTokens(
+      this.payer,
+      false,
+    );
     if (quoteBalance > 0) {
       const quoteWithdrawIx = this.withdrawIx(
-        payer,
+        this.payer,
         this.market.quoteMint(),
         quoteBalance,
       );
@@ -577,26 +582,39 @@ export class ManifestClient {
   }
 
   /**
-   * CancelAllAndWithdrawAllIx instruction. Removes all orders
-   * and balances from the market
+   * ClearOutMarketTxs transactions. Removes all orders
+   * and balances from the market in two transactions
    *
    * @param payer PublicKey of the trader
    *
-   * @returns TransactionInstruction
+   * @returns TransactionSignatures[]
    */
-  public async cancelAllAndWithdrawAllIx(
-    payer: PublicKey,
-  ): Promise<TransactionInstruction[]> {
-    const instructions: TransactionInstruction[] = [];
-
-    const cancelAllIx = this.cancelAllIx();
-    instructions.push(cancelAllIx);
+  public async clearOutMarketTxs(
+    payerKeypair: Keypair,
+  ): Promise<TransactionSignature[]> {
     await this.market.reload(this.connection);
-
-    const withdrawInstructions = this.withdrawAllIx(payer);
-    instructions.push(...withdrawInstructions);
-
-    return instructions;
+    const cancelAllIx = this.cancelAllIx();
+    const cancelAllTx = new Transaction();
+    const cancelAllSig = await sendAndConfirmTransaction(
+      this.connection,
+      cancelAllTx.add(cancelAllIx),
+      [payerKeypair],
+      {
+        commitment: 'confirmed',
+      },
+    );
+    await this.market.reload(this.connection);
+    const withdrawAllIx = this.withdrawAllIx();
+    const withdrawAllTx = new Transaction();
+    const wihdrawAllSig = await sendAndConfirmTransaction(
+      this.connection,
+      withdrawAllTx.add(...withdrawAllIx),
+      [payerKeypair],
+      {
+        commitment: 'confirmed',
+      },
+    );
+    return [cancelAllSig, wihdrawAllSig];
   }
 }
 
