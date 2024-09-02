@@ -7,7 +7,7 @@ import { assert } from 'chai';
 import { placeOrder } from './placeOrder';
 import { OrderType } from '../src/manifest/types';
 
-async function testClearOutMarket(): Promise<void> {
+async function testKillSwitchMarket(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
 
@@ -46,7 +46,7 @@ async function testClearOutMarket(): Promise<void> {
     1,
   );
 
-  await clearOutMarket(connection, payerKeypair, marketAddress);
+  await killSwitchMarketOO(connection, payerKeypair, marketAddress);
   await market.reload(connection);
 
   assert(
@@ -65,7 +65,7 @@ async function testClearOutMarket(): Promise<void> {
 }
 
 // Note this also tests cancelAll and WithdrawAll since this is just a combination of them
-export async function clearOutMarket(
+export async function killSwitchMarketOO(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
@@ -75,14 +75,14 @@ export async function clearOutMarket(
     marketAddress,
     payerKeypair,
   );
-  const signatures = await client.clearOutMarketTxs(payerKeypair);
+  const signatures = await client.killSwitchMarket(payerKeypair);
   console.log(
     `Canceled and Withdrew tokens in ${signatures[0]} & ${signatures[1]}`,
   );
 }
 
-describe('Clear Out Market test', () => {
-  it('ClearOutMarket', async () => {
-    await testClearOutMarket();
+describe('Kill Switch Market test', () => {
+  it('KillSwitchMarket', async () => {
+    await testKillSwitchMarket();
   });
 });
