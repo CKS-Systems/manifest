@@ -2,8 +2,8 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData,
-    HyperTreeReadOperations, HyperTreeWriteOperations, Payload, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations,
+    HyperTreeWriteOperations, Payload, NIL,
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
