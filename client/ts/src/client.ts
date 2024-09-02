@@ -649,7 +649,6 @@ function toWrapperPlaceOrderParams(
   const priceQuoteAtomsPerBaseAtoms =
     wrapperPlaceOrderParamsExternal.tokenPrice *
     (quoteAtomsPerToken / baseAtomsPerToken);
-  // TODO: Make a helper and test it for this logic.
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
   );

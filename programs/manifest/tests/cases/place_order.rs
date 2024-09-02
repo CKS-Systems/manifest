@@ -1,6 +1,6 @@
 use std::u64;
 
-use hypertree::{RedBlackTree, NIL};
+use hypertree::{RedBlackTreeReadOnly, NIL};
 use manifest::{
     quantities::WrapperU64,
     state::{
@@ -541,7 +541,7 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .get_quote_balance_atoms(&second_keypair.pubkey())
         .await;
 
-    let bids: RedBlackTree<RestingOrder> = RedBlackTree::<RestingOrder>::new(
+    let bids: RedBlackTreeReadOnly<RestingOrder> = RedBlackTreeReadOnly::<RestingOrder>::new(
         test_fixture.market_fixture.market.dynamic.as_mut_slice(),
         test_fixture
             .market_fixture
@@ -560,7 +560,7 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         println!("bid {bid_balance_quote}");
         user_balance_quote += bid_balance_quote;
     }
-    let asks: RedBlackTree<RestingOrder> = RedBlackTree::<RestingOrder>::new(
+    let asks: RedBlackTreeReadOnly<RestingOrder> = RedBlackTreeReadOnly::<RestingOrder>::new(
         test_fixture.market_fixture.market.dynamic.as_mut_slice(),
         test_fixture
             .market_fixture

@@ -1,12 +1,12 @@
 use bytemuck::{Pod, Zeroable};
-use std::{cmp::Ordering, fmt::Display};
+use std::cmp::Ordering;
 
-use crate::{get_helper, get_mut_helper, trace, DataIndex};
+use crate::{
+    get_helper, get_mut_helper, trace, DataIndex, GetReadOnlyData, TreeReadOperations, TreeValue,
+    TreeWriteOperations, NIL,
+};
 
-pub const NIL: DataIndex = DataIndex::MAX;
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
-pub trait TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> TreeValue for T {}
 
 /// A Red-Black tree which supports random access O(log n), insert O(log n),
 /// delete O(log n), and get max O(1)
@@ -55,17 +55,13 @@ impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
     }
 
     /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<V> {
+    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTreeReadOnly<V>, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
             index: self.get_min_index::<V>(),
+            phantom: std::marker::PhantomData,
         }
     }
-}
-trait GetReadOnlyData<'a> {
-    fn data(&'a self) -> &'a [u8];
-    fn root_index(&self) -> DataIndex;
-    fn max_index(&self) -> DataIndex;
 }
 
 impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
@@ -90,7 +86,7 @@ impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
-trait TreeReadOperationsHelpers<'a> {
+trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V;
     fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool;
     fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool;
@@ -103,7 +99,7 @@ trait TreeReadOperationsHelpers<'a> {
     fn is_right_child<V: TreeValue>(&'a self, index: DataIndex) -> bool;
 }
 
-impl<'a, T> TreeReadOperationsHelpers<'a> for T
+impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
     T: GetReadOnlyData<'a>,
 {
@@ -182,13 +178,6 @@ where
     }
 }
 
-pub trait TreeReadOperations<'a> {
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex;
-    fn get_max_index(&self) -> DataIndex;
-    fn get_root_index(&self) -> DataIndex;
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-}
 impl<'a, T> TreeReadOperations<'a> for T
 where
     T: GetReadOnlyData<'a>,
@@ -380,20 +369,9 @@ impl<V: TreeValue> RBNode<V> {
     }
 }
 
-impl<'a, V: TreeValue> RedBlackTree<'a, V> {
-    /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
-    /// data in data is already well formed as a red black tree.
-    pub fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
-        RedBlackTree::<V> {
-            root_index,
-            data,
-            phantom: std::marker::PhantomData,
-            max_index,
-        }
-    }
-
+impl<'a, V: TreeValue> TreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
     /// Insert and rebalance. The data at index should be already zeroed.
-    pub fn insert(&mut self, index: DataIndex, value: V) {
+    fn insert(&mut self, index: DataIndex, value: V) {
         trace!("TREE insert {index}");
 
         // Case where this is now the root
@@ -435,17 +413,8 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         self.verify_rb_tree()
     }
 
-    #[cfg(test)]
-    fn remove_by_value(&mut self, value: &V) {
-        let index: DataIndex = self.lookup_index(value);
-        if index == NIL {
-            return;
-        }
-        self.remove_by_index(index);
-    }
-
     /// Remove a node by index and rebalance.
-    pub fn remove_by_index(&mut self, index: DataIndex) {
+    fn remove_by_index(&mut self, index: DataIndex) {
         trace!("TREE remove {index}");
 
         // Silently fail on removing NIL nodes.
@@ -496,6 +465,28 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.update_parent_child(index);
         self.remove_fix(child_index, parent_index);
+    }
+}
+
+impl<'a, V: TreeValue> RedBlackTree<'a, V> {
+    /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
+    /// data in data is already well formed as a red black tree.
+    pub fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
+        RedBlackTree::<V> {
+            root_index,
+            data,
+            phantom: std::marker::PhantomData,
+            max_index,
+        }
+    }
+
+    #[cfg(test)]
+    fn remove_by_value(&mut self, value: &V) {
+        let index: DataIndex = self.lookup_index(value);
+        if index == NIL {
+            return;
+        }
+        self.remove_by_index(index);
     }
 
     fn remove_fix(&mut self, current_index: DataIndex, parent_index: DataIndex) {
@@ -732,7 +723,6 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             self.rotate_left(grandparent_index);
             self.set_color(index_to_fix, grandparent_color);
             self.set_color(grandparent_index, index_to_fix_color);
-
         }
     }
 
@@ -987,15 +977,6 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
     }
 
-    // TODO: Go from max to min because that would be cheaper as we already store max
-    /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeIterator<V> {
-        RedBlackTreeIterator {
-            tree: self,
-            index: self.get_min_index::<V>(),
-        }
-    }
-
     #[cfg(any(test, feature = "fuzz"))]
     pub fn pretty_print(&self) {
         trace!("====== Hypertree ======");
@@ -1074,81 +1055,38 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
         num_black_nodes
     }
-}
 
-pub struct RedBlackTreeIterator<'a, V: TreeValue> {
-    tree: &'a RedBlackTree<'a, V>,
-    index: DataIndex,
-}
-
-impl<'a, V: TreeValue> Iterator for RedBlackTreeIterator<'a, V> {
-    type Item = (DataIndex, &'a RBNode<V>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
-        if index == NIL {
-            None
-        } else {
-            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
-            Some((index, result))
-        }
-    }
-}
-
-pub struct RedBlackTreeReadOnlyIterator<'a, V: TreeValue> {
-    tree: &'a RedBlackTreeReadOnly<'a, V>,
-    index: DataIndex,
-}
-
-impl<'a, V: TreeValue> Iterator for RedBlackTreeReadOnlyIterator<'a, V> {
-    type Item = (DataIndex, &'a RBNode<V>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
-        if index == NIL {
-            None
-        } else {
-            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
-            Some((index, result))
-        }
-    }
-}
-
-pub struct RedBlackTreeIntoIterator<'a, V: TreeValue> {
-    tree: RedBlackTree<'a, V>,
-    index: DataIndex,
-}
-
-impl<'a, V: TreeValue> Iterator for RedBlackTreeIntoIterator<'a, V> {
-    type Item = (DataIndex, RBNode<V>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
-        if index == NIL {
-            None
-        } else {
-            let result: RBNode<V> = *get_helper::<RBNode<V>>(self.tree.data, self.index);
-            self.index = successor_index;
-            self.tree.remove_by_index(index);
-            Some((index, result))
-        }
-    }
-}
-
-impl<'a, V: TreeValue> IntoIterator for RedBlackTree<'a, V> {
-    type Item = (DataIndex, RBNode<V>);
-    type IntoIter = RedBlackTreeIntoIterator<'a, V>;
-
-    fn into_iter(self) -> RedBlackTreeIntoIterator<'a, V> {
-        let min_index: DataIndex = self.get_min_index::<V>();
-        RedBlackTreeIntoIterator::<V> {
+    /// Sorted iterator starting from the min.
+    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTree<V>, V> {
+        RedBlackTreeReadOnlyIterator {
             tree: self,
-            index: min_index,
+            index: self.get_min_index::<V>(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+pub struct RedBlackTreeReadOnlyIterator<'a, T: TreeReadOperations<'a>, V: TreeValue> {
+    tree: &'a T,
+    index: DataIndex,
+
+    phantom: std::marker::PhantomData<&'a V>,
+}
+
+impl<'a, T: TreeReadOperations<'a> + GetReadOnlyData<'a>, V: TreeValue> Iterator
+    for RedBlackTreeReadOnlyIterator<'a, T, V>
+{
+    type Item = (DataIndex, &'a RBNode<V>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index: DataIndex = self.index;
+        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        if index == NIL {
+            None
+        } else {
+            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
+            self.index = successor_index;
+            Some((index, result))
         }
     }
 }
@@ -1157,6 +1095,8 @@ impl<'a, V: TreeValue> IntoIterator for RedBlackTree<'a, V> {
 
 #[cfg(test)]
 mod test {
+    use std::fmt::Display;
+
     use super::*;
 
     #[test]
@@ -1378,13 +1318,6 @@ mod test {
             );
         }
         tree.verify_rb_tree();
-    }
-
-    #[test]
-    fn test_into_iter() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        for (_index, _node) in tree {}
     }
 
     #[test]
