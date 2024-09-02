@@ -775,7 +775,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_add_to_global(global_trade_accounts_opt, &resting_order)?;
+            assert_with_msg(
+                global_trade_accounts_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Missing global accounts when adding a global",
+            )?;
+            try_to_add_to_global(&global_trade_accounts_opt.as_ref().unwrap(), &resting_order)?;
         } else {
             // Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.

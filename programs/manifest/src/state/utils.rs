@@ -96,15 +96,9 @@ pub(crate) fn remove_from_global(
 }
 
 pub(crate) fn try_to_add_to_global(
-    global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
+    global_trade_accounts: &GlobalTradeAccounts,
     resting_order: &RestingOrder,
 ) -> ProgramResult {
-    assert_with_msg(
-        global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
-        "Missing global accounts when adding a global",
-    )?;
-    let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
 
     {
