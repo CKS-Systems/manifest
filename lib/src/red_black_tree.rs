@@ -54,15 +54,6 @@ impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
             phantom: std::marker::PhantomData,
         }
     }
-
-    /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTreeReadOnly<V>, V> {
-        RedBlackTreeReadOnlyIterator {
-            tree: self,
-            index: self.get_min_index::<V>(),
-            phantom: std::marker::PhantomData,
-        }
-    }
 }
 
 impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
@@ -2012,7 +2003,7 @@ mod test {
 
         let tree: RedBlackTreeReadOnly<TestOrderBid> =
             RedBlackTreeReadOnly::new(&data, root_index, NIL);
-        for _ in tree.iter() {
+        for _ in tree.iter::<TestOrderBid>() {
             println!("Iteration in read only tree");
         }
         tree.data();

@@ -10,7 +10,8 @@ use crate::{
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
-    HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
+    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
     program::assert_with_msg,
@@ -158,9 +159,9 @@ pub(crate) fn sync(
         // iterator so cannot also borrow it for updating the nodes.
         let mut to_remove_indices: Vec<DataIndex> = Vec::new();
         let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::new();
-        for (order_index, order) in orders_tree.iter() {
-            let expected_sequence_number: u64 = order.get_value().get_order_sequence_number();
-            let core_data_index: DataIndex = order.get_value().get_market_data_index();
+        for (order_index, order) in orders_tree.iter::<WrapperOpenOrder>() {
+            let expected_sequence_number: u64 = order.get_order_sequence_number();
+            let core_data_index: DataIndex = order.get_market_data_index();
             // Verifies that it is not just zeroed and happens to match seq num,
             // also check that there are base atoms left.
             let core_resting_order: &RestingOrder =

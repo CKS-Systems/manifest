@@ -3,7 +3,7 @@ use std::{
     io::Error,
 };
 
-use hypertree::{DataIndex, NIL};
+use hypertree::{DataIndex, HyperTreeValueIteratorTrait, NIL};
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
@@ -767,12 +767,12 @@ impl MarketFixture {
             NIL,
         );
         let mut bids_vec: Vec<RestingOrder> = bids
-            .iter()
-            .map(|node| *node.1.get_value())
+            .iter::<RestingOrder>()
+            .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
         let asks_vec: Vec<RestingOrder> = asks
-            .iter()
-            .map(|node| *node.1.get_value())
+            .iter::<RestingOrder>()
+            .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
         bids_vec.extend(asks_vec);
         bids_vec

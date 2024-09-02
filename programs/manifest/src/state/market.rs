@@ -1,7 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
-    HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
+    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
@@ -810,10 +811,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
             };
-            for (index, resting_order) in tree.iter() {
-                if resting_order.get_value().get_sequence_number() == order_sequence_number {
+            for (index, resting_order) in tree.iter::<RestingOrder>() {
+                if resting_order.get_sequence_number() == order_sequence_number {
                     assert_with_msg(
-                        resting_order.get_value().get_trader_index() == trader_index,
+                        resting_order.get_trader_index() == trader_index,
                         ManifestError::InvalidCancel,
                         "Cannot cancel for another trader",
                     )?;
