@@ -14,3 +14,5 @@ ignore:
   - "client/ts/src/fillFeed.ts"
   # Not hermetic
   - "client/ts/src/utils/solana.ts"
+  # Do not run the demo client in tests
+  - "client/ts/demo/main.ts

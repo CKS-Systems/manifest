@@ -115,8 +115,12 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const walletTokens: number = Number(
-      (await this.connection.getTokenAccountBalance(traderTokenAccount, 'finalized'))
-        .value.uiAmount,
+      (
+        await this.connection.getTokenAccountBalance(
+          traderTokenAccount,
+          'finalized',
+        )
+      ).value.uiAmount,
     );
     // Deposit at most half
     const depositAmountTokens: number = Math.floor(
@@ -252,7 +256,9 @@ class DummyTrader {
     const maxTokens: number = isBid
       ? balanceTokens / priceTokens
       : balanceTokens;
-    const baseTokensInOrder: number = Math.floor((Math.random() * maxTokens) / 2);
+    const baseTokensInOrder: number = Math.floor(
+      (Math.random() * maxTokens) / 2,
+    );
 
     let orderType = OrderType.Limit;
     switch (this.name) {
@@ -271,7 +277,7 @@ class DummyTrader {
       orderType,
       clientOrderId: 0,
       numBaseTokens: baseTokensInOrder,
-      tokenPrice: priceTokens
+      tokenPrice: priceTokens,
     });
     const signature: string = await sendAndConfirmTransaction(
       this.connection,
@@ -304,8 +310,12 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const balanceTokens: number = Number(
-      (await this.connection.getTokenAccountBalance(traderTokenAccount, 'finalized'))
-        .value.uiAmount,
+      (
+        await this.connection.getTokenAccountBalance(
+          traderTokenAccount,
+          'finalized',
+        )
+      ).value.uiAmount,
     );
     if (balanceTokens == 0) {
       console.log('No balance for placing order from wallet');
@@ -391,7 +401,9 @@ async function createMarket(
     fromPubkey: keypair.publicKey,
     newAccountPubkey: marketKeypair.publicKey,
     space: FIXED_MANIFEST_HEADER_SIZE,
-    lamports: await connection.getMinimumBalanceForRentExemption(FIXED_MANIFEST_HEADER_SIZE),
+    lamports: await connection.getMinimumBalanceForRentExemption(
+      FIXED_MANIFEST_HEADER_SIZE,
+    ),
     programId: PROGRAM_ID,
   });
   const createMarketIx = ManifestClient['createMarketIx'](
