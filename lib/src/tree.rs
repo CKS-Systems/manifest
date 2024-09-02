@@ -6,29 +6,33 @@ use crate::DataIndex;
 
 pub const NIL: DataIndex = DataIndex::MAX;
 
-pub trait TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> TreeValue for T {}
+pub trait Payload: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
+impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload for T {}
 
-// TODO: Make this for all possible orderbook data structures (linked list), not just trees
-pub trait TreeReadOperations<'a> {
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex;
+// A HyperTree is any datastructure that does not require contiguous memory and
+// implements max, insert, delete, lookup, iterator, successor, predecessor.
+// Read and write operations can be separated. Read only iterator is required.
+// It is a separate trait because it wasnt possible to get the rust traits to
+// work with it in the same trait.
+pub trait HyperTreeReadOperations<'a> {
+    fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex;
     fn get_max_index(&self) -> DataIndex;
     fn get_root_index(&self) -> DataIndex;
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-
-    // TODO: Make this implementation generic, difference from what is
-    // implemented is that it returns the value, not RBNode<V>
-    // fn iter<V: TreeValue, I: Iterator<Item = (DataIndex, &'a V)> + 'a >(&'a self) -> I;
+    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
 }
 
-pub(crate) trait GetReadOnlyData<'a> {
-    fn data(&'a self) -> &'a [u8];
-    fn root_index(&self) -> DataIndex;
-    fn max_index(&self) -> DataIndex;
+pub struct HyperTreeValueReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
+    pub(crate) tree: &'a T,
+    pub(crate) index: DataIndex,
+    pub(crate) phantom: std::marker::PhantomData<&'a V>,
 }
 
-pub trait TreeWriteOperations<'a, V: TreeValue> {
+pub trait HyperTreeValueIteratorTrait<'a, T: HyperTreeReadOperations<'a>> {
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V>;
+}
+
+pub trait HyperTreeWriteOperations<'a, V: Payload> {
     fn insert(&mut self, index: DataIndex, value: V);
     fn remove_by_index(&mut self, index: DataIndex);
 }

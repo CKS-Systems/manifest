@@ -1,7 +1,7 @@
 use std::{cell::RefMut, mem::size_of};
 
 use hypertree::{
-    get_mut_helper, DataIndex, FreeList, TreeReadOperations, TreeWriteOperations, NIL,
+    get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations, HyperTreeWriteOperations, NIL,
 };
 use manifest::{
     program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account},
