@@ -11,7 +11,9 @@ impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload fo
 
 // A HyperTree is any datastructure that does not require contiguous memory and
 // implements max, insert, delete, lookup, iterator, successor, predecessor.
-// Read and write operations can be separated.
+// Read and write operations can be separated. Read only iterator is required.
+// It is a separate trait because it wasnt possible to get the rust traits to
+// work with it in the same trait.
 pub trait HyperTreeReadOperations<'a> {
     fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex;
     fn get_max_index(&self) -> DataIndex;

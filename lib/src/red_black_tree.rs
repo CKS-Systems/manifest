@@ -2,7 +2,9 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload, NIL
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations,
+    HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload,
+    NIL,
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
@@ -333,7 +335,6 @@ where
 
         current_index
     }
-    
 }
 impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
 where
@@ -348,7 +349,8 @@ where
     }
 }
 
-impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> HyperTreeValueReadOnlyIterator<'a, T, V>
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload>
+    HyperTreeValueReadOnlyIterator<'a, T, V>
 {
     pub fn new(tree: &'a T) -> Self {
         HyperTreeValueReadOnlyIterator {
@@ -1113,6 +1115,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
     }
 
     /// Sorted iterator starting from the min.
+    #[cfg(any(test, feature = "fuzz"))]
     fn node_iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTree<V>, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
