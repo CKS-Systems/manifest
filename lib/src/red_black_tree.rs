@@ -2,7 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackData, GetRedBlackReadOnlyData,
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData,
     HyperTreeReadOperations, HyperTreeWriteOperations, Payload, NIL,
 };
 
@@ -84,11 +84,6 @@ impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
     }
     fn max_index(&self) -> DataIndex {
         self.max_index
-    }
-}
-impl<'a, V: Payload> GetRedBlackData<'a> for RedBlackTree<'a, V> {
-    fn data(&'a mut self) -> &'a mut [u8] {
-        self.data
     }
 }
 

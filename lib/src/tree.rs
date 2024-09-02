@@ -36,6 +36,3 @@ pub(crate) trait GetRedBlackReadOnlyData<'a> {
     fn root_index(&self) -> DataIndex;
     fn max_index(&self) -> DataIndex;
 }
-pub(crate) trait GetRedBlackData<'a> {
-    fn data(&'a mut self) -> &'a mut [u8];
-}
