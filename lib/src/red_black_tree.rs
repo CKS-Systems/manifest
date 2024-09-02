@@ -2,8 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations,
-    HyperTreeWriteOperations, Payload, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload, NIL
 };
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
@@ -333,6 +332,48 @@ where
         current_index = self.get_parent_index::<V>(current_index);
 
         current_index
+    }
+    
+}
+impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
+where
+    T: GetRedBlackReadOnlyData<'a> + HyperTreeReadOperations<'a>,
+{
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+        HyperTreeValueReadOnlyIterator {
+            tree: self,
+            index: self.get_min_index::<V>(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> HyperTreeValueReadOnlyIterator<'a, T, V>
+{
+    pub fn new(tree: &'a T) -> Self {
+        HyperTreeValueReadOnlyIterator {
+            tree,
+            index: tree.get_min_index::<V>(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> Iterator
+    for HyperTreeValueReadOnlyIterator<'a, T, V>
+{
+    type Item = (DataIndex, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index: DataIndex = self.index;
+        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        if index == NIL {
+            None
+        } else {
+            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
+            self.index = successor_index;
+            Some((index, result.get_value()))
+        }
     }
 }
 
@@ -996,7 +1037,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
     pub fn pretty_print(&self) {
         trace!("====== Hypertree ======");
 
-        for (index, node) in self.iter() {
+        for (index, node) in self.node_iter() {
             let mut row_str: String = String::new();
 
             row_str += &"  ".repeat(self.depth(index) as usize);
@@ -1039,7 +1080,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
     #[cfg(any(test, feature = "fuzz"))]
     pub fn verify_rb_tree(&self) {
         // Verify that all red nodes only have black children
-        for (index, node) in self.iter() {
+        for (index, node) in self.node_iter() {
             if node.color == Color::Red {
                 assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
                 assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
@@ -1050,7 +1091,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         let first_index: DataIndex = self.get_min_index::<V>();
         let num_black: i32 = self.num_black_nodes_through_root(first_index);
 
-        for (index, _node) in self.iter() {
+        for (index, _node) in self.node_iter() {
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
                 assert!(num_black == self.num_black_nodes_through_root(index));
             }
@@ -1072,7 +1113,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
     }
 
     /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTree<V>, V> {
+    fn node_iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTree<V>, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
             index: self.get_min_index::<V>(),

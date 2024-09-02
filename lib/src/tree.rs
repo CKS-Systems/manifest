@@ -18,10 +18,16 @@ pub trait HyperTreeReadOperations<'a> {
     fn get_root_index(&self) -> DataIndex;
     fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
     fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
+}
 
-    // TODO: Make this implementation generic, difference from what is
-    // implemented is that it returns the value, not RBNode<V>
-    // fn iter<V: TreeValue, I: Iterator<Item = (DataIndex, &'a V)> + 'a >(&'a self) -> I;
+pub struct HyperTreeValueReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
+    pub(crate) tree: &'a T,
+    pub(crate) index: DataIndex,
+    pub(crate) phantom: std::marker::PhantomData<&'a V>,
+}
+
+pub trait HyperTreeValueIteratorTrait<'a, T: HyperTreeReadOperations<'a>> {
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V>;
 }
 
 pub trait HyperTreeWriteOperations<'a, V: Payload> {
@@ -31,7 +37,7 @@ pub trait HyperTreeWriteOperations<'a, V: Payload> {
 
 // Specific to red black trees and not all data structures. Implementing this
 // gets a lot of other stuff for free.
-pub(crate) trait GetRedBlackReadOnlyData<'a> {
+pub trait GetRedBlackReadOnlyData<'a> {
     fn data(&'a self) -> &'a [u8];
     fn root_index(&self) -> DataIndex;
     fn max_index(&self) -> DataIndex;
