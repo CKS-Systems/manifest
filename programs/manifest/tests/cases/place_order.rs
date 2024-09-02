@@ -1,6 +1,6 @@
 use std::u64;
 
-use hypertree::{RedBlackTreeReadOnly, NIL};
+use hypertree::{HyperTreeValueIteratorTrait, RedBlackTreeReadOnly, NIL};
 use manifest::{
     quantities::WrapperU64,
     state::{
@@ -550,13 +550,10 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
             .get_bids_root_index(),
         NIL,
     );
-    for (_, bid) in bids.iter() {
-        let bid_balance_quote = (bid
-            .get_value()
-            .get_num_base_atoms()
-            .checked_mul(bid.get_value().get_price(), true))
-        .unwrap()
-        .as_u64();
+    for (_, bid) in bids.iter::<RestingOrder>() {
+        let bid_balance_quote = (bid.get_num_base_atoms().checked_mul(bid.get_price(), true))
+            .unwrap()
+            .as_u64();
         println!("bid {bid_balance_quote}");
         user_balance_quote += bid_balance_quote;
     }
@@ -570,8 +567,8 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         NIL,
     );
 
-    for (_, ask) in asks.iter() {
-        let ask_balance_base = ask.get_value().get_num_base_atoms().as_u64();
+    for (_, ask) in asks.iter::<RestingOrder>() {
+        let ask_balance_base = ask.get_num_base_atoms().as_u64();
         println!("ask {ask_balance_base}");
         user_balance_base += ask_balance_base;
     }
