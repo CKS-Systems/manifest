@@ -86,6 +86,14 @@ impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
+pub trait GetRedBlackData<'a> {
+    fn data(&'a mut self) -> &'a mut [u8];
+}
+impl<'a, V: Payload> GetRedBlackData<'a> for RedBlackTree<'a, V> {
+    fn data(&'a mut self) -> &'a mut [u8] {
+        self.data
+    }
+}
 
 pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
@@ -223,6 +231,14 @@ where
             parent_left_child_index
         }
     }
+}
+
+pub(crate) trait RedBlackTreeWriteOperationsHelpers<'a> {
+}
+impl<'a, T> RedBlackTreeWriteOperationsHelpers<'a> for T
+where
+    T: GetRedBlackData<'a>,
+{
 }
 
 impl<'a, T> HyperTreeReadOperations<'a> for T
