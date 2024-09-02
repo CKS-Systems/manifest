@@ -23,4 +23,11 @@ pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
 
 // Amount of gas deposited for every global order. This is done to as an
 // economic disincentive to spam.
+//
+// - Every time you place a global order, you deposit 5000 lamports into the
+// global account. This is an overestimate for the gas burden on whoever will
+// remove it from orderbook.
+// - When you remove an order because you fill it, you cancel it yourself, you try
+// to match and the funds for it dont exist, or you remove it because it is
+// expired, you get the 5000 lamports.
 pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
