@@ -2,7 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, GetRedBlackReadOnlyData, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload,
     NIL,
 };
@@ -54,6 +54,14 @@ impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
             phantom: std::marker::PhantomData,
         }
     }
+}
+
+// Specific to red black trees and not all data structures. Implementing this
+// gets a lot of other stuff for free.
+pub trait GetRedBlackReadOnlyData<'a> {
+    fn data(&'a self) -> &'a [u8];
+    fn root_index(&self) -> DataIndex;
+    fn max_index(&self) -> DataIndex;
 }
 
 impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
@@ -327,6 +335,106 @@ where
         current_index
     }
 }
+
+#[cfg(any(test, feature = "fuzz"))]
+pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackReadOnlyData<'a>> {
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+    fn pretty_print<V: Payload>(&'a self);
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+    fn verify_rb_tree<V: Payload>(&'a self);
+    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
+}
+
+#[cfg(any(test, feature = "fuzz"))]
+impl<'a, T> RedBlackTreeTestHelpers<'a, T> for T
+where
+    T: GetRedBlackReadOnlyData<'a>,
+{
+    /// Sorted iterator starting from the min.
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
+        RedBlackTreeReadOnlyIterator {
+            tree: self,
+            index: self.get_min_index::<V>(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    fn pretty_print<V: Payload>(&'a self) {
+        trace!("====== Hypertree ======");
+
+        for (index, node) in self.node_iter::<V>() {
+            let mut row_str: String = String::new();
+
+            row_str += &"  ".repeat(self.depth::<V>(index) as usize);
+
+            let color = if node.color == Color::Black { 'B' } else { 'R' };
+            let str = &format!("{color}:{index}:{node}");
+            if node.color == Color::Red {
+                // Cannot use with sbf. Enable when debugging
+                // locally without sbf.
+                #[cfg(colored)]
+                {
+                    use colored::Colorize;
+                    row_str += &format!("{}", str.red());
+                }
+                #[cfg(not(colored))]
+                {
+                    row_str += str;
+                }
+            } else {
+                row_str += str;
+            }
+            trace!("{}", row_str);
+        }
+
+        trace!("=======================");
+    }
+
+    // Only used in pretty printing, so can be slow
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut depth = -1;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            current_index = self.get_parent_index::<V>(current_index);
+            depth += 1;
+        }
+        depth
+    }
+
+    fn verify_rb_tree<V: Payload>(&'a self) {
+        // Verify that all red nodes only have black children
+        for (index, node) in self.node_iter::<V>() {
+            if node.color == Color::Red {
+                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
+                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
+            }
+        }
+
+        // Verify that all nodes have the same number of black nodes to the root.
+        let first_index: DataIndex = self.get_min_index::<V>();
+        let num_black: i32 = self.num_black_nodes_through_root::<V>(first_index);
+
+        for (index, _node) in self.node_iter::<V>() {
+            if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
+                assert!(num_black == self.num_black_nodes_through_root::<V>(index));
+            }
+        }
+    }
+
+    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut num_black_nodes: i32 = 0;
+        let mut current_index: DataIndex = index;
+
+        while current_index != NIL {
+            if self.get_color::<V>(current_index) == Color::Black {
+                num_black_nodes += 1;
+            }
+            current_index = self.get_parent_index::<V>(current_index);
+        }
+        num_black_nodes
+    }
+}
+
 impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
 where
     T: GetRedBlackReadOnlyData<'a> + HyperTreeReadOperations<'a>,
@@ -491,7 +599,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         self.insert_fix(index);
 
         #[cfg(test)]
-        self.verify_rb_tree()
+        self.verify_rb_tree::<V>()
     }
 
     /// Remove a node by index and rebalance.
@@ -807,6 +915,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
     }
 
+    // TODO: Move these to somewhere that can be shared with a LLRB implementation.
     fn rotate_left(&mut self, index: DataIndex) {
         // Left rotate of G
         //
@@ -1025,97 +1134,11 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             self.root_index = child_index;
         }
     }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    pub fn pretty_print(&self) {
-        trace!("====== Hypertree ======");
-
-        for (index, node) in self.node_iter() {
-            let mut row_str: String = String::new();
-
-            row_str += &"  ".repeat(self.depth(index) as usize);
-
-            let color = if node.color == Color::Black { 'B' } else { 'R' };
-            let str = &format!("{color}:{index}:{node}");
-            if node.color == Color::Red {
-                // Cannot use with sbf. Enable when debugging
-                // locally without sbf.
-                #[cfg(colored)]
-                {
-                    use colored::Colorize;
-                    row_str += &format!("{}", str.red());
-                }
-                #[cfg(not(colored))]
-                {
-                    row_str += str;
-                }
-            } else {
-                row_str += str;
-            }
-            trace!("{}", row_str);
-        }
-
-        trace!("=======================");
-    }
-
-    // Only used in pretty printing, so can be slow
-    #[cfg(any(test, feature = "fuzz"))]
-    fn depth(&self, index: DataIndex) -> i32 {
-        let mut depth = -1;
-        let mut current_index: DataIndex = index;
-        while current_index != NIL {
-            current_index = self.get_parent_index::<V>(current_index);
-            depth += 1;
-        }
-        depth
-    }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    pub fn verify_rb_tree(&self) {
-        // Verify that all red nodes only have black children
-        for (index, node) in self.node_iter() {
-            if node.color == Color::Red {
-                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
-                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
-            }
-        }
-
-        // Verify that all nodes have the same number of black nodes to the root.
-        let first_index: DataIndex = self.get_min_index::<V>();
-        let num_black: i32 = self.num_black_nodes_through_root(first_index);
-
-        for (index, _node) in self.node_iter() {
-            if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
-                assert!(num_black == self.num_black_nodes_through_root(index));
-            }
-        }
-    }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    fn num_black_nodes_through_root(&self, index: DataIndex) -> i32 {
-        let mut num_black_nodes: i32 = 0;
-        let mut current_index: DataIndex = index;
-
-        while current_index != NIL {
-            if self.get_color::<V>(current_index) == Color::Black {
-                num_black_nodes += 1;
-            }
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        num_black_nodes
-    }
-
-    /// Sorted iterator starting from the min.
-    #[cfg(any(test, feature = "fuzz"))]
-    fn node_iter(&self) -> RedBlackTreeReadOnlyIterator<RedBlackTree<V>, V> {
-        RedBlackTreeReadOnlyIterator {
-            tree: self,
-            index: self.get_min_index::<V>(),
-            phantom: std::marker::PhantomData,
-        }
-    }
 }
 
+// Iterator that gives the RBNode information is only needed for testing.
+// External users should use the HyperTreeValueIteratorTrait.
+#[cfg(any(test, feature = "fuzz"))]
 pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
     tree: &'a T,
     index: DataIndex,
@@ -1123,6 +1146,7 @@ pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: P
     phantom: std::marker::PhantomData<&'a V>,
 }
 
+#[cfg(any(test, feature = "fuzz"))]
 impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> Iterator
     for RedBlackTreeReadOnlyIterator<'a, T, V>
 {
@@ -1276,7 +1300,7 @@ mod test {
     fn test_pretty_print() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        tree.pretty_print();
+        tree.pretty_print::<TestOrderBid>();
     }
 
     #[test]
@@ -1289,7 +1313,7 @@ mod test {
             TEST_BLOCK_WIDTH * 32,
             TestOrderBid::new((15_900).try_into().unwrap()),
         );
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1300,7 +1324,7 @@ mod test {
         for i in 1..12 {
             tree.remove_by_value(&TestOrderBid::new(i * 1_000));
         }
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1308,7 +1332,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(7 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1316,7 +1340,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(6 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1324,7 +1348,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(2 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1333,7 +1357,7 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(5 * 1_000));
         tree.remove_by_value(&TestOrderBid::new(4 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1342,7 +1366,7 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(11 * 1_000));
         tree.remove_by_value(&TestOrderBid::new(10 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1352,7 +1376,7 @@ mod test {
 
         for i in 4..8 {
             tree.remove_by_value(&TestOrderBid::new(i * 1_000));
-            tree.verify_rb_tree();
+            tree.verify_rb_tree::<TestOrderBid>();
         }
     }
 
@@ -1367,7 +1391,7 @@ mod test {
                 TestOrderBid::new(((12 - i) * 1_000).into()),
             );
         }
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1377,7 +1401,7 @@ mod test {
         // Does not exist in the tree. Should fail silently.
         tree.remove_by_value(&TestOrderBid::new(99999));
         tree.remove_by_value(&TestOrderBid::new(1));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1410,7 +1434,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(15));
 
         tree.remove_by_value(&TestOrderBid::new(40));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1423,7 +1447,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(35));
 
         tree.remove_by_value(&TestOrderBid::new(20));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1436,7 +1460,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(25));
 
         tree.remove_by_value(&TestOrderBid::new(40));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1452,7 +1476,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(1));
         tree.remove_by_value(&TestOrderBid::new(1));
         tree.remove_by_value(&TestOrderBid::new(30));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1468,7 +1492,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(45));
         tree.remove_by_value(&TestOrderBid::new(45));
         tree.remove_by_value(&TestOrderBid::new(10));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1480,7 +1504,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(300));
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(250));
         tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(275));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1489,7 +1513,7 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.insert(TEST_BLOCK_WIDTH * 12, TestOrderBid::new(4500));
         tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5500));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1521,7 +1545,7 @@ mod test {
             tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1530,7 +1554,7 @@ mod test {
         let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
         assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1554,7 +1578,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5000));
         tree.insert(TEST_BLOCK_WIDTH * 14, TestOrderBid::new(1000));
         tree.insert(TEST_BLOCK_WIDTH * 15, TestOrderBid::new(1000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1577,7 +1601,7 @@ mod test {
         tree.remove_by_index(TEST_BLOCK_WIDTH * 4);
         tree.remove_by_index(TEST_BLOCK_WIDTH * 2);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                   B
@@ -1674,11 +1698,11 @@ mod test {
 
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(8 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                  (B)
@@ -1775,11 +1799,11 @@ mod test {
 
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 6 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(6 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                   B
@@ -1906,11 +1930,11 @@ mod test {
         };
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(11 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     // This case would try to rotate beyond the root of the tree in the second
@@ -1978,11 +2002,11 @@ mod test {
         };
         let mut tree: RedBlackTree<TestOrderAsk> =
             RedBlackTree::new(&mut data, 0 * TEST_BLOCK_WIDTH, 1 * TEST_BLOCK_WIDTH);
-        tree.verify_rb_tree();
-        tree.pretty_print();
+        tree.verify_rb_tree::<TestOrderBid>();
+        tree.pretty_print::<TestOrderBid>();
 
         tree.insert(5 * TEST_BLOCK_WIDTH, TestOrderAsk::new(0));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]

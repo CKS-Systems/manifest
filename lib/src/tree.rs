@@ -36,11 +36,3 @@ pub trait HyperTreeWriteOperations<'a, V: Payload> {
     fn insert(&mut self, index: DataIndex, value: V);
     fn remove_by_index(&mut self, index: DataIndex);
 }
-
-// Specific to red black trees and not all data structures. Implementing this
-// gets a lot of other stuff for free.
-pub trait GetRedBlackReadOnlyData<'a> {
-    fn data(&'a self) -> &'a [u8];
-    fn root_index(&self) -> DataIndex;
-    fn max_index(&self) -> DataIndex;
-}
