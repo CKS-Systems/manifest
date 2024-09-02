@@ -9,12 +9,72 @@ use crate::{
 
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 
-// Overview of all the structs and traits in this file.
+// Overview of all the structs and traits in this file. Skips some internal helpers.
 //
 // Public
+//  struct RedBlackTree<'a, V: Payload>
+//    fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self
+//    GetRedBlackTreeReadOnlyData
+//    GetRedBlackTreeData
+//    HyperTreeWriteOperations
+//  struct RedBlackTreeReadOnly<'a, V: Payload>
+//    fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self
+//    GetRedBlackTreeReadOnlyData
 //
-// RedBlackTree<'a, V: Payload>
-// RedBlackTreeReadOnly<'a, V: Payload>
+//  trait GetRedBlackTreeReadOnlyData<'a>
+//    fn data(&self) -> &[u8];
+//    fn root_index(&self) -> DataIndex;
+//    fn max_index(&self) -> DataIndex;
+//    RedBlackTreeReadOperationsHelpers
+//    HyperTreeReadOperations
+//    RedBlackTreeTestHelpers
+//    HyperTreeValueIteratorTrait
+//  trait GetRedBlackTreeData<'a>
+//    fn data(&mut self) -> &mut [u8];
+//    fn set_root_index(&mut self, root_index: DataIndex);
+//    RedBlackTreeWriteOperationsHelpers
+//  struct RBNode<V>
+//    Ord
+//    PartialOrd
+//    PartialEq
+//    Eq
+//    fn get_payload_type(&self) -> u8
+//    fn set_payload_type(&mut self, payload_type: u8)
+//    fn get_mut_value(&mut self) -> &mut V
+//    fn get_value(&self) -> &V
+//
+// Internal
+//  trait RedBlackTreeReadOperationsHelpers<'a>
+//    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
+//    fn has_left<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn has_right<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_right_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
+//    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn get_min_index<V: Payload>(&self) -> DataIndex;
+//    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+//    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+// trait RedBlackTreeWriteOperationsHelpers<'a>
+//    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
+//    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
+//    fn set_left_index<V: Payload>(&mut self, index: DataIndex, left_index: DataIndex);
+//    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
+//    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
+//    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
+//    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+//    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
+// trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>>
+//    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+//    fn pretty_print<V: Payload>(&'a self);
+//    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+//    fn verify_rb_tree<V: Payload>(&'a self);
+//    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
+// enum Color
 
 /// A Red-Black tree which supports random access O(log n), insert O(log n),
 /// delete O(log n), and get max O(1)
@@ -65,13 +125,13 @@ impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
 
 // Specific to red black trees and not all data structures. Implementing this
 // gets a lot of other stuff for free.
-pub trait GetRedBlackReadOnlyData<'a> {
+pub trait GetRedBlackTreeReadOnlyData<'a> {
     fn data(&self) -> &[u8];
     fn root_index(&self) -> DataIndex;
     fn max_index(&self) -> DataIndex;
 }
 
-impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
+impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
     fn data(&self) -> &[u8] {
         self.data
     }
@@ -82,7 +142,7 @@ impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V>
         self.max_index
     }
 }
-impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
+impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&self) -> &[u8] {
         self.data
     }
@@ -93,11 +153,11 @@ impl<'a, V: Payload> GetRedBlackReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
-pub trait GetRedBlackData<'a> {
+pub trait GetRedBlackTreeData<'a> {
     fn data(&mut self) -> &mut [u8];
     fn set_root_index(&mut self, root_index: DataIndex);
 }
-impl<'a, V: Payload> GetRedBlackData<'a> for RedBlackTree<'a, V> {
+impl<'a, V: Payload> GetRedBlackTreeData<'a> for RedBlackTree<'a, V> {
     fn data(&mut self) -> &mut [u8] {
         self.data
     }
@@ -126,7 +186,7 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
 
 impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
-    T: GetRedBlackReadOnlyData<'a>,
+    T: GetRedBlackTreeReadOnlyData<'a>,
 {
     // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
     // when we already know the index is not NIL.
@@ -253,7 +313,9 @@ pub(crate) trait RedBlackTreeWriteOperationsHelpers<'a> {
 }
 impl<'a, T> RedBlackTreeWriteOperationsHelpers<'a> for T
 where
-    T: GetRedBlackData<'a> + RedBlackTreeReadOperationsHelpers<'a> + GetRedBlackReadOnlyData<'a>,
+    T: GetRedBlackTreeData<'a>
+        + RedBlackTreeReadOperationsHelpers<'a>
+        + GetRedBlackTreeReadOnlyData<'a>,
 {
     fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color) {
         if index == NIL {
@@ -477,7 +539,7 @@ where
 
 impl<'a, T> HyperTreeReadOperations<'a> for T
 where
-    T: GetRedBlackReadOnlyData<'a>,
+    T: GetRedBlackTreeReadOnlyData<'a>,
 {
     /// Lookup the index of a given value.
     fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex {
@@ -587,7 +649,7 @@ where
 }
 
 #[cfg(any(test, feature = "fuzz"))]
-pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackReadOnlyData<'a>> {
+pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
     fn pretty_print<V: Payload>(&'a self);
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
@@ -598,7 +660,7 @@ pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackReadOnlyData<'a>> {
 #[cfg(any(test, feature = "fuzz"))]
 impl<'a, T> RedBlackTreeTestHelpers<'a, T> for T
 where
-    T: GetRedBlackReadOnlyData<'a>,
+    T: GetRedBlackTreeReadOnlyData<'a>,
 {
     /// Sorted iterator starting from the min.
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
@@ -687,7 +749,7 @@ where
 
 impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
 where
-    T: GetRedBlackReadOnlyData<'a> + HyperTreeReadOperations<'a>,
+    T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
 {
     fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
         HyperTreeValueReadOnlyIterator {
@@ -698,19 +760,7 @@ where
     }
 }
 
-impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload>
-    HyperTreeValueReadOnlyIterator<'a, T, V>
-{
-    pub fn new(tree: &'a T) -> Self {
-        HyperTreeValueReadOnlyIterator {
-            tree,
-            index: tree.get_min_index::<V>(),
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> Iterator
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Payload> Iterator
     for HyperTreeValueReadOnlyIterator<'a, T, V>
 {
     type Item = (DataIndex, &'a V);
@@ -747,17 +797,17 @@ unsafe impl Zeroable for Color {
 /// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
 /// RedBlack and BST properties, the rest is the payload.
 pub struct RBNode<V> {
-    pub(crate) left: DataIndex,
-    pub(crate) right: DataIndex,
-    pub(crate) parent: DataIndex,
-    pub(crate) color: Color,
+    left: DataIndex,
+    right: DataIndex,
+    parent: DataIndex,
+    color: Color,
 
     // Optional enum controlled by the application to identify the type of node.
     // Defaults to zero.
-    pub(crate) payload_type: u8,
+    payload_type: u8,
 
-    pub(crate) _unused_padding: u16,
-    pub(crate) value: V,
+    _unused_padding: u16,
+    value: V,
 }
 unsafe impl<V: Payload> Pod for RBNode<V> {}
 
@@ -1177,7 +1227,7 @@ pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: P
 }
 
 #[cfg(any(test, feature = "fuzz"))]
-impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackReadOnlyData<'a>, V: Payload> Iterator
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Payload> Iterator
     for RedBlackTreeReadOnlyIterator<'a, T, V>
 {
     type Item = (DataIndex, &'a RBNode<V>);
