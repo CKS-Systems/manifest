@@ -541,33 +541,15 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .get_quote_balance_atoms(&second_keypair.pubkey())
         .await;
 
-    let bids: RedBlackTreeReadOnly<RestingOrder> = RedBlackTreeReadOnly::<RestingOrder>::new(
-        test_fixture.market_fixture.market.dynamic.as_mut_slice(),
-        test_fixture
-            .market_fixture
-            .market
-            .fixed
-            .get_bids_root_index(),
-        NIL,
-    );
-    for (_, bid) in bids.iter::<RestingOrder>() {
+    for (_, bid) in test_fixture.market_fixture.market.get_bids().iter::<RestingOrder>() {
         let bid_balance_quote = (bid.get_num_base_atoms().checked_mul(bid.get_price(), true))
             .unwrap()
             .as_u64();
         println!("bid {bid_balance_quote}");
         user_balance_quote += bid_balance_quote;
     }
-    let asks: RedBlackTreeReadOnly<RestingOrder> = RedBlackTreeReadOnly::<RestingOrder>::new(
-        test_fixture.market_fixture.market.dynamic.as_mut_slice(),
-        test_fixture
-            .market_fixture
-            .market
-            .fixed
-            .get_asks_root_index(),
-        NIL,
-    );
 
-    for (_, ask) in asks.iter::<RestingOrder>() {
+    for (_, ask) in test_fixture.market_fixture.market.get_asks().iter::<RestingOrder>() {
         let ask_balance_base = ask.get_num_base_atoms().as_u64();
         println!("ask {ask_balance_base}");
         user_balance_base += ask_balance_base;

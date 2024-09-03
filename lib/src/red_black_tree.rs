@@ -600,7 +600,7 @@ where
     }
 
     /// Get the previous index. This walks the tree, so does not care about equal keys.
-    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_lower_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -624,7 +624,7 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal keys.
-    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -666,7 +666,7 @@ where
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: self.get_max_index(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -754,7 +754,7 @@ where
     fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
         HyperTreeValueReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: self.get_max_index(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -767,12 +767,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result.get_value()))
         }
     }
@@ -914,9 +914,9 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
             trace!(
                 "TREE max {}->{}",
                 self.max_index,
-                self.get_predecessor_index::<V>(self.max_index)
+                self.get_next_lower_index::<V>(self.max_index)
             );
-            self.max_index = self.get_predecessor_index::<V>(self.max_index);
+            self.max_index = self.get_next_lower_index::<V>(self.max_index);
         }
 
         // If it is an internal node, we copy the successor value here and call
@@ -925,7 +925,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         // of the tree with the max to be sparser.
         if self.is_internal::<V>(index) {
             // Swap nodes
-            let successor_index: DataIndex = self.get_successor_index::<V>(index);
+            let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
             self.swap_nodes::<V>(index, successor_index);
         }
 
@@ -1234,12 +1234,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result))
         }
     }

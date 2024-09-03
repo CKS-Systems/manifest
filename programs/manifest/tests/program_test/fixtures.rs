@@ -756,21 +756,13 @@ impl MarketFixture {
 
     pub async fn get_resting_orders(&mut self) -> Vec<RestingOrder> {
         self.reload().await;
-        let bids: BooksideReadOnly = BooksideReadOnly::new(
-            self.market.dynamic.as_slice(),
-            self.market.fixed.get_bids_root_index(),
-            NIL,
-        );
-        let asks: BooksideReadOnly = BooksideReadOnly::new(
-            self.market.dynamic.as_slice(),
-            self.market.fixed.get_asks_root_index(),
-            NIL,
-        );
-        let mut bids_vec: Vec<RestingOrder> = bids
+        let mut bids_vec: Vec<RestingOrder> = self.market
+            .get_bids()
             .iter::<RestingOrder>()
             .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
-        let asks_vec: Vec<RestingOrder> = asks
+        let asks_vec: Vec<RestingOrder> = self.market
+            .get_asks()
             .iter::<RestingOrder>()
             .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
