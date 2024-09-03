@@ -1046,7 +1046,7 @@ fn insert_order_into_tree(
     }
 }
 
-pub fn get_next_candidate_match_index(
+fn get_next_candidate_match_index(
     fixed: &MarketFixed,
     dynamic: &[u8],
     current_order_index: DataIndex,
