@@ -721,6 +721,7 @@ where
                     Some(num_black) => {
                         assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
                     }
+                    #[allow(unused_assignments)] // the compiler has issues with "match"
                     None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
                 }
             }
