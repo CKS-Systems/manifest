@@ -395,12 +395,20 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
 
     pub fn get_bids(&self) -> BooksideReadOnly {
         let DynamicAccount { dynamic, fixed } = self.borrow_market();
-        BooksideReadOnly::new(dynamic, fixed.get_bids_root_index(), fixed.get_bids_best_index())
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_bids_root_index(),
+            fixed.get_bids_best_index(),
+        )
     }
 
     pub fn get_asks(&self) -> BooksideReadOnly {
         let DynamicAccount { dynamic, fixed } = self.borrow_market();
-        BooksideReadOnly::new(dynamic, fixed.get_asks_root_index(), fixed.get_asks_best_index())
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_asks_root_index(),
+            fixed.get_asks_best_index(),
+        )
     }
 }
 

@@ -756,12 +756,14 @@ impl MarketFixture {
 
     pub async fn get_resting_orders(&mut self) -> Vec<RestingOrder> {
         self.reload().await;
-        let mut bids_vec: Vec<RestingOrder> = self.market
+        let mut bids_vec: Vec<RestingOrder> = self
+            .market
             .get_bids()
             .iter::<RestingOrder>()
             .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
-        let asks_vec: Vec<RestingOrder> = self.market
+        let asks_vec: Vec<RestingOrder> = self
+            .market
             .get_asks()
             .iter::<RestingOrder>()
             .map(|node| *node.1)

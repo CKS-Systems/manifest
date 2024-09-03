@@ -541,7 +541,12 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .get_quote_balance_atoms(&second_keypair.pubkey())
         .await;
 
-    for (_, bid) in test_fixture.market_fixture.market.get_bids().iter::<RestingOrder>() {
+    for (_, bid) in test_fixture
+        .market_fixture
+        .market
+        .get_bids()
+        .iter::<RestingOrder>()
+    {
         let bid_balance_quote = (bid.get_num_base_atoms().checked_mul(bid.get_price(), true))
             .unwrap()
             .as_u64();
@@ -549,7 +554,12 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         user_balance_quote += bid_balance_quote;
     }
 
-    for (_, ask) in test_fixture.market_fixture.market.get_asks().iter::<RestingOrder>() {
+    for (_, ask) in test_fixture
+        .market_fixture
+        .market
+        .get_asks()
+        .iter::<RestingOrder>()
+    {
         let ask_balance_base = ask.get_num_base_atoms().as_u64();
         println!("ask {ask_balance_base}");
         user_balance_base += ask_balance_base;
