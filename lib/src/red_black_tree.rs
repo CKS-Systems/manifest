@@ -704,15 +704,23 @@ where
         for (index, node) in self.node_iter::<V>() {
             // Verify that all red nodes only have black children
             if node.color == Color::Red {
-                assert_eq!(self.get_color::<V>(self.get_left_index::<V>(index)), Color::Black);
-                assert_eq!(self.get_color::<V>(self.get_right_index::<V>(index)), Color::Black);
+                assert_eq!(
+                    self.get_color::<V>(self.get_left_index::<V>(index)),
+                    Color::Black
+                );
+                assert_eq!(
+                    self.get_color::<V>(self.get_right_index::<V>(index)),
+                    Color::Black
+                );
             }
 
             // Verify that all leaf nodes have the same number of black nodes to the root.
             let mut num_black = None;
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
                 match num_black {
-                    Some(num_black) => assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index)),
+                    Some(num_black) => {
+                        assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
+                    }
                     None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
                 }
             }
