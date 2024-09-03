@@ -52,7 +52,6 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
 //    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
 //    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-//    fn get_min_index<V: Payload>(&self) -> DataIndex;
 //    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -174,7 +173,6 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
     fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-    fn get_min_index<V: Payload>(&self) -> DataIndex;
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -232,17 +230,6 @@ where
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.parent
-    }
-
-    fn get_min_index<V: Payload>(&self) -> DataIndex {
-        if self.root_index() == NIL {
-            return NIL;
-        }
-        let mut current_index: DataIndex = self.root_index();
-        while self.get_left_index::<V>(current_index) != NIL {
-            current_index = self.get_left_index::<V>(current_index);
-        }
-        current_index
     }
 
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
@@ -714,21 +701,20 @@ where
     }
 
     fn verify_rb_tree<V: Payload>(&'a self) {
-        // Verify that all red nodes only have black children
         for (index, node) in self.node_iter::<V>() {
+            // Verify that all red nodes only have black children
             if node.color == Color::Red {
-                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
-                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
+                assert_eq!(self.get_color::<V>(self.get_left_index::<V>(index)), Color::Black);
+                assert_eq!(self.get_color::<V>(self.get_right_index::<V>(index)), Color::Black);
             }
-        }
 
-        // Verify that all nodes have the same number of black nodes to the root.
-        let first_index: DataIndex = self.get_min_index::<V>();
-        let num_black: i32 = self.num_black_nodes_through_root::<V>(first_index);
-
-        for (index, _node) in self.node_iter::<V>() {
+            // Verify that all leaf nodes have the same number of black nodes to the root.
+            let mut num_black = None;
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
-                assert!(num_black == self.num_black_nodes_through_root::<V>(index));
+                match num_black {
+                    Some(num_black) => assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index)),
+                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
+                }
             }
         }
     }
@@ -1485,11 +1471,10 @@ mod test {
     }
 
     #[test]
-    fn test_min_max() {
+    fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
@@ -1597,42 +1582,41 @@ mod test {
     }
 
     #[test]
-    fn test_get_predecessor_index() {
+    fn test_get_next_lower_index() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_predecessor_index::<TestOrderBid>(NIL), NIL);
+        assert_eq!(tree.get_next_lower_index::<TestOrderBid>(NIL), NIL);
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
             TEST_BLOCK_WIDTH * 5
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
             TEST_BLOCK_WIDTH * 4
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
             TEST_BLOCK_WIDTH * 3
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
             TEST_BLOCK_WIDTH * 2
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
             TEST_BLOCK_WIDTH
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_empty_min_max() {
+    fn test_empty_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
         tree.verify_rb_tree::<TestOrderBid>();
     }
