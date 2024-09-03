@@ -1,6 +1,6 @@
 use std::u64;
 
-use hypertree::{HyperTreeValueIteratorTrait, RedBlackTreeReadOnly, NIL};
+use hypertree::HyperTreeValueIteratorTrait;
 use manifest::{
     quantities::WrapperU64,
     state::{

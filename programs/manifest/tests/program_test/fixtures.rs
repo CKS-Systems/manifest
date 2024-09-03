@@ -3,7 +3,7 @@ use std::{
     io::Error,
 };
 
-use hypertree::{DataIndex, HyperTreeValueIteratorTrait, NIL};
+use hypertree::{DataIndex, HyperTreeValueIteratorTrait};
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
@@ -16,10 +16,7 @@ use manifest::{
         withdraw_instruction,
     },
     quantities::WrapperU64,
-    state::{
-        BooksideReadOnly, GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType,
-        RestingOrder,
-    },
+    state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType, RestingOrder},
     validation::{get_global_address, MintAccountInfo},
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
