@@ -57,12 +57,12 @@ const ecoSystemData = [
     name: '',
     img: (
       <a href='https://cks.systems/' target='_blank' rel='noopener noreferrer'>
-        <div className='w-[200px] sm:w-[100px] 2xl:w-[200px] 3xl:w-[650px] h-[200px] sm:h-[100px] 2xl:h-[200px] 3xl:h-[650px] relative'>
-          <Image src='/assets/CKS.png' fill alt='' className='object-fill' />
+      <div className='w-[540px] sm:w-[900px] 2xl:w-[1650px] 3xl:w-[2400px] h-[135px] 2xl:h-[360px] 3xl:h-[900px] sm:h-[240px] relative'>
+          <Image src='/assets/Cks-logo.svg' fill alt='' className='object-contain' />
         </div>
       </a>
     ),
-  }, 
+  },
   {
     path: '#',
     name: '',
