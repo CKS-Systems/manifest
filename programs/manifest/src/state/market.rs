@@ -200,13 +200,21 @@ impl MarketFixed {
         self.quote_vault_bump
     }
 
-    // Used in fuzz testing to verify amounts on the book.
-    pub fn get_bids_root_index(&self) -> DataIndex {
+    // Used only in this file to construct iterator
+    pub(crate) fn get_bids_root_index(&self) -> DataIndex {
         self.bids_root_index
     }
-    pub fn get_asks_root_index(&self) -> DataIndex {
+    pub(crate) fn get_asks_root_index(&self) -> DataIndex {
         self.asks_root_index
     }
+    pub(crate) fn get_bids_best_index(&self) -> DataIndex {
+        self.bids_best_index
+    }
+    pub(crate) fn get_asks_best_index(&self) -> DataIndex {
+        self.asks_best_index
+    }
+
+    // Used in benchmark
     pub fn has_free_block(&self) -> bool {
         self.free_list_head_index != NIL
     }
@@ -383,6 +391,24 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         &get_helper::<RBNode<ClaimedSeat>>(dynamic, index)
             .get_value()
             .trader
+    }
+
+    pub fn get_bids(&self) -> BooksideReadOnly {
+        let DynamicAccount { dynamic, fixed } = self.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_bids_root_index(),
+            fixed.get_bids_best_index(),
+        )
+    }
+
+    pub fn get_asks(&self) -> BooksideReadOnly {
+        let DynamicAccount { dynamic, fixed } = self.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_asks_root_index(),
+            fixed.get_asks_best_index(),
+        )
     }
 }
 
@@ -1002,7 +1028,7 @@ fn insert_order_into_tree(
             tree.get_root_index(),
             fixed.bids_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::<RestingOrder>(tree.get_max_index()),
+            tree.get_next_lower_index::<RestingOrder>(tree.get_max_index()),
         );
         fixed.bids_root_index = tree.get_root_index();
         fixed.bids_best_index = tree.get_max_index();
@@ -1013,7 +1039,7 @@ fn insert_order_into_tree(
             tree.get_root_index(),
             fixed.asks_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::<RestingOrder>(tree.get_max_index()),
+            tree.get_next_lower_index::<RestingOrder>(tree.get_max_index()),
         );
         fixed.asks_root_index = tree.get_root_index();
         fixed.asks_best_index = tree.get_max_index();
@@ -1030,13 +1056,13 @@ fn get_next_candidate_match_index(
         let tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         let next_order_index: DataIndex =
-            tree.get_predecessor_index::<RestingOrder>(current_order_index);
+            tree.get_next_lower_index::<RestingOrder>(current_order_index);
         next_order_index
     } else {
         let tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         let next_order_index: DataIndex =
-            tree.get_predecessor_index::<RestingOrder>(current_order_index);
+            tree.get_next_lower_index::<RestingOrder>(current_order_index);
         next_order_index
     }
 }
