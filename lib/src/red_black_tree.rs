@@ -575,6 +575,20 @@ where
         current_index
     }
 
+    fn lookup_max_index<V: Payload>(&'a self) -> DataIndex {
+        let mut current_index = self.root_index();
+        if current_index == NIL {
+            return NIL;
+        }
+        loop {
+            let right_index = self.get_right_index::<V>(current_index);
+            if right_index == NIL {
+                return current_index;
+            }
+            current_index = right_index;
+        }
+    }
+
     /// Get the max index. If a tree set this to NIL on a non-empty tree, this
     /// will always be NIL.
     fn get_max_index(&self) -> DataIndex {
@@ -757,9 +771,13 @@ where
     T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
 {
     fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+        let mut index = self.get_max_index();
+        if index == NIL {
+            index = self.lookup_max_index::<V>();
+        }
         HyperTreeValueReadOnlyIterator {
             tree: self,
-            index: self.get_max_index(),
+            index,
             phantom: std::marker::PhantomData,
         }
     }

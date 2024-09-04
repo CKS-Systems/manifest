@@ -16,6 +16,7 @@ impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload fo
 // work with it in the same trait.
 pub trait HyperTreeReadOperations<'a> {
     fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex;
+    fn lookup_max_index<V: Payload>(&'a self) -> DataIndex;
     fn get_max_index(&self) -> DataIndex;
     fn get_root_index(&self) -> DataIndex;
     fn get_next_lower_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex;
