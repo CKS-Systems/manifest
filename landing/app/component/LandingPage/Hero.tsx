@@ -37,10 +37,10 @@ const Hero: React.FC = () => {
                 <div className='w-full py-3 2xl:py-5 3xl:py-14 flex justify-center rounded-xl items-center gap-24 sm:gap-28 3xl:gap-[14rem] bg-[#3d3b3a]'>
                   <div className='flex justify-center items-center flex-col gap-4'>
                     <p className='text-[#95C9BD] text-[10px] sm:text-[16px] md:text-[20px] 2xl:text-[28px] 3xl:text-[36px] font-terminaExtraDemi'>
-                      0 Bps
+                      0.00 %
                     </p>
                     <p className='text-[12px] sm:text-[14px] md:text-[16px] 2xl:text-[24px] font-normal 3xl:text-[32px] text-[#bca378]/90'>
-                      Exchange Fees
+                      Trading Fees
                     </p>
                   </div>
                   <div className='flex justify-center items-center flex-col gap-4'>
