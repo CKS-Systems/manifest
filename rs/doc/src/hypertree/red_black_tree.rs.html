@@ -2179,6 +2179,43 @@
 <a href="#2177" id="2177">2177</a>
 <a href="#2178" id="2178">2178</a>
 <a href="#2179" id="2179">2179</a>
+<a href="#2180" id="2180">2180</a>
+<a href="#2181" id="2181">2181</a>
+<a href="#2182" id="2182">2182</a>
+<a href="#2183" id="2183">2183</a>
+<a href="#2184" id="2184">2184</a>
+<a href="#2185" id="2185">2185</a>
+<a href="#2186" id="2186">2186</a>
+<a href="#2187" id="2187">2187</a>
+<a href="#2188" id="2188">2188</a>
+<a href="#2189" id="2189">2189</a>
+<a href="#2190" id="2190">2190</a>
+<a href="#2191" id="2191">2191</a>
+<a href="#2192" id="2192">2192</a>
+<a href="#2193" id="2193">2193</a>
+<a href="#2194" id="2194">2194</a>
+<a href="#2195" id="2195">2195</a>
+<a href="#2196" id="2196">2196</a>
+<a href="#2197" id="2197">2197</a>
+<a href="#2198" id="2198">2198</a>
+<a href="#2199" id="2199">2199</a>
+<a href="#2200" id="2200">2200</a>
+<a href="#2201" id="2201">2201</a>
+<a href="#2202" id="2202">2202</a>
+<a href="#2203" id="2203">2203</a>
+<a href="#2204" id="2204">2204</a>
+<a href="#2205" id="2205">2205</a>
+<a href="#2206" id="2206">2206</a>
+<a href="#2207" id="2207">2207</a>
+<a href="#2208" id="2208">2208</a>
+<a href="#2209" id="2209">2209</a>
+<a href="#2210" id="2210">2210</a>
+<a href="#2211" id="2211">2211</a>
+<a href="#2212" id="2212">2212</a>
+<a href="#2213" id="2213">2213</a>
+<a href="#2214" id="2214">2214</a>
+<a href="#2215" id="2215">2215</a>
+<a href="#2216" id="2216">2216</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -2233,7 +2270,6 @@
 //    fn get_left_index&lt;V: Payload&gt;(&amp;self, index: DataIndex) -&gt; DataIndex;
 //    fn get_color&lt;V: Payload&gt;(&amp;self, index: DataIndex) -&gt; Color;
 //    fn get_parent_index&lt;V: Payload&gt;(&amp;self, index: DataIndex) -&gt; DataIndex;
-//    fn get_min_index&lt;V: Payload&gt;(&amp;self) -&gt; DataIndex;
 //    fn is_left_child&lt;V: Payload&gt;(&amp;self, index: DataIndex) -&gt; bool;
 //    fn is_right_child&lt;V: Payload&gt;(&amp;self, index: DataIndex) -&gt; bool;
 //    fn get_node&lt;V: Payload&gt;(&amp;'a self, index: DataIndex) -&gt; &amp;RBNode&lt;V&gt;;
@@ -2294,6 +2330,17 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: Payload&gt; RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, V&gt; {
     <span class="doccomment">/// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
+    /// It is necessary to persist the root_index to re-initialize a tree, storing
+    /// the max_index is recommended when in-order iteration is performance critical.
+    ///
+    /// Depending on the index args this will behave differently:
+    ///
+    /// root=NIL: initializes an empty tree, get_max() is defined
+    ///
+    /// root!=NIL max=NIL: initializes an existing tree, get_max() is undefined &amp;
+    ///                    iter() will dynamically lookup the maximum
+    ///
+    /// root!=NIL max!=NIL: initializes an existing tree, get_max() is defined
     </span><span class="kw">pub fn </span>new(data: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], root_index: DataIndex, max_index: DataIndex) -&gt; <span class="self">Self </span>{
         RedBlackTreeReadOnly::&lt;V&gt; {
             root_index,
@@ -2355,7 +2402,6 @@
     <span class="kw">fn </span>get_left_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
     <span class="kw">fn </span>get_color&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; Color;
     <span class="kw">fn </span>get_parent_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
-    <span class="kw">fn </span>get_min_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex;
     <span class="kw">fn </span>is_left_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
     <span class="kw">fn </span>is_right_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
     <span class="kw">fn </span>get_node&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;V&gt;;
@@ -2413,17 +2459,6 @@
         }
         <span class="kw">let </span>node: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data(), index);
         node.parent
-    }
-
-    <span class="kw">fn </span>get_min_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
-        <span class="kw">if </span><span class="self">self</span>.root_index() == NIL {
-            <span class="kw">return </span>NIL;
-        }
-        <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = <span class="self">self</span>.root_index();
-        <span class="kw">while </span><span class="self">self</span>.get_left_index::&lt;V&gt;(current_index) != NIL {
-            current_index = <span class="self">self</span>.get_left_index::&lt;V&gt;(current_index);
-        }
-        current_index
     }
 
     <span class="kw">fn </span>is_left_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool {
@@ -2769,6 +2804,20 @@
         current_index
     }
 
+    <span class="kw">fn </span>lookup_max_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; DataIndex {
+        <span class="kw">let </span><span class="kw-2">mut </span>current_index = <span class="self">self</span>.root_index();
+        <span class="kw">if </span>current_index == NIL {
+            <span class="kw">return </span>NIL;
+        }
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>right_index = <span class="self">self</span>.get_right_index::&lt;V&gt;(current_index);
+            <span class="kw">if </span>right_index == NIL {
+                <span class="kw">return </span>current_index;
+            }
+            current_index = right_index;
+        }
+    }
+
     <span class="doccomment">/// Get the max index. If a tree set this to NIL on a non-empty tree, this
     /// will always be NIL.
     </span><span class="kw">fn </span>get_max_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
@@ -2781,7 +2830,7 @@
     }
 
     <span class="doccomment">/// Get the previous index. This walks the tree, so does not care about equal keys.
-    </span><span class="kw">fn </span>get_predecessor_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
+    </span><span class="kw">fn </span>get_next_lower_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
         <span class="kw">if </span>index == NIL {
             <span class="kw">return </span>NIL;
         }
@@ -2805,7 +2854,7 @@
     }
 
     <span class="doccomment">/// Get the next index. This walks the tree, so does not care about equal keys.
-    </span><span class="kw">fn </span>get_successor_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
+    </span><span class="kw">fn </span>get_next_higher_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
         <span class="kw">if </span>index == NIL {
             <span class="kw">return </span>NIL;
         }
@@ -2847,7 +2896,7 @@
     </span><span class="kw">fn </span>node_iter&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;T, V&gt; {
         RedBlackTreeReadOnlyIterator {
             tree: <span class="self">self</span>,
-            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
+            index: <span class="self">self</span>.get_max_index(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -2859,6 +2908,16 @@
             <span class="kw">let </span><span class="kw-2">mut </span>row_str: String = String::new();
 
             row_str += <span class="kw-2">&amp;</span><span class="string">"  "</span>.repeat(<span class="self">self</span>.depth::&lt;V&gt;(index) <span class="kw">as </span>usize);
+
+            row_str += <span class="kw">if </span>node.parent == NIL {
+                <span class="string">"- "
+            </span>} <span class="kw">else </span>{
+                <span class="kw">if </span><span class="self">self</span>.is_left_child::&lt;V&gt;(index) {
+                    <span class="string">"└ "
+                </span>} <span class="kw">else </span>{
+                    <span class="string">"┌ "
+                </span>}
+            };
 
             <span class="kw">let </span>color = <span class="kw">if </span>node.color == Color::Black { <span class="string">'B' </span>} <span class="kw">else </span>{ <span class="string">'R' </span>};
             <span class="kw">let </span>str = <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{color}:{index}:{node}"</span>);
@@ -2895,21 +2954,29 @@
     }
 
     <span class="kw">fn </span>verify_rb_tree&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) {
-        <span class="comment">// Verify that all red nodes only have black children
-        </span><span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.node_iter::&lt;V&gt;() {
-            <span class="kw">if </span>node.color == Color::Red {
-                <span class="macro">assert!</span>(<span class="self">self</span>.get_color::&lt;V&gt;(<span class="self">self</span>.get_left_index::&lt;V&gt;(index)) == Color::Black);
-                <span class="macro">assert!</span>(<span class="self">self</span>.get_color::&lt;V&gt;(<span class="self">self</span>.get_right_index::&lt;V&gt;(index)) == Color::Black);
+        <span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.node_iter::&lt;V&gt;() {
+            <span class="comment">// Verify that all red nodes only have black children
+            </span><span class="kw">if </span>node.color == Color::Red {
+                <span class="macro">assert_eq!</span>(
+                    <span class="self">self</span>.get_color::&lt;V&gt;(<span class="self">self</span>.get_left_index::&lt;V&gt;(index)),
+                    Color::Black
+                );
+                <span class="macro">assert_eq!</span>(
+                    <span class="self">self</span>.get_color::&lt;V&gt;(<span class="self">self</span>.get_right_index::&lt;V&gt;(index)),
+                    Color::Black
+                );
             }
-        }
 
-        <span class="comment">// Verify that all nodes have the same number of black nodes to the root.
-        </span><span class="kw">let </span>first_index: DataIndex = <span class="self">self</span>.get_min_index::&lt;V&gt;();
-        <span class="kw">let </span>num_black: i32 = <span class="self">self</span>.num_black_nodes_through_root::&lt;V&gt;(first_index);
-
-        <span class="kw">for </span>(index, _node) <span class="kw">in </span><span class="self">self</span>.node_iter::&lt;V&gt;() {
+            <span class="comment">// Verify that all leaf nodes have the same number of black nodes to the root.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>num_black = <span class="prelude-val">None</span>;
             <span class="kw">if </span>!<span class="self">self</span>.has_left::&lt;V&gt;(index) || !<span class="self">self</span>.has_right::&lt;V&gt;(index) {
-                <span class="macro">assert!</span>(num_black == <span class="self">self</span>.num_black_nodes_through_root::&lt;V&gt;(index));
+                <span class="kw">match </span>num_black {
+                    <span class="prelude-val">Some</span>(num_black) =&gt; {
+                        <span class="macro">assert_eq!</span>(num_black, <span class="self">self</span>.num_black_nodes_through_root::&lt;V&gt;(index))
+                    }
+                    <span class="attr">#[allow(unused_assignments)] </span><span class="comment">// the compiler has issues with "match"
+                    </span><span class="prelude-val">None </span>=&gt; num_black = <span class="prelude-val">Some</span>(<span class="self">self</span>.num_black_nodes_through_root::&lt;V&gt;(index)),
+                }
             }
         }
     }
@@ -2933,9 +3000,13 @@
     </span>T: GetRedBlackTreeReadOnlyData&lt;<span class="lifetime">'a</span>&gt; + HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt;,
 {
     <span class="kw">fn </span>iter&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; HyperTreeValueReadOnlyIterator&lt;T, V&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="self">self</span>.get_max_index();
+        <span class="kw">if </span>index == NIL {
+            index = <span class="self">self</span>.lookup_max_index::&lt;V&gt;();
+        }
         HyperTreeValueReadOnlyIterator {
             tree: <span class="self">self</span>,
-            index: <span class="self">self</span>.get_min_index::&lt;V&gt;(),
+            index,
             phantom: std::marker::PhantomData,
         }
     }
@@ -2948,12 +3019,12 @@
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
+        <span class="kw">let </span>next_index: DataIndex = <span class="self">self</span>.tree.get_next_lower_index::&lt;V&gt;(<span class="self">self</span>.index);
         <span class="kw">if </span>index == NIL {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data(), index);
-            <span class="self">self</span>.index = successor_index;
+            <span class="self">self</span>.index = next_index;
             <span class="prelude-val">Some</span>((index, result.get_value()))
         }
     }
@@ -3095,9 +3166,9 @@
             <span class="macro">trace!</span>(
                 <span class="string">"TREE max {}-&gt;{}"</span>,
                 <span class="self">self</span>.max_index,
-                <span class="self">self</span>.get_predecessor_index::&lt;V&gt;(<span class="self">self</span>.max_index)
+                <span class="self">self</span>.get_next_lower_index::&lt;V&gt;(<span class="self">self</span>.max_index)
             );
-            <span class="self">self</span>.max_index = <span class="self">self</span>.get_predecessor_index::&lt;V&gt;(<span class="self">self</span>.max_index);
+            <span class="self">self</span>.max_index = <span class="self">self</span>.get_next_lower_index::&lt;V&gt;(<span class="self">self</span>.max_index);
         }
 
         <span class="comment">// If it is an internal node, we copy the successor value here and call
@@ -3106,7 +3177,7 @@
         // of the tree with the max to be sparser.
         </span><span class="kw">if </span><span class="self">self</span>.is_internal::&lt;V&gt;(index) {
             <span class="comment">// Swap nodes
-            </span><span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.get_successor_index::&lt;V&gt;(index);
+            </span><span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.get_next_higher_index::&lt;V&gt;(index);
             <span class="self">self</span>.swap_nodes::&lt;V&gt;(index, successor_index);
         }
 
@@ -3415,12 +3486,12 @@
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>index: DataIndex = <span class="self">self</span>.index;
-        <span class="kw">let </span>successor_index: DataIndex = <span class="self">self</span>.tree.get_successor_index::&lt;V&gt;(<span class="self">self</span>.index);
+        <span class="kw">let </span>next_index: DataIndex = <span class="self">self</span>.tree.get_next_lower_index::&lt;V&gt;(<span class="self">self</span>.index);
         <span class="kw">if </span>index == NIL {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>result: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.tree.data(), index);
-            <span class="self">self</span>.index = successor_index;
+            <span class="self">self</span>.index = next_index;
             <span class="prelude-val">Some</span>((index, result))
         }
     }
@@ -3666,11 +3737,14 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_min_max() {
+    </span><span class="kw">fn </span>test_max() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
         <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        <span class="macro">assert_eq!</span>(
+            tree.get_max_index(),
+            tree.lookup_max_index::&lt;TestOrderBid&gt;()
+        );
         <span class="macro">assert_eq!</span>(tree.get_max_index(), TEST_BLOCK_WIDTH * <span class="number">11</span>);
-        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrderBid&gt;(), TEST_BLOCK_WIDTH);
     }
 
     <span class="attr">#[test]
@@ -3778,42 +3852,42 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_get_predecessor_index() {
+    </span><span class="kw">fn </span>test_get_next_lower_index() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
         <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        <span class="macro">assert_eq!</span>(tree.get_predecessor_index::&lt;TestOrderBid&gt;(NIL), NIL);
+        <span class="macro">assert_eq!</span>(tree.get_next_lower_index::&lt;TestOrderBid&gt;(NIL), NIL);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">6</span>),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">6</span>),
             TEST_BLOCK_WIDTH * <span class="number">5
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">5</span>),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">5</span>),
             TEST_BLOCK_WIDTH * <span class="number">4
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">4</span>),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">4</span>),
             TEST_BLOCK_WIDTH * <span class="number">3
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">3</span>),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">3</span>),
             TEST_BLOCK_WIDTH * <span class="number">2
         </span>);
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">2</span>),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * <span class="number">2</span>),
             TEST_BLOCK_WIDTH
         );
         <span class="macro">assert_eq!</span>(
-            tree.get_predecessor_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH),
+            tree.get_next_lower_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree::&lt;TestOrderBid&gt;();
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_empty_min_max() {
+    </span><span class="kw">fn </span>test_empty_max() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
         <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = RedBlackTree::new(<span class="kw-2">&amp;mut </span>data, NIL, NIL);
-        <span class="macro">assert_eq!</span>(tree.get_min_index::&lt;TestOrderBid&gt;(), NIL);
+        <span class="macro">assert_eq!</span>(tree.lookup_max_index::&lt;TestOrderBid&gt;(), NIL);
         <span class="macro">assert_eq!</span>(tree.get_max_index(), NIL);
         tree.verify_rb_tree::&lt;TestOrderBid&gt;();
     }

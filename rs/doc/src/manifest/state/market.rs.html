@@ -1094,6 +1094,32 @@
 <a href="#1092" id="1092">1092</a>
 <a href="#1093" id="1093">1093</a>
 <a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
@@ -1296,14 +1322,22 @@
         <span class="self">self</span>.quote_vault_bump
     }
 
-    <span class="comment">// Used in fuzz testing to verify amounts on the book.
-    </span><span class="kw">pub fn </span>get_bids_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
+    <span class="comment">// Used only in this file to construct iterator
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_bids_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
         <span class="self">self</span>.bids_root_index
     }
-    <span class="kw">pub fn </span>get_asks_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_asks_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
         <span class="self">self</span>.asks_root_index
     }
-    <span class="kw">pub fn </span>has_free_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_bids_best_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
+        <span class="self">self</span>.bids_best_index
+    }
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_asks_best_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
+        <span class="self">self</span>.asks_best_index
+    }
+
+    <span class="comment">// Used in benchmark
+    </span><span class="kw">pub fn </span>has_free_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.free_list_head_index != NIL
     }
 }
@@ -1479,6 +1513,24 @@
         <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, index)
             .get_value()
             .trader
+    }
+
+    <span class="kw">pub fn </span>get_bids(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BooksideReadOnly {
+        <span class="kw">let </span>DynamicAccount { dynamic, fixed } = <span class="self">self</span>.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_bids_root_index(),
+            fixed.get_bids_best_index(),
+        )
+    }
+
+    <span class="kw">pub fn </span>get_asks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BooksideReadOnly {
+        <span class="kw">let </span>DynamicAccount { dynamic, fixed } = <span class="self">self</span>.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_asks_root_index(),
+            fixed.get_asks_best_index(),
+        )
     }
 }
 
@@ -2098,7 +2150,7 @@
             tree.get_root_index(),
             fixed.bids_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::&lt;RestingOrder&gt;(tree.get_max_index()),
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(tree.get_max_index()),
         );
         fixed.bids_root_index = tree.get_root_index();
         fixed.bids_best_index = tree.get_max_index();
@@ -2109,7 +2161,7 @@
             tree.get_root_index(),
             fixed.asks_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::&lt;RestingOrder&gt;(tree.get_max_index()),
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(tree.get_max_index()),
         );
         fixed.asks_root_index = tree.get_root_index();
         fixed.asks_best_index = tree.get_max_index();
@@ -2126,13 +2178,13 @@
         <span class="kw">let </span>tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         <span class="kw">let </span>next_order_index: DataIndex =
-            tree.get_predecessor_index::&lt;RestingOrder&gt;(current_order_index);
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_order_index);
         next_order_index
     } <span class="kw">else </span>{
         <span class="kw">let </span>tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         <span class="kw">let </span>next_order_index: DataIndex =
-            tree.get_predecessor_index::&lt;RestingOrder&gt;(current_order_index);
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_order_index);
         next_order_index
     }
 }
