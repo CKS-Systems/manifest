@@ -1,0 +1,186 @@
+@import url('https://fonts.cdnfonts.com/css/termina-test');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #090b0b;
+}
+@font-face {
+  font-family: 'TerminaTest-Thin';
+  src: url('/fonts/TerminaTest-Thin.woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TerminaTest-Regular';
+  src: url('/fonts/TerminaTest-Regular.woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TerminaTest-Medium';
+  src: url('/fonts/TerminaTest-Medium.woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TerminaTest-Light';
+  src: url('/fonts/TerminaTest-Light.woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TerminaTest-heavy';
+  src: url('/fonts/TerminaTest-heavy.woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TerminaTest-ExtraLight';
+  src: url('/fonts/TerminaTest-ExtraLight.woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TerminaTest-Demi';
+  src: url('/fonts/TerminaTest-Demi.woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TerminaTest-Bold';
+  src: url('/fonts/TerminaTest-Bold.woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TerminaTest-Black';
+  src: url('/fonts/TerminaTest-Black.woff');
+  font-display: swap;
+}
+
+.textColor {
+  background: var(
+    --Gradients-Teals,
+    linear-gradient(101deg, #95C9BD 0%,  #2b7765 100%)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.textColor21 {
+  background: white;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.textColor2 {
+  background: var(
+    --Gradients-Light-Purp,
+    linear-gradient(
+      100deg,
+      #bca378 -4.9%,
+      #dfab52 100%
+    )
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* border gradents ------>  */
+
+.borderGradient {
+  background: #090b0b;
+}
+
+.gradient-wrapper {
+  position: relative;
+  background: linear-gradient(to right top, #927252, #95C9BD);
+}
+
+@media screen and (min-width: 2900px) {
+  .gradient-wrapper {
+    padding: 4px !important;
+  }
+}
+@media screen and (max-width: 500px) {
+  .gradient-wrapper {
+    padding: 1px !important;
+  }
+}
+.wrapper1 {
+  position: relative;
+  background: linear-gradient(to right, #927252, #95C9BD);
+  padding: 1px;
+  border-radius: 16px;
+}
+
+@media screen and (min-width: 1800px) {
+  .wrapper1 {
+    padding: 2px !important;
+  }
+}
+
+@media screen and (min-width: 2500px) {
+  .wrapper1 {
+    padding: 3px !important;
+  }
+}
+@media screen and (min-width: 3000px) {
+  .wrapper1 {
+    padding: 4px !important;
+  }
+}
+.borderGradientC1 {
+  background: #090b0b;
+  border-radius: 16px;
+}
+
+/* border gradients ends here ------> */
+/* footer styles ----->  */
+.ftBg {
+  border-top: 0.5px solid var(--whites-10, rgba(255, 255, 255, 0.1));
+  background: linear-gradient(101deg, #090b0b 0%, #1c2222 100%);
+}
+
+.secBg {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* =======> drawer style */
+.drawer {
+  width: 50% !important;
+  background-color: #090b0b !important;
+}
+
+.hrGr:hover {
+  background: #00FFE5;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@media screen and (max-width: 976px) {
+  .col1 {
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .col2 {
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .col3 {
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .col4 {
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .col5 {
+    border: none !important;
+    background-color: transparent !important;
+  }
+}
+@media screen and (max-width: 500px) {
+  .drawer {
+    width: 100% !important;
+  }
+}
