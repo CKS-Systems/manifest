@@ -114,14 +114,14 @@ impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     /// data in data is already well formed as a red black tree.
     /// It is necessary to persist the root_index to re-initialize a tree, storing
     /// the max_index is recommended when in-order iteration is performance critical.
-    /// 
+    ///
     /// Depending on the index args this will behave differently:
-    /// 
+    ///
     /// root=NIL: initializes an empty tree, get_max() is defined
-    /// 
+    ///
     /// root!=NIL max=NIL: initializes an existing tree, get_max() is undefined &
     ///                    iter() will dynamically lookup the maximum
-    /// 
+    ///
     /// root!=NIL max!=NIL: initializes an existing tree, get_max() is defined
     pub fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
         RedBlackTreeReadOnly::<V> {
@@ -1522,7 +1522,10 @@ mod test {
     fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_max_index(), tree.lookup_max_index::<TestOrderBid>());
+        assert_eq!(
+            tree.get_max_index(),
+            tree.lookup_max_index::<TestOrderBid>()
+        );
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
     }
 
