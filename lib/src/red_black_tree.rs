@@ -666,6 +666,16 @@ where
 
             row_str += &"  ".repeat(self.depth::<V>(index) as usize);
 
+            row_str += if node.parent == NIL {
+                "- "
+            } else {
+                if self.is_left_child::<V>(index) {
+                    "└ "
+                } else {
+                    "┌ "
+                }
+            };
+
             let color = if node.color == Color::Black { 'B' } else { 'R' };
             let str = &format!("{color}:{index}:{node}");
             if node.color == Color::Red {
