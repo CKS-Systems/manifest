@@ -286,7 +286,7 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
     result.push(matching_order_index);
 
     let mut current_order_index: DataIndex =
-        open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(matching_order_index);
+        open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(matching_order_index);
     while current_order_index != NIL {
         if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
             .get_value()
@@ -297,11 +297,11 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
         }
         result.push(current_order_index);
         current_order_index =
-            open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(current_order_index);
+            open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(current_order_index);
     }
 
     let mut current_order_index: DataIndex =
-        open_orders_tree.get_successor_index::<WrapperOpenOrder>(matching_order_index);
+        open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(matching_order_index);
     while current_order_index != NIL {
         if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
             .get_value()
@@ -312,7 +312,7 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
         }
         result.push(current_order_index);
         current_order_index =
-            open_orders_tree.get_successor_index::<WrapperOpenOrder>(current_order_index);
+            open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(current_order_index);
     }
 
     // Not necessary but useful in practice.
