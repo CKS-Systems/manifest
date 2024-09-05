@@ -152,6 +152,7 @@ impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTreeReadOnly<'a
         self.max_index
     }
 }
+
 impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&self) -> &[u8] {
         self.data
@@ -663,8 +664,14 @@ where
 #[cfg(any(test, feature = "fuzz"))]
 pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
-    fn pretty_print<V: Payload>(&'a self);
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+    #[cfg(test)]
+    fn max_depth<V: Payload>(&'a self) -> i32;
+    #[cfg(test)]
+    fn x<V: Payload>(&'a self, index: DataIndex) -> i32;
+    #[cfg(test)]
+    fn pretty_print<V: Payload>(&'a self);
+    fn ugly_print<V: Payload>(&'a self);
     fn verify_rb_tree<V: Payload>(&'a self);
     fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
 }
@@ -683,7 +690,102 @@ where
         }
     }
 
+    // Only used in pretty printing, so can be slow
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut depth = -1;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            current_index = self.get_parent_index::<V>(current_index);
+            depth += 1;
+        }
+        depth
+    }
+    #[cfg(test)]
+    fn max_depth<V: Payload>(&'a self) -> i32 {
+        let max_depth: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.depth::<V>(b.0)));
+        max_depth
+    }
+    #[cfg(test)]
+    fn x<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        // Max depth
+        let max_depth: i32 = self.max_depth::<V>();
+
+        let mut x: i32 = 0;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            if self.is_left_child::<V>(current_index) {
+                x -= i32::pow(2, (max_depth - self.depth::<V>(current_index)) as u32);
+            }
+            if self.is_right_child::<V>(current_index) {
+                x += i32::pow(2, (max_depth - self.depth::<V>(current_index)) as u32);
+            }
+            current_index = self.get_parent_index::<V>(current_index);
+        }
+        x
+    }
+
+    #[cfg(test)]
     fn pretty_print<V: Payload>(&'a self) {
+        // Get the max depth and max / min X
+        let max_depth: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.depth::<V>(b.0)));
+        let max_x: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.x::<V>(b.0)));
+        let min_x: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.min(self.x::<V>(b.0)));
+        trace!("=========Pretty Print===========");
+        for y in 0..(max_depth + 1) {
+            let mut row_str: String = String::new();
+            for x in (min_x)..(max_x + 1) {
+                let mut found: bool = false;
+                for (index, node) in self.node_iter::<V>() {
+                    if self.depth::<V>(index) == y && self.x::<V>(index) == x {
+                        found = true;
+                        let str = &format!("{:<5}", node);
+                        if node.color == Color::Red {
+                            // Cannot use with sbf. Enable when debugging
+                            // locally without sbf.
+                            #[cfg(colored)]
+                            {
+                                use colored::Colorize;
+                                row_str += &format!("{}", str.red());
+                            }
+                            #[cfg(not(colored))]
+                            {
+                                row_str += str;
+                            }
+                        } else {
+                            #[cfg(colored)]
+                            {
+                                use colored::Colorize;
+                                row_str += &format!("{}", str.black());
+                            }
+                            #[cfg(not(colored))]
+                            {
+                                row_str += str;
+                            }
+                        }
+                    }
+                }
+                if !found {
+                    row_str += &format!("{:<8}", "");
+                }
+            }
+            trace!("{}", row_str);
+        }
+        let mut end: String = String::new();
+        for _x in (min_x)..(max_x + 1) {
+            end += "=====";
+        }
+        trace!("{}", end);
+    }
+
+    fn ugly_print<V: Payload>(&'a self) {
         trace!("====== Hypertree ======");
 
         for (index, node) in self.node_iter::<V>() {
@@ -722,17 +824,6 @@ where
         }
 
         trace!("=======================");
-    }
-
-    // Only used in pretty printing, so can be slow
-    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
-        let mut depth = -1;
-        let mut current_index: DataIndex = index;
-        while current_index != NIL {
-            current_index = self.get_parent_index::<V>(current_index);
-            depth += 1;
-        }
-        depth
     }
 
     fn verify_rb_tree<V: Payload>(&'a self) {
@@ -831,17 +922,17 @@ unsafe impl Zeroable for Color {
 /// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
 /// RedBlack and BST properties, the rest is the payload.
 pub struct RBNode<V> {
-    left: DataIndex,
-    right: DataIndex,
-    parent: DataIndex,
-    color: Color,
+    pub(crate) left: DataIndex,
+    pub(crate) right: DataIndex,
+    pub(crate) parent: DataIndex,
+    pub(crate) color: Color,
 
     // Optional enum controlled by the application to identify the type of node.
     // Defaults to zero.
-    payload_type: u8,
+    pub(crate) payload_type: u8,
 
-    _unused_padding: u16,
-    value: V,
+    pub(crate) _unused_padding: u16,
+    pub(crate) value: V,
 }
 unsafe impl<V: Payload> Pod for RBNode<V> {}
 
@@ -1282,7 +1373,7 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 // No IterMut because changing keys could break red-black properties.
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use std::fmt::Display;
 
     use super::*;
@@ -1295,7 +1386,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderBid {
+    pub(crate) struct TestOrderBid {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1327,7 +1418,7 @@ mod test {
     }
 
     impl TestOrderBid {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderBid {
                 order_id,
                 padding: [0; 128],
@@ -1337,7 +1428,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderAsk {
+    pub(crate) struct TestOrderAsk {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1369,7 +1460,7 @@ mod test {
     }
 
     impl TestOrderAsk {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderAsk {
                 order_id,
                 padding: [0; 128],
@@ -1384,7 +1475,7 @@ mod test {
     // Color: DataIndex
     // TestOrder: 8 + 128
     // 8 + 8 + 8 + 8 + 8 + 128 = 168
-    const TEST_BLOCK_WIDTH: DataIndex = 168;
+    pub(crate) const TEST_BLOCK_WIDTH: DataIndex = 168;
 
     #[test]
     fn test_insert_basic() {

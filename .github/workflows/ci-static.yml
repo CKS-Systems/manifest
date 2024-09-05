@@ -7,7 +7,7 @@ on:
     paths:
       [
         'programs/**',
-        'lib',
+        'lib/**',
         'Cargo.toml',
         'Cargo.lock',
       ]
