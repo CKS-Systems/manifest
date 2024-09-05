@@ -17,7 +17,9 @@ use static_assertions::const_assert_eq;
 use crate::{
     program::{assert_with_msg, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
-    validation::{get_global_vault_address, ManifestAccount},
+    validation::{
+        get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
+    },
 };
 
 use super::{
@@ -47,8 +49,9 @@ pub struct GlobalFixed {
     num_bytes_allocated: DataIndex,
 
     vault_bump: u8,
+    global_bump: u8,
 
-    _unused_padding: [u8; 3],
+    _unused_padding: [u8; 2],
 }
 const_assert_eq!(
     size_of::<GlobalFixed>(),
@@ -59,7 +62,8 @@ const_assert_eq!(
     4 +   // free_list_head_index
     4 +   // num_bytes_allocated
     1 +   // vault_bump
-    3 // unused_padding
+    1 +   // global_bump
+    2 // unused_padding
 );
 const_assert_eq!(size_of::<GlobalFixed>(), GLOBAL_FIXED_SIZE);
 const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
@@ -87,10 +91,14 @@ pub struct GlobalTrader {
     /// in trades stay in the market.
     balance_atoms: GlobalAtoms,
 
-    // TODO: Track number of orders so there is an amount of gas prepayments
-    // known to be returned if this seat gets purged.
+    // Number of gas deposits on the global account. This is the number of gas
+    // deposits that were paid by the global trader, but were not taken when the
+    // order was removed.
+    // TODO: Make a way to claim gas deposits
+    claimable_gas_deposits: u32,
+
     /// unused padding
-    _padding: [u64; 1],
+    _padding: [u32; 1],
 }
 const_assert_eq!(size_of::<GlobalTrader>(), GLOBAL_TRADER_SIZE);
 const_assert_eq!(size_of::<GlobalTrader>() % 8, 0);
@@ -120,6 +128,7 @@ impl std::fmt::Display for GlobalTrader {
 impl GlobalFixed {
     pub fn new_empty(mint: &Pubkey) -> Self {
         let (vault, vault_bump) = get_global_vault_address(mint);
+        let (_, global_bump) = get_global_address(mint);
         GlobalFixed {
             discriminant: GLOBAL_FIXED_DISCRIMINANT,
             mint: *mint,
@@ -128,7 +137,8 @@ impl GlobalFixed {
             free_list_head_index: NIL,
             num_bytes_allocated: 0,
             vault_bump,
-            _unused_padding: [0; 3],
+            global_bump,
+            _unused_padding: [0; 2],
         }
     }
     pub fn get_global_traders_root_index(&self) -> DataIndex {
@@ -142,6 +152,9 @@ impl GlobalFixed {
     }
     pub fn get_vault_bump(&self) -> u8 {
         self.vault_bump
+    }
+    pub fn get_global_bump(&self) -> u8 {
+        self.global_bump
     }
 }
 
@@ -165,6 +178,7 @@ impl GlobalTrader {
         GlobalTrader {
             trader: *trader,
             balance_atoms: GlobalAtoms::ZERO,
+            claimable_gas_deposits: 0,
             _padding: [0; 1],
         }
     }
@@ -257,12 +271,16 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     }
 
     /// Add global order to the global account and specific market.
-    pub fn add_order(&mut self, resting_order: &RestingOrder, trader: &Pubkey) -> ProgramResult {
+    pub fn add_order(
+        &mut self,
+        resting_order: &RestingOrder,
+        global_trade_owner: &Pubkey,
+    ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        let global_trader: &GlobalTrader = get_global_trader(fixed, dynamic, trader)?;
+        let global_trader: &mut GlobalTrader =
+            get_mut_global_trader(fixed, dynamic, global_trade_owner)?;
         let global_atoms_deposited: GlobalAtoms = global_trader.balance_atoms;
 
-        // TODO: Gas prepayment maintenance
         let num_global_atoms: GlobalAtoms = if resting_order.get_is_bid() {
             GlobalAtoms::new(
                 resting_order
@@ -274,6 +292,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         } else {
             GlobalAtoms::new(resting_order.get_num_base_atoms().as_u64())
         };
+
         // This can be trivial to circumvent by using flash loans. This is just
         // an informational safety check.
         assert_with_msg(
@@ -281,12 +300,24 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             ManifestError::GlobalInsufficient,
             "Insufficient funds for global order",
         )?;
+
         Ok(())
     }
 
-    /// Remove global order. Update the GlobalTraderMarketInfo.
-    pub fn remove_order(&mut self, _trader: &Pubkey) -> ProgramResult {
-        // TODO: Return gas prepayment to the trader
+    /// Remove global order. Update the GlobalTrader.
+    pub fn remove_order(
+        &mut self,
+        global_trade_owner: &Pubkey,
+        global_trade_accounts: &GlobalTradeAccounts,
+    ) -> ProgramResult {
+        let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
+        let global_trader: &mut GlobalTrader =
+            get_mut_global_trader(fixed, dynamic, global_trade_owner)?;
+
+        let GlobalTradeAccounts { trader, .. } = global_trade_accounts;
+        if trader.info.key != global_trade_owner || global_trade_accounts.system_program.is_none() {
+            global_trader.claimable_gas_deposits += 1;
+        }
 
         Ok(())
     }
