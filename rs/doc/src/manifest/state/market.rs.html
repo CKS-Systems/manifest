@@ -1120,6 +1120,32 @@
 <a href="#1118" id="1118">1118</a>
 <a href="#1119" id="1119">1119</a>
 <a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
@@ -1135,7 +1161,7 @@
     program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
+        utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
     },
     validation::{
@@ -1857,6 +1883,20 @@
             })<span class="question-mark">?</span>;
 
             <span class="kw">if </span>did_fully_match_resting_order {
+                <span class="comment">// Get paid for removing a global order.
+                </span><span class="kw">if </span>get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index)
+                    .get_value()
+                    .get_order_type()
+                    == OrderType::Global
+                {
+                    <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
+                        <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
+                    } <span class="kw">else </span>{
+                        <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
+                    };
+                    remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, <span class="kw-2">&amp;</span>maker)<span class="question-mark">?</span>;
+                }
+
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)<span class="question-mark">?</span>;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)<span class="question-mark">?</span>;
                 current_order_index = next_order_index;
@@ -1912,7 +1952,12 @@
             } <span class="kw">else </span>{
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
             };
-            try_to_add_to_global(global_trade_accounts_opt, <span class="kw-2">&amp;</span>resting_order)<span class="question-mark">?</span>;
+            assert_with_msg(
+                global_trade_accounts_opt.is_some(),
+                ManifestError::MissingGlobal,
+                <span class="string">"Missing global accounts when adding a global"</span>,
+            )<span class="question-mark">?</span>;
+            try_to_add_to_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap(), <span class="kw-2">&amp;</span>resting_order)<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
             <span class="comment">// Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.
@@ -2017,7 +2062,10 @@
             } <span class="kw">else </span>{
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
             };
-            try_to_remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?
+            <span class="kw">let </span>trader: <span class="kw-2">&amp;</span>Pubkey = <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index)
+                .get_value()
+                .trader;
+            remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, trader)<span class="question-mark">?
         </span>} <span class="kw">else </span>{
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
         }
@@ -2227,8 +2275,12 @@
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
         };
-        try_to_remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?
-    </span>} <span class="kw">else </span>{
+        <span class="kw">let </span>maker: <span class="kw-2">&amp;</span>Pubkey =
+            <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, other_order.get_trader_index())
+                .get_value()
+                .trader;
+        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, maker)<span class="question-mark">?</span>;
+    } <span class="kw">else </span>{
         update_balance_by_trader_index(
             dynamic,
             other_order.get_trader_index(),

@@ -101,13 +101,13 @@
         AccountMeta::new(<span class="kw-2">*</span>trader_quote_account, <span class="bool-val">false</span>),
         AccountMeta::new(vault_base_account, <span class="bool-val">false</span>),
         AccountMeta::new(vault_quote_account, <span class="bool-val">false</span>),
-        AccountMeta::new(token_program_base, <span class="bool-val">false</span>),
+        AccountMeta::new_readonly(token_program_base, <span class="bool-val">false</span>),
     ];
     <span class="kw">if </span>token_program_base == spl_token_2022::id() {
-        account_metas.push(AccountMeta::new(<span class="kw-2">*</span>base_mint, <span class="bool-val">false</span>))
+        account_metas.push(AccountMeta::new_readonly(<span class="kw-2">*</span>base_mint, <span class="bool-val">false</span>))
     }
     <span class="kw">if </span>token_program_base != token_program_quote {
-        account_metas.push(AccountMeta::new(token_program_quote, <span class="bool-val">false</span>))
+        account_metas.push(AccountMeta::new_readonly(token_program_quote, <span class="bool-val">false</span>))
     }
     <span class="kw">if </span>token_program_quote == spl_token_2022::id() {
         account_metas.push(AccountMeta::new(<span class="kw-2">*</span>quote_mint, <span class="bool-val">false</span>))

@@ -112,7 +112,7 @@
             <span class="kw">let </span>(global_vault, <span class="kw">_</span>) = get_global_vault_address(<span class="kw-2">&amp;</span>mint);
             <span class="kw">let </span>(market_vault, <span class="kw">_</span>) = get_vault_address(market, <span class="kw-2">&amp;</span>mint);
             <span class="kw">let </span><span class="kw-2">mut </span>global_account_metas: Vec&lt;AccountMeta&gt; = <span class="macro">vec!</span>[
-                AccountMeta::new(mint, <span class="bool-val">false</span>),
+                AccountMeta::new_readonly(mint, <span class="bool-val">false</span>),
                 AccountMeta::new(global, <span class="bool-val">false</span>),
                 AccountMeta::new(global_vault, <span class="bool-val">false</span>),
                 AccountMeta::new(market_vault, <span class="bool-val">false</span>),
@@ -120,9 +120,9 @@
             <span class="kw">if </span>token_program_opt.is_none()
                 || token_program_opt.is_some_and(|f| f == spl_token::id())
             {
-                global_account_metas.push(AccountMeta::new(spl_token::id(), <span class="bool-val">false</span>));
+                global_account_metas.push(AccountMeta::new_readonly(spl_token::id(), <span class="bool-val">false</span>));
             } <span class="kw">else </span>{
-                global_account_metas.push(AccountMeta::new(spl_token_2022::id(), <span class="bool-val">false</span>));
+                global_account_metas.push(AccountMeta::new_readonly(spl_token_2022::id(), <span class="bool-val">false</span>));
             }
             account_metas.extend(global_account_metas);
         }

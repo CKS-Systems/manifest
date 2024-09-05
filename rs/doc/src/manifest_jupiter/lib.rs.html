@@ -804,6 +804,19 @@
 <a href="#802" id="802">802</a>
 <a href="#803" id="803">803</a>
 <a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
@@ -1017,8 +1030,8 @@
             MARKET_FIXED_SIZE,
         },
         validation::{
-            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
-            TokenProgram,
+            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, Signer,
+            TokenAccountInfo, TokenProgram,
         },
     };
     <span class="kw">use </span>solana_sdk::{account::Account, account_info::AccountInfo};
@@ -1427,7 +1440,7 @@
 
         <span class="kw">let </span>manifest_id: Pubkey = manifest::id();
         <span class="kw">let </span>global_key: Pubkey = get_global_address(<span class="kw-2">&amp;</span>quote_mint_key).<span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>global_lamports: u64 = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>global_lamports: u64 = <span class="number">1_000_000</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>global_data_vec: Vec&lt;u8&gt; = Vec::new();
         <span class="kw">let </span>global_account_info: AccountInfo = {
             <span class="kw">let </span><span class="kw-2">mut </span>global_value: DynamicAccount&lt;GlobalFixed, Vec&lt;u8&gt;&gt; = GlobalValue {
@@ -1502,7 +1515,19 @@
         <span class="comment">// Bid for 10 SOL
         </span>market_value.market_expand().unwrap();
 
-        <span class="kw">let </span>quote_global_trade_account: GlobalTradeAccounts = GlobalTradeAccounts {
+        <span class="kw">let </span><span class="kw-2">mut </span>lamports: u64 = <span class="number">100_000</span>;
+        <span class="kw">let </span>trader_account_info: AccountInfo&lt;<span class="lifetime">'_</span>&gt; = AccountInfo {
+            key: <span class="kw-2">&amp;</span>trader_key,
+            lamports: Rc::new(RefCell::new(<span class="kw-2">&amp;mut </span>lamports)),
+            data: Rc::new(RefCell::new(<span class="kw-2">&amp;mut </span>[])),
+            owner: <span class="kw-2">&amp;</span>Pubkey::new_unique(),
+            rent_epoch: <span class="number">0</span>,
+            is_signer: <span class="bool-val">true</span>,
+            is_writable: <span class="bool-val">false</span>,
+            executable: <span class="bool-val">false</span>,
+        };
+
+        <span class="kw">let </span>quote_global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
             mint: <span class="prelude-val">Some</span>(quote_mint_info.clone()),
             global: ManifestAccountInfo::new(<span class="kw-2">&amp;</span>global_account_info).unwrap(),
             global_vault: TokenAccountInfo::new(<span class="kw-2">&amp;</span>global_vault_account_info, <span class="kw-2">&amp;</span>quote_mint_key)
@@ -1510,7 +1535,8 @@
             market_vault: TokenAccountInfo::new(<span class="kw-2">&amp;</span>market_vault_account_info, <span class="kw-2">&amp;</span>quote_mint_key)
                 .unwrap(),
             token_program: TokenProgram::new(<span class="kw-2">&amp;</span>token_program_account_info).unwrap(),
-            trader: trader_key.clone(),
+            system_program: <span class="prelude-val">None</span>,
+            trader: Signer::new(<span class="kw-2">&amp;</span>trader_account_info).unwrap(),
             market: market_key.clone(),
         };
 
@@ -1524,7 +1550,7 @@
                 is_bid: <span class="bool-val">true</span>,
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Global,
-                global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(quote_global_trade_account)],
+                global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(quote_global_trade_accounts)],
             })
             .unwrap();
 

@@ -377,6 +377,37 @@
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
 <a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -396,7 +427,9 @@
 <span class="kw">use crate</span>::{
     program::{assert_with_msg, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
-    validation::{get_global_vault_address, ManifestAccount},
+    validation::{
+        get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
+    },
 };
 
 <span class="kw">use super</span>::{
@@ -426,8 +459,9 @@
     </span>num_bytes_allocated: DataIndex,
 
     vault_bump: u8,
+    global_bump: u8,
 
-    _unused_padding: [u8; <span class="number">3</span>],
+    _unused_padding: [u8; <span class="number">2</span>],
 }
 <span class="macro">const_assert_eq!</span>(
     size_of::&lt;GlobalFixed&gt;(),
@@ -438,7 +472,8 @@
     </span><span class="number">4 </span>+   <span class="comment">// free_list_head_index
     </span><span class="number">4 </span>+   <span class="comment">// num_bytes_allocated
     </span><span class="number">1 </span>+   <span class="comment">// vault_bump
-    </span><span class="number">3 </span><span class="comment">// unused_padding
+    </span><span class="number">1 </span>+   <span class="comment">// global_bump
+    </span><span class="number">2 </span><span class="comment">// unused_padding
 </span>);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalFixed&gt;(), GLOBAL_FIXED_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalFixed&gt;() % <span class="number">8</span>, <span class="number">0</span>);
@@ -466,10 +501,14 @@
     /// in trades stay in the market.
     </span>balance_atoms: GlobalAtoms,
 
-    <span class="comment">// TODO: Track number of orders so there is an amount of gas prepayments
-    // known to be returned if this seat gets purged.
-    </span><span class="doccomment">/// unused padding
-    </span>_padding: [u64; <span class="number">1</span>],
+    <span class="comment">// Number of gas deposits on the global account. This is the number of gas
+    // deposits that were paid by the global trader, but were not taken when the
+    // order was removed.
+    // TODO: Make a way to claim gas deposits
+    </span>claimable_gas_deposits: u32,
+
+    <span class="doccomment">/// unused padding
+    </span>_padding: [u32; <span class="number">1</span>],
 }
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalTrader&gt;(), GLOBAL_TRADER_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalTrader&gt;() % <span class="number">8</span>, <span class="number">0</span>);
@@ -499,6 +538,7 @@
 <span class="kw">impl </span>GlobalFixed {
     <span class="kw">pub fn </span>new_empty(mint: <span class="kw-2">&amp;</span>Pubkey) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(vault, vault_bump) = get_global_vault_address(mint);
+        <span class="kw">let </span>(<span class="kw">_</span>, global_bump) = get_global_address(mint);
         GlobalFixed {
             discriminant: GLOBAL_FIXED_DISCRIMINANT,
             mint: <span class="kw-2">*</span>mint,
@@ -507,7 +547,8 @@
             free_list_head_index: NIL,
             num_bytes_allocated: <span class="number">0</span>,
             vault_bump,
-            _unused_padding: [<span class="number">0</span>; <span class="number">3</span>],
+            global_bump,
+            _unused_padding: [<span class="number">0</span>; <span class="number">2</span>],
         }
     }
     <span class="kw">pub fn </span>get_global_traders_root_index(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DataIndex {
@@ -521,6 +562,9 @@
     }
     <span class="kw">pub fn </span>get_vault_bump(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
         <span class="self">self</span>.vault_bump
+    }
+    <span class="kw">pub fn </span>get_global_bump(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
+        <span class="self">self</span>.global_bump
     }
 }
 
@@ -544,6 +588,7 @@
         GlobalTrader {
             trader: <span class="kw-2">*</span>trader,
             balance_atoms: GlobalAtoms::ZERO,
+            claimable_gas_deposits: <span class="number">0</span>,
             _padding: [<span class="number">0</span>; <span class="number">1</span>],
         }
     }
@@ -636,13 +681,17 @@
     }
 
     <span class="doccomment">/// Add global order to the global account and specific market.
-    </span><span class="kw">pub fn </span>add_order(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resting_order: <span class="kw-2">&amp;</span>RestingOrder, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
+    </span><span class="kw">pub fn </span>add_order(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        resting_order: <span class="kw-2">&amp;</span>RestingOrder,
+        global_trade_owner: <span class="kw-2">&amp;</span>Pubkey,
+    ) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
-        <span class="kw">let </span>global_trader: <span class="kw-2">&amp;</span>GlobalTrader = get_global_trader(fixed, dynamic, trader)<span class="question-mark">?</span>;
+        <span class="kw">let </span>global_trader: <span class="kw-2">&amp;mut </span>GlobalTrader =
+            get_mut_global_trader(fixed, dynamic, global_trade_owner)<span class="question-mark">?</span>;
         <span class="kw">let </span>global_atoms_deposited: GlobalAtoms = global_trader.balance_atoms;
 
-        <span class="comment">// TODO: Gas prepayment maintenance
-        </span><span class="kw">let </span>num_global_atoms: GlobalAtoms = <span class="kw">if </span>resting_order.get_is_bid() {
+        <span class="kw">let </span>num_global_atoms: GlobalAtoms = <span class="kw">if </span>resting_order.get_is_bid() {
             GlobalAtoms::new(
                 resting_order
                     .get_num_base_atoms()
@@ -653,6 +702,7 @@
         } <span class="kw">else </span>{
             GlobalAtoms::new(resting_order.get_num_base_atoms().as_u64())
         };
+
         <span class="comment">// This can be trivial to circumvent by using flash loans. This is just
         // an informational safety check.
         </span>assert_with_msg(
@@ -660,14 +710,26 @@
             ManifestError::GlobalInsufficient,
             <span class="string">"Insufficient funds for global order"</span>,
         )<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Remove global order. Update the GlobalTraderMarketInfo.
-    </span><span class="kw">pub fn </span>remove_order(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
-        <span class="comment">// TODO: Return gas prepayment to the trader
+    <span class="doccomment">/// Remove global order. Update the GlobalTrader.
+    </span><span class="kw">pub fn </span>remove_order(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        global_trade_owner: <span class="kw-2">&amp;</span>Pubkey,
+        global_trade_accounts: <span class="kw-2">&amp;</span>GlobalTradeAccounts,
+    ) -&gt; ProgramResult {
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
+        <span class="kw">let </span>global_trader: <span class="kw-2">&amp;mut </span>GlobalTrader =
+            get_mut_global_trader(fixed, dynamic, global_trade_owner)<span class="question-mark">?</span>;
 
-        </span><span class="prelude-val">Ok</span>(())
+        <span class="kw">let </span>GlobalTradeAccounts { trader, .. } = global_trade_accounts;
+        <span class="kw">if </span>trader.info.key != global_trade_owner || global_trade_accounts.system_program.is_none() {
+            global_trader.claimable_gas_deposits += <span class="number">1</span>;
+        }
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Deposit to global account.
