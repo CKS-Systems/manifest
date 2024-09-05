@@ -6,8 +6,7 @@ use crate::{
     RedBlackTreeReadOperationsHelpers, RedBlackTreeWriteOperationsHelpers, NIL,
 };
 
-/// A Left Leaning Red-Black tree which supports random access O(log n) and get max O(1),
-/// but does not require the data to be mutable.
+/// A Left Leaning Red-Black tree which supports random access O(log n) and get max O(1)
 /// https://tjkendev.github.io/bst-visualization/red-black-tree/left-leaning.html
 pub struct LLRB<'a, V: Payload> {
     /// The address within data that the root node starts.
