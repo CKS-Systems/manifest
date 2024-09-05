@@ -4,7 +4,10 @@ use std::{
 };
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{get_helper, get_mut_helper, DataIndex, FreeList, RBNode, TreeReadOperations, NIL};
+use hypertree::{
+    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, NIL,
+};
 use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
@@ -242,8 +245,8 @@ pub(crate) fn process_batch_update(
         let open_orders_tree: OpenOrdersTreeReadOnly =
             OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
 
-        for open_order_node in open_orders_tree.iter() {
-            let open_order: &WrapperOpenOrder = open_order_node.1.get_value();
+        for open_order_node in open_orders_tree.iter::<WrapperOpenOrder>() {
+            let open_order: &WrapperOpenOrder = open_order_node.1;
             core_cancels.push(CancelOrderParams::new_with_hint(
                 open_order.get_order_sequence_number(),
                 Some(open_order.get_market_data_index()),
@@ -361,12 +364,15 @@ pub(crate) fn process_batch_update(
             });
     });
     if cancel_all {
-        let mut open_orders_tree: OpenOrdersTree =
-            OpenOrdersTree::new(wrapper_dynamic_data, orders_root_index, NIL);
+        let open_orders_tree: OpenOrdersTreeReadOnly =
+            OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
         let mut to_remove_indices: Vec<DataIndex> = Vec::new();
-        for open_order in open_orders_tree.iter() {
+        for open_order in open_orders_tree.iter::<WrapperOpenOrder>() {
             to_remove_indices.push(open_order.0);
         }
+
+        let mut open_orders_tree: OpenOrdersTree =
+            OpenOrdersTree::new(wrapper_dynamic_data, orders_root_index, NIL);
         for open_order_index in to_remove_indices.iter() {
             open_orders_tree.remove_by_index(*open_order_index);
         }

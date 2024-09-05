@@ -9,8 +9,9 @@ use crate::{
 };
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, TreeReadOperations, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
     program::assert_with_msg,
@@ -158,9 +159,9 @@ pub(crate) fn sync(
         // iterator so cannot also borrow it for updating the nodes.
         let mut to_remove_indices: Vec<DataIndex> = Vec::new();
         let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::new();
-        for (order_index, order) in orders_tree.iter() {
-            let expected_sequence_number: u64 = order.get_value().get_order_sequence_number();
-            let core_data_index: DataIndex = order.get_value().get_market_data_index();
+        for (order_index, order) in orders_tree.iter::<WrapperOpenOrder>() {
+            let expected_sequence_number: u64 = order.get_order_sequence_number();
+            let core_data_index: DataIndex = order.get_market_data_index();
             // Verifies that it is not just zeroed and happens to match seq num,
             // also check that there are base atoms left.
             let core_resting_order: &RestingOrder =
@@ -285,7 +286,7 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
     result.push(matching_order_index);
 
     let mut current_order_index: DataIndex =
-        open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(matching_order_index);
+        open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(matching_order_index);
     while current_order_index != NIL {
         if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
             .get_value()
@@ -296,11 +297,11 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
         }
         result.push(current_order_index);
         current_order_index =
-            open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(current_order_index);
+            open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(current_order_index);
     }
 
     let mut current_order_index: DataIndex =
-        open_orders_tree.get_successor_index::<WrapperOpenOrder>(matching_order_index);
+        open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(matching_order_index);
     while current_order_index != NIL {
         if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
             .get_value()
@@ -311,7 +312,7 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
         }
         result.push(current_order_index);
         current_order_index =
-            open_orders_tree.get_successor_index::<WrapperOpenOrder>(current_order_index);
+            open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(current_order_index);
     }
 
     // Not necessary but useful in practice.

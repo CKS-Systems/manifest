@@ -9,6 +9,7 @@ import { ManifestClient } from '../src/client';
 import {
   mintTo,
   createAssociatedTokenAccountIdempotent,
+  getMint,
 } from '@solana/spl-token';
 import { createMarket } from './createMarket';
 import { Market } from '../src/market';
@@ -28,11 +29,11 @@ async function testDeposit(): Promise<void> {
 
   await market.reload(connection);
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, true) == 10,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 10,
     'deposit withdrawable balance check base',
   );
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, false) == 0,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'deposit withdrawable balance check quote',
   );
   market.prettyPrint();
@@ -43,14 +44,18 @@ export async function deposit(
   payerKeypair: Keypair,
   marketAddress: PublicKey,
   mint: PublicKey,
-  amountAtoms: number,
+  amountTokens: number,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
     connection,
     marketAddress,
     payerKeypair,
   );
-  const depositIx = client.depositIx(payerKeypair.publicKey, mint, amountAtoms);
+  const depositIx = client.depositIx(
+    payerKeypair.publicKey,
+    mint,
+    amountTokens,
+  );
 
   const traderTokenAccount = await createAssociatedTokenAccountIdempotent(
     connection,
@@ -59,6 +64,8 @@ export async function deposit(
     payerKeypair.publicKey,
   );
 
+  const mintDecimals = (await getMint(connection, mint)).decimals;
+  const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
   const mintSig = await mintTo(
     connection,
     payerKeypair,
@@ -67,7 +74,9 @@ export async function deposit(
     payerKeypair.publicKey,
     amountAtoms,
   );
-  console.log(`Minted ${amountAtoms} to ${traderTokenAccount} in ${mintSig}`);
+  console.log(
+    `Minted ${amountTokens} tokens to ${traderTokenAccount} in ${mintSig}`,
+  );
 
   const signature = await sendAndConfirmTransaction(
     connection,
@@ -77,7 +86,7 @@ export async function deposit(
       commitment: 'confirmed',
     },
   );
-  console.log(`Deposited ${amountAtoms} atoms in ${signature}`);
+  console.log(`Deposited ${amountTokens} tokens in ${signature}`);
 }
 
 describe('Deposit test', () => {

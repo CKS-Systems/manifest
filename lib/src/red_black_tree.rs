@@ -1,16 +1,83 @@
 use bytemuck::{Pod, Zeroable};
-use std::{cmp::Ordering, fmt::Display};
+use std::cmp::Ordering;
 
-use crate::{get_helper, get_mut_helper, trace, DataIndex};
+use crate::{
+    get_helper, get_mut_helper, trace, DataIndex, HyperTreeReadOperations,
+    HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload,
+    NIL,
+};
 
-pub const NIL: DataIndex = DataIndex::MAX;
 pub const RBTREE_OVERHEAD_BYTES: usize = 16;
-pub trait TreeValue: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
-impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> TreeValue for T {}
+
+// Overview of all the structs and traits in this file. Skips some internal helpers.
+//
+// Public
+//  struct RedBlackTree<'a, V: Payload>
+//    fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self
+//    GetRedBlackTreeReadOnlyData
+//    GetRedBlackTreeData
+//    HyperTreeWriteOperations
+//  struct RedBlackTreeReadOnly<'a, V: Payload>
+//    fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self
+//    GetRedBlackTreeReadOnlyData
+//
+//  trait GetRedBlackTreeReadOnlyData<'a>
+//    fn data(&self) -> &[u8];
+//    fn root_index(&self) -> DataIndex;
+//    fn max_index(&self) -> DataIndex;
+//    RedBlackTreeReadOperationsHelpers
+//    HyperTreeReadOperations
+//    RedBlackTreeTestHelpers
+//    HyperTreeValueIteratorTrait
+//  trait GetRedBlackTreeData<'a>
+//    fn data(&mut self) -> &mut [u8];
+//    fn set_root_index(&mut self, root_index: DataIndex);
+//    RedBlackTreeWriteOperationsHelpers
+//  struct RBNode<V>
+//    Ord
+//    PartialOrd
+//    PartialEq
+//    Eq
+//    fn get_payload_type(&self) -> u8
+//    fn set_payload_type(&mut self, payload_type: u8)
+//    fn get_mut_value(&mut self) -> &mut V
+//    fn get_value(&self) -> &V
+//
+// Internal
+//  trait RedBlackTreeReadOperationsHelpers<'a>
+//    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
+//    fn has_left<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn has_right<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_right_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
+//    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+//    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+//    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
+//    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+// trait RedBlackTreeWriteOperationsHelpers<'a>
+//    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
+//    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
+//    fn set_left_index<V: Payload>(&mut self, index: DataIndex, left_index: DataIndex);
+//    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
+//    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
+//    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
+//    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+//    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
+// trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>>
+//    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+//    fn pretty_print<V: Payload>(&'a self);
+//    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+//    fn verify_rb_tree<V: Payload>(&'a self);
+//    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
+// enum Color
 
 /// A Red-Black tree which supports random access O(log n), insert O(log n),
 /// delete O(log n), and get max O(1)
-pub struct RedBlackTree<'a, V: TreeValue> {
+pub struct RedBlackTree<'a, V: Payload> {
     /// The address within data that the root node starts.
     root_index: DataIndex,
     /// Unowned byte array which contains all the data for this tree and possibly more.
@@ -27,7 +94,7 @@ pub struct RedBlackTree<'a, V: TreeValue> {
 
 /// A Red-Black tree which supports random access O(log n) and get max O(1),
 /// but does not require the data to be mutable.
-pub struct RedBlackTreeReadOnly<'a, V: TreeValue> {
+pub struct RedBlackTreeReadOnly<'a, V: Payload> {
     /// The address within data that the root node starts.
     root_index: DataIndex,
     /// Unowned byte array which contains all the data for this tree and possibly more.
@@ -42,9 +109,20 @@ pub struct RedBlackTreeReadOnly<'a, V: TreeValue> {
     phantom: std::marker::PhantomData<&'a V>,
 }
 
-impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
+impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
+    /// It is necessary to persist the root_index to re-initialize a tree, storing
+    /// the max_index is recommended when in-order iteration is performance critical.
+    ///
+    /// Depending on the index args this will behave differently:
+    ///
+    /// root=NIL: initializes an empty tree, get_max() is defined
+    ///
+    /// root!=NIL max=NIL: initializes an existing tree, get_max() is undefined &
+    ///                    iter() will dynamically lookup the maximum
+    ///
+    /// root!=NIL max!=NIL: initializes an existing tree, get_max() is defined
     pub fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
         RedBlackTreeReadOnly::<V> {
             root_index,
@@ -53,23 +131,18 @@ impl<'a, V: TreeValue> RedBlackTreeReadOnly<'a, V> {
             phantom: std::marker::PhantomData,
         }
     }
-
-    /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeReadOnlyIterator<V> {
-        RedBlackTreeReadOnlyIterator {
-            tree: self,
-            index: self.get_min_index::<V>(),
-        }
-    }
 }
-trait GetReadOnlyData<'a> {
-    fn data(&'a self) -> &'a [u8];
+
+// Specific to red black trees and not all data structures. Implementing this
+// gets a lot of other stuff for free.
+pub trait GetRedBlackTreeReadOnlyData<'a> {
+    fn data(&self) -> &[u8];
     fn root_index(&self) -> DataIndex;
     fn max_index(&self) -> DataIndex;
 }
 
-impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
-    fn data(&'a self) -> &'a [u8] {
+impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
+    fn data(&self) -> &[u8] {
         self.data
     }
     fn root_index(&self) -> DataIndex {
@@ -79,8 +152,8 @@ impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTreeReadOnly<'a, V> {
         self.max_index
     }
 }
-impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTree<'a, V> {
-    fn data(&'a self) -> &'a [u8] {
+impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTree<'a, V> {
+    fn data(&self) -> &[u8] {
         self.data
     }
     fn root_index(&self) -> DataIndex {
@@ -90,62 +163,79 @@ impl<'a, V: TreeValue> GetReadOnlyData<'a> for RedBlackTree<'a, V> {
         self.max_index
     }
 }
-trait TreeReadOperationsHelpers<'a> {
-    fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V;
-    fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn get_right_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_left_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_color<V: TreeValue>(&'a self, index: DataIndex) -> Color;
-    fn get_parent_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_min_index<V: TreeValue>(&'a self) -> DataIndex;
-    fn is_left_child<V: TreeValue>(&'a self, index: DataIndex) -> bool;
-    fn is_right_child<V: TreeValue>(&'a self, index: DataIndex) -> bool;
+pub trait GetRedBlackTreeData<'a> {
+    fn data(&mut self) -> &mut [u8];
+    fn set_root_index(&mut self, root_index: DataIndex);
+}
+impl<'a, V: Payload> GetRedBlackTreeData<'a> for RedBlackTree<'a, V> {
+    fn data(&mut self) -> &mut [u8] {
+        self.data
+    }
+    fn set_root_index(&mut self, root_index: DataIndex) {
+        self.root_index = root_index;
+    }
 }
 
-impl<'a, T> TreeReadOperationsHelpers<'a> for T
+pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
+    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
+    fn has_left<V: Payload>(&self, index: DataIndex) -> bool;
+    fn has_right<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_right_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
+    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
+    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+        -> DataIndex;
+}
+
+impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
-    T: GetReadOnlyData<'a>,
+    T: GetRedBlackTreeReadOnlyData<'a>,
 {
     // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
     // when we already know the index is not NIL.
-    fn get_value<V: TreeValue>(&'a self, index: DataIndex) -> &'a V {
+    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         &node.value
     }
-    fn has_left<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn has_left<V: Payload>(&self, index: DataIndex) -> bool {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.left != NIL
     }
-    fn has_right<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn has_right<V: Payload>(&self, index: DataIndex) -> bool {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.right != NIL
     }
-    fn get_color<V: TreeValue>(&'a self, index: DataIndex) -> Color {
+    fn get_color<V: Payload>(&self, index: DataIndex) -> Color {
         if index == NIL {
             return Color::Black;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.color
     }
-    fn get_right_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_right_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.right
     }
-    fn get_left_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.left
     }
-    fn get_parent_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -153,18 +243,7 @@ where
         node.parent
     }
 
-    fn get_min_index<V: TreeValue>(&'a self) -> DataIndex {
-        if self.root_index() == NIL {
-            return NIL;
-        }
-        let mut current_index: DataIndex = self.root_index();
-        while self.get_left_index::<V>(current_index) != NIL {
-            current_index = self.get_left_index::<V>(current_index);
-        }
-        current_index
-    }
-
-    fn is_left_child<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
         // TODO: Explore if we can store is_left_child and is_right_child in the
         // empty bits after color to avoid the compute of checking the parent.
         if index == self.root_index() {
@@ -173,28 +252,295 @@ where
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.get_left_index::<V>(parent_index) == index
     }
-    fn is_right_child<V: TreeValue>(&'a self, index: DataIndex) -> bool {
+    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool {
         if index == self.root_index() {
             return false;
         }
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.get_right_index::<V>(parent_index) == index
     }
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &'a RBNode<V> {
+        debug_assert_ne!(index, NIL);
+        let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
+        node
+    }
+
+    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
+        debug_assert_ne!(index, NIL);
+        // Assert that there are not both. This is getting the unique child.
+        debug_assert!(!(self.has_left::<V>(index) && self.has_right::<V>(index)));
+
+        let left_child_index: DataIndex = self.get_left_index::<V>(index);
+        let child_index: DataIndex = if left_child_index != NIL {
+            left_child_index
+        } else {
+            self.get_right_index::<V>(index)
+        };
+        child_index
+    }
+
+    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool {
+        debug_assert_ne!(index, NIL);
+        self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
+    }
+
+    fn get_sibling_index<V: Payload>(
+        &self,
+        index: DataIndex,
+        parent_index: DataIndex,
+    ) -> DataIndex {
+        debug_assert_ne!(parent_index, NIL);
+        let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
+        if parent_left_child_index == index {
+            self.get_right_index::<V>(parent_index)
+        } else {
+            parent_left_child_index
+        }
+    }
 }
 
-pub trait TreeReadOperations<'a> {
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex;
-    fn get_max_index(&self) -> DataIndex;
-    fn get_root_index(&self) -> DataIndex;
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex;
+pub(crate) trait RedBlackTreeWriteOperationsHelpers<'a> {
+    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
+    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
+    fn set_left_index<V: Payload>(&mut self, index: DataIndex, left_index: DataIndex);
+    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
+    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
+    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
+    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 }
-impl<'a, T> TreeReadOperations<'a> for T
+impl<'a, T> RedBlackTreeWriteOperationsHelpers<'a> for T
 where
-    T: GetReadOnlyData<'a>,
+    T: GetRedBlackTreeData<'a>
+        + RedBlackTreeReadOperationsHelpers<'a>
+        + GetRedBlackTreeReadOnlyData<'a>,
+{
+    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color) {
+        if index == NIL {
+            return;
+        }
+        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), index);
+        node.color = color;
+    }
+    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex) {
+        if index == NIL {
+            return;
+        }
+        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), index);
+        node.parent = parent_index;
+    }
+    fn set_left_index<V: Payload>(&mut self, index: DataIndex, left_index: DataIndex) {
+        if index == NIL {
+            return;
+        }
+        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), index);
+        node.left = left_index;
+    }
+    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex) {
+        if index == NIL {
+            return;
+        }
+        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), index);
+        node.right = right_index;
+    }
+
+    fn rotate_left<V: Payload>(&mut self, index: DataIndex) {
+        // Left rotate of G
+        //
+        //         GG                     GG
+        //         |                      |
+        //         G                      P
+        //       /   \                  /   \
+        //      U     P     --->      G      X
+        //          /   \           /   \
+        //        Y      X        U       Y
+
+        let g_index: DataIndex = index;
+        let p_index: DataIndex = self.get_right_index::<V>(g_index);
+        let x_index: DataIndex = self.get_right_index::<V>(p_index);
+        let y_index: DataIndex = self.get_left_index::<V>(p_index);
+        let gg_index: DataIndex = self.get_parent_index::<V>(index);
+
+        // P
+        {
+            // Does not use the helpers to avoid redundant NIL checks.
+            let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
+            p_node.parent = gg_index;
+            p_node.left = g_index;
+            p_node.right = x_index;
+        }
+
+        // Y
+        self.set_parent_index::<V>(y_index, g_index);
+
+        // G
+        {
+            let g_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), g_index);
+            g_node.parent = p_index;
+            g_node.right = y_index;
+        }
+
+        // X
+
+        // GG
+        if gg_index != NIL {
+            if self.get_left_index::<V>(gg_index) == index {
+                self.set_left_index::<V>(gg_index, p_index);
+            }
+            if self.get_right_index::<V>(gg_index) == index {
+                self.set_right_index::<V>(gg_index, p_index);
+            }
+        }
+
+        // U
+        // Unchanged, just included for completeness
+
+        // Root
+        if self.root_index() == g_index {
+            self.set_root_index(p_index);
+        }
+    }
+
+    fn rotate_right<V: Payload>(&mut self, index: DataIndex) {
+        // Right rotate of G
+        //
+        //         GG                     GG
+        //         |                      |
+        //         G                      P
+        //       /   \                  /   \
+        //      P     U     --->      X       G
+        //    /  \                          /   \
+        //  X     Y                       Y       U
+
+        let g_index: DataIndex = index;
+        let p_index: DataIndex = self.get_left_index::<V>(g_index);
+        let x_index: DataIndex = self.get_left_index::<V>(p_index);
+        let y_index: DataIndex = self.get_right_index::<V>(p_index);
+        let gg_index: DataIndex = self.get_parent_index::<V>(index);
+
+        // P
+        {
+            // Does not use the helpers to avoid redundant NIL checks.
+            let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
+            p_node.parent = gg_index;
+            p_node.left = x_index;
+            p_node.right = g_index;
+        }
+
+        // Y
+        self.set_parent_index::<V>(y_index, g_index);
+
+        // X
+
+        // G
+        {
+            let g_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), g_index);
+            g_node.parent = p_index;
+            g_node.left = y_index;
+        }
+
+        // GG
+        if gg_index != NIL {
+            if self.get_left_index::<V>(gg_index) == index {
+                self.set_left_index::<V>(gg_index, p_index);
+            }
+            if self.get_right_index::<V>(gg_index) == index {
+                self.set_right_index::<V>(gg_index, p_index);
+            }
+        }
+
+        // U
+        // Unchanged, just included for completeness
+
+        // Root
+        if self.root_index() == g_index {
+            self.set_root_index(p_index);
+        }
+    }
+
+    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex) {
+        let parent_0: DataIndex = self.get_parent_index::<V>(index_0);
+        let parent_1: DataIndex = self.get_parent_index::<V>(index_1);
+        let left_0: DataIndex = self.get_left_index::<V>(index_0);
+        let left_1: DataIndex = self.get_left_index::<V>(index_1);
+        let right_0: DataIndex = self.get_right_index::<V>(index_0);
+        let right_1: DataIndex = self.get_right_index::<V>(index_1);
+
+        let is_left_0: bool = self.is_left_child::<V>(index_0);
+        let is_left_1: bool = self.is_left_child::<V>(index_1);
+
+        // Setting the above parent coming down for both.
+        if is_left_0 {
+            self.set_left_index::<V>(parent_0, index_1);
+        } else {
+            self.set_right_index::<V>(parent_0, index_1);
+        }
+        if is_left_1 {
+            self.set_left_index::<V>(parent_1, index_0);
+        } else {
+            self.set_right_index::<V>(parent_1, index_0);
+        }
+
+        self.set_left_index::<V>(index_0, left_1);
+        self.set_right_index::<V>(index_0, right_1);
+        self.set_parent_index::<V>(index_0, parent_1);
+
+        self.set_left_index::<V>(index_1, left_0);
+        self.set_right_index::<V>(index_1, right_0);
+        self.set_parent_index::<V>(index_1, parent_0);
+
+        self.set_parent_index::<V>(left_0, index_1);
+        self.set_parent_index::<V>(left_1, index_0);
+        self.set_parent_index::<V>(right_0, index_1);
+        self.set_parent_index::<V>(right_1, index_0);
+
+        // Edge case of swapping with successor.
+        if parent_1 == index_0 {
+            self.set_parent_index::<V>(index_0, index_1);
+            self.set_parent_index::<V>(index_1, parent_0);
+            self.set_right_index::<V>(index_1, index_0);
+        }
+
+        // Should not happen because we only swap with successor of an
+        // internal node. Root is a successor of a leaf.
+        debug_assert_ne!(self.root_index(), index_1);
+        if self.root_index() == index_0 {
+            self.set_root_index(index_1);
+        }
+
+        let index_0_color: Color = self.get_color::<V>(index_0);
+        let index_1_color: Color = self.get_color::<V>(index_1);
+        self.set_color::<V>(index_0, index_1_color);
+        self.set_color::<V>(index_1, index_0_color);
+    }
+
+    // Take out the node in the middle and fix parent child relationships
+    fn update_parent_child<V: Payload>(&mut self, index: DataIndex) {
+        debug_assert_ne!(index, NIL);
+        debug_assert!(!self.is_internal::<V>(index));
+
+        let parent_index: DataIndex = self.get_parent_index::<V>(index);
+        let child_index: DataIndex = self.get_child_index::<V>(index);
+
+        trace!("TREE update parent child {parent_index}<-{index}<-{child_index}");
+        self.set_parent_index::<V>(child_index, parent_index);
+        if self.is_left_child::<V>(index) {
+            self.set_left_index::<V>(parent_index, child_index);
+        } else {
+            self.set_right_index::<V>(parent_index, child_index);
+        }
+        if self.root_index() == index {
+            self.set_root_index(child_index);
+        }
+    }
+}
+
+impl<'a, T> HyperTreeReadOperations<'a> for T
+where
+    T: GetRedBlackTreeReadOnlyData<'a>,
 {
     /// Lookup the index of a given value.
-    fn lookup_index<V: TreeValue>(&'a self, value: &V) -> DataIndex {
+    fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex {
         if self.root_index() == NIL {
             return NIL;
         }
@@ -240,6 +586,20 @@ where
         current_index
     }
 
+    fn lookup_max_index<V: Payload>(&'a self) -> DataIndex {
+        let mut current_index = self.root_index();
+        if current_index == NIL {
+            return NIL;
+        }
+        loop {
+            let right_index = self.get_right_index::<V>(current_index);
+            if right_index == NIL {
+                return current_index;
+            }
+            current_index = right_index;
+        }
+    }
+
     /// Get the max index. If a tree set this to NIL on a non-empty tree, this
     /// will always be NIL.
     fn get_max_index(&self) -> DataIndex {
@@ -252,7 +612,7 @@ where
     }
 
     /// Get the previous index. This walks the tree, so does not care about equal keys.
-    fn get_predecessor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_lower_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -276,7 +636,7 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal keys.
-    fn get_successor_index<V: TreeValue>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -300,9 +660,161 @@ where
     }
 }
 
+#[cfg(any(test, feature = "fuzz"))]
+pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+    fn pretty_print<V: Payload>(&'a self);
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+    fn verify_rb_tree<V: Payload>(&'a self);
+    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
+}
+
+#[cfg(any(test, feature = "fuzz"))]
+impl<'a, T> RedBlackTreeTestHelpers<'a, T> for T
+where
+    T: GetRedBlackTreeReadOnlyData<'a>,
+{
+    /// Sorted iterator starting from the min.
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
+        RedBlackTreeReadOnlyIterator {
+            tree: self,
+            index: self.get_max_index(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    fn pretty_print<V: Payload>(&'a self) {
+        trace!("====== Hypertree ======");
+
+        for (index, node) in self.node_iter::<V>() {
+            let mut row_str: String = String::new();
+
+            row_str += &"  ".repeat(self.depth::<V>(index) as usize);
+
+            row_str += if node.parent == NIL {
+                "- "
+            } else {
+                if self.is_left_child::<V>(index) {
+                    "└ "
+                } else {
+                    "┌ "
+                }
+            };
+
+            let color = if node.color == Color::Black { 'B' } else { 'R' };
+            let str = &format!("{color}:{index}:{node}");
+            if node.color == Color::Red {
+                // Cannot use with sbf. Enable when debugging
+                // locally without sbf.
+                #[cfg(colored)]
+                {
+                    use colored::Colorize;
+                    row_str += &format!("{}", str.red());
+                }
+                #[cfg(not(colored))]
+                {
+                    row_str += str;
+                }
+            } else {
+                row_str += str;
+            }
+            trace!("{}", row_str);
+        }
+
+        trace!("=======================");
+    }
+
+    // Only used in pretty printing, so can be slow
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut depth = -1;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            current_index = self.get_parent_index::<V>(current_index);
+            depth += 1;
+        }
+        depth
+    }
+
+    fn verify_rb_tree<V: Payload>(&'a self) {
+        for (index, node) in self.node_iter::<V>() {
+            // Verify that all red nodes only have black children
+            if node.color == Color::Red {
+                assert_eq!(
+                    self.get_color::<V>(self.get_left_index::<V>(index)),
+                    Color::Black
+                );
+                assert_eq!(
+                    self.get_color::<V>(self.get_right_index::<V>(index)),
+                    Color::Black
+                );
+            }
+
+            // Verify that all leaf nodes have the same number of black nodes to the root.
+            let mut num_black = None;
+            if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
+                match num_black {
+                    Some(num_black) => {
+                        assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
+                    }
+                    #[allow(unused_assignments)] // the compiler has issues with "match"
+                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
+                }
+            }
+        }
+    }
+
+    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut num_black_nodes: i32 = 0;
+        let mut current_index: DataIndex = index;
+
+        while current_index != NIL {
+            if self.get_color::<V>(current_index) == Color::Black {
+                num_black_nodes += 1;
+            }
+            current_index = self.get_parent_index::<V>(current_index);
+        }
+        num_black_nodes
+    }
+}
+
+impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
+where
+    T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
+{
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+        let mut index = self.get_max_index();
+        if index == NIL {
+            index = self.lookup_max_index::<V>();
+        }
+        HyperTreeValueReadOnlyIterator {
+            tree: self,
+            index,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Payload> Iterator
+    for HyperTreeValueReadOnlyIterator<'a, T, V>
+{
+    type Item = (DataIndex, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index: DataIndex = self.index;
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
+        if index == NIL {
+            None
+        } else {
+            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
+            self.index = next_index;
+            Some((index, result.get_value()))
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
-enum Color {
+pub(crate) enum Color {
     #[default]
     Black = 0,
     Red = 1,
@@ -331,35 +843,35 @@ pub struct RBNode<V> {
     _unused_padding: u16,
     value: V,
 }
-unsafe impl<V: TreeValue> Pod for RBNode<V> {}
+unsafe impl<V: Payload> Pod for RBNode<V> {}
 
-impl<V: TreeValue> Ord for RBNode<V> {
+impl<V: Payload> Ord for RBNode<V> {
     fn cmp(&self, other: &Self) -> Ordering {
         (self.value).cmp(&(other.value))
     }
 }
 
-impl<V: TreeValue> PartialOrd for RBNode<V> {
+impl<V: Payload> PartialOrd for RBNode<V> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<V: TreeValue> PartialEq for RBNode<V> {
+impl<V: Payload> PartialEq for RBNode<V> {
     fn eq(&self, other: &Self) -> bool {
         (self.value) == (other.value)
     }
 }
 
-impl<V: TreeValue> Eq for RBNode<V> {}
+impl<V: Payload> Eq for RBNode<V> {}
 
-impl<V: TreeValue> std::fmt::Display for RBNode<V> {
+impl<V: Payload> std::fmt::Display for RBNode<V> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(fmt, "{}", self.value)
     }
 }
 
-impl<V: TreeValue> RBNode<V> {
+impl<V: Payload> RBNode<V> {
     fn get_left_index(&self) -> DataIndex {
         self.left
     }
@@ -380,20 +892,9 @@ impl<V: TreeValue> RBNode<V> {
     }
 }
 
-impl<'a, V: TreeValue> RedBlackTree<'a, V> {
-    /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
-    /// data in data is already well formed as a red black tree.
-    pub fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
-        RedBlackTree::<V> {
-            root_index,
-            data,
-            phantom: std::marker::PhantomData,
-            max_index,
-        }
-    }
-
+impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
     /// Insert and rebalance. The data at index should be already zeroed.
-    pub fn insert(&mut self, index: DataIndex, value: V) {
+    fn insert(&mut self, index: DataIndex, value: V) {
         trace!("TREE insert {index}");
 
         // Case where this is now the root
@@ -432,20 +933,11 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         self.insert_fix(index);
 
         #[cfg(test)]
-        self.verify_rb_tree()
-    }
-
-    #[cfg(test)]
-    fn remove_by_value(&mut self, value: &V) {
-        let index: DataIndex = self.lookup_index(value);
-        if index == NIL {
-            return;
-        }
-        self.remove_by_index(index);
+        self.verify_rb_tree::<V>()
     }
 
     /// Remove a node by index and rebalance.
-    pub fn remove_by_index(&mut self, index: DataIndex) {
+    fn remove_by_index(&mut self, index: DataIndex) {
         trace!("TREE remove {index}");
 
         // Silently fail on removing NIL nodes.
@@ -456,19 +948,19 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             trace!(
                 "TREE max {}->{}",
                 self.max_index,
-                self.get_predecessor_index::<V>(self.max_index)
+                self.get_next_lower_index::<V>(self.max_index)
             );
-            self.max_index = self.get_predecessor_index::<V>(self.max_index);
+            self.max_index = self.get_next_lower_index::<V>(self.max_index);
         }
 
         // If it is an internal node, we copy the successor value here and call
         // delete on the successor. We could do either the successor or
         // predecessor. We pick the successor because we would prefer the side
         // of the tree with the max to be sparser.
-        if self.is_internal(index) {
+        if self.is_internal::<V>(index) {
             // Swap nodes
-            let successor_index: DataIndex = self.get_successor_index::<V>(index);
-            self.swap_nodes(index, successor_index);
+            let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
+            self.swap_nodes::<V>(index, successor_index);
         }
 
         // Now we are guaranteed that the node to delete is either a leaf or has
@@ -485,17 +977,39 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         };
         if child_color == Color::Red || to_delete_color == Color::Red {
             // Simple case make the new one Black and move the child onto current.
-            let child_index: DataIndex = self.get_child_index(index);
-            self.update_parent_child(index);
-            self.set_color(child_index, Color::Black);
+            let child_index: DataIndex = self.get_child_index::<V>(index);
+            self.update_parent_child::<V>(index);
+            self.set_color::<V>(child_index, Color::Black);
             return;
         }
 
         // Actually removes from the tree
-        let child_index: DataIndex = self.get_child_index(index);
+        let child_index: DataIndex = self.get_child_index::<V>(index);
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
-        self.update_parent_child(index);
+        self.update_parent_child::<V>(index);
         self.remove_fix(child_index, parent_index);
+    }
+}
+
+impl<'a, V: Payload> RedBlackTree<'a, V> {
+    /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
+    /// data in data is already well formed as a red black tree.
+    pub fn new(data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
+        RedBlackTree::<V> {
+            root_index,
+            data,
+            phantom: std::marker::PhantomData,
+            max_index,
+        }
+    }
+
+    #[cfg(test)]
+    fn remove_by_value(&mut self, value: &V) {
+        let index: DataIndex = self.lookup_index(value);
+        if index == NIL {
+            return;
+        }
+        self.remove_by_index(index);
     }
 
     fn remove_fix(&mut self, current_index: DataIndex, parent_index: DataIndex) {
@@ -507,7 +1021,7 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             return;
         }
 
-        let sibling_index: DataIndex = self.get_sibling_index(current_index, parent_index);
+        let sibling_index: DataIndex = self.get_sibling_index::<V>(current_index, parent_index);
         let sibling_color: Color = self.get_color::<V>(sibling_index);
         let parent_color: Color = self.get_color::<V>(parent_index);
 
@@ -523,42 +1037,42 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
             if self.get_color::<V>(sibling_left_child_index) == Color::Red
                 && self.is_left_child::<V>(sibling_index)
             {
-                self.set_color(sibling_left_child_index, Color::Black);
-                self.set_color(parent_index, sibling_color);
-                self.set_color(sibling_index, parent_color);
-                self.rotate_right(parent_index);
+                self.set_color::<V>(sibling_left_child_index, Color::Black);
+                self.set_color::<V>(parent_index, sibling_color);
+                self.set_color::<V>(sibling_index, parent_color);
+                self.rotate_right::<V>(parent_index);
                 return;
             }
             // ii left right
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
                 && self.is_left_child::<V>(sibling_index)
             {
-                self.set_color(sibling_right_child_index, Color::Red);
-                self.set_color(parent_index, Color::Black);
-                self.set_color(sibling_index, Color::Black);
-                self.rotate_left(sibling_index);
-                self.rotate_right(parent_index);
+                self.set_color::<V>(sibling_right_child_index, Color::Red);
+                self.set_color::<V>(parent_index, Color::Black);
+                self.set_color::<V>(sibling_index, Color::Black);
+                self.rotate_left::<V>(sibling_index);
+                self.rotate_right::<V>(parent_index);
                 return;
             }
             // iii right right
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
                 && self.is_right_child::<V>(sibling_index)
             {
-                self.set_color(sibling_right_child_index, Color::Black);
-                self.set_color(parent_index, sibling_color);
-                self.set_color(sibling_index, parent_color);
-                self.rotate_left(parent_index);
+                self.set_color::<V>(sibling_right_child_index, Color::Black);
+                self.set_color::<V>(parent_index, sibling_color);
+                self.set_color::<V>(sibling_index, parent_color);
+                self.rotate_left::<V>(parent_index);
                 return;
             }
             // iv right left
             if self.get_color::<V>(sibling_left_child_index) == Color::Red
                 && self.is_right_child::<V>(sibling_index)
             {
-                self.set_color(sibling_left_child_index, Color::Red);
-                self.set_color(parent_index, Color::Black);
-                self.set_color(sibling_index, Color::Black);
-                self.rotate_right(sibling_index);
-                self.rotate_left(parent_index);
+                self.set_color::<V>(sibling_left_child_index, Color::Red);
+                self.set_color::<V>(parent_index, Color::Black);
+                self.set_color::<V>(sibling_index, Color::Black);
+                self.rotate_right::<V>(sibling_index);
+                self.rotate_left::<V>(parent_index);
                 return;
             }
             unreachable!();
@@ -567,13 +1081,13 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // 3b
         // Sibling is black and both children are black
         if sibling_color == Color::Black {
-            self.set_color(sibling_index, Color::Red);
+            self.set_color::<V>(sibling_index, Color::Red);
             if parent_color == Color::Black {
                 // Recurse on the parent
                 self.remove_fix(parent_index, self.get_parent_index::<V>(parent_index));
                 return;
             } else {
-                self.set_color(parent_index, Color::Black);
+                self.set_color::<V>(parent_index, Color::Black);
                 return;
             }
         }
@@ -581,14 +1095,14 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         // 3c
         // Sibing is red
         if self.is_left_child::<V>(sibling_index) {
-            self.rotate_right(parent_index);
-            self.set_color(parent_index, Color::Red);
-            self.set_color(sibling_index, Color::Black);
+            self.rotate_right::<V>(parent_index);
+            self.set_color::<V>(parent_index, Color::Red);
+            self.set_color::<V>(sibling_index, Color::Black);
             self.remove_fix(current_index, parent_index);
         } else if self.is_right_child::<V>(sibling_index) {
-            self.rotate_left(parent_index);
-            self.set_color(parent_index, Color::Red);
-            self.set_color(sibling_index, Color::Black);
+            self.rotate_left::<V>(parent_index);
+            self.set_color::<V>(parent_index, Color::Red);
+            self.set_color::<V>(sibling_index, Color::Black);
             self.remove_fix(current_index, parent_index);
         }
     }
@@ -638,9 +1152,9 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         }
         // We ended at a leaf and need to add below.
         if *self.get_node(current_parent_index) < node_to_insert {
-            self.set_right_index(current_parent_index, new_node_index);
+            self.set_right_index::<V>(current_parent_index, new_node_index);
         } else {
-            self.set_left_index(current_parent_index, new_node_index);
+            self.set_left_index::<V>(current_parent_index, new_node_index);
         }
 
         // Put the leaf in the tree and update its parent.
@@ -653,7 +1167,7 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
 
     fn insert_fix(&mut self, index_to_fix: DataIndex) {
         if self.root_index == index_to_fix {
-            self.set_color(index_to_fix, Color::Black);
+            self.set_color::<V>(index_to_fix, Color::Black);
             return;
         }
 
@@ -685,9 +1199,9 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
 
         // Case I: Uncle is red
         if uncle_color == Color::Red {
-            self.set_color(parent_index, Color::Black);
-            self.set_color(uncle_index, Color::Black);
-            self.set_color(grandparent_index, Color::Red);
+            self.set_color::<V>(parent_index, Color::Black);
+            self.set_color::<V>(uncle_index, Color::Black);
+            self.set_color::<V>(grandparent_index, Color::Red);
 
             // Recurse
             self.insert_fix(grandparent_index);
@@ -702,452 +1216,65 @@ impl<'a, V: TreeValue> RedBlackTree<'a, V> {
         trace!("FIX G=[{grandparent_index}:{grandparent_color:?}] P=[{parent_index}:{parent_color:?}] Pi={parent_is_left} Ci={current_is_left}");
 
         if grandparent_index == NIL && parent_color == Color::Red {
-            self.set_color(parent_index, Color::Black);
+            self.set_color::<V>(parent_index, Color::Black);
             return;
         }
 
         // Case II: Uncle is black, left left
         if parent_is_left && current_is_left {
-            self.rotate_right(grandparent_index);
-            self.set_color(grandparent_index, parent_color);
-            self.set_color(parent_index, grandparent_color);
+            self.rotate_right::<V>(grandparent_index);
+            self.set_color::<V>(grandparent_index, parent_color);
+            self.set_color::<V>(parent_index, grandparent_color);
         }
         let index_to_fix_color: Color = self.get_color::<V>(index_to_fix);
         // Case III: Uncle is black, left right
         if parent_is_left && !current_is_left {
-            self.rotate_left(parent_index);
-            self.rotate_right(grandparent_index);
-            self.set_color(index_to_fix, grandparent_color);
-            self.set_color(grandparent_index, index_to_fix_color);
+            self.rotate_left::<V>(parent_index);
+            self.rotate_right::<V>(grandparent_index);
+            self.set_color::<V>(index_to_fix, grandparent_color);
+            self.set_color::<V>(grandparent_index, index_to_fix_color);
         }
         // Case IV: Uncle is black, right right
         if !parent_is_left && !current_is_left {
-            self.rotate_left(grandparent_index);
-            self.set_color(grandparent_index, parent_color);
-            self.set_color(parent_index, grandparent_color);
+            self.rotate_left::<V>(grandparent_index);
+            self.set_color::<V>(grandparent_index, parent_color);
+            self.set_color::<V>(parent_index, grandparent_color);
         }
         // Case V: Uncle is black, right left
         if !parent_is_left && current_is_left {
-            self.rotate_right(parent_index);
-            self.rotate_left(grandparent_index);
-            self.set_color(index_to_fix, grandparent_color);
-            self.set_color(grandparent_index, index_to_fix_color);
+            self.rotate_right::<V>(parent_index);
+            self.rotate_left::<V>(grandparent_index);
+            self.set_color::<V>(index_to_fix, grandparent_color);
+            self.set_color::<V>(grandparent_index, index_to_fix_color);
         }
-    }
-
-    fn rotate_left(&mut self, index: DataIndex) {
-        // Left rotate of G
-        //
-        //         GG                     GG
-        //         |                      |
-        //         G                      P
-        //       /   \                  /   \
-        //      U     P     --->      G      X
-        //          /   \           /   \
-        //        Y      X        U       Y
-
-        let g_index: DataIndex = index;
-        let p_index: DataIndex = self.get_right_index::<V>(g_index);
-        let x_index: DataIndex = self.get_right_index::<V>(p_index);
-        let y_index: DataIndex = self.get_left_index::<V>(p_index);
-        let gg_index: DataIndex = self.get_parent_index::<V>(index);
-
-        // P
-        {
-            // Does not use the helpers to avoid redundant NIL checks.
-            let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, p_index);
-            p_node.parent = gg_index;
-            p_node.left = g_index;
-            p_node.right = x_index;
-        }
-
-        // Y
-        self.set_parent_index(y_index, g_index);
-
-        // G
-        {
-            let g_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, g_index);
-            g_node.parent = p_index;
-            g_node.right = y_index;
-        }
-
-        // X
-
-        // GG
-        if gg_index != NIL {
-            if self.get_left_index::<V>(gg_index) == index {
-                self.set_left_index(gg_index, p_index);
-            }
-            if self.get_right_index::<V>(gg_index) == index {
-                self.set_right_index(gg_index, p_index);
-            }
-        }
-
-        // U
-        // Unchanged, just included for completeness
-
-        // Root
-        if self.root_index == g_index {
-            self.root_index = p_index;
-        }
-    }
-
-    fn rotate_right(&mut self, index: DataIndex) {
-        // Right rotate of G
-        //
-        //         GG                     GG
-        //         |                      |
-        //         G                      P
-        //       /   \                  /   \
-        //      P     U     --->      X       G
-        //    /  \                          /   \
-        //  X     Y                       Y       U
-
-        let g_index: DataIndex = index;
-        let p_index: DataIndex = self.get_left_index::<V>(g_index);
-        let x_index: DataIndex = self.get_left_index::<V>(p_index);
-        let y_index: DataIndex = self.get_right_index::<V>(p_index);
-        let gg_index: DataIndex = self.get_parent_index::<V>(index);
-
-        // P
-        {
-            // Does not use the helpers to avoid redundant NIL checks.
-            let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, p_index);
-            p_node.parent = gg_index;
-            p_node.left = x_index;
-            p_node.right = g_index;
-        }
-
-        // Y
-        self.set_parent_index(y_index, g_index);
-
-        // X
-
-        // G
-        {
-            let g_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, g_index);
-            g_node.parent = p_index;
-            g_node.left = y_index;
-        }
-
-        // GG
-        if gg_index != NIL {
-            if self.get_left_index::<V>(gg_index) == index {
-                self.set_left_index(gg_index, p_index);
-            }
-            if self.get_right_index::<V>(gg_index) == index {
-                self.set_right_index(gg_index, p_index);
-            }
-        }
-
-        // U
-        // Unchanged, just included for completeness
-
-        // Root
-        if self.root_index == g_index {
-            self.root_index = p_index;
-        }
-    }
-
-    // TODO: Remove the NIL checks here when possible.
-    fn set_color(&mut self, index: DataIndex, color: Color) {
-        if index == NIL {
-            return;
-        }
-        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, index);
-        node.color = color;
-    }
-    fn set_parent_index(&mut self, index: DataIndex, parent_index: DataIndex) {
-        if index == NIL {
-            return;
-        }
-        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, index);
-        node.parent = parent_index;
-    }
-    fn set_left_index(&mut self, index: DataIndex, left_index: DataIndex) {
-        if index == NIL {
-            return;
-        }
-        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, index);
-        node.left = left_index;
-    }
-    fn set_right_index(&mut self, index: DataIndex, right_index: DataIndex) {
-        if index == NIL {
-            return;
-        }
-        let node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data, index);
-        node.right = right_index;
-    }
-    fn swap_nodes(&mut self, index_0: DataIndex, index_1: DataIndex) {
-        let parent_0: DataIndex = self.get_parent_index::<V>(index_0);
-        let parent_1: DataIndex = self.get_parent_index::<V>(index_1);
-        let left_0: DataIndex = self.get_left_index::<V>(index_0);
-        let left_1: DataIndex = self.get_left_index::<V>(index_1);
-        let right_0: DataIndex = self.get_right_index::<V>(index_0);
-        let right_1: DataIndex = self.get_right_index::<V>(index_1);
-
-        let is_left_0: bool = self.is_left_child::<V>(index_0);
-        let is_left_1: bool = self.is_left_child::<V>(index_1);
-
-        // Setting the above parent coming down for both.
-        if is_left_0 {
-            self.set_left_index(parent_0, index_1);
-        } else {
-            self.set_right_index(parent_0, index_1);
-        }
-        if is_left_1 {
-            self.set_left_index(parent_1, index_0);
-        } else {
-            self.set_right_index(parent_1, index_0);
-        }
-
-        self.set_left_index(index_0, left_1);
-        self.set_right_index(index_0, right_1);
-        self.set_parent_index(index_0, parent_1);
-
-        self.set_left_index(index_1, left_0);
-        self.set_right_index(index_1, right_0);
-        self.set_parent_index(index_1, parent_0);
-
-        self.set_parent_index(left_0, index_1);
-        self.set_parent_index(left_1, index_0);
-        self.set_parent_index(right_0, index_1);
-        self.set_parent_index(right_1, index_0);
-
-        // Edge case of swapping with successor.
-        if parent_1 == index_0 {
-            self.set_parent_index(index_0, index_1);
-            self.set_parent_index(index_1, parent_0);
-            self.set_right_index(index_1, index_0);
-        }
-
-        // Should not happen because we only swap with successor of an
-        // internal node. Root is a successor of a leaf.
-        debug_assert_ne!(self.root_index, index_1);
-        if self.root_index == index_0 {
-            self.root_index = index_1;
-        }
-
-        let index_0_color: Color = self.get_color::<V>(index_0);
-        let index_1_color: Color = self.get_color::<V>(index_1);
-        self.set_color(index_0, index_1_color);
-        self.set_color(index_1, index_0_color);
-    }
-    fn get_node(&self, index: DataIndex) -> &RBNode<V> {
-        debug_assert_ne!(index, NIL);
-        let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data, index);
-        node
-    }
-
-    // Take out the node in the middle and fix parent child relationships
-    fn update_parent_child(&mut self, index: DataIndex) {
-        debug_assert_ne!(index, NIL);
-        debug_assert!(!self.is_internal(index));
-
-        let parent_index: DataIndex = self.get_parent_index::<V>(index);
-        let child_index: DataIndex = self.get_child_index(index);
-
-        trace!("TREE update parent child {parent_index}<-{index}<-{child_index}");
-        self.set_parent_index(child_index, parent_index);
-        if self.is_left_child::<V>(index) {
-            self.set_left_index(parent_index, child_index);
-        } else {
-            self.set_right_index(parent_index, child_index);
-        }
-        if self.root_index == index {
-            self.root_index = child_index;
-        }
-    }
-    fn get_child_index(&self, index: DataIndex) -> DataIndex {
-        debug_assert_ne!(index, NIL);
-        // Assert that there are not both. This is getting the unique child.
-        debug_assert!(!(self.has_left::<V>(index) && self.has_right::<V>(index)));
-
-        let left_child_index: DataIndex = self.get_left_index::<V>(index);
-        let child_index: DataIndex = if left_child_index != NIL {
-            left_child_index
-        } else {
-            self.get_right_index::<V>(index)
-        };
-        child_index
-    }
-    fn is_internal(&self, index: DataIndex) -> bool {
-        debug_assert_ne!(index, NIL);
-        self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
-    }
-
-    fn get_sibling_index(&self, index: DataIndex, parent_index: DataIndex) -> DataIndex {
-        debug_assert_ne!(parent_index, NIL);
-        let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
-        if parent_left_child_index == index {
-            self.get_right_index::<V>(parent_index)
-        } else {
-            parent_left_child_index
-        }
-    }
-
-    // TODO: Go from max to min because that would be cheaper as we already store max
-    /// Sorted iterator starting from the min.
-    pub fn iter(&self) -> RedBlackTreeIterator<V> {
-        RedBlackTreeIterator {
-            tree: self,
-            index: self.get_min_index::<V>(),
-        }
-    }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    pub fn pretty_print(&self) {
-        trace!("====== Hypertree ======");
-
-        for (index, node) in self.iter() {
-            let mut row_str: String = String::new();
-
-            row_str += &"  ".repeat(self.depth(index) as usize);
-
-            let color = if node.color == Color::Black { 'B' } else { 'R' };
-            let str = &format!("{color}:{index}:{node}");
-            if node.color == Color::Red {
-                // Cannot use with sbf. Enable when debugging
-                // locally without sbf.
-                #[cfg(colored)]
-                {
-                    use colored::Colorize;
-                    row_str += &format!("{}", str.red());
-                }
-                #[cfg(not(colored))]
-                {
-                    row_str += str;
-                }
-            } else {
-                row_str += str;
-            }
-            trace!("{}", row_str);
-        }
-
-        trace!("=======================");
-    }
-
-    // Only used in pretty printing, so can be slow
-    #[cfg(any(test, feature = "fuzz"))]
-    fn depth(&self, index: DataIndex) -> i32 {
-        let mut depth = -1;
-        let mut current_index: DataIndex = index;
-        while current_index != NIL {
-            current_index = self.get_parent_index::<V>(current_index);
-            depth += 1;
-        }
-        depth
-    }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    pub fn verify_rb_tree(&self) {
-        // Verify that all red nodes only have black children
-        for (index, node) in self.iter() {
-            if node.color == Color::Red {
-                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
-                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
-            }
-        }
-
-        // Verify that all nodes have the same number of black nodes to the root.
-        let first_index: DataIndex = self.get_min_index::<V>();
-        let num_black: i32 = self.num_black_nodes_through_root(first_index);
-
-        for (index, _node) in self.iter() {
-            if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
-                assert!(num_black == self.num_black_nodes_through_root(index));
-            }
-        }
-    }
-
-    #[cfg(any(test, feature = "fuzz"))]
-    fn num_black_nodes_through_root(&self, index: DataIndex) -> i32 {
-        let mut num_black_nodes: i32 = 0;
-        let mut current_index: DataIndex = index;
-
-        while current_index != NIL {
-            if self.get_color::<V>(current_index) == Color::Black {
-                num_black_nodes += 1;
-            }
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        num_black_nodes
     }
 }
 
-pub struct RedBlackTreeIterator<'a, V: TreeValue> {
-    tree: &'a RedBlackTree<'a, V>,
+// Iterator that gives the RBNode information is only needed for testing.
+// External users should use the HyperTreeValueIteratorTrait.
+#[cfg(any(test, feature = "fuzz"))]
+pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
+    tree: &'a T,
     index: DataIndex,
+
+    phantom: std::marker::PhantomData<&'a V>,
 }
 
-impl<'a, V: TreeValue> Iterator for RedBlackTreeIterator<'a, V> {
+#[cfg(any(test, feature = "fuzz"))]
+impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Payload> Iterator
+    for RedBlackTreeReadOnlyIterator<'a, T, V>
+{
     type Item = (DataIndex, &'a RBNode<V>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
-            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
+            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
+            self.index = next_index;
             Some((index, result))
-        }
-    }
-}
-
-pub struct RedBlackTreeReadOnlyIterator<'a, V: TreeValue> {
-    tree: &'a RedBlackTreeReadOnly<'a, V>,
-    index: DataIndex,
-}
-
-impl<'a, V: TreeValue> Iterator for RedBlackTreeReadOnlyIterator<'a, V> {
-    type Item = (DataIndex, &'a RBNode<V>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
-        if index == NIL {
-            None
-        } else {
-            let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data, index);
-            self.index = successor_index;
-            Some((index, result))
-        }
-    }
-}
-
-pub struct RedBlackTreeIntoIterator<'a, V: TreeValue> {
-    tree: RedBlackTree<'a, V>,
-    index: DataIndex,
-}
-
-impl<'a, V: TreeValue> Iterator for RedBlackTreeIntoIterator<'a, V> {
-    type Item = (DataIndex, RBNode<V>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
-        if index == NIL {
-            None
-        } else {
-            let result: RBNode<V> = *get_helper::<RBNode<V>>(self.tree.data, self.index);
-            self.index = successor_index;
-            self.tree.remove_by_index(index);
-            Some((index, result))
-        }
-    }
-}
-
-impl<'a, V: TreeValue> IntoIterator for RedBlackTree<'a, V> {
-    type Item = (DataIndex, RBNode<V>);
-    type IntoIter = RedBlackTreeIntoIterator<'a, V>;
-
-    fn into_iter(self) -> RedBlackTreeIntoIterator<'a, V> {
-        let min_index: DataIndex = self.get_min_index::<V>();
-        RedBlackTreeIntoIterator::<V> {
-            tree: self,
-            index: min_index,
         }
     }
 }
@@ -1156,6 +1283,8 @@ impl<'a, V: TreeValue> IntoIterator for RedBlackTree<'a, V> {
 
 #[cfg(test)]
 mod test {
+    use std::fmt::Display;
+
     use super::*;
 
     #[test]
@@ -1285,7 +1414,7 @@ mod test {
     fn test_pretty_print() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        tree.pretty_print();
+        tree.pretty_print::<TestOrderBid>();
     }
 
     #[test]
@@ -1298,7 +1427,7 @@ mod test {
             TEST_BLOCK_WIDTH * 32,
             TestOrderBid::new((15_900).try_into().unwrap()),
         );
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1309,7 +1438,7 @@ mod test {
         for i in 1..12 {
             tree.remove_by_value(&TestOrderBid::new(i * 1_000));
         }
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1317,7 +1446,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(7 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1325,7 +1454,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(6 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1333,7 +1462,7 @@ mod test {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(2 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1342,7 +1471,7 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(5 * 1_000));
         tree.remove_by_value(&TestOrderBid::new(4 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1351,7 +1480,7 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.remove_by_value(&TestOrderBid::new(11 * 1_000));
         tree.remove_by_value(&TestOrderBid::new(10 * 1_000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1361,7 +1490,7 @@ mod test {
 
         for i in 4..8 {
             tree.remove_by_value(&TestOrderBid::new(i * 1_000));
-            tree.verify_rb_tree();
+            tree.verify_rb_tree::<TestOrderBid>();
         }
     }
 
@@ -1376,14 +1505,7 @@ mod test {
                 TestOrderBid::new(((12 - i) * 1_000).into()),
             );
         }
-        tree.verify_rb_tree();
-    }
-
-    #[test]
-    fn test_into_iter() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        for (_index, _node) in tree {}
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1393,15 +1515,18 @@ mod test {
         // Does not exist in the tree. Should fail silently.
         tree.remove_by_value(&TestOrderBid::new(99999));
         tree.remove_by_value(&TestOrderBid::new(1));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_min_max() {
+    fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        assert_eq!(
+            tree.get_max_index(),
+            tree.lookup_max_index::<TestOrderBid>()
+        );
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
@@ -1426,7 +1551,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 0, TestOrderBid::new(15));
 
         tree.remove_by_value(&TestOrderBid::new(40));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1439,7 +1564,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(35));
 
         tree.remove_by_value(&TestOrderBid::new(20));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1452,7 +1577,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(25));
 
         tree.remove_by_value(&TestOrderBid::new(40));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1468,7 +1593,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(1));
         tree.remove_by_value(&TestOrderBid::new(1));
         tree.remove_by_value(&TestOrderBid::new(30));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1484,7 +1609,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 5, TestOrderBid::new(45));
         tree.remove_by_value(&TestOrderBid::new(45));
         tree.remove_by_value(&TestOrderBid::new(10));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1496,7 +1621,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 2, TestOrderBid::new(300));
         tree.insert(TEST_BLOCK_WIDTH * 3, TestOrderBid::new(250));
         tree.insert(TEST_BLOCK_WIDTH * 4, TestOrderBid::new(275));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1505,48 +1630,48 @@ mod test {
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.insert(TEST_BLOCK_WIDTH * 12, TestOrderBid::new(4500));
         tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5500));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_get_predecessor_index() {
+    fn test_get_next_lower_index() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_predecessor_index::<TestOrderBid>(NIL), NIL);
+        assert_eq!(tree.get_next_lower_index::<TestOrderBid>(NIL), NIL);
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
             TEST_BLOCK_WIDTH * 5
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
             TEST_BLOCK_WIDTH * 4
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
             TEST_BLOCK_WIDTH * 3
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
             TEST_BLOCK_WIDTH * 2
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
             TEST_BLOCK_WIDTH
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_empty_min_max() {
+    fn test_empty_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
+        assert_eq!(tree.lookup_max_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1570,7 +1695,7 @@ mod test {
         tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5000));
         tree.insert(TEST_BLOCK_WIDTH * 14, TestOrderBid::new(1000));
         tree.insert(TEST_BLOCK_WIDTH * 15, TestOrderBid::new(1000));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -1593,7 +1718,7 @@ mod test {
         tree.remove_by_index(TEST_BLOCK_WIDTH * 4);
         tree.remove_by_index(TEST_BLOCK_WIDTH * 2);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                   B
@@ -1690,11 +1815,11 @@ mod test {
 
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(8 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                  (B)
@@ -1791,11 +1916,11 @@ mod test {
 
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 6 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(6 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     //                   B
@@ -1922,11 +2047,11 @@ mod test {
         };
         let mut tree: RedBlackTree<TestOrderBid> =
             RedBlackTree::new(&mut data, 5 * TEST_BLOCK_WIDTH, NIL);
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
 
         tree.remove_by_index(11 * TEST_BLOCK_WIDTH);
 
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     // This case would try to rotate beyond the root of the tree in the second
@@ -1994,11 +2119,11 @@ mod test {
         };
         let mut tree: RedBlackTree<TestOrderAsk> =
             RedBlackTree::new(&mut data, 0 * TEST_BLOCK_WIDTH, 1 * TEST_BLOCK_WIDTH);
-        tree.verify_rb_tree();
-        tree.pretty_print();
+        tree.verify_rb_tree::<TestOrderBid>();
+        tree.pretty_print::<TestOrderBid>();
 
         tree.insert(5 * TEST_BLOCK_WIDTH, TestOrderAsk::new(0));
-        tree.verify_rb_tree();
+        tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
@@ -2019,7 +2144,7 @@ mod test {
 
         let tree: RedBlackTreeReadOnly<TestOrderBid> =
             RedBlackTreeReadOnly::new(&data, root_index, NIL);
-        for _ in tree.iter() {
+        for _ in tree.iter::<TestOrderBid>() {
             println!("Iteration in read only tree");
         }
         tree.data();
