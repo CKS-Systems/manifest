@@ -152,6 +152,7 @@ impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTreeReadOnly<'a
         self.max_index
     }
 }
+
 impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&self) -> &[u8] {
         self.data
@@ -1372,7 +1373,7 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 // No IterMut because changing keys could break red-black properties.
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use std::fmt::Display;
 
     use super::*;
@@ -1385,7 +1386,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderBid {
+    pub(crate) struct TestOrderBid {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1417,7 +1418,7 @@ mod test {
     }
 
     impl TestOrderBid {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderBid {
                 order_id,
                 padding: [0; 128],
@@ -1427,7 +1428,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderAsk {
+    pub(crate) struct TestOrderAsk {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1459,7 +1460,7 @@ mod test {
     }
 
     impl TestOrderAsk {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderAsk {
                 order_id,
                 padding: [0; 128],
@@ -1474,7 +1475,7 @@ mod test {
     // Color: DataIndex
     // TestOrder: 8 + 128
     // 8 + 8 + 8 + 8 + 8 + 128 = 168
-    const TEST_BLOCK_WIDTH: DataIndex = 168;
+    pub(crate) const TEST_BLOCK_WIDTH: DataIndex = 168;
 
     #[test]
     fn test_insert_basic() {

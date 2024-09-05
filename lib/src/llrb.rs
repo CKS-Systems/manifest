@@ -436,112 +436,12 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for LLRB<'a, V> {
 
 #[cfg(test)]
 mod test {
-    use std::{cmp::Ordering, fmt::Display};
-
-    use bytemuck::{Pod, Zeroable};
-
-    use crate::HyperTreeReadOperations;
+    use crate::{
+        red_black_tree::test::{TestOrderAsk, TestOrderBid, TEST_BLOCK_WIDTH},
+        HyperTreeReadOperations,
+    };
 
     use super::*;
-
-    #[test]
-    fn test_color_default() {
-        assert_eq!(Color::default(), Color::Black);
-        assert_eq!(Color::zeroed(), Color::Black);
-    }
-
-    #[derive(Copy, Clone, Pod, Zeroable, Debug)]
-    #[repr(C)]
-    struct TestOrderBid {
-        order_id: u64,
-        padding: [u8; 128],
-    }
-
-    impl Ord for TestOrderBid {
-        fn cmp(&self, other: &Self) -> Ordering {
-            (self.order_id).cmp(&(other.order_id))
-        }
-    }
-
-    impl PartialOrd for TestOrderBid {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    impl PartialEq for TestOrderBid {
-        fn eq(&self, other: &Self) -> bool {
-            (self.order_id) == (other.order_id)
-        }
-    }
-
-    impl Eq for TestOrderBid {}
-
-    impl Display for TestOrderBid {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(f, "{}", self.order_id)
-        }
-    }
-
-    impl TestOrderBid {
-        fn new(order_id: u64) -> Self {
-            TestOrderBid {
-                order_id,
-                padding: [0; 128],
-            }
-        }
-    }
-
-    #[derive(Copy, Clone, Pod, Zeroable, Debug)]
-    #[repr(C)]
-    struct TestOrderAsk {
-        order_id: u64,
-        padding: [u8; 128],
-    }
-
-    impl Ord for TestOrderAsk {
-        fn cmp(&self, other: &Self) -> Ordering {
-            other.order_id.cmp(&self.order_id)
-        }
-    }
-
-    impl PartialOrd for TestOrderAsk {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    impl PartialEq for TestOrderAsk {
-        fn eq(&self, other: &Self) -> bool {
-            (self.order_id) == (other.order_id)
-        }
-    }
-
-    impl Eq for TestOrderAsk {}
-
-    impl Display for TestOrderAsk {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(f, "{}", self.order_id)
-        }
-    }
-
-    impl TestOrderAsk {
-        fn new(order_id: u64) -> Self {
-            TestOrderAsk {
-                order_id,
-                padding: [0; 128],
-            }
-        }
-    }
-
-    // Blocks are
-    // Left: DataIndex
-    // Right: DataIndex
-    // Parent: DataIndex
-    // Color: DataIndex
-    // TestOrder: 8 + 128
-    // 8 + 8 + 8 + 8 + 8 + 128 = 168
-    const TEST_BLOCK_WIDTH: DataIndex = 168;
 
     #[test]
     fn test_insert_basic() {
@@ -1161,67 +1061,5 @@ mod test {
         tree.data();
         assert_eq!(tree.root_index(), root_index);
         assert_eq!(tree.max_index(), NIL);
-    }
-
-    #[derive(Copy, Clone, Pod, Zeroable)]
-    #[repr(C)]
-    struct TestOrder2 {
-        order_id: u64,
-        nonce: u64,
-        padding: [u64; 15],
-    }
-
-    impl Ord for TestOrder2 {
-        fn cmp(&self, other: &Self) -> Ordering {
-            (self.order_id).cmp(&(other.order_id))
-        }
-    }
-
-    impl PartialOrd for TestOrder2 {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    impl PartialEq for TestOrder2 {
-        fn eq(&self, other: &Self) -> bool {
-            (self.order_id) == (other.order_id) && (self.nonce) == (other.nonce)
-        }
-    }
-
-    impl Eq for TestOrder2 {}
-
-    impl Display for TestOrder2 {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(f, "{}", self.order_id)
-        }
-    }
-
-    impl TestOrder2 {
-        fn new(order_id: u64, nonce: u64) -> Self {
-            TestOrder2 {
-                order_id,
-                nonce,
-                padding: [0; 15],
-            }
-        }
-    }
-
-    // Equal lookup keys but not equal nodes.
-    #[test]
-    fn test_lookup_equal() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let mut tree: LLRB<TestOrder2> = LLRB::new(&mut data, NIL, NIL);
-
-        tree.insert(TEST_BLOCK_WIDTH * 0, TestOrder2::new(1000, 1234));
-        tree.insert(TEST_BLOCK_WIDTH * 1, TestOrder2::new(1000, 2345));
-        tree.insert(TEST_BLOCK_WIDTH * 2, TestOrder2::new(1000, 3456));
-        tree.insert(TEST_BLOCK_WIDTH * 3, TestOrder2::new(1000, 4567));
-        tree.insert(TEST_BLOCK_WIDTH * 4, TestOrder2::new(1000, 5678));
-        tree.insert(TEST_BLOCK_WIDTH * 5, TestOrder2::new(1000, 6789));
-        tree.insert(TEST_BLOCK_WIDTH * 6, TestOrder2::new(1000, 7890));
-        tree.lookup_index(&TestOrder2::new(1_000, 1234));
-        tree.lookup_index(&TestOrder2::new(1_000, 4567));
-        tree.lookup_index(&TestOrder2::new(1_000, 7890));
     }
 }
