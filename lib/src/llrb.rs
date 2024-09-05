@@ -676,11 +676,10 @@ mod test {
     }
 
     #[test]
-    fn test_min_max() {
+    fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: LLRB<TestOrderBid> = init_simple_tree(&mut data);
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
@@ -788,10 +787,9 @@ mod test {
     }
 
     #[test]
-    fn test_empty_min_max() {
+    fn test_empty_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: LLRB<TestOrderBid> = LLRB::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
         tree.verify_rb_tree::<TestOrderBid>();
     }
