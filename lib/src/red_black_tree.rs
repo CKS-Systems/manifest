@@ -52,7 +52,6 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
 //    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
 //    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-//    fn get_min_index<V: Payload>(&self) -> DataIndex;
 //    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -113,6 +112,17 @@ pub struct RedBlackTreeReadOnly<'a, V: Payload> {
 impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
+    /// It is necessary to persist the root_index to re-initialize a tree, storing
+    /// the max_index is recommended when in-order iteration is performance critical.
+    ///
+    /// Depending on the index args this will behave differently:
+    ///
+    /// root=NIL: initializes an empty tree, get_max() is defined
+    ///
+    /// root!=NIL max=NIL: initializes an existing tree, get_max() is undefined &
+    ///                    iter() will dynamically lookup the maximum
+    ///
+    /// root!=NIL max!=NIL: initializes an existing tree, get_max() is defined
     pub fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
         RedBlackTreeReadOnly::<V> {
             root_index,
@@ -174,7 +184,6 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
     fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-    fn get_min_index<V: Payload>(&self) -> DataIndex;
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -232,17 +241,6 @@ where
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.parent
-    }
-
-    fn get_min_index<V: Payload>(&self) -> DataIndex {
-        if self.root_index() == NIL {
-            return NIL;
-        }
-        let mut current_index: DataIndex = self.root_index();
-        while self.get_left_index::<V>(current_index) != NIL {
-            current_index = self.get_left_index::<V>(current_index);
-        }
-        current_index
     }
 
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
@@ -588,6 +586,20 @@ where
         current_index
     }
 
+    fn lookup_max_index<V: Payload>(&'a self) -> DataIndex {
+        let mut current_index = self.root_index();
+        if current_index == NIL {
+            return NIL;
+        }
+        loop {
+            let right_index = self.get_right_index::<V>(current_index);
+            if right_index == NIL {
+                return current_index;
+            }
+            current_index = right_index;
+        }
+    }
+
     /// Get the max index. If a tree set this to NIL on a non-empty tree, this
     /// will always be NIL.
     fn get_max_index(&self) -> DataIndex {
@@ -600,7 +612,7 @@ where
     }
 
     /// Get the previous index. This walks the tree, so does not care about equal keys.
-    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_lower_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -624,7 +636,7 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal keys.
-    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -672,7 +684,7 @@ where
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: self.get_max_index(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -814,21 +826,29 @@ where
     }
 
     fn verify_rb_tree<V: Payload>(&'a self) {
-        // Verify that all red nodes only have black children
         for (index, node) in self.node_iter::<V>() {
+            // Verify that all red nodes only have black children
             if node.color == Color::Red {
-                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
-                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
+                assert_eq!(
+                    self.get_color::<V>(self.get_left_index::<V>(index)),
+                    Color::Black
+                );
+                assert_eq!(
+                    self.get_color::<V>(self.get_right_index::<V>(index)),
+                    Color::Black
+                );
             }
-        }
 
-        // Verify that all nodes have the same number of black nodes to the root.
-        let first_index: DataIndex = self.get_min_index::<V>();
-        let num_black: i32 = self.num_black_nodes_through_root::<V>(first_index);
-
-        for (index, _node) in self.node_iter::<V>() {
+            // Verify that all leaf nodes have the same number of black nodes to the root.
+            let mut num_black = None;
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
-                assert!(num_black == self.num_black_nodes_through_root::<V>(index));
+                match num_black {
+                    Some(num_black) => {
+                        assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
+                    }
+                    #[allow(unused_assignments)] // the compiler has issues with "match"
+                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
+                }
             }
         }
     }
@@ -852,9 +872,13 @@ where
     T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
 {
     fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+        let mut index = self.get_max_index();
+        if index == NIL {
+            index = self.lookup_max_index::<V>();
+        }
         HyperTreeValueReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index,
             phantom: std::marker::PhantomData,
         }
     }
@@ -867,12 +891,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result.get_value()))
         }
     }
@@ -1014,9 +1038,9 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
             trace!(
                 "TREE max {}->{}",
                 self.max_index,
-                self.get_predecessor_index::<V>(self.max_index)
+                self.get_next_lower_index::<V>(self.max_index)
             );
-            self.max_index = self.get_predecessor_index::<V>(self.max_index);
+            self.max_index = self.get_next_lower_index::<V>(self.max_index);
         }
 
         // If it is an internal node, we copy the successor value here and call
@@ -1025,7 +1049,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         // of the tree with the max to be sparser.
         if self.is_internal::<V>(index) {
             // Swap nodes
-            let successor_index: DataIndex = self.get_successor_index::<V>(index);
+            let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
             self.swap_nodes::<V>(index, successor_index);
         }
 
@@ -1334,12 +1358,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result))
         }
     }
@@ -1585,11 +1609,14 @@ mod test {
     }
 
     #[test]
-    fn test_min_max() {
+    fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        assert_eq!(
+            tree.get_max_index(),
+            tree.lookup_max_index::<TestOrderBid>()
+        );
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
@@ -1697,42 +1724,42 @@ mod test {
     }
 
     #[test]
-    fn test_get_predecessor_index() {
+    fn test_get_next_lower_index() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_predecessor_index::<TestOrderBid>(NIL), NIL);
+        assert_eq!(tree.get_next_lower_index::<TestOrderBid>(NIL), NIL);
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
             TEST_BLOCK_WIDTH * 5
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
             TEST_BLOCK_WIDTH * 4
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
             TEST_BLOCK_WIDTH * 3
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
             TEST_BLOCK_WIDTH * 2
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
             TEST_BLOCK_WIDTH
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_empty_min_max() {
+    fn test_empty_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
+        assert_eq!(tree.lookup_max_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
         tree.verify_rb_tree::<TestOrderBid>();
     }
