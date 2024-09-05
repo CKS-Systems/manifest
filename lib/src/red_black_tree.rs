@@ -678,7 +678,6 @@ where
     }
 
     // Only used in pretty printing, so can be slow
-    #[cfg(test)]
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
         let mut depth = -1;
         let mut current_index: DataIndex = index;
