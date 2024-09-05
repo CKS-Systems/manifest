@@ -13,7 +13,7 @@ use crate::{
     program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
+        utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
     },
     validation::{
@@ -735,6 +735,20 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             })?;
 
             if did_fully_match_resting_order {
+                // Get paid for removing a global order.
+                if get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
+                    .get_value()
+                    .get_order_type()
+                    == OrderType::Global
+                {
+                    let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                        &global_trade_accounts_opts[0]
+                    } else {
+                        &global_trade_accounts_opts[1]
+                    };
+                    remove_from_global(&global_trade_accounts_opt, &maker)?;
+                }
+
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_order_index = next_order_index;
@@ -790,7 +804,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_add_to_global(global_trade_accounts_opt, &resting_order)?;
+            assert_with_msg(
+                global_trade_accounts_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Missing global accounts when adding a global",
+            )?;
+            try_to_add_to_global(&global_trade_accounts_opt.as_ref().unwrap(), &resting_order)?;
         } else {
             // Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.
@@ -895,7 +914,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt)?
+            let trader: &Pubkey = &get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
+                .get_value()
+                .trader;
+            remove_from_global(&global_trade_accounts_opt, trader)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1105,7 +1127,11 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        try_to_remove_from_global(&global_trade_accounts_opt)?
+        let maker: &Pubkey =
+            &get_helper::<RBNode<ClaimedSeat>>(dynamic, other_order.get_trader_index())
+                .get_value()
+                .trader;
+        remove_from_global(&global_trade_accounts_opt, maker)?;
     } else {
         update_balance_by_trader_index(
             dynamic,
