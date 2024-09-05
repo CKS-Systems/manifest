@@ -8,6 +8,9 @@ use crate::{
 
 /// A Left Leaning Red-Black tree which supports random access O(log n) and get max O(1)
 /// https://tjkendev.github.io/bst-visualization/red-black-tree/left-leaning.html
+/// This does not properly handle equal key values like the regular RBTree
+/// because this does top-down deletions and does not branch when it finds an
+/// equal key, just stops there.
 pub struct LLRB<'a, V: Payload> {
     /// The address within data that the root node starts.
     root_index: DataIndex,
@@ -200,7 +203,6 @@ impl<'a, V: Payload> LLRB<'a, V> {
 
         let current: &RBNode<V> = get_helper::<RBNode<V>>(self.data, current_index);
         let to_delete: &RBNode<V> = get_helper::<RBNode<V>>(self.data, to_delete_index);
-        // TODO: Handle equal key values
         if to_delete < current {
             let left_index: DataIndex = self.get_left_index::<V>(current_index);
             let left_color: Color = self.get_color::<V>(left_index);
