@@ -671,7 +671,7 @@ pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
     fn x<V: Payload>(&'a self, index: DataIndex) -> i32;
     #[cfg(test)]
     fn pretty_print<V: Payload>(&'a self);
-    fn ugly_print<V: Payload>(&'a self);
+    fn debug_print<V: Payload>(&'a self);
     fn verify_rb_tree<V: Payload>(&'a self);
     fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
 }
@@ -785,7 +785,7 @@ where
         trace!("{}", end);
     }
 
-    fn ugly_print<V: Payload>(&'a self) {
+    fn debug_print<V: Payload>(&'a self) {
         trace!("====== Hypertree ======");
 
         for (index, node) in self.node_iter::<V>() {
