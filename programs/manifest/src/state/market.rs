@@ -273,26 +273,18 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
     ) -> Result<QuoteAtoms, ProgramError> {
-        let DynamicAccount { fixed, dynamic } = self.borrow_market();
         let now_slot: u32 = get_now_slot();
 
-        let mut current_order_index: DataIndex = if is_bid {
-            fixed.asks_best_index
+        let book = if is_bid {
+            self.get_asks()
         } else {
-            fixed.bids_best_index
+            self.get_bids()
         };
 
         let mut total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
         let mut remaining_base_atoms = limit_base_atoms;
-        while remaining_base_atoms > BaseAtoms::ZERO && current_order_index != NIL {
-            let next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
-
+        for (_, other_order) in book.iter::<RestingOrder>() {
             if other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 continue;
             }
 
@@ -308,7 +300,10 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
 
             remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)?;
-            current_order_index = next_order_index;
+
+            if remaining_base_atoms == BaseAtoms::ZERO {
+                break;
+            }
         }
 
         return Ok(total_quote_atoms_matched);
@@ -320,27 +315,18 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         round_up: bool,
         limit_quote_atoms: QuoteAtoms,
     ) -> Result<BaseAtoms, ProgramError> {
-        let DynamicAccount { fixed, dynamic } = self.borrow_market();
-
         let now_slot: u32 = get_now_slot();
 
-        let mut current_order_index: DataIndex = if is_bid {
-            fixed.asks_best_index
+        let book = if is_bid {
+            self.get_asks()
         } else {
-            fixed.bids_best_index
+            self.get_bids()
         };
 
         let mut total_base_atoms_matched: BaseAtoms = BaseAtoms::ZERO;
         let mut remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
-        while remaining_quote_atoms > QuoteAtoms::ZERO && current_order_index != NIL {
-            let next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
-
+        for (_, other_order) in book.iter::<RestingOrder>() {
             if other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 continue;
             }
 
@@ -359,7 +345,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
 
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)?;
-            current_order_index = next_order_index;
+            if remaining_quote_atoms == QuoteAtoms::ZERO {
+                break;
+            }
         }
 
         return Ok(total_base_atoms_matched);
