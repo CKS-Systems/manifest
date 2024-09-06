@@ -2980,7 +2980,7 @@
     </span><span class="kw">fn </span>x&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; i32;
     <span class="attr">#[cfg(test)]
     </span><span class="kw">fn </span>pretty_print&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>);
-    <span class="kw">fn </span>ugly_print&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>);
+    <span class="kw">fn </span>debug_print&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>);
     <span class="kw">fn </span>verify_rb_tree&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>);
     <span class="kw">fn </span>num_black_nodes_through_root&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; i32;
 }
@@ -3094,7 +3094,7 @@
         <span class="macro">trace!</span>(<span class="string">"{}"</span>, end);
     }
 
-    <span class="kw">fn </span>ugly_print&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) {
+    <span class="kw">fn </span>debug_print&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) {
         <span class="macro">trace!</span>(<span class="string">"====== Hypertree ======"</span>);
 
         <span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.node_iter::&lt;V&gt;() {

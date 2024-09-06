@@ -1134,18 +1134,6 @@
 <a href="#1132" id="1132">1132</a>
 <a href="#1133" id="1133">1133</a>
 <a href="#1134" id="1134">1134</a>
-<a href="#1135" id="1135">1135</a>
-<a href="#1136" id="1136">1136</a>
-<a href="#1137" id="1137">1137</a>
-<a href="#1138" id="1138">1138</a>
-<a href="#1139" id="1139">1139</a>
-<a href="#1140" id="1140">1140</a>
-<a href="#1141" id="1141">1141</a>
-<a href="#1142" id="1142">1142</a>
-<a href="#1143" id="1143">1143</a>
-<a href="#1144" id="1144">1144</a>
-<a href="#1145" id="1145">1145</a>
-<a href="#1146" id="1146">1146</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
@@ -1421,26 +1409,18 @@
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtoms, ProgramError&gt; {
-        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_market();
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>current_order_index: DataIndex = <span class="kw">if </span>is_bid {
-            fixed.asks_best_index
+        <span class="kw">let </span>book = <span class="kw">if </span>is_bid {
+            <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
-            fixed.bids_best_index
+            <span class="self">self</span>.get_bids()
         };
 
         <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms = limit_base_atoms;
-        <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_order_index != NIL {
-            <span class="kw">let </span>next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            <span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
-                get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index).get_value();
-
+        <span class="kw">for </span>(<span class="kw">_</span>, other_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
             <span class="kw">if </span>other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 <span class="kw">continue</span>;
             }
 
@@ -1456,7 +1436,10 @@
             }
 
             remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)<span class="question-mark">?</span>;
-            current_order_index = next_order_index;
+
+            <span class="kw">if </span>remaining_base_atoms == BaseAtoms::ZERO {
+                <span class="kw">break</span>;
+            }
         }
 
         <span class="kw">return </span><span class="prelude-val">Ok</span>(total_quote_atoms_matched);
@@ -1468,27 +1451,18 @@
         round_up: bool,
         limit_quote_atoms: QuoteAtoms,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
-        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_market();
-
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>current_order_index: DataIndex = <span class="kw">if </span>is_bid {
-            fixed.asks_best_index
+        <span class="kw">let </span>book = <span class="kw">if </span>is_bid {
+            <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
-            fixed.bids_best_index
+            <span class="self">self</span>.get_bids()
         };
 
         <span class="kw">let </span><span class="kw-2">mut </span>total_base_atoms_matched: BaseAtoms = BaseAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
-        <span class="kw">while </span>remaining_quote_atoms &gt; QuoteAtoms::ZERO &amp;&amp; current_order_index != NIL {
-            <span class="kw">let </span>next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            <span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
-                get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index).get_value();
-
+        <span class="kw">for </span>(<span class="kw">_</span>, other_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
             <span class="kw">if </span>other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 <span class="kw">continue</span>;
             }
 
@@ -1507,7 +1481,9 @@
             }
 
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)<span class="question-mark">?</span>;
-            current_order_index = next_order_index;
+            <span class="kw">if </span>remaining_quote_atoms == QuoteAtoms::ZERO {
+                <span class="kw">break</span>;
+            }
         }
 
         <span class="kw">return </span><span class="prelude-val">Ok</span>(total_base_atoms_matched);
