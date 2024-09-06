@@ -13,7 +13,7 @@ use crate::{
     program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        utils::{assert_can_take, try_to_move_global_tokens, try_to_remove_from_global},
+        utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
     },
     validation::{
@@ -200,13 +200,21 @@ impl MarketFixed {
         self.quote_vault_bump
     }
 
-    // Used in fuzz testing to verify amounts on the book.
-    pub fn get_bids_root_index(&self) -> DataIndex {
+    // Used only in this file to construct iterator
+    pub(crate) fn get_bids_root_index(&self) -> DataIndex {
         self.bids_root_index
     }
-    pub fn get_asks_root_index(&self) -> DataIndex {
+    pub(crate) fn get_asks_root_index(&self) -> DataIndex {
         self.asks_root_index
     }
+    pub(crate) fn get_bids_best_index(&self) -> DataIndex {
+        self.bids_best_index
+    }
+    pub(crate) fn get_asks_best_index(&self) -> DataIndex {
+        self.asks_best_index
+    }
+
+    // Used in benchmark
     pub fn has_free_block(&self) -> bool {
         self.free_list_head_index != NIL
     }
@@ -265,26 +273,18 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
     ) -> Result<QuoteAtoms, ProgramError> {
-        let DynamicAccount { fixed, dynamic } = self.borrow_market();
         let now_slot: u32 = get_now_slot();
 
-        let mut current_order_index: DataIndex = if is_bid {
-            fixed.asks_best_index
+        let book = if is_bid {
+            self.get_asks()
         } else {
-            fixed.bids_best_index
+            self.get_bids()
         };
 
         let mut total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
         let mut remaining_base_atoms = limit_base_atoms;
-        while remaining_base_atoms > BaseAtoms::ZERO && current_order_index != NIL {
-            let next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
-
+        for (_, other_order) in book.iter::<RestingOrder>() {
             if other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 continue;
             }
 
@@ -300,7 +300,10 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
 
             remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)?;
-            current_order_index = next_order_index;
+
+            if remaining_base_atoms == BaseAtoms::ZERO {
+                break;
+            }
         }
 
         return Ok(total_quote_atoms_matched);
@@ -312,27 +315,18 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         round_up: bool,
         limit_quote_atoms: QuoteAtoms,
     ) -> Result<BaseAtoms, ProgramError> {
-        let DynamicAccount { fixed, dynamic } = self.borrow_market();
-
         let now_slot: u32 = get_now_slot();
 
-        let mut current_order_index: DataIndex = if is_bid {
-            fixed.asks_best_index
+        let book = if is_bid {
+            self.get_asks()
         } else {
-            fixed.bids_best_index
+            self.get_bids()
         };
 
         let mut total_base_atoms_matched: BaseAtoms = BaseAtoms::ZERO;
         let mut remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
-        while remaining_quote_atoms > QuoteAtoms::ZERO && current_order_index != NIL {
-            let next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
-
+        for (_, other_order) in book.iter::<RestingOrder>() {
             if other_order.is_expired(now_slot) {
-                current_order_index = next_order_index;
                 continue;
             }
 
@@ -351,7 +345,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
 
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)?;
-            current_order_index = next_order_index;
+            if remaining_quote_atoms == QuoteAtoms::ZERO {
+                break;
+            }
         }
 
         return Ok(total_base_atoms_matched);
@@ -383,6 +379,24 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         &get_helper::<RBNode<ClaimedSeat>>(dynamic, index)
             .get_value()
             .trader
+    }
+
+    pub fn get_bids(&self) -> BooksideReadOnly {
+        let DynamicAccount { dynamic, fixed } = self.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_bids_root_index(),
+            fixed.get_bids_best_index(),
+        )
+    }
+
+    pub fn get_asks(&self) -> BooksideReadOnly {
+        let DynamicAccount { dynamic, fixed } = self.borrow_market();
+        BooksideReadOnly::new(
+            dynamic,
+            fixed.get_asks_root_index(),
+            fixed.get_asks_best_index(),
+        )
     }
 }
 
@@ -709,6 +723,20 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             })?;
 
             if did_fully_match_resting_order {
+                // Get paid for removing a global order.
+                if get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
+                    .get_value()
+                    .get_order_type()
+                    == OrderType::Global
+                {
+                    let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                        &global_trade_accounts_opts[0]
+                    } else {
+                        &global_trade_accounts_opts[1]
+                    };
+                    remove_from_global(&global_trade_accounts_opt, &maker)?;
+                }
+
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)?;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_order_index = next_order_index;
@@ -764,7 +792,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_add_to_global(global_trade_accounts_opt, &resting_order)?;
+            assert_with_msg(
+                global_trade_accounts_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Missing global accounts when adding a global",
+            )?;
+            try_to_add_to_global(&global_trade_accounts_opt.as_ref().unwrap(), &resting_order)?;
         } else {
             // Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.
@@ -869,7 +902,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            try_to_remove_from_global(&global_trade_accounts_opt)?
+            let trader: &Pubkey = &get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
+                .get_value()
+                .trader;
+            remove_from_global(&global_trade_accounts_opt, trader)?
         } else {
             update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1002,7 +1038,7 @@ fn insert_order_into_tree(
             tree.get_root_index(),
             fixed.bids_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::<RestingOrder>(tree.get_max_index()),
+            tree.get_next_lower_index::<RestingOrder>(tree.get_max_index()),
         );
         fixed.bids_root_index = tree.get_root_index();
         fixed.bids_best_index = tree.get_max_index();
@@ -1013,7 +1049,7 @@ fn insert_order_into_tree(
             tree.get_root_index(),
             fixed.asks_best_index,
             tree.get_max_index(),
-            tree.get_predecessor_index::<RestingOrder>(tree.get_max_index()),
+            tree.get_next_lower_index::<RestingOrder>(tree.get_max_index()),
         );
         fixed.asks_root_index = tree.get_root_index();
         fixed.asks_best_index = tree.get_max_index();
@@ -1030,13 +1066,13 @@ fn get_next_candidate_match_index(
         let tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         let next_order_index: DataIndex =
-            tree.get_predecessor_index::<RestingOrder>(current_order_index);
+            tree.get_next_lower_index::<RestingOrder>(current_order_index);
         next_order_index
     } else {
         let tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         let next_order_index: DataIndex =
-            tree.get_predecessor_index::<RestingOrder>(current_order_index);
+            tree.get_next_lower_index::<RestingOrder>(current_order_index);
         next_order_index
     }
 }
@@ -1079,7 +1115,11 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        try_to_remove_from_global(&global_trade_accounts_opt)?
+        let maker: &Pubkey =
+            &get_helper::<RBNode<ClaimedSeat>>(dynamic, other_order.get_trader_index())
+                .get_value()
+                .trader;
+        remove_from_global(&global_trade_accounts_opt, maker)?;
     } else {
         update_balance_by_trader_index(
             dynamic,

@@ -33,13 +33,13 @@ pub fn swap_instruction(
         AccountMeta::new(*trader_quote_account, false),
         AccountMeta::new(vault_base_account, false),
         AccountMeta::new(vault_quote_account, false),
-        AccountMeta::new(token_program_base, false),
+        AccountMeta::new_readonly(token_program_base, false),
     ];
     if token_program_base == spl_token_2022::id() {
-        account_metas.push(AccountMeta::new(*base_mint, false))
+        account_metas.push(AccountMeta::new_readonly(*base_mint, false))
     }
     if token_program_base != token_program_quote {
-        account_metas.push(AccountMeta::new(token_program_quote, false))
+        account_metas.push(AccountMeta::new_readonly(token_program_quote, false))
     }
     if token_program_quote == spl_token_2022::id() {
         account_metas.push(AccountMeta::new(*quote_mint, false))
