@@ -12,11 +12,15 @@ use super::constants::CLAIMED_SEAT_SIZE;
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 pub struct ClaimedSeat {
     pub trader: Pubkey,
-    // Balances are withdrawable on the exchange. They do not include funds in open orders.
-    // When moving funds over to open orders, use the worst case rounding.
+    // Balances are withdrawable on the exchange. They do not include funds in
+    // open orders. When moving funds over to open orders, use the worst case
+    // rounding.
     pub base_withdrawable_balance: BaseAtoms,
     pub quote_withdrawable_balance: QuoteAtoms,
-    /// Quote volume traded over lifetime, can overflow.
+    /// Quote volume traded over lifetime, can overflow. Double counts self
+    /// trades. This is for informational and monitoring purposes only. This is
+    /// not guaranteed to be maintained. It does not secure any value in
+    /// manifest. Use at your own risk.
     pub quote_volume: QuoteAtoms,
     _padding: [u8; 8],
 }

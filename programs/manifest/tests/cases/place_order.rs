@@ -204,6 +204,23 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
             .await,
         0
     );
+
+    // verify volume stats
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_volume(&test_fixture.payer())
+            .await,
+        2_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_volume(&second_keypair.pubkey())
+            .await,
+        2_000 * USDC_UNIT_SIZE
+    );
+
     Ok(())
 }
 

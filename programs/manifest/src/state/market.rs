@@ -381,6 +381,19 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             .trader
     }
 
+    pub fn get_trader_voume(&self, trader: &Pubkey) -> QuoteAtoms {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+
+        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        let trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
+        let claimed_seat: &ClaimedSeat =
+            get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_value();
+
+        claimed_seat.quote_volume
+    }
+
     pub fn get_bids(&self) -> BooksideReadOnly {
         let DynamicAccount { dynamic, fixed } = self.borrow_market();
         BooksideReadOnly::new(

@@ -751,6 +751,11 @@ impl MarketFixture {
         self.market.get_trader_balance(trader).1.as_u64()
     }
 
+    pub async fn get_quote_volume(&mut self, trader: &Pubkey) -> u64 {
+        self.reload().await;
+        self.market.get_trader_voume(trader).as_u64()
+    }
+
     pub async fn get_resting_orders(&mut self) -> Vec<RestingOrder> {
         self.reload().await;
         let mut bids_vec: Vec<RestingOrder> = self
