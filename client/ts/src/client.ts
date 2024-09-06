@@ -42,6 +42,8 @@ import { getVaultAddress } from './utils/market';
 export class ManifestClient {
   private isBase22: boolean;
   private isQuote22: boolean;
+  public initialized: boolean = false;
+
   private constructor(
     public connection: Connection,
     public wrapper: Wrapper,
@@ -184,11 +186,165 @@ export class ManifestClient {
       connection,
       address: wrapperResponse.pubkey,
     });
+
     return new ManifestClient(
       connection,
       wrapper,
       marketObject,
       payerKeypair.publicKey,
+      baseMint,
+      quoteMint,
+    );
+  }
+
+  /**
+   * generate ixs which need to be executed in order to run a manifest client for a given market. 0 means all good
+   *
+   * @param connection Connection
+   * @param marketPk PublicKey of the market
+   * @param payerKeypair Keypair of the trader
+   *
+   * @returns Promise<TransactionInstruction[]>
+   */
+  public static async getSetupIxs(
+    connection: Connection,
+    marketPk: PublicKey,
+    payerPub: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    const ixs: TransactionInstruction[] = [];
+    const existingWrappers: GetProgramAccountsResponse =
+      await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
+        filters: [
+          // Dont check discriminant since there is only one type of account.
+          {
+            memcmp: {
+              offset: 8,
+              encoding: 'base58',
+              bytes: payerPub.toBase58(),
+            },
+          },
+        ],
+      });
+
+    if (existingWrappers.length == 0) {
+      const wrapperKeypair: Keypair = Keypair.generate();
+      const createAccountIx: TransactionInstruction =
+        SystemProgram.createAccount({
+          fromPubkey: payerPub,
+          newAccountPubkey: wrapperKeypair.publicKey,
+          space: FIXED_WRAPPER_HEADER_SIZE,
+          lamports: await connection.getMinimumBalanceForRentExemption(
+            FIXED_WRAPPER_HEADER_SIZE,
+          ),
+          programId: WRAPPER_PROGRAM_ID,
+        });
+      ixs.push(createAccountIx);
+
+      const createWrapperIx: TransactionInstruction =
+        createCreateWrapperInstruction({
+          owner: payerPub,
+          payer: payerPub,
+          wrapperState: wrapperKeypair.publicKey,
+        });
+      ixs.push(createWrapperIx);
+
+      const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
+        manifestProgram: MANIFEST_PROGRAM_ID,
+        owner: payerPub,
+        market: marketPk,
+        payer: payerPub,
+        wrapperState: wrapperKeypair.publicKey,
+      });
+      ixs.push(claimSeatIx);
+
+      return ixs;
+    }
+
+    // Otherwise there is an existing wrapper
+    const wrapperResponse: Readonly<{
+      account: AccountInfo<Buffer>;
+      pubkey: PublicKey;
+    }> = existingWrappers[0];
+    const wrapperData: WrapperData = Wrapper.deserializeWrapperBuffer(
+      wrapperResponse.account.data,
+    );
+    const existingMarketInfos: MarketInfoParsed[] =
+      wrapperData.marketInfos.filter((marketInfo: MarketInfoParsed) => {
+        return marketInfo.market.toBase58() == marketPk.toBase58();
+      });
+    if (existingMarketInfos.length > 0) {
+      return [];
+    }
+
+    // There is a wrapper, but need to claim a seat.
+    const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
+      manifestProgram: MANIFEST_PROGRAM_ID,
+      owner: payerPub,
+      market: marketPk,
+      payer: payerPub,
+      wrapperState: wrapperResponse.pubkey,
+    });
+    ixs.push(claimSeatIx);
+    return ixs;
+  }
+
+  /**
+   * Create a new client. throws if setup ixs are needed. Call ManifestClient.getSetupIxs to check if ixs are needed.
+   *
+   * @param connection Connection
+   * @param marketPk PublicKey of the market
+   * @param payerKeypair Keypair of the trader
+   *
+   * @returns ManifestClient
+   */
+  public static async getClientForMarketNoPrivateKey(
+    connection: Connection,
+    marketPk: PublicKey,
+    payerPub: PublicKey,
+  ): Promise<ManifestClient> {
+    const ixs = await this.getSetupIxs(connection, marketPk, payerPub);
+    if (ixs.length !== 0) {
+      throw new Error('setup ixs need to be executed first');
+    }
+
+    const marketObject: Market = await Market.loadFromAddress({
+      connection: connection,
+      address: marketPk,
+    });
+    const baseMintPk: PublicKey = marketObject.baseMint();
+    const quoteMintPk: PublicKey = marketObject.quoteMint();
+    const baseMint: Mint = await getMint(connection, baseMintPk);
+    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+
+    const existingWrappers: GetProgramAccountsResponse =
+      await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
+        filters: [
+          // Dont check discriminant since there is only one type of account.
+          {
+            memcmp: {
+              offset: 8,
+              encoding: 'base58',
+              bytes: payerPub.toBase58(),
+            },
+          },
+        ],
+      });
+
+    const wrapperResponse: Readonly<{
+      account: AccountInfo<Buffer>;
+      pubkey: PublicKey;
+    }> = existingWrappers[0];
+
+    const wrapper = await Wrapper.loadFromAddress({
+      connection,
+      address: wrapperResponse.pubkey,
+    });
+
+    return new ManifestClient(
+      connection,
+      wrapper,
+      marketObject,
+      payerPub,
       baseMint,
       quoteMint,
     );
