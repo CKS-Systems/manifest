@@ -19,6 +19,7 @@ use manifest::{
     state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
     validation::{Program, Signer},
 };
+use sbprof::sbprof;
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
@@ -135,6 +136,7 @@ pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &
     assert_eq!(header.trader, *owner_key);
 }
 
+#[sbprof]
 pub(crate) fn sync(
     wrapper_state: &WrapperStateAccountInfo,
     market: &Pubkey,

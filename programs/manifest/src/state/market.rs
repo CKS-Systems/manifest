@@ -4,6 +4,7 @@ use hypertree::{
     HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
     RedBlackTreeReadOnly, NIL,
 };
+use sbprof::sbprof;
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 use std::mem::size_of;
@@ -531,6 +532,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
+    #[sbprof]
     pub fn place_order(
         &mut self,
         args: AddOrderToMarketArgs,
@@ -863,6 +865,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     }
 
     // Does a linear scan over the orderbook to find the index to cancel.
+    #[sbprof]
     pub fn cancel_order(
         &mut self,
         trader_index: DataIndex,
