@@ -108,10 +108,17 @@ pub struct MarketFixed {
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
+    _padding2: [u32; 1],
+
+    /// Quote volume traded over lifetime, can overflow. This is for
+    /// informational and monitoring purposes only. This is not guaranteed to
+    /// be maintained. It does not secure any value in manifest.
+    /// Use at your own risk.
+    quote_volume: QuoteAtoms,
+
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
-    _padding2: [u32; 3],
     _padding3: [u64; 8],
 }
 const_assert_eq!(
@@ -170,7 +177,8 @@ impl MarketFixed {
             asks_best_index: NIL,
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
-            _padding2: [0; 3],
+            _padding2: [0; 1],
+            quote_volume: QuoteAtoms::ZERO,
             _padding3: [0; 8],
         }
     }
@@ -198,6 +206,9 @@ impl MarketFixed {
     }
     pub fn get_quote_vault_bump(&self) -> u8 {
         self.quote_vault_bump
+    }
+    pub fn get_quote_volume(&self) -> QuoteAtoms {
+        self.quote_volume
     }
 
     // Used only in this file to construct iterator
@@ -379,6 +390,19 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         &get_helper::<RBNode<ClaimedSeat>>(dynamic, index)
             .get_value()
             .trader
+    }
+
+    pub fn get_trader_voume(&self, trader: &Pubkey) -> QuoteAtoms {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+
+        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        let trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
+        let claimed_seat: &ClaimedSeat =
+            get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_value();
+
+        claimed_seat.quote_volume
     }
 
     pub fn get_bids(&self) -> BooksideReadOnly {
@@ -711,6 +735,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 },
             )?;
 
+            // record maker & taker volume
+            record_volume_by_trader_index(dynamic, other_trader_index, quote_atoms_traded);
+            record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded);
+
             emit_stack(FillLog {
                 market,
                 maker,
@@ -762,6 +790,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 break;
             }
         }
+
+        // record volume on market
+        fixed.quote_volume = fixed
+            .quote_volume
+            .overflowing_add(total_quote_atoms_traded)
+            .0;
 
         // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
@@ -1015,6 +1049,16 @@ fn update_balance_by_trader_index(
             .checked_sub(QuoteAtoms::new(amount_atoms))?;
     }
     Ok(())
+}
+
+fn record_volume_by_trader_index(
+    dynamic: &mut [u8],
+    trader_index: DataIndex,
+    amount_atoms: QuoteAtoms,
+) {
+    let claimed_seat: &mut ClaimedSeat =
+        get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
+    claimed_seat.quote_volume = claimed_seat.quote_volume.overflowing_add(amount_atoms).0;
 }
 
 #[inline(always)]

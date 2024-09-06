@@ -42,6 +42,17 @@ macro_rules! checked_add {
     };
 }
 
+macro_rules! overflowing_add {
+    ($type_name:ident) => {
+        impl $type_name {
+            pub fn overflowing_add(self, other: Self) -> ($type_name, bool) {
+                let (sum, overflow) = self.inner.overflowing_add(other.inner);
+                ($type_name::new(sum), overflow)
+            }
+        }
+    };
+}
+
 macro_rules! basic_math {
     ($type_name:ident) => {
         impl Add for $type_name {
@@ -125,6 +136,7 @@ macro_rules! basic_u64 {
 
         basic_math!($type_name);
         checked_add!($type_name);
+        overflowing_add!($type_name);
     };
 }
 

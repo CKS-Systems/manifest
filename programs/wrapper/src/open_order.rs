@@ -21,7 +21,7 @@ pub struct WrapperOpenOrder {
     is_bid: PodBool,
     order_type: OrderType,
 
-    _padding: [u8; 14],
+    _padding: [u8; 30],
 }
 
 // Blocks on wrapper are bigger than blocks on the market because there is more
@@ -35,8 +35,8 @@ pub struct WrapperOpenOrder {
 // 4 + // last_valid_slot
 // 1 + // is_bid
 // 1 + // order_type
-// 14  // padding
-// = 64
+// 30  // padding
+// = 80
 const_assert_eq!(size_of::<WrapperOpenOrder>(), WRAPPER_BLOCK_PAYLOAD_SIZE);
 const_assert_eq!(size_of::<WrapperOpenOrder>() % 16, 0);
 
@@ -61,7 +61,7 @@ impl WrapperOpenOrder {
             order_type,
             market_data_index,
             is_bid: PodBool::from_bool(is_bid),
-            _padding: [0; 14],
+            _padding: [0; 30],
         }
     }
 
@@ -76,7 +76,7 @@ impl WrapperOpenOrder {
             order_type: OrderType::Limit,
             market_data_index: NIL,
             is_bid: PodBool::from_bool(true),
-            _padding: [0; 14],
+            _padding: [0; 30],
         }
     }
 

@@ -24,9 +24,12 @@ pub struct MarketInfo {
     /// Withdrawable quote balance on the market.
     pub quote_balance: QuoteAtoms,
 
+    /// Quote volume traded over lifetime, can overflow.
+    pub quote_volume: QuoteAtoms,
+
     /// Last slot that a sync was called on.
     pub last_updated_slot: u32,
-    pub _padding: [u32; 1],
+    pub _padding: [u32; 3],
 }
 
 // Blocks on wrapper are bigger than blocks on the market because there is more
@@ -37,9 +40,10 @@ pub struct MarketInfo {
 // 4 +  // trader_index
 // 8 +  // base_balance
 // 8 +  // quote_balance
+// 8 +  // quote_volume
 // 4 +  // last_updated_slot
-// 4    // padding
-// = 64
+// 12   // padding
+// = 80
 const_assert_eq!(size_of::<MarketInfo>(), WRAPPER_BLOCK_PAYLOAD_SIZE);
 const_assert_eq!(size_of::<MarketInfo>() % 16, 0);
 
@@ -50,10 +54,7 @@ impl MarketInfo {
             market,
             orders_root_index: NIL,
             trader_index,
-            base_balance: BaseAtoms::ZERO,
-            quote_balance: QuoteAtoms::ZERO,
-            last_updated_slot: 0,
-            _padding: [0; 1],
+            ..Default::default()
         }
     }
 }
