@@ -108,10 +108,17 @@ pub struct MarketFixed {
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
+    _padding2: [u32; 1],
+
+    /// Quote volume traded over lifetime, can overflow. This is for
+    /// informational and monitoring purposes only. This is not guaranteed to
+    /// be maintained. It does not secure any value in manifest.
+    /// Use at your own risk.
+    quote_volume: QuoteAtoms,
+
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
-    _padding2: [u32; 3],
     _padding3: [u64; 8],
 }
 const_assert_eq!(
@@ -170,7 +177,8 @@ impl MarketFixed {
             asks_best_index: NIL,
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
-            _padding2: [0; 3],
+            _padding2: [0; 1],
+            quote_volume: QuoteAtoms::ZERO,
             _padding3: [0; 8],
         }
     }
@@ -780,6 +788,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
         }
 
+        // record volume on market
+        fixed.quote_volume = fixed
+            .quote_volume
+            .overflowing_add(total_quote_atoms_traded)
+            .0;
+
         // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
             return Ok(AddOrderToMarketResult {
@@ -1041,13 +1055,7 @@ fn record_volume_by_trader_index(
 ) {
     let claimed_seat: &mut ClaimedSeat =
         get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
-    claimed_seat.quote_volume = QuoteAtoms::new(
-        claimed_seat
-            .quote_volume
-            .as_u64()
-            .overflowing_add(amount_atoms.as_u64())
-            .0,
-    );
+    claimed_seat.quote_volume = claimed_seat.quote_volume.overflowing_add(amount_atoms).0;
 }
 
 #[inline(always)]
