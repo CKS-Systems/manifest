@@ -207,6 +207,9 @@ impl MarketFixed {
     pub fn get_quote_vault_bump(&self) -> u8 {
         self.quote_vault_bump
     }
+    pub fn get_quote_volume(&self) -> QuoteAtoms {
+        self.quote_volume
+    }
 
     // Used only in this file to construct iterator
     pub(crate) fn get_bids_root_index(&self) -> DataIndex {

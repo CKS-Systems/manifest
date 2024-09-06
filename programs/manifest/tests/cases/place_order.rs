@@ -220,6 +220,10 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
             .await,
         2_000 * USDC_UNIT_SIZE
     );
+    assert_eq!(
+        test_fixture.market_fixture.market.fixed.get_quote_volume(),
+        2_000 * USDC_UNIT_SIZE
+    );
 
     Ok(())
 }
