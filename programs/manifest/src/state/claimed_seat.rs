@@ -16,12 +16,15 @@ pub struct ClaimedSeat {
     // When moving funds over to open orders, use the worst case rounding.
     pub base_withdrawable_balance: BaseAtoms,
     pub quote_withdrawable_balance: QuoteAtoms,
-    _padding: [u8; 16],
+    /// Quote volume traded over lifetime, can overflow.
+    pub quote_volume: QuoteAtoms,
+    _padding: [u8; 8],
 }
 // 32 + // trader
 //  8 + // base_balance
 //  8 + // quote_balance
-// 16   // padding
+//  8 + // quote_volume
+//  8   // padding
 // = 64
 const_assert_eq!(size_of::<ClaimedSeat>(), CLAIMED_SEAT_SIZE);
 const_assert_eq!(size_of::<ClaimedSeat>() % 8, 0);
@@ -30,9 +33,7 @@ impl ClaimedSeat {
     pub fn new_empty(trader: Pubkey) -> Self {
         ClaimedSeat {
             trader,
-            base_withdrawable_balance: BaseAtoms::default(),
-            quote_withdrawable_balance: QuoteAtoms::default(),
-            _padding: [0; 16],
+            ..Default::default()
         }
     }
 }

@@ -31,14 +31,14 @@ use solana_program::{
 };
 use static_assertions::const_assert_eq;
 
-pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 64;
+pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 80;
 pub const BLOCK_HEADER_SIZE: usize = 16;
 pub const WRAPPER_BLOCK_SIZE: usize = WRAPPER_BLOCK_PAYLOAD_SIZE + BLOCK_HEADER_SIZE;
 
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 pub struct UnusedWrapperFreeListPadding {
-    _padding: [u64; 7],
+    _padding: [u64; 9],
     _padding2: [u32; 5],
 }
 pub const FREE_LIST_HEADER_SIZE: usize = 4;
@@ -221,6 +221,7 @@ pub(crate) fn sync(
         get_helper::<RBNode<ClaimedSeat>>(market_ref.dynamic, market_info.trader_index).get_value();
     market_info.base_balance = claimed_seat.base_withdrawable_balance;
     market_info.quote_balance = claimed_seat.quote_withdrawable_balance;
+    market_info.quote_volume = claimed_seat.quote_volume;
     market_info.last_updated_slot = Clock::get().unwrap().slot as u32;
 
     Ok(())
