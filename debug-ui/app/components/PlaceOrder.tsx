@@ -8,10 +8,10 @@ import {
   PublicKey,
 } from '@solana/web3.js';
 import {
-  ManifestClient,
   OrderType,
   WrapperPlaceOrderParamsExternal,
 } from '@cks-systems/manifest-sdk';
+import { setupClient } from '@/lib/util';
 
 const PlaceOrder = ({
   marketAddress,
@@ -49,36 +49,14 @@ const PlaceOrder = ({
   const onSubmit = async (e: { preventDefault: () => void }): Promise<void> => {
     e.preventDefault();
 
-    if (!connected) {
-      throw new Error(
-        'place order submit button should be disabled when not connected',
-      );
-    }
-
     const marketPub: PublicKey = new PublicKey(marketAddress);
 
-    const setupIxs = await ManifestClient.getSetupIxs(
+    const mClient = await setupClient(
       conn,
       marketPub,
-      signerPub as PublicKey, // checked connected above
-    );
-
-    if (setupIxs.length > 0) {
-      console.log('sending setup ixs...');
-      const sig = await sendTransaction(
-        new Transaction().add(...setupIxs),
-        conn,
-        { skipPreflight: true },
-      );
-      console.log(
-        `setupTx: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
-    }
-
-    const mClient = await ManifestClient.getClientForMarketNoPrivateKey(
-      conn,
-      marketPub,
-      signerPub as PublicKey,
+      signerPub,
+      connected,
+      sendTransaction,
     );
 
     const orderParams: WrapperPlaceOrderParamsExternal = {
@@ -190,4 +168,3 @@ const PlaceOrder = ({
 };
 
 export default PlaceOrder;
-

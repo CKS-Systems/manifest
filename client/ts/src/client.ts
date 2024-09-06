@@ -39,6 +39,12 @@ import {
 import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 
+export interface SetupData {
+  setupNeeded: boolean;
+  instructions: TransactionInstruction[];
+  wrapperKeypair: Keypair | null;
+}
+
 export class ManifestClient {
   private isBase22: boolean;
   private isQuote22: boolean;
@@ -204,14 +210,18 @@ export class ManifestClient {
    * @param marketPk PublicKey of the market
    * @param payerKeypair Keypair of the trader
    *
-   * @returns Promise<TransactionInstruction[]>
+   * @returns Promise<SetupData>
    */
   public static async getSetupIxs(
     connection: Connection,
     marketPk: PublicKey,
     payerPub: PublicKey,
-  ): Promise<TransactionInstruction[]> {
-    const ixs: TransactionInstruction[] = [];
+  ): Promise<SetupData> {
+    const setupData: SetupData = {
+      setupNeeded: true,
+      instructions: [],
+      wrapperKeypair: null,
+    };
     const existingWrappers: GetProgramAccountsResponse =
       await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
         filters: [
@@ -228,6 +238,8 @@ export class ManifestClient {
 
     if (existingWrappers.length == 0) {
       const wrapperKeypair: Keypair = Keypair.generate();
+      setupData.wrapperKeypair = wrapperKeypair;
+
       const createAccountIx: TransactionInstruction =
         SystemProgram.createAccount({
           fromPubkey: payerPub,
@@ -238,7 +250,7 @@ export class ManifestClient {
           ),
           programId: WRAPPER_PROGRAM_ID,
         });
-      ixs.push(createAccountIx);
+      setupData.instructions.push(createAccountIx);
 
       const createWrapperIx: TransactionInstruction =
         createCreateWrapperInstruction({
@@ -246,7 +258,7 @@ export class ManifestClient {
           payer: payerPub,
           wrapperState: wrapperKeypair.publicKey,
         });
-      ixs.push(createWrapperIx);
+      setupData.instructions.push(createWrapperIx);
 
       const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
         manifestProgram: MANIFEST_PROGRAM_ID,
@@ -255,9 +267,9 @@ export class ManifestClient {
         payer: payerPub,
         wrapperState: wrapperKeypair.publicKey,
       });
-      ixs.push(claimSeatIx);
+      setupData.instructions.push(claimSeatIx);
 
-      return ixs;
+      return setupData;
     }
 
     // Otherwise there is an existing wrapper
@@ -268,12 +280,14 @@ export class ManifestClient {
     const wrapperData: WrapperData = Wrapper.deserializeWrapperBuffer(
       wrapperResponse.account.data,
     );
+
     const existingMarketInfos: MarketInfoParsed[] =
       wrapperData.marketInfos.filter((marketInfo: MarketInfoParsed) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       });
     if (existingMarketInfos.length > 0) {
-      return [];
+      setupData.setupNeeded = false;
+      return setupData;
     }
 
     // There is a wrapper, but need to claim a seat.
@@ -284,8 +298,9 @@ export class ManifestClient {
       payer: payerPub,
       wrapperState: wrapperResponse.pubkey,
     });
-    ixs.push(claimSeatIx);
-    return ixs;
+    setupData.instructions.push(claimSeatIx);
+
+    return setupData;
   }
 
   /**
@@ -302,8 +317,12 @@ export class ManifestClient {
     marketPk: PublicKey,
     payerPub: PublicKey,
   ): Promise<ManifestClient> {
-    const ixs = await this.getSetupIxs(connection, marketPk, payerPub);
-    if (ixs.length !== 0) {
+    const { setupNeeded } = await this.getSetupIxs(
+      connection,
+      marketPk,
+      payerPub,
+    );
+    if (setupNeeded) {
       throw new Error('setup ixs need to be executed first');
     }
 

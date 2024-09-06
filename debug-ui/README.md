@@ -4,6 +4,8 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 If you intend to run `rando-bot`, make sure to set the env vars in `.env`. use `.env.example` as a template
 
+You must set `NEXT_PUBLIC_RPC_URL` in `.env.local` before running. You can choose between different clusters by supplying different values for this environment variable.
+
 ```bash
 # install deps
 yarn
@@ -18,7 +20,6 @@ yarn run:rando-bot
 ## TODOs
 
 - setup script to create devnet market
-- setup to choose network (mainnet,devnet, etc)
 
 ## NOTES
 

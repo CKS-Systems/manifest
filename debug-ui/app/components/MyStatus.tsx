@@ -59,7 +59,7 @@ const MyStatus = ({
     const mClient = await setupClient(
       conn,
       marketPub,
-      signerPub as PublicKey,
+      signerPub,
       connected,
       sendTransaction,
     );
@@ -85,10 +85,14 @@ const MyStatus = ({
 
   const withdraw = async (): Promise<void> => {
     const marketPub = new PublicKey(marketAddress);
+    if (!connected) {
+      throw new Error('must be connected before setting up client');
+    }
+
     const mClient = await setupClient(
       conn,
       marketPub,
-      signerPub as PublicKey,
+      signerPub,
       connected,
       sendTransaction,
     );
@@ -97,13 +101,16 @@ const MyStatus = ({
       ? mClient.market.quoteMint()
       : mClient.market.baseMint();
 
-    const depositIx = mClient.withdrawIx(
+    const withdrawIx = mClient.withdrawIx(
       signerPub!,
       mintPub,
       Number(amountTokens),
     );
     try {
-      const sig = await sendTransaction(new Transaction().add(depositIx), conn);
+      const sig = await sendTransaction(
+        new Transaction().add(withdrawIx),
+        conn,
+      );
       console.log(
         `withdraw: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
       );

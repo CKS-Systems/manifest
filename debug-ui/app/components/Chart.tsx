@@ -9,44 +9,29 @@ import {
   CandlestickData,
   Time,
 } from 'lightweight-charts';
-import { FillLogResult } from '@cks-systems/manifest-sdk';
+import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 
 const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const marketRef = useRef<Market | null>(null); // To track the latest market value
 
   const [chartEntries, setChartEntries] = useState<CandlestickData[]>([]);
   const { connection: conn } = useConnection();
 
-  const aggregateFillData = async (
-    fill: FillLogResult,
-    fillsInInterval: CandlestickData | null,
-  ): Promise<CandlestickData> => {
-    const time = await conn.getBlockTime(fill.slot);
-    if (!time) return fillsInInterval!;
-
-    const timestamp = Math.floor(time / 60) * 60; // Group by minute
-
-    if (!fillsInInterval) {
-      return {
-        time: timestamp as Time,
-        open: fill.price,
-        high: fill.price,
-        low: fill.price,
-        close: fill.price,
-      };
-    } else {
-      return {
-        time: timestamp as Time,
-        open: fillsInInterval.open,
-        high: Math.max(fillsInInterval.high, fill.price),
-        low: Math.min(fillsInInterval.low, fill.price),
-        close: fill.price,
-      };
-    }
-  };
+  useEffect(() => {
+    const marketPub = new PublicKey(marketAddress);
+    Market.loadFromAddress({
+      connection: conn,
+      address: marketPub,
+    }).then((m) => {
+      console.log('got market', m);
+      marketRef.current = m;
+    });
+  }, [conn, marketAddress]);
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:1234');
@@ -54,6 +39,43 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
     ws.onmessage = async (message): Promise<void> => {
       const fill: FillLogResult = JSON.parse(message.data);
+
+      const aggregateFillData = async (
+        fill: FillLogResult,
+        fillsInInterval: CandlestickData | null,
+      ): Promise<CandlestickData> => {
+        const time = await conn.getBlockTime(fill.slot);
+        if (!time) return fillsInInterval!;
+
+        const timestamp = Math.floor(time / 60) * 60; // Group by minute
+
+        const quoteTokens =
+          fill.quoteAtoms /
+          10 ** Number(marketRef.current?.quoteDecimals() || 0);
+        const baseTokens =
+          fill.baseAtoms / 10 ** Number(marketRef.current?.baseDecimals() || 0);
+
+        const price = Number((quoteTokens / baseTokens).toFixed(4));
+
+        if (!fillsInInterval) {
+          return {
+            time: timestamp as Time,
+            open: price,
+            high: price,
+            low: price,
+            close: price,
+          };
+        } else {
+          return {
+            time: timestamp as Time,
+            open: fillsInInterval.open,
+            high: Math.max(fillsInInterval.high, price),
+            low: Math.min(fillsInInterval.low, price),
+            close: price,
+          };
+        }
+      };
+
       const updatedCandlestick = await aggregateFillData(
         fill,
         fillsInCurrentInterval,
@@ -83,10 +105,10 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       ] as CandlestickData[]);
     };
 
-    return () => {
+    return (): void => {
       ws.close();
     };
-  }, [chartEntries]);
+  }, [chartEntries, conn]);
 
   useEffect(() => {
     if (chartContainerRef.current) {
@@ -129,14 +151,14 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
       candlestickSeriesRef.current = candlestickSeries;
 
-      const handleResize = () => {
+      const handleResize = (): void => {
         if (chartContainerRef.current) {
           chart.applyOptions({ width: chartContainerRef.current.clientWidth });
         }
       };
       window.addEventListener('resize', handleResize);
 
-      return () => {
+      return (): void => {
         chart.remove();
         window.removeEventListener('resize', handleResize);
       };

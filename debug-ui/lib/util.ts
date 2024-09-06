@@ -14,10 +14,13 @@ type SendTransaction = (
   options?: SendTransactionOptions,
 ) => Promise<TransactionSignature>;
 
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export const setupClient = async (
   conn: Connection,
   marketPub: PublicKey,
-  signerPub: PublicKey,
+  signerPub: PublicKey | null,
   connected: boolean,
   sendTransaction: SendTransaction,
 ): Promise<ManifestClient> => {
@@ -25,22 +28,28 @@ export const setupClient = async (
     throw new Error('must be connected before setting up client');
   }
 
-  const setupIxs = await ManifestClient.getSetupIxs(
-    conn,
-    marketPub,
-    signerPub as PublicKey, // checked connected above
-  );
+  const { setupNeeded, instructions, wrapperKeypair } =
+    await ManifestClient.getSetupIxs(conn, marketPub, signerPub as PublicKey);
 
-  if (setupIxs.length > 0) {
-    console.log('sending setup ixs...');
-    const sig = await sendTransaction(
-      new Transaction().add(...setupIxs),
-      conn,
-      { skipPreflight: false },
-    );
+  if (setupNeeded) {
+    console.log(`sending ${instructions.length} setup ixs...`);
+    const tx = new Transaction().add(...instructions);
+    const { blockhash } = await conn.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = signerPub!;
+    if (wrapperKeypair) {
+      tx.sign(wrapperKeypair);
+    }
+
+    const sig = await sendTransaction(tx, conn);
+
     console.log(
       `setupTx: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
     );
+
+    console.log('sleeping 5 seconds to ensure state catches up');
+
+    await sleep(5_000);
   }
 
   const mClient = await ManifestClient.getClientForMarketNoPrivateKey(
