@@ -712,8 +712,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             )?;
 
             // record maker & taker volume
-            record_volume_by_trader_index(dynamic, other_trader_index, quote_atoms_traded)?;
-            record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded)?;
+            record_volume_by_trader_index(dynamic, other_trader_index, quote_atoms_traded);
+            record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded);
 
             emit_stack(FillLog {
                 market,
@@ -1025,7 +1025,7 @@ fn record_volume_by_trader_index(
     dynamic: &mut [u8],
     trader_index: DataIndex,
     amount_atoms: QuoteAtoms,
-) -> ProgramResult {
+) {
     let claimed_seat: &mut ClaimedSeat =
         get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
     claimed_seat.quote_volume = QuoteAtoms::new(
@@ -1035,7 +1035,6 @@ fn record_volume_by_trader_index(
             .overflowing_add(amount_atoms.as_u64())
             .0,
     );
-    Ok(())
 }
 
 #[inline(always)]
