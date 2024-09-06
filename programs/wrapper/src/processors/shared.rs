@@ -282,6 +282,7 @@ pub(crate) fn lookup_order_indexes_by_client_order_id(
     let matching_order_index: DataIndex =
         open_orders_tree.lookup_index(&WrapperOpenOrder::new_empty(client_order_id));
 
+    // TODO: size according to freelist
     let mut result: Vec<DataIndex> = Vec::new();
     result.push(matching_order_index);
 

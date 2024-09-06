@@ -166,9 +166,8 @@ pub(crate) fn process_batch_update(
         },
     );
     let mut core_cancels: Vec<CancelOrderParams> = cancels
-        .clone()
-        .into_iter()
-        .map(|cancel: WrapperCancelOrderParams| {
+        .iter()
+        .map(|cancel: &WrapperCancelOrderParams| {
             let order_indexes_to_remove: Vec<DataIndex> =
                 get_wrapper_order_indexes_by_client_order_id(
                     &wrapper_state,
@@ -209,14 +208,10 @@ pub(crate) fn process_batch_update(
                         return CancelOrderParams::new_with_hint(0, Some(NIL));
                     }
                 })
-                .collect()
+                .collect::<Vec<CancelOrderParams>>()
         })
-        .collect::<Vec<Vec<CancelOrderParams>>>()
-        .concat()
-        .into_iter()
-        .filter(|cancel: &CancelOrderParams| {
-            cancel.order_index_hint().is_some() && cancel.order_index_hint().unwrap() != NIL
-        })
+        .flatten()
+        .filter(|cancel| cancel.order_index_hint().map_or(false, |id| id != NIL))
         .collect();
 
     // If the user wants to cancel all, then ignore the cancel request and just
@@ -232,6 +227,7 @@ pub(crate) fn process_batch_update(
         remaining_quote_atoms = market_info.quote_balance;
         drop(wrapper_data);
 
+        // TODO: estimate vector size by looking at freelist
         core_cancels = Vec::new();
         let wrapper_state_info: &AccountInfo = wrapper_state.info;
         let wrapper_data: Ref<&mut [u8]> = wrapper_state_info.try_borrow_data().unwrap();
@@ -245,8 +241,7 @@ pub(crate) fn process_batch_update(
         let open_orders_tree: OpenOrdersTreeReadOnly =
             OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
 
-        for open_order_node in open_orders_tree.iter::<WrapperOpenOrder>() {
-            let open_order: &WrapperOpenOrder = open_order_node.1;
+        for (_, open_order) in open_orders_tree.iter::<WrapperOpenOrder>() {
             core_cancels.push(CancelOrderParams::new_with_hint(
                 open_order.get_order_sequence_number(),
                 Some(open_order.get_market_data_index()),
@@ -263,9 +258,8 @@ pub(crate) fn process_batch_update(
     }
 
     let core_orders: Vec<PlaceOrderParams> = orders
-        .clone()
-        .into_iter()
-        .map(|order: WrapperPlaceOrderParams| {
+        .iter()
+        .map(|order: &WrapperPlaceOrderParams| {
             // Possibly reduce the order due to insufficient funds. This is a
             // request from a market maker so that the whole tx doesnt roll back
             // if they do not have the funds on the exchange that the orders
@@ -338,7 +332,8 @@ pub(crate) fn process_batch_update(
             .get_mut_value();
     let mut orders_root_index: DataIndex = market_info.orders_root_index;
 
-    cancels.into_iter().for_each(|cancel| {
+    // TODO: we can avoid looking up the order_wrapper_index here if we save it before
+    cancels.iter().for_each(|cancel| {
         let order_wrapper_indexes: Vec<DataIndex> = lookup_order_indexes_by_client_order_id(
             cancel.client_order_id,
             wrapper_dynamic_data,
@@ -363,13 +358,14 @@ pub(crate) fn process_batch_update(
                 }
             });
     });
+    // TODO: we can avoid looking up the order_wrapper_index here if we save it before
     if cancel_all {
         let open_orders_tree: OpenOrdersTreeReadOnly =
             OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
-        let mut to_remove_indices: Vec<DataIndex> = Vec::new();
-        for open_order in open_orders_tree.iter::<WrapperOpenOrder>() {
-            to_remove_indices.push(open_order.0);
-        }
+        let to_remove_indices: Vec<DataIndex> = open_orders_tree
+            .iter::<WrapperOpenOrder>()
+            .map(|(id, _)| id)
+            .collect();
 
         let mut open_orders_tree: OpenOrdersTree =
             OpenOrdersTree::new(wrapper_dynamic_data, orders_root_index, NIL);
