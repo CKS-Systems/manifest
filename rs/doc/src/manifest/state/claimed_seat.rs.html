@@ -70,6 +70,11 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span><span class="kw">crate</span>::quantities::{BaseAtoms, QuoteAtoms};
@@ -84,16 +89,23 @@
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 </span><span class="kw">pub struct </span>ClaimedSeat {
     <span class="kw">pub </span>trader: Pubkey,
-    <span class="comment">// Balances are withdrawable on the exchange. They do not include funds in open orders.
-    // When moving funds over to open orders, use the worst case rounding.
+    <span class="comment">// Balances are withdrawable on the exchange. They do not include funds in
+    // open orders. When moving funds over to open orders, use the worst case
+    // rounding.
     </span><span class="kw">pub </span>base_withdrawable_balance: BaseAtoms,
     <span class="kw">pub </span>quote_withdrawable_balance: QuoteAtoms,
-    _padding: [u8; <span class="number">16</span>],
+    <span class="doccomment">/// Quote volume traded over lifetime, can overflow. Double counts self
+    /// trades. This is for informational and monitoring purposes only. This is
+    /// not guaranteed to be maintained. It does not secure any value in
+    /// manifest. Use at your own risk.
+    </span><span class="kw">pub </span>quote_volume: QuoteAtoms,
+    _padding: [u8; <span class="number">8</span>],
 }
 <span class="comment">// 32 + // trader
 //  8 + // base_balance
 //  8 + // quote_balance
-// 16   // padding
+//  8 + // quote_volume
+//  8   // padding
 // = 64
 </span><span class="macro">const_assert_eq!</span>(size_of::&lt;ClaimedSeat&gt;(), CLAIMED_SEAT_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;ClaimedSeat&gt;() % <span class="number">8</span>, <span class="number">0</span>);
@@ -102,9 +114,7 @@
     <span class="kw">pub fn </span>new_empty(trader: Pubkey) -&gt; <span class="self">Self </span>{
         ClaimedSeat {
             trader,
-            base_withdrawable_balance: BaseAtoms::default(),
-            quote_withdrawable_balance: QuoteAtoms::default(),
-            _padding: [<span class="number">0</span>; <span class="number">16</span>],
+            ..Default::default()
         }
     }
 }
