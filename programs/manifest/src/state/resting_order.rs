@@ -185,7 +185,11 @@ impl Eq for RestingOrder {}
 
 impl std::fmt::Display for RestingOrder {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}@{}", self.num_base_atoms, self.price)
+        write!(
+            f,
+            "{}@{}|E:{})",
+            self.num_base_atoms, self.price, self.effective_price
+        )
     }
 }
 

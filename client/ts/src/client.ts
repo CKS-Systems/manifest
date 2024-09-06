@@ -589,7 +589,6 @@ export class ManifestClient {
     }
 
     if (depositAmount <= 0) {
-      console.debug('Enough balance to place order without deposit');
       return [placeOrderIx];
     }
     const depositIx = this.depositIx(payer, depositMint, depositAmount);

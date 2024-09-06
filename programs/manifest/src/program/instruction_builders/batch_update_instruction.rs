@@ -40,7 +40,7 @@ pub fn batch_update_instruction(
             let (global_vault, _) = get_global_vault_address(&mint);
             let (market_vault, _) = get_vault_address(market, &mint);
             let mut global_account_metas: Vec<AccountMeta> = vec![
-                AccountMeta::new(mint, false),
+                AccountMeta::new_readonly(mint, false),
                 AccountMeta::new(global, false),
                 AccountMeta::new(global_vault, false),
                 AccountMeta::new(market_vault, false),
@@ -48,9 +48,9 @@ pub fn batch_update_instruction(
             if token_program_opt.is_none()
                 || token_program_opt.is_some_and(|f| f == spl_token::id())
             {
-                global_account_metas.push(AccountMeta::new(spl_token::id(), false));
+                global_account_metas.push(AccountMeta::new_readonly(spl_token::id(), false));
             } else {
-                global_account_metas.push(AccountMeta::new(spl_token_2022::id(), false));
+                global_account_metas.push(AccountMeta::new_readonly(spl_token_2022::id(), false));
             }
             account_metas.extend(global_account_metas);
         }

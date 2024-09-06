@@ -180,7 +180,6 @@ export class Market {
     const withdrawableBalance = isBase
       ? toNum(seat.baseBalance) / 10 ** this.baseDecimals()
       : toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
-    console.debug('Withdrawable Balance', isBase, withdrawableBalance);
     return withdrawableBalance;
   }
 

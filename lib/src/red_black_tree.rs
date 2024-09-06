@@ -52,7 +52,6 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
 //    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
 //    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-//    fn get_min_index<V: Payload>(&self) -> DataIndex;
 //    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
 //    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -113,6 +112,17 @@ pub struct RedBlackTreeReadOnly<'a, V: Payload> {
 impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     /// Creates a new RedBlackTree. Does not mutate data yet. Assumes the actual
     /// data in data is already well formed as a red black tree.
+    /// It is necessary to persist the root_index to re-initialize a tree, storing
+    /// the max_index is recommended when in-order iteration is performance critical.
+    ///
+    /// Depending on the index args this will behave differently:
+    ///
+    /// root=NIL: initializes an empty tree, get_max() is defined
+    ///
+    /// root!=NIL max=NIL: initializes an existing tree, get_max() is undefined &
+    ///                    iter() will dynamically lookup the maximum
+    ///
+    /// root!=NIL max!=NIL: initializes an existing tree, get_max() is defined
     pub fn new(data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
         RedBlackTreeReadOnly::<V> {
             root_index,
@@ -142,6 +152,7 @@ impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTreeReadOnly<'a
         self.max_index
     }
 }
+
 impl<'a, V: Payload> GetRedBlackTreeReadOnlyData<'a> for RedBlackTree<'a, V> {
     fn data(&self) -> &[u8] {
         self.data
@@ -174,7 +185,6 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
     fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
-    fn get_min_index<V: Payload>(&self) -> DataIndex;
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
@@ -232,17 +242,6 @@ where
         }
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
         node.parent
-    }
-
-    fn get_min_index<V: Payload>(&self) -> DataIndex {
-        if self.root_index() == NIL {
-            return NIL;
-        }
-        let mut current_index: DataIndex = self.root_index();
-        while self.get_left_index::<V>(current_index) != NIL {
-            current_index = self.get_left_index::<V>(current_index);
-        }
-        current_index
     }
 
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
@@ -588,6 +587,20 @@ where
         current_index
     }
 
+    fn lookup_max_index<V: Payload>(&'a self) -> DataIndex {
+        let mut current_index = self.root_index();
+        if current_index == NIL {
+            return NIL;
+        }
+        loop {
+            let right_index = self.get_right_index::<V>(current_index);
+            if right_index == NIL {
+                return current_index;
+            }
+            current_index = right_index;
+        }
+    }
+
     /// Get the max index. If a tree set this to NIL on a non-empty tree, this
     /// will always be NIL.
     fn get_max_index(&self) -> DataIndex {
@@ -600,7 +613,7 @@ where
     }
 
     /// Get the previous index. This walks the tree, so does not care about equal keys.
-    fn get_predecessor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_lower_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -624,7 +637,7 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal keys.
-    fn get_successor_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
+    fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
         }
@@ -651,8 +664,14 @@ where
 #[cfg(any(test, feature = "fuzz"))]
 pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
-    fn pretty_print<V: Payload>(&'a self);
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
+    #[cfg(test)]
+    fn max_depth<V: Payload>(&'a self) -> i32;
+    #[cfg(test)]
+    fn x<V: Payload>(&'a self, index: DataIndex) -> i32;
+    #[cfg(test)]
+    fn pretty_print<V: Payload>(&'a self);
+    fn debug_print<V: Payload>(&'a self);
     fn verify_rb_tree<V: Payload>(&'a self);
     fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
 }
@@ -666,18 +685,123 @@ where
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index: self.get_max_index(),
             phantom: std::marker::PhantomData,
         }
     }
 
+    // Only used in pretty printing, so can be slow
+    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        let mut depth = -1;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            current_index = self.get_parent_index::<V>(current_index);
+            depth += 1;
+        }
+        depth
+    }
+    #[cfg(test)]
+    fn max_depth<V: Payload>(&'a self) -> i32 {
+        let max_depth: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.depth::<V>(b.0)));
+        max_depth
+    }
+    #[cfg(test)]
+    fn x<V: Payload>(&'a self, index: DataIndex) -> i32 {
+        // Max depth
+        let max_depth: i32 = self.max_depth::<V>();
+
+        let mut x: i32 = 0;
+        let mut current_index: DataIndex = index;
+        while current_index != NIL {
+            if self.is_left_child::<V>(current_index) {
+                x -= i32::pow(2, (max_depth - self.depth::<V>(current_index)) as u32);
+            }
+            if self.is_right_child::<V>(current_index) {
+                x += i32::pow(2, (max_depth - self.depth::<V>(current_index)) as u32);
+            }
+            current_index = self.get_parent_index::<V>(current_index);
+        }
+        x
+    }
+
+    #[cfg(test)]
     fn pretty_print<V: Payload>(&'a self) {
+        // Get the max depth and max / min X
+        let max_depth: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.depth::<V>(b.0)));
+        let max_x: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.max(self.x::<V>(b.0)));
+        let min_x: i32 = self
+            .node_iter::<V>()
+            .fold(0, |a, b| a.min(self.x::<V>(b.0)));
+        trace!("=========Pretty Print===========");
+        for y in 0..(max_depth + 1) {
+            let mut row_str: String = String::new();
+            for x in (min_x)..(max_x + 1) {
+                let mut found: bool = false;
+                for (index, node) in self.node_iter::<V>() {
+                    if self.depth::<V>(index) == y && self.x::<V>(index) == x {
+                        found = true;
+                        let str = &format!("{:<5}", node);
+                        if node.color == Color::Red {
+                            // Cannot use with sbf. Enable when debugging
+                            // locally without sbf.
+                            #[cfg(colored)]
+                            {
+                                use colored::Colorize;
+                                row_str += &format!("{}", str.red());
+                            }
+                            #[cfg(not(colored))]
+                            {
+                                row_str += str;
+                            }
+                        } else {
+                            #[cfg(colored)]
+                            {
+                                use colored::Colorize;
+                                row_str += &format!("{}", str.black());
+                            }
+                            #[cfg(not(colored))]
+                            {
+                                row_str += str;
+                            }
+                        }
+                    }
+                }
+                if !found {
+                    row_str += &format!("{:<8}", "");
+                }
+            }
+            trace!("{}", row_str);
+        }
+        let mut end: String = String::new();
+        for _x in (min_x)..(max_x + 1) {
+            end += "=====";
+        }
+        trace!("{}", end);
+    }
+
+    fn debug_print<V: Payload>(&'a self) {
         trace!("====== Hypertree ======");
 
         for (index, node) in self.node_iter::<V>() {
             let mut row_str: String = String::new();
 
             row_str += &"  ".repeat(self.depth::<V>(index) as usize);
+
+            row_str += if node.parent == NIL {
+                "- "
+            } else {
+                if self.is_left_child::<V>(index) {
+                    "└ "
+                } else {
+                    "┌ "
+                }
+            };
 
             let color = if node.color == Color::Black { 'B' } else { 'R' };
             let str = &format!("{color}:{index}:{node}");
@@ -702,33 +826,30 @@ where
         trace!("=======================");
     }
 
-    // Only used in pretty printing, so can be slow
-    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32 {
-        let mut depth = -1;
-        let mut current_index: DataIndex = index;
-        while current_index != NIL {
-            current_index = self.get_parent_index::<V>(current_index);
-            depth += 1;
-        }
-        depth
-    }
-
     fn verify_rb_tree<V: Payload>(&'a self) {
-        // Verify that all red nodes only have black children
         for (index, node) in self.node_iter::<V>() {
+            // Verify that all red nodes only have black children
             if node.color == Color::Red {
-                assert!(self.get_color::<V>(self.get_left_index::<V>(index)) == Color::Black);
-                assert!(self.get_color::<V>(self.get_right_index::<V>(index)) == Color::Black);
+                assert_eq!(
+                    self.get_color::<V>(self.get_left_index::<V>(index)),
+                    Color::Black
+                );
+                assert_eq!(
+                    self.get_color::<V>(self.get_right_index::<V>(index)),
+                    Color::Black
+                );
             }
-        }
 
-        // Verify that all nodes have the same number of black nodes to the root.
-        let first_index: DataIndex = self.get_min_index::<V>();
-        let num_black: i32 = self.num_black_nodes_through_root::<V>(first_index);
-
-        for (index, _node) in self.node_iter::<V>() {
+            // Verify that all leaf nodes have the same number of black nodes to the root.
+            let mut num_black = None;
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
-                assert!(num_black == self.num_black_nodes_through_root::<V>(index));
+                match num_black {
+                    Some(num_black) => {
+                        assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
+                    }
+                    #[allow(unused_assignments)] // the compiler has issues with "match"
+                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
+                }
             }
         }
     }
@@ -752,9 +873,13 @@ where
     T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
 {
     fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+        let mut index = self.get_max_index();
+        if index == NIL {
+            index = self.lookup_max_index::<V>();
+        }
         HyperTreeValueReadOnlyIterator {
             tree: self,
-            index: self.get_min_index::<V>(),
+            index,
             phantom: std::marker::PhantomData,
         }
     }
@@ -767,12 +892,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result.get_value()))
         }
     }
@@ -797,17 +922,17 @@ unsafe impl Zeroable for Color {
 /// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
 /// RedBlack and BST properties, the rest is the payload.
 pub struct RBNode<V> {
-    left: DataIndex,
-    right: DataIndex,
-    parent: DataIndex,
-    color: Color,
+    pub(crate) left: DataIndex,
+    pub(crate) right: DataIndex,
+    pub(crate) parent: DataIndex,
+    pub(crate) color: Color,
 
     // Optional enum controlled by the application to identify the type of node.
     // Defaults to zero.
-    payload_type: u8,
+    pub(crate) payload_type: u8,
 
-    _unused_padding: u16,
-    value: V,
+    pub(crate) _unused_padding: u16,
+    pub(crate) value: V,
 }
 unsafe impl<V: Payload> Pod for RBNode<V> {}
 
@@ -914,9 +1039,9 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
             trace!(
                 "TREE max {}->{}",
                 self.max_index,
-                self.get_predecessor_index::<V>(self.max_index)
+                self.get_next_lower_index::<V>(self.max_index)
             );
-            self.max_index = self.get_predecessor_index::<V>(self.max_index);
+            self.max_index = self.get_next_lower_index::<V>(self.max_index);
         }
 
         // If it is an internal node, we copy the successor value here and call
@@ -925,7 +1050,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         // of the tree with the max to be sparser.
         if self.is_internal::<V>(index) {
             // Swap nodes
-            let successor_index: DataIndex = self.get_successor_index::<V>(index);
+            let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
             self.swap_nodes::<V>(index, successor_index);
         }
 
@@ -1234,12 +1359,12 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 
     fn next(&mut self) -> Option<Self::Item> {
         let index: DataIndex = self.index;
-        let successor_index: DataIndex = self.tree.get_successor_index::<V>(self.index);
+        let next_index: DataIndex = self.tree.get_next_lower_index::<V>(self.index);
         if index == NIL {
             None
         } else {
             let result: &RBNode<V> = get_helper::<RBNode<V>>(self.tree.data(), index);
-            self.index = successor_index;
+            self.index = next_index;
             Some((index, result))
         }
     }
@@ -1248,7 +1373,7 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
 // No IterMut because changing keys could break red-black properties.
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use std::fmt::Display;
 
     use super::*;
@@ -1261,7 +1386,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderBid {
+    pub(crate) struct TestOrderBid {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1293,7 +1418,7 @@ mod test {
     }
 
     impl TestOrderBid {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderBid {
                 order_id,
                 padding: [0; 128],
@@ -1303,7 +1428,7 @@ mod test {
 
     #[derive(Copy, Clone, Pod, Zeroable, Debug)]
     #[repr(C)]
-    struct TestOrderAsk {
+    pub(crate) struct TestOrderAsk {
         order_id: u64,
         padding: [u8; 128],
     }
@@ -1335,7 +1460,7 @@ mod test {
     }
 
     impl TestOrderAsk {
-        fn new(order_id: u64) -> Self {
+        pub(crate) fn new(order_id: u64) -> Self {
             TestOrderAsk {
                 order_id,
                 padding: [0; 128],
@@ -1350,7 +1475,7 @@ mod test {
     // Color: DataIndex
     // TestOrder: 8 + 128
     // 8 + 8 + 8 + 8 + 8 + 128 = 168
-    const TEST_BLOCK_WIDTH: DataIndex = 168;
+    pub(crate) const TEST_BLOCK_WIDTH: DataIndex = 168;
 
     #[test]
     fn test_insert_basic() {
@@ -1485,11 +1610,14 @@ mod test {
     }
 
     #[test]
-    fn test_min_max() {
+    fn test_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        assert_eq!(
+            tree.get_max_index(),
+            tree.lookup_max_index::<TestOrderBid>()
+        );
         assert_eq!(tree.get_max_index(), TEST_BLOCK_WIDTH * 11);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), TEST_BLOCK_WIDTH);
     }
 
     #[test]
@@ -1597,42 +1725,42 @@ mod test {
     }
 
     #[test]
-    fn test_get_predecessor_index() {
+    fn test_get_next_lower_index() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        assert_eq!(tree.get_predecessor_index::<TestOrderBid>(NIL), NIL);
+        assert_eq!(tree.get_next_lower_index::<TestOrderBid>(NIL), NIL);
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 6),
             TEST_BLOCK_WIDTH * 5
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 5),
             TEST_BLOCK_WIDTH * 4
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 4),
             TEST_BLOCK_WIDTH * 3
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 3),
             TEST_BLOCK_WIDTH * 2
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH * 2),
             TEST_BLOCK_WIDTH
         );
         assert_eq!(
-            tree.get_predecessor_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
+            tree.get_next_lower_index::<TestOrderBid>(TEST_BLOCK_WIDTH),
             NIL
         );
         tree.verify_rb_tree::<TestOrderBid>();
     }
 
     #[test]
-    fn test_empty_min_max() {
+    fn test_empty_max() {
         let mut data: [u8; 100000] = [0; 100000];
         let tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
-        assert_eq!(tree.get_min_index::<TestOrderBid>(), NIL);
+        assert_eq!(tree.lookup_max_index::<TestOrderBid>(), NIL);
         assert_eq!(tree.get_max_index(), NIL);
         tree.verify_rb_tree::<TestOrderBid>();
     }
