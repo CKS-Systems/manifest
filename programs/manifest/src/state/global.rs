@@ -25,6 +25,7 @@ use crate::{
 use super::{
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, GLOBAL_BLOCK_SIZE,
     GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_FREE_LIST_BLOCK_SIZE, GLOBAL_TRADER_SIZE,
+    MAX_GLOBAL_SEATS,
 };
 
 #[repr(C)]
@@ -51,7 +52,7 @@ pub struct GlobalFixed {
     vault_bump: u8,
     global_bump: u8,
 
-    _unused_padding: [u8; 2],
+    num_seats_claimed: u16,
 }
 const_assert_eq!(
     size_of::<GlobalFixed>(),
@@ -63,7 +64,7 @@ const_assert_eq!(
     4 +   // num_bytes_allocated
     1 +   // vault_bump
     1 +   // global_bump
-    2 // unused_padding
+    2 // num_seats_claimed
 );
 const_assert_eq!(size_of::<GlobalFixed>(), GLOBAL_FIXED_SIZE);
 const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
@@ -97,8 +98,8 @@ pub struct GlobalTrader {
     // TODO: Make a way to claim gas deposits
     claimable_gas_deposits: u32,
 
-    /// unused padding
-    _padding: [u32; 1],
+    /// Track the number of open orders which correlates to the number of gas deposits. This is relevant when purging.
+    open_global_orders: u32,
 }
 const_assert_eq!(size_of::<GlobalTrader>(), GLOBAL_TRADER_SIZE);
 const_assert_eq!(size_of::<GlobalTrader>() % 8, 0);
@@ -138,7 +139,7 @@ impl GlobalFixed {
             num_bytes_allocated: 0,
             vault_bump,
             global_bump,
-            _unused_padding: [0; 2],
+            num_seats_claimed: 0,
         }
     }
     pub fn get_global_traders_root_index(&self) -> DataIndex {
@@ -179,7 +180,7 @@ impl GlobalTrader {
             trader: *trader,
             balance_atoms: GlobalAtoms::ZERO,
             claimable_gas_deposits: 0,
-            _padding: [0; 1],
+            open_global_orders: 0,
         }
     }
     pub fn get_trader(&self) -> &Pubkey {
@@ -207,10 +208,15 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
         }
     }
 
-    pub fn get_balance_atoms(&self, trader: &Pubkey) -> Result<GlobalAtoms, ProgramError> {
+    pub fn get_balance_atoms(&self, trader: &Pubkey) -> GlobalAtoms {
         let DynamicAccount { fixed, dynamic } = self.borrow_global();
-        let global_trader: &GlobalTrader = get_global_trader(fixed, dynamic, trader)?;
-        Ok(global_trader.balance_atoms)
+        // If the trader got evicted, then they wont be found.
+        let global_trader_or: Option<&GlobalTrader> = get_global_trader(fixed, dynamic, trader);
+        if let Some(global_trader) = global_trader_or {
+            global_trader.balance_atoms
+        } else {
+            GlobalAtoms::ZERO
+        }
     }
 }
 
@@ -266,6 +272,46 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         global_trader_tree.insert(free_address, global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
+        // TODO: Assert that num seats claimed is below the limit.
+        assert_with_msg(
+            fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
+            ManifestError::TooManyGlobalSeats,
+            "There is a strict limit on number of seats available in a global, use evict",
+        )?;
+
+        fixed.num_seats_claimed += 1;
+
+        Ok(())
+    }
+
+    /// Evict from the
+    pub fn evict_and_take_seat(
+        &mut self,
+        existing_trader: &Pubkey,
+        new_trader: &Pubkey,
+    ) -> ProgramResult {
+        // TODO: Assert evictable and pay them for the eviction withdraw.
+
+        let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
+
+        let free_address: DataIndex = get_free_address_on_global_fixed(fixed, dynamic);
+        let existing_trader: GlobalTrader = *get_global_trader(fixed, dynamic, existing_trader)
+            .expect("Trader to evict must exist");
+        let mut global_trader_tree: GlobalTraderTree =
+            GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
+        let existing_index: DataIndex = global_trader_tree.lookup_index(&existing_trader);
+        global_trader_tree.remove_by_index(existing_index);
+
+        let new_global_trader: GlobalTrader = GlobalTrader::new_empty(new_trader);
+        // Cannot claim an extra seat.
+        assert_with_msg(
+            global_trader_tree.lookup_index(&new_global_trader) == NIL,
+            ManifestError::AlreadyClaimedSeat,
+            "Already claimed global trader seat",
+        )?;
+
+        global_trader_tree.insert(free_address, new_global_trader);
+        fixed.global_traders_root_index = global_trader_tree.get_root_index();
 
         Ok(())
     }
@@ -280,6 +326,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let global_trader: &mut GlobalTrader =
             get_mut_global_trader(fixed, dynamic, global_trade_owner)?;
         let global_atoms_deposited: GlobalAtoms = global_trader.balance_atoms;
+        global_trader.open_global_orders += 1;
 
         let num_global_atoms: GlobalAtoms = if resting_order.get_is_bid() {
             GlobalAtoms::new(
@@ -318,6 +365,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         if trader.info.key != global_trade_owner || global_trade_accounts.system_program.is_none() {
             global_trader.claimable_gas_deposits += 1;
         }
+        global_trader.open_global_orders -= 1;
 
         Ok(())
     }
@@ -354,19 +402,17 @@ fn get_global_trader<'a>(
     fixed: &'a GlobalFixed,
     dynamic: &'a [u8],
     trader: &'a Pubkey,
-) -> Result<&'a GlobalTrader, ProgramError> {
+) -> Option<&'a GlobalTrader> {
     let global_trader_tree: GlobalTraderTreeReadOnly =
         GlobalTraderTreeReadOnly::new(dynamic, fixed.global_traders_root_index, NIL);
     let global_trader_index: DataIndex =
         global_trader_tree.lookup_index(&GlobalTrader::new_empty(trader));
-    assert_with_msg(
-        global_trader_index != NIL,
-        ManifestError::MissingGlobal,
-        "Could not find global trader",
-    )?;
+    if global_trader_index == NIL {
+        return None;
+    }
     let global_trader: &GlobalTrader =
         get_helper::<RBNode<GlobalTrader>>(dynamic, global_trader_index).get_value();
-    Ok(global_trader)
+    Some(global_trader)
 }
 
 fn get_mut_global_trader<'a>(

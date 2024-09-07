@@ -35,7 +35,7 @@ async fn global_add_trader() -> anyhow::Result<()> {
         test_fixture.global_fixture.global;
 
     // Verifying that the account exists and that there are zero there.
-    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::ZERO);
     Ok(())
 }
@@ -61,7 +61,7 @@ async fn global_deposit() -> anyhow::Result<()> {
         test_fixture.global_fixture.global;
 
     // Verifying that the account exists and that there are tokens there.
-    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
     Ok(())
 }
@@ -79,7 +79,7 @@ async fn global_withdraw() -> anyhow::Result<()> {
         test_fixture.global_fixture.global;
 
     // Verifying that the account exists and that there are tokens there.
-    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::new(0));
     Ok(())
 }
@@ -278,8 +278,7 @@ async fn global_match_order() -> anyhow::Result<()> {
         test_fixture
             .global_fixture
             .global
-            .get_balance_atoms(&test_fixture.payer())
-            .unwrap(),
+            .get_balance_atoms(&test_fixture.payer()),
         999_900
     );
 
@@ -339,7 +338,7 @@ async fn global_deposit_22() -> anyhow::Result<()> {
     let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> = global_fixture.global;
 
     // Verifying that the account exists and that there are tokens there.
-    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
     Ok(())
 }
@@ -473,7 +472,7 @@ async fn global_match_22() -> anyhow::Result<()> {
     let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> = global_fixture.global;
 
     // Verify that the global account traded all of its tokens.
-    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer)?;
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::new(999_000));
     market_fixture.reload().await;
     // Zero because swaps reset the amounts, even if it is a self trade.
@@ -550,8 +549,7 @@ async fn global_insufficient() -> anyhow::Result<()> {
         test_fixture
             .global_fixture
             .global
-            .get_balance_atoms(&test_fixture.payer())
-            .unwrap(),
+            .get_balance_atoms(&test_fixture.payer()),
         0
     );
 

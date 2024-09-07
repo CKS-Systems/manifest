@@ -30,4 +30,13 @@ pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
 // - When you remove an order because you fill it, you cancel it yourself, you try
 // to match and the funds for it dont exist, or you remove it because it is
 // expired, you get the 5000 lamports.
+//
+// Note that if your seat gets evicted, then all your orders are unbacked and
+// now are free to have their deposits claimed. So there is an incentive to keep
+// capital on the exchange to prevent that.
 pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
+
+/// Limit on the number of global seats available. Set so that this is hit
+/// before the global account starts running into account size limits, but is
+/// generous enough that it really should only matter in deterring spam.
+pub const MAX_GLOBAL_SEATS: u16 = u16::MAX - 1_u16;
