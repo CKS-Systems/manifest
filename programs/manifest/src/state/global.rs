@@ -272,7 +272,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         global_trader_tree.insert(free_address, global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
-        // TODO: Assert that num seats claimed is below the limit.
         assert_with_msg(
             fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
             ManifestError::TooManyGlobalSeats,
@@ -284,14 +283,12 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    /// Evict from the
+    /// Evict from the global account and steal their seat
     pub fn evict_and_take_seat(
         &mut self,
         existing_trader: &Pubkey,
         new_trader: &Pubkey,
     ) -> ProgramResult {
-        // TODO: Assert evictable and pay them for the eviction withdraw.
-
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
         let free_address: DataIndex = get_free_address_on_global_fixed(fixed, dynamic);

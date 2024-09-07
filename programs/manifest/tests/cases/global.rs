@@ -555,3 +555,17 @@ async fn global_insufficient() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn global_get_balance_not_in_global() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    let payer: Pubkey = test_fixture.payer();
+
+    test_fixture.global_fixture.reload().await;
+    let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> =
+        test_fixture.global_fixture.global;
+
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
+    assert_eq!(balance_atoms, GlobalAtoms::ZERO);
+    Ok(())
+}

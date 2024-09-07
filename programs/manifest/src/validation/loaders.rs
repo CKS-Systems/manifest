@@ -666,3 +666,54 @@ impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
         })
     }
 }
+
+/// Global evict
+pub(crate) struct GlobalEvictContext<'a, 'info> {
+    pub payer: Signer<'a, 'info>,
+    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
+    pub mint: MintAccountInfo<'a, 'info>,
+    pub global_vault: TokenAccountInfo<'a, 'info>,
+    pub trader_token: TokenAccountInfo<'a, 'info>,
+    pub evictee_token: TokenAccountInfo<'a, 'info>,
+    pub token_program: TokenProgram<'a, 'info>,
+}
+
+impl<'a, 'info> GlobalEvictContext<'a, 'info> {
+    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+
+        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let global: ManifestAccountInfo<GlobalFixed> =
+            ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+
+        let mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
+
+        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+        let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
+
+        let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
+            next_account_info(account_iter)?,
+            mint.info.key,
+            &expected_global_vault_address,
+            &expected_global_vault_address,
+        )?;
+        drop(global_data);
+
+        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let trader_token: TokenAccountInfo =
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
+        let evictee_token: TokenAccountInfo =
+            TokenAccountInfo::new(token_account_info, mint.info.key)?;
+        let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
+        Ok(Self {
+            payer,
+            global,
+            mint,
+            global_vault,
+            trader_token,
+            evictee_token,
+            token_program,
+        })
+    }
+}
