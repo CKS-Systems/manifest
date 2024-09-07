@@ -39,7 +39,7 @@ if (!RPC_URL) {
 }
 
 if (!MARKET_CREATOR_PRIVATE_KEY) {
-  throw new Error('MARKET_CREATOR_PRIVATE_KEY missing from env');
+  console.warn('MARKET_CREATOR_PRIVATE_KEY missing from env. using random.');
 }
 
 if (!MARKET_ADDRESS) {
@@ -47,15 +47,15 @@ if (!MARKET_ADDRESS) {
 }
 
 if (!ALICE_PRIVATE_KEY) {
-  throw new Error('ALICE_PRIVATE_KEY missing from env');
+  console.warn('ALICE_PRIVATE_KEY missing from env. using random.');
 }
 
 if (!BOB_PRIVATE_KEY) {
-  throw new Error('BOB_PRIVATE_KEY missing from env');
+  console.warn('BOB_PRIVATE_KEY missing from env. using random.');
 }
 
 if (!CHARLIE_PRIVATE_KEY) {
-  throw new Error('CHARLIE_PRIVATE_KEY missing from env');
+  console.warn('CHARLIE_PRIVATE_KEY missing from env. using random.');
 }
 
 class DummyTrader {
