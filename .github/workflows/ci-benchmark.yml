@@ -31,7 +31,7 @@ jobs:
           submodules: recursive
 
       - name: Switch submodule to current HEAD
-        run: cd $GITHUB_WORKSPACE/manifest-private/deps/manifest; git checkout $GITHUB_SHA
+        run: cd $GITHUB_WORKSPACE/manifest-private/deps/manifest; git fetch origin $GITHUB_SHA; git checkout $GITHUB_SHA
 
       - uses: actions/setup-python@v5
         with:
