@@ -204,7 +204,8 @@ export class ManifestClient {
   }
 
   /**
-   * generate ixs which need to be executed in order to run a manifest client for a given market. 0 means all good
+   * generate ixs which need to be executed in order to run a manifest client for a given market. `{ setupNeeded: false }` means all good.
+   * this function should be used before getClientForMarketNoPrivateKey for UI cases where `Keypair`s cannot be directly passed in.
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
@@ -305,6 +306,7 @@ export class ManifestClient {
 
   /**
    * Create a new client. throws if setup ixs are needed. Call ManifestClient.getSetupIxs to check if ixs are needed.
+   * This is the way to create a client without directly passing in `Keypair` types (for example when building a UI).
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
