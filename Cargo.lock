@@ -1822,7 +1822,6 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "colored",
- "sbprof",
  "solana-program",
  "static_assertions",
 ]
@@ -3395,14 +3394,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "sbprof"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 2.0.75",
 ]
 
 [[package]]
@@ -6360,7 +6351,6 @@ dependencies = [
  "hypertree",
  "manifest",
  "num_enum 0.5.9",
- "sbprof",
  "shank",
  "solana-logger",
  "solana-program",

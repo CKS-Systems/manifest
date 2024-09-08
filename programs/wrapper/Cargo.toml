@@ -21,7 +21,6 @@ test = []
 [dependencies]
 manifest = { path = "../manifest", features = ["no-entrypoint"]  }
 hypertree = { path = "../../lib" }
-sbprof = { path = "../../../../sbprof" }
 # Cannot use workspace because the generator needs to see a version here
 shank = "0.4.2"
 spl-token = { workspace = true, features = ["no-entrypoint"] }

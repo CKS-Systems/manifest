@@ -105,7 +105,6 @@ impl WrapperBatchUpdateParams {
     }
 }
 
-// #[sbprof]
 fn prepare_cancels(
     market: &ManifestAccountInfo<MarketFixed>,
     wrapper_state: &WrapperStateAccountInfo,
@@ -209,7 +208,6 @@ fn prepare_cancels(
     return Ok(core_cancels);
 }
 
-// #[sbprof]
 fn prepare_orders(
     orders: &Vec<WrapperPlaceOrderParams>,
     remaining_base_atoms: &mut BaseAtoms,
@@ -259,7 +257,6 @@ fn prepare_orders(
         .collect()
 }
 
-// #[sbprof]
 fn process_cancels(
     wrapper_state: &WrapperStateAccountInfo,
     cancels: &Vec<WrapperCancelOrderParams>,
@@ -330,7 +327,6 @@ fn process_cancels(
     return orders_root_index;
 }
 
-// #[sbprof]
 fn process_orders<'a, 'info>(
     payer: &Signer<'a, 'info>,
     system_program: &Program<'a, 'info>,
@@ -402,18 +398,6 @@ fn process_orders<'a, 'info>(
     Ok(())
 }
 
-// #[sbprof]
-fn _invoke(
-    ix: &solana_program::instruction::Instruction,
-    ais: &[AccountInfo<'_>],
-) -> ProgramResult {
-    invoke(
-        ix, // System program is not needed since already expanded.
-        ais,
-    )
-}
-
-// #[sbprof]
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
