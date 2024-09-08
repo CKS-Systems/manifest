@@ -2,7 +2,7 @@ use std::cell::Ref;
 
 use borsh::BorshDeserialize;
 use manifest::{
-    program::{deposit::DepositParams, deposit_instruction, get_dynamic_account},
+    program::{deposit::DepositParams, deposit_instruction},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };

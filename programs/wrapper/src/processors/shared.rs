@@ -17,7 +17,7 @@ use manifest::{
     program::get_dynamic_account,
     quantities::BaseAtoms,
     require,
-    state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, RestingOrder},
+    state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -124,7 +124,7 @@ fn does_need_expand(wrapper_state: &WrapperStateAccountInfo) -> bool {
     let (fixed_data, _dynamic_data) = wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
 
     let wrapper_fixed: &ManifestWrapperStateFixed = get_helper(fixed_data, 0);
-    return wrapper_fixed.free_list_head_index == NIL;
+    wrapper_fixed.free_list_head_index == NIL
 }
 
 pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &Pubkey) {
@@ -141,7 +141,7 @@ pub(crate) fn sync(
     market: &ManifestAccountInfo<MarketFixed>,
 ) -> ProgramResult {
     let market_info_index: DataIndex =
-        get_market_info_index_for_market(&wrapper_state, &market.info.key);
+        get_market_info_index_for_market(wrapper_state, market.info.key);
     sync_fast(wrapper_state, market, market_info_index)
 }
 
@@ -190,7 +190,8 @@ pub(crate) fn sync_fast(
             let node: &mut RBNode<WrapperOpenOrder> =
                 get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index);
             let core_resting_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index).get_value();
+                get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index)
+                    .get_value();
             node.get_mut_value()
                 .update_remaining(core_resting_order.get_num_base_atoms());
 
@@ -256,82 +257,6 @@ pub(crate) fn get_market_info_index_for_market(
     let market_info_index: DataIndex =
         market_infos_tree.lookup_index(&MarketInfo::new_empty(*market, NIL));
     market_info_index
-}
-
-pub(crate) fn get_wrapper_order_indexes_by_client_order_id(
-    wrapper_state: &WrapperStateAccountInfo,
-    market_key: &Pubkey,
-    client_order_id: u64,
-) -> Vec<DataIndex> {
-    // Lookup all orders with that client_order_id
-    let market_info_index: DataIndex = get_market_info_index_for_market(wrapper_state, market_key);
-    let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data().unwrap();
-    let (_fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
-
-    let orders_root_index: DataIndex =
-        get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index)
-            .get_value()
-            .orders_root_index;
-
-    let matching_order_indexes: Vec<DataIndex> = lookup_order_indexes_by_client_order_id(
-        client_order_id,
-        wrapper_dynamic_data,
-        orders_root_index,
-    );
-
-    matching_order_indexes
-}
-
-pub(crate) fn lookup_order_indexes_by_client_order_id(
-    client_order_id: u64,
-    wrapper_dynamic_data: &[u8],
-    orders_root_index: DataIndex,
-) -> Vec<DataIndex> {
-    let open_orders_tree: OpenOrdersTreeReadOnly =
-        OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
-    let matching_order_index: DataIndex =
-        open_orders_tree.lookup_index(&WrapperOpenOrder::new_empty(client_order_id));
-
-    // TODO: size according to freelist
-    let mut result: Vec<DataIndex> = Vec::new();
-    result.push(matching_order_index);
-
-    let mut current_order_index: DataIndex =
-        open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(matching_order_index);
-    while current_order_index != NIL {
-        if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
-            .get_value()
-            .get_client_order_id()
-            != client_order_id
-        {
-            break;
-        }
-        result.push(current_order_index);
-        current_order_index =
-            open_orders_tree.get_next_lower_index::<WrapperOpenOrder>(current_order_index);
-    }
-
-    let mut current_order_index: DataIndex =
-        open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(matching_order_index);
-    while current_order_index != NIL {
-        if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
-            .get_value()
-            .get_client_order_id()
-            != client_order_id
-        {
-            break;
-        }
-        result.push(current_order_index);
-        current_order_index =
-            open_orders_tree.get_next_higher_index::<WrapperOpenOrder>(current_order_index);
-    }
-
-    // Not necessary but useful in practice.
-    result.sort_unstable();
-    result.dedup();
-
-    result
 }
 
 /// Validation for wrapper account

@@ -16,7 +16,7 @@ use manifest::{
         ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, MarketRef, OrderType},
+    state::{DynamicAccount, MarketFixed, OrderType},
     validation::{loaders::BatchUpdateContext, ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -35,9 +35,8 @@ use crate::{
 };
 
 use super::shared::{
-    check_signer, expand_wrapper_if_needed, get_market_info_index_for_market,
-    get_wrapper_order_indexes_by_client_order_id, lookup_order_indexes_by_client_order_id, sync,
-    sync_fast, OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
+    check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
+    OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
@@ -148,7 +147,7 @@ fn prepare_cancels(
             };
         }
     }
-    return Ok((wrapper_indices, core_cancels));
+    Ok((wrapper_indices, core_cancels))
 }
 
 fn prepare_orders(
@@ -226,13 +225,34 @@ fn execute_cpi(
         accounts: acc_metas,
         data: [
             ManifestInstruction::BatchUpdate.to_vec(),
-            BatchUpdateParams::new(trader_index_hint, core_cancels, core_orders)
-                .try_to_vec()
-                .unwrap(),
+            BatchUpdateParams::new(trader_index_hint, core_cancels, core_orders).try_to_vec()?,
         ]
         .concat(),
     };
 
+    invoke(&ix, &accounts[1..])
+}
+
+fn execute_cpi2(
+    accounts: &[AccountInfo],
+    trader_index_hint: Option<DataIndex>,
+    core_cancels: Vec<CancelOrderParams>,
+    core_orders: Vec<PlaceOrderParams>,
+    market_key: &Pubkey,
+    payer_key: &Pubkey,
+) -> ProgramResult {
+    let ix = batch_update_instruction(
+        market_key,
+        payer_key,
+        trader_index_hint,
+        core_cancels,
+        core_orders,
+        None,
+        None,
+        None,
+        None,
+    );
+    // Call the batch update CPI
     invoke(&ix, &accounts[1..])
 }
 
@@ -300,6 +320,9 @@ fn process_orders<'a, 'info>(
             continue;
         }
 
+        // TODO expand as much as possible in one go
+        expand_wrapper_if_needed(wrapper_state, payer, system_program)?;
+
         let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
         let wrapper: DynamicAccount<&mut ManifestWrapperStateFixed, &mut [u8]> =
             get_mut_dynamic_account(&mut wrapper_data);
@@ -346,8 +369,6 @@ fn process_orders<'a, 'info>(
         market_info.orders_root_index = new_root_index;
 
         drop(wrapper_data);
-
-        expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
     }
     Ok(())
 }
@@ -362,14 +383,11 @@ pub(crate) fn process_batch_update(
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     let _manifest_program: Program =
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
-
-    let batch_update_context: BatchUpdateContext = BatchUpdateContext::load(&accounts[1..])?;
-    let BatchUpdateContext {
-        market,
-        payer,
-        system_program,
-        ..
-    } = batch_update_context;
+    let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
+    let market: ManifestAccountInfo<MarketFixed> =
+        ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+    let system_program: Program =
+        Program::new(next_account_info(account_iter)?, &system_program::id())?;
 
     check_signer(&wrapper_state, payer.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
@@ -416,6 +434,7 @@ pub(crate) fn process_batch_update(
     );
 
     execute_cpi(accounts, trader_index_hint, core_cancels, core_orders)?;
+    // execute_cpi2(accounts, trader_index_hint, core_cancels, core_orders, market.key, payer.key)?;
 
     // Process the cancels
     process_cancels(&wrapper_state, &cancel_indices, market_info_index);
