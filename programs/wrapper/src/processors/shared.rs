@@ -14,10 +14,11 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
+    program::get_dynamic_account,
     quantities::BaseAtoms,
     require,
-    state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
-    validation::{Program, Signer},
+    state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, RestingOrder},
+    validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -137,12 +138,22 @@ pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &
 
 pub(crate) fn sync(
     wrapper_state: &WrapperStateAccountInfo,
-    market: &Pubkey,
-    market_ref: MarketRef,
+    market: &ManifestAccountInfo<MarketFixed>,
 ) -> ProgramResult {
-    let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market);
+    let market_info_index: DataIndex =
+        get_market_info_index_for_market(&wrapper_state, &market.info.key);
+    sync_fast(wrapper_state, market, market_info_index)
+}
 
-    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
+pub(crate) fn sync_fast(
+    wrapper_state: &WrapperStateAccountInfo,
+    market: &ManifestAccountInfo<MarketFixed>,
+    market_info_index: DataIndex,
+) -> ProgramResult {
+    let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
+    let market_ref = get_dynamic_account::<MarketFixed>(&market_data);
+
+    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data()?;
     let (fixed_data, wrapper_dynamic_data) =
         wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
 
@@ -157,8 +168,8 @@ pub(crate) fn sync(
 
         // Cannot do this in one pass because we need the data borrowed for the
         // iterator so cannot also borrow it for updating the nodes.
-        let mut to_remove_indices: Vec<DataIndex> = Vec::new();
-        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::new();
+        let mut to_remove_indices: Vec<DataIndex> = Vec::with_capacity(16);
+        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::with_capacity(16);
         for (order_index, order) in orders_tree.iter::<WrapperOpenOrder>() {
             let expected_sequence_number: u64 = order.get_order_sequence_number();
             let core_data_index: DataIndex = order.get_market_data_index();
@@ -179,8 +190,7 @@ pub(crate) fn sync(
             let node: &mut RBNode<WrapperOpenOrder> =
                 get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index);
             let core_resting_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index)
-                    .get_value();
+                get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index).get_value();
             node.get_mut_value()
                 .update_remaining(core_resting_order.get_num_base_atoms());
 

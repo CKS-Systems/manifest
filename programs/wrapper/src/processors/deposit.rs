@@ -72,11 +72,7 @@ pub(crate) fn process_deposit(
         ],
     )?;
 
-    sync(
-        &wrapper_state,
-        market.key,
-        get_dynamic_account(&market.try_borrow_data().unwrap()),
-    )?;
+    sync(&wrapper_state, &market)?;
 
     Ok(())
 }

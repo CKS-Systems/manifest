@@ -24,12 +24,11 @@ pub fn batch_update_instruction(
     Instruction {
         program_id: crate::id(),
         accounts: vec![
+            AccountMeta::new(*wrapper_state, false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*payer, true),
             AccountMeta::new(*market, false),
             AccountMeta::new_readonly(system_program::id(), false),
-            AccountMeta::new(*payer, true),
-            AccountMeta::new(*wrapper_state, false),
         ],
         data: [
             ManifestWrapperInstruction::BatchUpdate.to_vec(),
