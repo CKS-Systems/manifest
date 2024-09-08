@@ -1,4 +1,4 @@
-use solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
+use solana_program::program_error::ProgramError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -54,14 +54,14 @@ impl From<ManifestError> for ProgramError {
     }
 }
 
-#[track_caller]
-#[inline(always)]
-pub fn assert_with_msg(v: bool, err: impl Into<ProgramError>, msg: &str) -> ProgramResult {
-    if v {
+#[macro_export]
+macro_rules! require {
+  ($test:expr, $err:expr, $($arg:tt)*) => {
+    if $test {
         Ok(())
     } else {
-        let caller: &std::panic::Location<'_> = std::panic::Location::caller();
-        solana_program::msg!("{}. \n{}", msg, caller);
-        Err(err.into())
+        solana_program::msg!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
+        Err(($err))
     }
+  };
 }

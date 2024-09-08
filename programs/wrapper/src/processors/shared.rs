@@ -14,8 +14,8 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::assert_with_msg,
     quantities::BaseAtoms,
+    require,
     state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
     validation::{Program, Signer},
 };
@@ -341,7 +341,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     fn _new_unchecked(
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Wrapper must be owned by the program",
@@ -359,7 +359,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
 
-        assert_with_msg(
+        require!(
             header.discriminant == WRAPPER_STATE_DISCRIMINANT,
             ProgramError::InvalidAccountData,
             "Invalid wrapper state discriminant",
@@ -375,13 +375,13 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Market must be owned by the Manifest program",
         )?;
         // On initialization, the discriminant is not set yet.
-        assert_with_msg(
+        require!(
             header.discriminant == 0,
             ProgramError::InvalidAccountData,
             "Expected uninitialized market with discriminant 0",

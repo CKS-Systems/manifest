@@ -2,8 +2,9 @@ use std::cell::RefMut;
 
 use crate::{
     global_vault_seeds_with_bump,
-    program::{assert_with_msg, get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
 };
 use hypertree::{DataIndex, NIL};
@@ -42,7 +43,7 @@ pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
     global_trade_owner: &Pubkey,
 ) -> ProgramResult {
-    assert_with_msg(
+    require!(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
         "Missing global accounts when cancelling a global",
@@ -127,7 +128,7 @@ pub(crate) fn try_to_add_to_global(
 }
 
 pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
-    assert_with_msg(
+    require!(
         order_type_can_take(order_type),
         ManifestError::PostOnlyCrosses,
         "Post only order would cross",
@@ -136,19 +137,18 @@ pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
 }
 
 pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) -> ProgramResult {
-    assert_with_msg(
+    require!(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot > now_slot,
         ManifestError::AlreadyExpired,
-        &format!(
-            "Placing an already expired order. now: {} last_valid: {}",
-            now_slot, last_valid_slot
-        ),
+        "Placing an already expired order. now: {} last_valid: {}",
+        now_slot,
+        last_valid_slot
     )?;
     Ok(())
 }
 
 pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult {
-    assert_with_msg(
+    require!(
         trader_index != NIL,
         ManifestError::AlreadyClaimedSeat,
         "Need to claim a seat first",
@@ -161,7 +161,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -> Result<bool, ProgramError> {
-    assert_with_msg(
+    require!(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
         "Missing global accounts when adding a global",
@@ -193,7 +193,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
     let global_vault_bump: u8 = global_dynamic_account.fixed.get_vault_bump();
     if *token_program.key == spl_token_2022::id() {
-        assert_with_msg(
+        require!(
             mint.is_some(),
             ManifestError::MissingGlobal,
             "Missing global mint",

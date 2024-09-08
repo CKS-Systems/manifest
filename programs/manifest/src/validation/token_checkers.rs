@@ -1,4 +1,4 @@
-use crate::program::error::assert_with_msg;
+use crate::require;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
@@ -37,13 +37,13 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
         info: &'a AccountInfo<'info>,
         mint: &Pubkey,
     ) -> Result<TokenAccountInfo<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.owner == &spl_token::id() || info.owner == &spl_token_2022::id(),
             ProgramError::IllegalOwner,
             "Token account must be owned by the Token Program",
         )?;
         // The mint key is found at offset 0 of the token account
-        assert_with_msg(
+        require!(
             &info.try_borrow_data()?[0..32] == mint.as_ref(),
             ProgramError::InvalidAccountData,
             "Token account mint mismatch",
@@ -66,7 +66,7 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
     ) -> Result<TokenAccountInfo<'a, 'info>, ProgramError> {
         let token_account_info = Self::new(info, mint)?;
         // The owner key is found at offset 32 of the token account
-        assert_with_msg(
+        require!(
             &info.try_borrow_data()?[32..64] == owner.as_ref(),
             ProgramError::IllegalOwner,
             "Token account owner mismatch",
@@ -80,7 +80,7 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
         owner: &Pubkey,
         key: &Pubkey,
     ) -> Result<TokenAccountInfo<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.key == key,
             ProgramError::InvalidInstructionData,
             "Invalid pubkey for Token Account",

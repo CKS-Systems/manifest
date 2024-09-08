@@ -1,12 +1,13 @@
-use std::cell::RefMut;
+use std::{cell::RefMut, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
-        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut,
-        OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
+        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -76,6 +77,7 @@ impl PlaceOrderParams {
     pub fn base_atoms(&self) -> u64 {
         self.base_atoms
     }
+
     pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
             self.price_mantissa,
@@ -148,6 +150,8 @@ pub(crate) fn process_batch_update(
         orders,
     } = BatchUpdateParams::try_from_slice(data)?;
 
+    let current_slot = Some(get_now_slot());
+
     trace!("batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}");
 
     let trader_index: DataIndex = {
@@ -160,19 +164,21 @@ pub(crate) fn process_batch_update(
                 dynamic_account.get_trader_index(payer.key)
             }
             Some(hinted_index) => {
-                assert_with_msg(
+                require!(
                     hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
                     ManifestError::WrongIndexHintParams,
-                    &format!("Invalid trader hint index {}", hinted_index),
+                    "Invalid trader hint index {}",
+                    hinted_index,
                 )?;
-                assert_with_msg(
+                require!(
                     get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
                         .get_payload_type()
                         == MarketDataTreeNodeType::ClaimedSeat as u8,
                     ManifestError::WrongIndexHintParams,
-                    &format!("Invalid trader hint index {}", hinted_index),
+                    "Invalid trader hint index {}",
+                    hinted_index,
                 )?;
-                assert_with_msg(
+                require!(
                     payer
                         .key
                         .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
@@ -201,12 +207,13 @@ pub(crate) fn process_batch_update(
                     // Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
-                    assert_with_msg(
+                    require!(
                         trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        "Invalid cancel hint index {}",
+                        hinted_cancel_index,
                     )?;
-                    assert_with_msg(
+                    require!(
                         get_helper::<RBNode<RestingOrder>>(
                             &dynamic_account.dynamic,
                             hinted_cancel_index,
@@ -214,14 +221,16 @@ pub(crate) fn process_batch_update(
                         .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder as u8,
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        "Invalid cancel hint index {}",
+                        hinted_cancel_index,
                     )?;
                     let order: &RestingOrder =
                         dynamic_account.get_order_by_index(hinted_cancel_index);
-                    assert_with_msg(
+                    require!(
                         trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        &format!("Invalid cancel hint index {}", hinted_cancel_index),
+                        "Invalid cancel hint index {}",
+                        hinted_cancel_index,
                     )?;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
@@ -263,6 +272,7 @@ pub(crate) fn process_batch_update(
                     last_valid_slot,
                     order_type,
                     global_trade_accounts_opts: &global_trade_accounts_opts,
+                    current_slot,
                 })?;
 
             let AddOrderToMarketResult {
@@ -288,7 +298,8 @@ pub(crate) fn process_batch_update(
         expand_market_if_needed(&payer, &market, &system_program)?;
     }
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(result.len());
+    let mut buffer: Vec<u8> =
+        Vec::with_capacity(size_of::<BatchUpdateReturn>() + result.len() * 2 * size_of::<u64>());
     let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
     return_data.serialize(&mut buffer).unwrap();
     set_return_data(&buffer[..]);
