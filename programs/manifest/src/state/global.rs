@@ -43,6 +43,12 @@ pub struct GlobalFixed {
     /// Red-black tree root representing the global orders for the bank.
     global_traders_root_index: DataIndex,
 
+    /// Red-black tree root representing the global orders for the bank sorted by amount.
+    global_amounts_root_index: DataIndex,
+    /// Max, because the Hypertree provides access to max, but the sort key is
+    /// reversed so this is the smallest balance.
+    global_amounts_max_index: DataIndex,
+
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
@@ -60,6 +66,8 @@ const_assert_eq!(
     32 +  // mint
     32 +  // vault
     4 +   // global_seats_root_index
+    4 +   // global_amounts_root_index
+    4 +   // global_amounts_max_index 
     4 +   // free_list_head_index
     4 +   // num_bytes_allocated
     1 +   // vault_bump
@@ -135,6 +143,8 @@ impl GlobalFixed {
             mint: *mint,
             vault,
             global_traders_root_index: NIL,
+            global_amounts_root_index: NIL,
+            global_amounts_max_index: NIL,
             free_list_head_index: NIL,
             num_bytes_allocated: 0,
             vault_bump,
@@ -289,11 +299,17 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         existing_trader: &Pubkey,
         new_trader: &Pubkey,
     ) -> ProgramResult {
+        // TODO: Make this expensive so it cannot be composed and used in attacks where bumping.
+
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
-        let free_address: DataIndex = get_free_address_on_global_fixed(fixed, dynamic);
         let existing_trader: GlobalTrader = *get_global_trader(fixed, dynamic, existing_trader)
             .expect("Trader to evict must exist");
+        assert_with_msg(
+            existing_trader.balance_atoms == GlobalAtoms::ZERO,
+            ManifestError::GlobalInsufficient,
+            "Error in emptying the existing global",
+        )?;
         let mut global_trader_tree: GlobalTraderTree =
             GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
         let existing_index: DataIndex = global_trader_tree.lookup_index(&existing_trader);
@@ -307,7 +323,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             "Already claimed global trader seat",
         )?;
 
-        global_trader_tree.insert(free_address, new_global_trader);
+        global_trader_tree.insert(existing_index, new_global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
 
         Ok(())

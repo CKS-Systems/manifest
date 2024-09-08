@@ -703,6 +703,7 @@ impl<'a, 'info> GlobalEvictContext<'a, 'info> {
         let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
         let trader_token: TokenAccountInfo =
             TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
+        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
         let evictee_token: TokenAccountInfo =
             TokenAccountInfo::new(token_account_info, mint.info.key)?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;

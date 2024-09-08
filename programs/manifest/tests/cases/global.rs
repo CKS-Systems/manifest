@@ -4,13 +4,19 @@ use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
         batch_update_instruction, global_add_trader_instruction, global_deposit_instruction,
-        swap_instruction,
+        global_evict_instruction, swap_instruction,
     },
     quantities::{GlobalAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, GlobalFixed, OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{
+        DynamicAccount, GlobalFixed, OrderType, RestingOrder, MAX_GLOBAL_SEATS,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
 };
 use solana_program_test::tokio;
-use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair};
+use solana_sdk::{
+    instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    system_instruction::transfer,
+};
 
 use crate::{
     send_tx_with_retry, GlobalFixture, MarketFixture, MintFixture, TestFixture, Token,
@@ -567,5 +573,119 @@ async fn global_get_balance_not_in_global() -> anyhow::Result<()> {
 
     let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
     assert_eq!(balance_atoms, GlobalAtoms::ZERO);
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_run_out_of_seats() -> anyhow::Result<()> {
+    let test_fixture: TestFixture = TestFixture::new().await;
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+
+    for _ in 0..MAX_GLOBAL_SEATS {
+        let keypair: Keypair = Keypair::new();
+        // Fund gas for the account.
+        send_tx_with_retry(
+            Rc::clone(&test_fixture.context),
+            &[transfer(&payer, &keypair.pubkey(), 10_000_000)],
+            Some(&payer),
+            &[&payer_keypair],
+        )
+        .await?;
+        send_tx_with_retry(
+            Rc::clone(&test_fixture.context),
+            &[global_add_trader_instruction(
+                &test_fixture.global_fixture.key,
+                &keypair.pubkey(),
+            )],
+            Some(&keypair.pubkey()),
+            &[&keypair],
+        )
+        .await?;
+    }
+
+    // Last one doesnt work.
+    assert!(test_fixture.global_add_trader().await.is_err());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_evict() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+
+    for _ in 0..MAX_GLOBAL_SEATS - 1 {
+        let new_keypair: Keypair = Keypair::new();
+        // There are bugs with the first tx looking like it fails but actually
+        // succeeds. Just continue on.
+        let _ = send_tx_with_retry(
+            Rc::clone(&test_fixture.context),
+            &[
+                transfer(&payer, &new_keypair.pubkey(), 10_000_000),
+                global_add_trader_instruction(
+                    &test_fixture.global_fixture.key,
+                    &new_keypair.pubkey(),
+                ),
+            ],
+            Some(&payer_keypair.pubkey()),
+            &[&payer_keypair, &new_keypair],
+        )
+        .await;
+    }
+
+    test_fixture.global_add_trader().await?;
+
+    let evictee_account_keypair: Keypair = Keypair::new();
+    let evictee_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.global_fixture.mint_key,
+        &payer,
+        &evictee_account_keypair,
+    )
+    .await;
+
+    let evictor_account_keypair: Keypair = Keypair::new();
+    let evictor_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.global_fixture.mint_key,
+        &test_fixture.second_keypair.pubkey(),
+        &evictor_account_keypair,
+    )
+    .await;
+    test_fixture
+        .usdc_mint_fixture
+        .mint_to(&evictor_account_fixture.key, 1_000_000)
+        .await;
+
+    // Second keypair is evicting first.
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_evict_instruction(
+            &test_fixture.global_fixture.mint_key,
+            &test_fixture.second_keypair.pubkey(),
+            &evictor_account_fixture.key,
+            &evictee_account_fixture.key,
+            &spl_token::id(),
+            1_000_000,
+        )],
+        Some(&test_fixture.second_keypair.pubkey()),
+        &[&test_fixture.second_keypair.insecure_clone()],
+    )
+    .await?;
+
+    test_fixture.global_fixture.reload().await;
+    let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> =
+        test_fixture.global_fixture.global;
+
+    // First got emptied.
+    let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
+    assert_eq!(balance_atoms, GlobalAtoms::ZERO);
+    let balance_atoms: GlobalAtoms =
+        global_dynamic_account.get_balance_atoms(&test_fixture.second_keypair.pubkey());
+    assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
+
     Ok(())
 }

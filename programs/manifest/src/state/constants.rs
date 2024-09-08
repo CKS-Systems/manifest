@@ -1,7 +1,7 @@
 use hypertree::RBTREE_OVERHEAD_BYTES;
 
 pub const MARKET_FIXED_SIZE: usize = 256;
-pub const GLOBAL_FIXED_SIZE: usize = 88;
+pub const GLOBAL_FIXED_SIZE: usize = 96;
 
 // Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
 // 64 bytes for a RestingOrder or ClaimedSeat.
@@ -39,4 +39,4 @@ pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 /// Limit on the number of global seats available. Set so that this is hit
 /// before the global account starts running into account size limits, but is
 /// generous enough that it really should only matter in deterring spam.
-pub const MAX_GLOBAL_SEATS: u16 = u16::MAX - 1_u16;
+pub const MAX_GLOBAL_SEATS: u16 = 1_000;

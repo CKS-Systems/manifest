@@ -51,6 +51,14 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
         Ok(Self { info })
     }
 
+    pub fn get_owner(&self) -> Pubkey {
+        Pubkey::new_from_array(
+            self.info.try_borrow_data().unwrap()[32..64]
+                .try_into()
+                .unwrap(),
+        )
+    }
+
     pub fn new_with_owner(
         info: &'a AccountInfo<'info>,
         mint: &Pubkey,
