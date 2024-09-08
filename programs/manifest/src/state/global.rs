@@ -282,7 +282,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         global_trader_tree.insert(free_address, global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
-        assert_with_msg(
+        require!(
             fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
             ManifestError::TooManyGlobalSeats,
             "There is a strict limit on number of seats available in a global, use evict",
@@ -305,7 +305,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let existing_trader: GlobalTrader = *get_global_trader(fixed, dynamic, existing_trader)
             .expect("Trader to evict must exist");
-        assert_with_msg(
+        require!(
             existing_trader.balance_atoms == GlobalAtoms::ZERO,
             ManifestError::GlobalInsufficient,
             "Error in emptying the existing global",
@@ -317,7 +317,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let new_global_trader: GlobalTrader = GlobalTrader::new_empty(new_trader);
         // Cannot claim an extra seat.
-        assert_with_msg(
+        require!(
             global_trader_tree.lookup_index(&new_global_trader) == NIL,
             ManifestError::AlreadyClaimedSeat,
             "Already claimed global trader seat",

@@ -585,23 +585,16 @@ async fn global_run_out_of_seats() -> anyhow::Result<()> {
     for _ in 0..MAX_GLOBAL_SEATS {
         let keypair: Keypair = Keypair::new();
         // Fund gas for the account.
-        send_tx_with_retry(
+        let _ = send_tx_with_retry(
             Rc::clone(&test_fixture.context),
-            &[transfer(&payer, &keypair.pubkey(), 10_000_000)],
+            &[
+                transfer(&payer, &keypair.pubkey(), 10_000_000),
+                global_add_trader_instruction(&test_fixture.global_fixture.key, &keypair.pubkey()),
+            ],
             Some(&payer),
-            &[&payer_keypair],
+            &[&payer_keypair, &keypair],
         )
-        .await?;
-        send_tx_with_retry(
-            Rc::clone(&test_fixture.context),
-            &[global_add_trader_instruction(
-                &test_fixture.global_fixture.key,
-                &keypair.pubkey(),
-            )],
-            Some(&keypair.pubkey()),
-            &[&keypair],
-        )
-        .await?;
+        .await;
     }
 
     // Last one doesnt work.
