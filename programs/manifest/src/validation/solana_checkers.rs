@@ -1,4 +1,4 @@
-use crate::program::error::assert_with_msg;
+use crate::require;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program,
 };
@@ -14,7 +14,7 @@ impl<'a, 'info> Program<'a, 'info> {
         info: &'a AccountInfo<'info>,
         expected_program_id: &Pubkey,
     ) -> Result<Program<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.key == expected_program_id,
             ProgramError::IncorrectProgramId,
             "Incorrect program id",
@@ -36,10 +36,10 @@ pub struct TokenProgram<'a, 'info> {
 
 impl<'a, 'info> TokenProgram<'a, 'info> {
     pub fn new(info: &'a AccountInfo<'info>) -> Result<TokenProgram<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             *info.key == spl_token::id() || *info.key == spl_token_2022::id(),
             ProgramError::IncorrectProgramId,
-            &format!("Incorrect token program id: {:?}", info.key),
+            "Incorrect token program id: {:?}", info.key
         )?;
         Ok(Self { info })
     }
@@ -66,7 +66,7 @@ pub struct Signer<'a, 'info> {
 
 impl<'a, 'info> Signer<'a, 'info> {
     pub fn new(info: &'a AccountInfo<'info>) -> Result<Signer<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
             "Missing required signature",
@@ -75,12 +75,12 @@ impl<'a, 'info> Signer<'a, 'info> {
     }
 
     pub fn new_payer(info: &'a AccountInfo<'info>) -> Result<Signer<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.is_writable,
             ProgramError::InvalidInstructionData,
             "Payer is not writable",
         )?;
-        assert_with_msg(
+        require!(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
             "Missing required signature for payer",
@@ -110,12 +110,12 @@ pub struct EmptyAccount<'a, 'info> {
 
 impl<'a, 'info> EmptyAccount<'a, 'info> {
     pub fn new(info: &'a AccountInfo<'info>) -> Result<EmptyAccount<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.data_is_empty(),
             ProgramError::InvalidAccountData,
             "Account must be uninitialized",
         )?;
-        assert_with_msg(
+        require!(
             info.owner == &system_program::id(),
             ProgramError::IllegalOwner,
             "Empty accounts must be owned by the system program",

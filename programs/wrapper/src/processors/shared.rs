@@ -14,7 +14,7 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::assert_with_msg,
+    require,
     quantities::BaseAtoms,
     state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
     validation::{Program, Signer},
@@ -51,6 +51,7 @@ const_assert_eq!(
 // Does not align to 8 bytes but not necessary
 // const_assert_eq!(size_of::<UnusedWrapperFreeListPadding>() % 8, 0);
 
+// #[sbprof]
 pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
     wrapper_state_account_info: &WrapperStateAccountInfo<'a, 'info>,
     payer: &Signer<'a, 'info>,
@@ -106,6 +107,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
     Ok(())
 }
 
+// #[sbprof]
 pub fn expand_wrapper(wrapper_data: &mut [u8]) {
     let (fixed_data, dynamic_data) =
         wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
@@ -127,6 +129,7 @@ fn does_need_expand(wrapper_state: &WrapperStateAccountInfo) -> bool {
     return wrapper_fixed.free_list_head_index == NIL;
 }
 
+// #[sbprof]
 pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &Pubkey) {
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let (header_bytes, _wrapper_dynamic_data) =
@@ -229,6 +232,7 @@ pub(crate) fn sync(
     Ok(())
 }
 
+// #[sbprof]
 pub(crate) fn get_market_info_index_for_market(
     wrapper_state: &WrapperStateAccountInfo,
     market: &Pubkey,
@@ -250,6 +254,7 @@ pub(crate) fn get_market_info_index_for_market(
     market_info_index
 }
 
+// #[sbprof]
 pub(crate) fn get_wrapper_order_indexes_by_client_order_id(
     wrapper_state: &WrapperStateAccountInfo,
     market_key: &Pubkey,
@@ -275,6 +280,7 @@ pub(crate) fn get_wrapper_order_indexes_by_client_order_id(
     matching_order_indexes
 }
 
+#[sbprof]
 pub(crate) fn lookup_order_indexes_by_client_order_id(
     client_order_id: u64,
     wrapper_dynamic_data: &[u8],
@@ -343,7 +349,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     fn _new_unchecked(
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Wrapper must be owned by the program",
@@ -351,6 +357,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         Ok(Self { info })
     }
 
+    #[sbprof]
     pub fn new(
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
@@ -361,7 +368,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
 
-        assert_with_msg(
+        require!(
             header.discriminant == WRAPPER_STATE_DISCRIMINANT,
             ProgramError::InvalidAccountData,
             "Invalid wrapper state discriminant",
@@ -377,13 +384,13 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Market must be owned by the Manifest program",
         )?;
         // On initialization, the discriminant is not set yet.
-        assert_with_msg(
+        require!(
             header.discriminant == 0,
             ProgramError::InvalidAccountData,
             "Expected uninitialized market with discriminant 0",

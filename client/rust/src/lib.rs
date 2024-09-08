@@ -300,6 +300,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -315,6 +316,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -461,6 +463,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -476,6 +479,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -732,6 +736,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Global,
                 global_trade_accounts_opts: &[None, Some(quote_global_trade_accounts)],
+                current_slot: None,
             })
             .unwrap();
 
@@ -747,6 +752,7 @@ mod test {
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
                 is_bid: false,
+                current_slot: None,
             })
             .unwrap();
 

@@ -1822,6 +1822,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "colored",
+ "sbprof",
  "solana-program",
  "static_assertions",
 ]
@@ -2169,7 +2170,6 @@ dependencies = [
  "bytemuck",
  "hypertree",
  "num_enum 0.5.9",
- "sbprof",
  "shank",
  "solana-logger",
  "solana-program",

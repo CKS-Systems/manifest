@@ -1,4 +1,4 @@
-use crate::program::{assert_with_msg, ManifestError};
+use crate::{require, program::{ManifestError}};
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::trace;
@@ -271,7 +271,7 @@ impl QuoteAtomsPerBaseAtom {
         } else {
             dividend.div(inner)
         };
-        assert_with_msg(
+        require!(
             base_atoms <= ATOM_LIMIT,
             ManifestError::Overflow,
             "Overflow",
@@ -295,7 +295,7 @@ impl QuoteAtomsPerBaseAtom {
             product.div(D20)
         };
         trace!("base:{base_atoms} price:{self} quote:{quote_atoms}");
-        assert_with_msg(
+        require!(
             quote_atoms <= ATOM_LIMIT,
             ManifestError::Overflow,
             "Overflow",

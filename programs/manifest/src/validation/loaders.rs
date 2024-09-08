@@ -9,7 +9,8 @@ use solana_program::{
 };
 
 use crate::{
-    program::{assert_with_msg, ManifestError},
+    require,
+    program::ManifestError,
     state::{GlobalFixed, MarketFixed},
     validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
 };
@@ -48,12 +49,12 @@ impl<'a, 'info> CreateMarketContext<'a, 'info> {
         let (expected_quote_vault, _quote_vault_bump) =
             get_vault_address(market.key, quote_mint.info.key);
 
-        assert_with_msg(
+        require!(
             expected_base_vault == *base_vault.info.key,
             ManifestError::IncorrectAccount,
             "Incorrect base vault account",
         )?;
-        assert_with_msg(
+        require!(
             expected_quote_vault == *quote_vault.info.key,
             ManifestError::IncorrectAccount,
             "Incorrect quote vault account",
@@ -359,7 +360,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
             let index: usize = if *global_mint_key == base_mint_key {
                 0
             } else {
-                assert_with_msg(
+                require!(
                     quote_mint_key == *global_mint_key,
                     ManifestError::MissingGlobal,
                     "Unexpected global accounts",
@@ -476,7 +477,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                 let (index, expected_market_vault_address) = if base_mint == *mint.info.key {
                     (0, &base_vault)
                 } else {
-                    assert_with_msg(
+                    require!(
                         quote_mint == *mint.info.key,
                         ManifestError::MissingGlobal,
                         "Unexpected global accounts",

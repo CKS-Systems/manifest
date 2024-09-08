@@ -17,7 +17,6 @@ use manifest::{
     state::{MarketFixed, MarketRef, OrderType},
     validation::{ManifestAccountInfo, Program, Signer},
 };
-use sbprof::sbprof;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -106,8 +105,16 @@ impl WrapperBatchUpdateParams {
     }
 }
 
-#[sbprof]
-fn prepare_cancels(market: &ManifestAccountInfo<MarketFixed>, wrapper_state: &WrapperStateAccountInfo, cancels: &Vec<WrapperCancelOrderParams>, cancel_all: bool, market_info_index: DataIndex, remaining_base_atoms: &mut BaseAtoms,  remaining_quote_atoms: &mut QuoteAtoms) -> Result<Vec<CancelOrderParams>, ProgramError> {
+// #[sbprof]
+fn prepare_cancels(
+    market: &ManifestAccountInfo<MarketFixed>,
+    wrapper_state: &WrapperStateAccountInfo,
+    cancels: &Vec<WrapperCancelOrderParams>,
+    cancel_all: bool,
+    market_info_index: DataIndex,
+    remaining_base_atoms: &mut BaseAtoms,
+    remaining_quote_atoms: &mut QuoteAtoms,
+) -> Result<Vec<CancelOrderParams>, ProgramError> {
     let mut core_cancels: Vec<CancelOrderParams> = cancels
         .iter()
         .map(|cancel: &WrapperCancelOrderParams| {
@@ -202,8 +209,12 @@ fn prepare_cancels(market: &ManifestAccountInfo<MarketFixed>, wrapper_state: &Wr
     return Ok(core_cancels);
 }
 
-#[sbprof]
-fn prepare_orders(orders: &Vec<WrapperPlaceOrderParams>, remaining_base_atoms: &mut BaseAtoms, remaining_quote_atoms: &mut QuoteAtoms) -> Vec<PlaceOrderParams> {
+// #[sbprof]
+fn prepare_orders(
+    orders: &Vec<WrapperPlaceOrderParams>,
+    remaining_base_atoms: &mut BaseAtoms,
+    remaining_quote_atoms: &mut QuoteAtoms,
+) -> Vec<PlaceOrderParams> {
     orders
         .iter()
         .map(|order: &WrapperPlaceOrderParams| {
@@ -248,8 +259,13 @@ fn prepare_orders(orders: &Vec<WrapperPlaceOrderParams>, remaining_base_atoms: &
         .collect()
 }
 
-#[sbprof]
-fn process_cancels(wrapper_state: &WrapperStateAccountInfo, cancels: &Vec<WrapperCancelOrderParams>, market_info_index: DataIndex, cancel_all: bool) -> DataIndex {
+// #[sbprof]
+fn process_cancels(
+    wrapper_state: &WrapperStateAccountInfo,
+    cancels: &Vec<WrapperCancelOrderParams>,
+    market_info_index: DataIndex,
+    cancel_all: bool,
+) -> DataIndex {
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let (fixed_data, wrapper_dynamic_data) =
         wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
@@ -314,7 +330,14 @@ fn process_cancels(wrapper_state: &WrapperStateAccountInfo, cancels: &Vec<Wrappe
     return orders_root_index;
 }
 
-fn process_orders<'a, 'info>(payer: &Signer<'a, 'info>, system_program: &Program<'a, 'info>, wrapper_state: &WrapperStateAccountInfo<'a, 'info>, orders: &Vec<WrapperPlaceOrderParams>, market_info_index: DataIndex) -> ProgramResult {
+// #[sbprof]
+fn process_orders<'a, 'info>(
+    payer: &Signer<'a, 'info>,
+    system_program: &Program<'a, 'info>,
+    wrapper_state: &WrapperStateAccountInfo<'a, 'info>,
+    orders: &Vec<WrapperPlaceOrderParams>,
+    market_info_index: DataIndex,
+) -> ProgramResult {
     let wrapper_state_info: &AccountInfo = wrapper_state.info;
 
     let cpi_return_data: Option<(Pubkey, Vec<u8>)> = get_return_data();
@@ -379,7 +402,18 @@ fn process_orders<'a, 'info>(payer: &Signer<'a, 'info>, system_program: &Program
     Ok(())
 }
 
-#[sbprof]
+// #[sbprof]
+fn _invoke(
+    ix: &solana_program::instruction::Instruction,
+    ais: &[AccountInfo<'_>],
+) -> ProgramResult {
+    invoke(
+        ix, // System program is not needed since already expanded.
+        ais,
+    )
+}
+
+// #[sbprof]
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -407,7 +441,7 @@ pub(crate) fn process_batch_update(
     sync(
         &wrapper_state,
         market.key,
-        get_dynamic_account(&market.try_borrow_data().unwrap()),
+        get_dynamic_account(&market.try_borrow_data()?),
     )?;
 
     // Cancels are mutable because the user may have mistakenly sent the same
@@ -442,33 +476,44 @@ pub(crate) fn process_batch_update(
         },
     );
 
-    let core_cancels = prepare_cancels(&market, &wrapper_state, &cancels, cancel_all, market_info_index, &mut remaining_base_atoms, &mut remaining_quote_atoms)?;
-    let core_orders = prepare_orders(&orders, &mut remaining_base_atoms, &mut remaining_quote_atoms);
-
-    // Call the batch update CPI
-    invoke(
-        &batch_update_instruction(
-            market.key,
-            payer.key,
-            trader_index_hint,
-            core_cancels.clone(),
-            core_orders.clone(),
-            None,
-            None,
-            None,
-            None,
-        ),
-        // System program is not needed since already expanded.
-        &[
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
+    let core_cancels = prepare_cancels(
+        &market,
+        &wrapper_state,
+        &cancels,
+        cancel_all,
+        market_info_index,
+        &mut remaining_base_atoms,
+        &mut remaining_quote_atoms,
     )?;
+    let core_orders = prepare_orders(
+        &orders,
+        &mut remaining_base_atoms,
+        &mut remaining_quote_atoms,
+    );
+
+    let ix = batch_update_instruction(
+        market.key,
+        payer.key,
+        trader_index_hint,
+        core_cancels.clone(),
+        core_orders.clone(),
+        None,
+        None,
+        None,
+        None,
+    );
+    let ais = [
+        manifest_program.info.clone(),
+        owner.info.clone(),
+        market.info.clone(),
+        system_program.info.clone(),
+    ];
+    // Call the batch update CPI
+    invoke(&ix, &ais)?;
 
     // Process the cancels
-    let orders_root_index = process_cancels(&wrapper_state, &cancels, market_info_index, cancel_all);
+    let orders_root_index =
+        process_cancels(&wrapper_state, &cancels, market_info_index, cancel_all);
 
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let (_fixed_data, wrapper_dynamic_data) =
@@ -480,7 +525,13 @@ pub(crate) fn process_batch_update(
     market_info.orders_root_index = orders_root_index;
     drop(wrapper_data);
 
-    process_orders(&payer, &system_program, &wrapper_state, &orders, market_info_index)?;
+    process_orders(
+        &payer,
+        &system_program,
+        &wrapper_state,
+        &orders,
+        market_info_index,
+    )?;
     // TODO: Enforce min_out_atoms
 
     // Sync to get the balance correct and remove any expired orders.
