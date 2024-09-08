@@ -403,7 +403,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 GlobalTrader::new_empty(new_trader, fixed.global_deposits_max_index);
 
             global_trader_tree.remove_by_index(existing_trader_index);
-            global_trader_tree.insert(existing_trader_index, new_global_trader);
 
             // Cannot claim an extra seat.
             require!(
@@ -411,6 +410,8 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 ManifestError::AlreadyClaimedSeat,
                 "Already claimed global trader seat",
             )?;
+
+            global_trader_tree.insert(existing_trader_index, new_global_trader);
             fixed.global_traders_root_index = global_trader_tree.get_root_index();
         }
 

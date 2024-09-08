@@ -36,7 +36,8 @@ pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
 // capital on the exchange to prevent that.
 pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 
+// TODO: size this so that the full account fits in 2 pages.
 /// Limit on the number of global seats available. Set so that this is hit
 /// before the global account starts running into account size limits, but is
 /// generous enough that it really should only matter in deterring spam.
-pub const MAX_GLOBAL_SEATS: u16 = 1_000;
+pub const MAX_GLOBAL_SEATS: u16 = 200;

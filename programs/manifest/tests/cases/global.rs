@@ -612,6 +612,19 @@ async fn global_evict() -> anyhow::Result<()> {
 
     for _ in 0..MAX_GLOBAL_SEATS - 1 {
         let new_keypair: Keypair = Keypair::new();
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+            Rc::clone(&test_fixture.context),
+            &test_fixture.global_fixture.mint_key,
+            &new_keypair.pubkey(),
+            &token_account_keypair,
+        )
+        .await;
+        test_fixture
+            .usdc_mint_fixture
+            .mint_to(&token_account_fixture.key, 1_000_000)
+            .await;
+
         // There are bugs with the first tx looking like it fails but actually
         // succeeds. Just continue on.
         let _ = send_tx_with_retry(
@@ -622,6 +635,13 @@ async fn global_evict() -> anyhow::Result<()> {
                     &test_fixture.global_fixture.key,
                     &new_keypair.pubkey(),
                 ),
+                global_deposit_instruction(
+                    &test_fixture.global_fixture.mint_key,
+                    &new_keypair.pubkey(),
+                    &token_account_fixture.key,
+                    &spl_token::id(),
+                    1_000_000,
+                ),
             ],
             Some(&payer_keypair.pubkey()),
             &[&payer_keypair, &new_keypair],
@@ -629,6 +649,7 @@ async fn global_evict() -> anyhow::Result<()> {
         .await;
     }
 
+    // Adds with payer
     test_fixture.global_add_trader().await?;
 
     let evictee_account_keypair: Keypair = Keypair::new();
