@@ -39,7 +39,8 @@ impl<'a, 'info> TokenProgram<'a, 'info> {
         require!(
             *info.key == spl_token::id() || *info.key == spl_token_2022::id(),
             ProgramError::IncorrectProgramId,
-            "Incorrect token program id: {:?}", info.key
+            "Incorrect token program id: {:?}",
+            info.key
         )?;
         Ok(Self { info })
     }

@@ -1,9 +1,9 @@
 use std::{cell::Ref, mem::size_of};
 
 use crate::{
-    require,
     logs::{emit_stack, CreateMarketLog},
-    program::{ expand_market_if_needed, ManifestError},
+    program::{expand_market_if_needed, ManifestError},
+    require,
     state::MarketFixed,
     utils::create_account,
     validation::{get_vault_address, loaders::CreateMarketContext},

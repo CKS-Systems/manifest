@@ -2,9 +2,9 @@ use std::cell::RefMut;
 
 use crate::{
     global_vault_seeds_with_bump,
-    require,
-    program::{ get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
 };
 use hypertree::{DataIndex, NIL};
@@ -140,8 +140,9 @@ pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) ->
     require!(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot > now_slot,
         ManifestError::AlreadyExpired,
-            "Placing an already expired order. now: {} last_valid: {}",
-            now_slot, last_valid_slot
+        "Placing an already expired order. now: {} last_valid: {}",
+        now_slot,
+        last_valid_slot
     )?;
     Ok(())
 }

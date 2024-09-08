@@ -15,9 +15,9 @@ use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pub
 use static_assertions::const_assert_eq;
 
 use crate::{
-    require,
-    program::{ ManifestError},
+    program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{
         get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
     },
@@ -165,8 +165,9 @@ impl ManifestAccount for GlobalFixed {
         require!(
             self.discriminant == GLOBAL_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-                "Invalid market discriminant actual: {} expected: {}",
-                self.discriminant, GLOBAL_FIXED_DISCRIMINANT
+            "Invalid market discriminant actual: {} expected: {}",
+            self.discriminant,
+            GLOBAL_FIXED_DISCRIMINANT
         )?;
         Ok(())
     }

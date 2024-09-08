@@ -9,10 +9,10 @@ use static_assertions::const_assert_eq;
 use std::mem::size_of;
 
 use crate::{
-    require,
     logs::{emit_stack, FillLog},
-    program::{ batch_update::MarketDataTreeNodeType, ManifestError},
+    program::{batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
@@ -42,7 +42,7 @@ pub struct AddOrderToMarketArgs<'a, 'info> {
     pub last_valid_slot: u32,
     pub order_type: OrderType,
     pub global_trade_accounts_opts: &'a [Option<GlobalTradeAccounts<'a, 'info>>; 2],
-    pub current_slot: Option<u32>
+    pub current_slot: Option<u32>,
 }
 
 pub struct AddOrderToMarketResult {
@@ -238,8 +238,9 @@ impl ManifestAccount for MarketFixed {
         require!(
             self.discriminant == MARKET_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-                "Invalid market discriminant actual: {} expected: {}",
-                self.discriminant, MARKET_FIXED_DISCRIMINANT
+            "Invalid market discriminant actual: {} expected: {}",
+            self.discriminant,
+            MARKET_FIXED_DISCRIMINANT
         )?;
         Ok(())
     }
@@ -1023,8 +1024,9 @@ fn update_balance_by_trader_index(
             require!(
                 claimed_seat.base_withdrawable_balance >= BaseAtoms::new(amount_atoms),
                 ProgramError::InsufficientFunds,
-                    "Not enough base atoms. Has {}, needs {}",
-                    claimed_seat.base_withdrawable_balance, amount_atoms
+                "Not enough base atoms. Has {}, needs {}",
+                claimed_seat.base_withdrawable_balance,
+                amount_atoms
             )?;
             claimed_seat.base_withdrawable_balance = claimed_seat
                 .base_withdrawable_balance
@@ -1038,8 +1040,9 @@ fn update_balance_by_trader_index(
         require!(
             claimed_seat.quote_withdrawable_balance >= QuoteAtoms::new(amount_atoms),
             ProgramError::InsufficientFunds,
-                "Not enough quote atoms. Has {}, needs {}",
-                claimed_seat.quote_withdrawable_balance, amount_atoms
+            "Not enough quote atoms. Has {}, needs {}",
+            claimed_seat.quote_withdrawable_balance,
+            amount_atoms
         )?;
         claimed_seat.quote_withdrawable_balance = claimed_seat
             .quote_withdrawable_balance

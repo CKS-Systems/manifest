@@ -14,8 +14,8 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    require,
     quantities::BaseAtoms,
+    require,
     state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
     validation::{Program, Signer},
 };

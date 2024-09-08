@@ -6,7 +6,8 @@ use crate::{
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
-        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE
+        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
+        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -271,7 +272,7 @@ pub(crate) fn process_batch_update(
                     last_valid_slot,
                     order_type,
                     global_trade_accounts_opts: &global_trade_accounts_opts,
-                    current_slot
+                    current_slot,
                 })?;
 
             let AddOrderToMarketResult {

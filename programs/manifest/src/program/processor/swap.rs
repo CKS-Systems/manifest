@@ -1,11 +1,11 @@
 use std::cell::RefMut;
 
 use crate::{
-    require,
     logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
-    program::{ ManifestError},
+    program::ManifestError,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
         NO_EXPIRATION_LAST_VALID_SLOT,
@@ -145,7 +145,8 @@ pub(crate) fn process_swap(
             out_atoms <= out_atoms_traded,
             ManifestError::InsufficientOut,
             "Insufficient out atoms returned. Minimum: {} Actual: {}",
-            out_atoms, out_atoms_traded
+            out_atoms,
+            out_atoms_traded
         )?;
     } else {
         let in_atoms_traded = if is_base_in {
@@ -156,8 +157,9 @@ pub(crate) fn process_swap(
         require!(
             in_atoms >= in_atoms_traded,
             ManifestError::InsufficientOut,
-                "Excessive in atoms charged. Maximum: {} Actual: {}",
-                in_atoms, in_atoms_traded
+            "Excessive in atoms charged. Maximum: {} Actual: {}",
+            in_atoms,
+            in_atoms_traded
         )?;
     }
 

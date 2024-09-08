@@ -1,4 +1,4 @@
-use crate::{require, program::{ManifestError}};
+use crate::{program::ManifestError, require};
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::trace;

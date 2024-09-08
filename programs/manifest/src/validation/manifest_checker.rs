@@ -68,9 +68,9 @@ fn verify_owned_by_manifest(owner: &Pubkey) -> ProgramResult {
     require!(
         owner == &crate::ID,
         ProgramError::IllegalOwner,
-            "Account must be owned by the Manifest program expected:{} actual:{}",
-            crate::ID,
-            owner
+        "Account must be owned by the Manifest program expected:{} actual:{}",
+        crate::ID,
+        owner
     )?;
     Ok(())
 }
@@ -80,9 +80,9 @@ fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> Program
     require!(
         size_of::<T>() == bytes.len(),
         ProgramError::InvalidAccountData,
-            "Incorrect length for uninitialized header expected: {} actual: {}",
-            size_of::<T>(),
-            bytes.len()
+        "Incorrect length for uninitialized header expected: {} actual: {}",
+        size_of::<T>(),
+        bytes.len()
     )?;
     require!(
         bytes.iter().all(|&byte| byte == 0),
