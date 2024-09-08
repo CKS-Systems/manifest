@@ -36,6 +36,8 @@ pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 80;
 pub const BLOCK_HEADER_SIZE: usize = 16;
 pub const WRAPPER_BLOCK_SIZE: usize = WRAPPER_BLOCK_PAYLOAD_SIZE + BLOCK_HEADER_SIZE;
 
+pub const EXPECTED_ORDER_BATCH_SIZE: usize = 16;
+
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 pub struct UnusedWrapperFreeListPadding {
@@ -168,8 +170,9 @@ pub(crate) fn sync_fast(
 
         // Cannot do this in one pass because we need the data borrowed for the
         // iterator so cannot also borrow it for updating the nodes.
-        let mut to_remove_indices: Vec<DataIndex> = Vec::with_capacity(16);
-        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::with_capacity(16);
+        let mut to_remove_indices: Vec<DataIndex> = Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
+        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> =
+            Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
         for (order_index, order) in orders_tree.iter::<WrapperOpenOrder>() {
             let expected_sequence_number: u64 = order.get_order_sequence_number();
             let core_data_index: DataIndex = order.get_market_data_index();

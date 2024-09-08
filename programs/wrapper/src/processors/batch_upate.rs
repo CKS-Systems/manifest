@@ -37,6 +37,7 @@ use crate::{
 use super::shared::{
     check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
     OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
+    EXPECTED_ORDER_BATCH_SIZE,
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
@@ -128,8 +129,8 @@ fn prepare_cancels(
         set
     };
 
-    let mut wrapper_indices: Vec<DataIndex> = Vec::with_capacity(16);
-    let mut core_cancels: Vec<CancelOrderParams> = Vec::with_capacity(16);
+    let mut wrapper_indices: Vec<DataIndex> = Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
+    let mut core_cancels: Vec<CancelOrderParams> = Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
     for (wrapper_index, open_order) in open_orders_tree.iter::<WrapperOpenOrder>() {
         if cancel_all || client_ids_to_cancel.contains(&open_order.get_client_order_id()) {
             wrapper_indices.push(wrapper_index);
