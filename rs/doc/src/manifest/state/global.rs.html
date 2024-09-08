@@ -425,8 +425,9 @@
 <span class="kw">use </span>static_assertions::const_assert_eq;
 
 <span class="kw">use crate</span>::{
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{
         get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
     },
@@ -571,13 +572,12 @@
 <span class="kw">impl </span>ManifestAccount <span class="kw">for </span>GlobalFixed {
     <span class="kw">fn </span>verify_discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ProgramResult {
         <span class="comment">// Check the discriminant to make sure it is a global account.
-        </span>assert_with_msg(
+        </span><span class="macro">require!</span>(
             <span class="self">self</span>.discriminant == GLOBAL_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">"Invalid market discriminant actual: {} expected: {}"</span>,
-                <span class="self">self</span>.discriminant, GLOBAL_FIXED_DISCRIMINANT
-            ),
+            <span class="string">"Invalid market discriminant actual: {} expected: {}"</span>,
+            <span class="self">self</span>.discriminant,
+            GLOBAL_FIXED_DISCRIMINANT
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -637,7 +637,7 @@
     <span class="kw">pub fn </span>global_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
 
-        assert_with_msg(
+        <span class="macro">require!</span>(
             fixed.free_list_head_index == NIL,
             ManifestError::InvalidFreeList,
             <span class="string">"Expected empty free list, but expand wasnt needed"</span>,
@@ -668,7 +668,7 @@
             GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
         <span class="kw">let </span>global_trader: GlobalTrader = GlobalTrader::new_empty(trader);
 
-        assert_with_msg(
+        <span class="macro">require!</span>(
             global_trader_tree.lookup_index(<span class="kw-2">&amp;</span>global_trader) == NIL,
             ManifestError::AlreadyClaimedSeat,
             <span class="string">"Already claimed global trader seat"</span>,
@@ -705,7 +705,7 @@
 
         <span class="comment">// This can be trivial to circumvent by using flash loans. This is just
         // an informational safety check.
-        </span>assert_with_msg(
+        </span><span class="macro">require!</span>(
             num_global_atoms &lt;= global_atoms_deposited,
             ManifestError::GlobalInsufficient,
             <span class="string">"Insufficient funds for global order"</span>,
@@ -769,7 +769,7 @@
         GlobalTraderTreeReadOnly::new(dynamic, fixed.global_traders_root_index, NIL);
     <span class="kw">let </span>global_trader_index: DataIndex =
         global_trader_tree.lookup_index(<span class="kw-2">&amp;</span>GlobalTrader::new_empty(trader));
-    assert_with_msg(
+    <span class="macro">require!</span>(
         global_trader_index != NIL,
         ManifestError::MissingGlobal,
         <span class="string">"Could not find global trader"</span>,
@@ -788,7 +788,7 @@
         GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
     <span class="kw">let </span>global_trader_index: DataIndex =
         global_trader_tree.lookup_index(<span class="kw-2">&amp;</span>GlobalTrader::new_empty(trader));
-    assert_with_msg(
+    <span class="macro">require!</span>(
         global_trader_index != NIL,
         ManifestError::MissingGlobal,
         <span class="string">"Could not find global trader"</span>,

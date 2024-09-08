@@ -668,6 +668,7 @@
 <a href="#666" id="666">666</a>
 <a href="#667" id="667">667</a>
 <a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -679,7 +680,8 @@
 };
 
 <span class="kw">use crate</span>::{
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
+    require,
     state::{GlobalFixed, MarketFixed},
     validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
 };
@@ -718,12 +720,12 @@
         <span class="kw">let </span>(expected_quote_vault, _quote_vault_bump) =
             get_vault_address(market.key, quote_mint.info.key);
 
-        assert_with_msg(
+        <span class="macro">require!</span>(
             expected_base_vault == <span class="kw-2">*</span>base_vault.info.key,
             ManifestError::IncorrectAccount,
             <span class="string">"Incorrect base vault account"</span>,
         )<span class="question-mark">?</span>;
-        assert_with_msg(
+        <span class="macro">require!</span>(
             expected_quote_vault == <span class="kw-2">*</span>quote_vault.info.key,
             ManifestError::IncorrectAccount,
             <span class="string">"Incorrect quote vault account"</span>,
@@ -1029,7 +1031,7 @@
             <span class="kw">let </span>index: usize = <span class="kw">if </span><span class="kw-2">*</span>global_mint_key == base_mint_key {
                 <span class="number">0
             </span>} <span class="kw">else </span>{
-                assert_with_msg(
+                <span class="macro">require!</span>(
                     quote_mint_key == <span class="kw-2">*</span>global_mint_key,
                     ManifestError::MissingGlobal,
                     <span class="string">"Unexpected global accounts"</span>,
@@ -1146,7 +1148,7 @@
                 <span class="kw">let </span>(index, expected_market_vault_address) = <span class="kw">if </span>base_mint == <span class="kw-2">*</span>mint.info.key {
                     (<span class="number">0</span>, <span class="kw-2">&amp;</span>base_vault)
                 } <span class="kw">else </span>{
-                    assert_with_msg(
+                    <span class="macro">require!</span>(
                         quote_mint == <span class="kw-2">*</span>mint.info.key,
                         ManifestError::MissingGlobal,
                         <span class="string">"Unexpected global accounts"</span>,

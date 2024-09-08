@@ -393,8 +393,9 @@
 <span class="kw">use crate</span>::{
     logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
         NO_EXPIRATION_LAST_VALID_SLOT,
@@ -521,6 +522,7 @@
         last_valid_slot,
         order_type,
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+        current_slot: <span class="prelude-val">None</span>,
     })<span class="question-mark">?</span>;
 
     <span class="kw">if </span>is_exact_in {
@@ -529,13 +531,12 @@
         } <span class="kw">else </span>{
             base_atoms_traded.as_u64()
         };
-        assert_with_msg(
+        <span class="macro">require!</span>(
             out_atoms &lt;= out_atoms_traded,
             ManifestError::InsufficientOut,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">"Insufficient out atoms returned. Minimum: {} Actual: {}"</span>,
-                out_atoms, out_atoms_traded
-            ),
+            <span class="string">"Insufficient out atoms returned. Minimum: {} Actual: {}"</span>,
+            out_atoms,
+            out_atoms_traded
         )<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
         <span class="kw">let </span>in_atoms_traded = <span class="kw">if </span>is_base_in {
@@ -543,13 +544,12 @@
         } <span class="kw">else </span>{
             quote_atoms_traded.as_u64()
         };
-        assert_with_msg(
+        <span class="macro">require!</span>(
             in_atoms &gt;= in_atoms_traded,
             ManifestError::InsufficientOut,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">"Excessive in atoms charged. Maximum: {} Actual: {}"</span>,
-                in_atoms, in_atoms_traded
-            ),
+            <span class="string">"Excessive in atoms charged. Maximum: {} Actual: {}"</span>,
+            in_atoms,
+            in_atoms_traded
         )<span class="question-mark">?</span>;
     }
 

@@ -246,8 +246,9 @@
 
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
-    program::{assert_with_msg, get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
 };
 <span class="kw">use </span>hypertree::{DataIndex, NIL};
@@ -286,7 +287,7 @@
     global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;,
     global_trade_owner: <span class="kw-2">&amp;</span>Pubkey,
 ) -&gt; ProgramResult {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
         <span class="string">"Missing global accounts when cancelling a global"</span>,
@@ -371,7 +372,7 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_can_take(order_type: OrderType) -&gt; ProgramResult {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         order_type_can_take(order_type),
         ManifestError::PostOnlyCrosses,
         <span class="string">"Post only order would cross"</span>,
@@ -380,19 +381,18 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_not_already_expired(last_valid_slot: u32, now_slot: u32) -&gt; ProgramResult {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot &gt; now_slot,
         ManifestError::AlreadyExpired,
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">"Placing an already expired order. now: {} last_valid: {}"</span>,
-            now_slot, last_valid_slot
-        ),
+        <span class="string">"Placing an already expired order. now: {} last_valid: {}"</span>,
+        now_slot,
+        last_valid_slot
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_already_has_seat(trader_index: DataIndex) -&gt; ProgramResult {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         trader_index != NIL,
         ManifestError::AlreadyClaimedSeat,
         <span class="string">"Need to claim a seat first"</span>,
@@ -405,7 +405,7 @@
     resting_order_trader: <span class="kw-2">&amp;</span>Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, ProgramError&gt; {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         global_trade_accounts_opt.is_some(),
         ManifestError::MissingGlobal,
         <span class="string">"Missing global accounts when adding a global"</span>,
@@ -438,7 +438,7 @@
 
     <span class="kw">let </span>global_vault_bump: u8 = global_dynamic_account.fixed.get_vault_bump();
     <span class="kw">if </span><span class="kw-2">*</span>token_program.key == spl_token_2022::id() {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             mint.is_some(),
             ManifestError::MissingGlobal,
             <span class="string">"Missing global mint"</span>,

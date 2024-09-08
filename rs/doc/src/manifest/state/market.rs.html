@@ -1190,8 +1190,9 @@
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, FillLog},
-    program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
+    program::{batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
@@ -1221,6 +1222,7 @@
     <span class="kw">pub </span>last_valid_slot: u32,
     <span class="kw">pub </span>order_type: OrderType,
     <span class="kw">pub </span>global_trade_accounts_opts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;; <span class="number">2</span>],
+    <span class="kw">pub </span>current_slot: <span class="prelude-ty">Option</span>&lt;u32&gt;,
 }
 
 <span class="kw">pub struct </span>AddOrderToMarketResult {
@@ -1413,13 +1415,12 @@
 
 <span class="kw">impl </span>ManifestAccount <span class="kw">for </span>MarketFixed {
     <span class="kw">fn </span>verify_discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ProgramResult {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             <span class="self">self</span>.discriminant == MARKET_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">"Invalid market discriminant actual: {} expected: {}"</span>,
-                <span class="self">self</span>.discriminant, MARKET_FIXED_DISCRIMINANT
-            ),
+            <span class="string">"Invalid market discriminant actual: {} expected: {}"</span>,
+            <span class="self">self</span>.discriminant,
+            MARKET_FIXED_DISCRIMINANT
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -1630,7 +1631,7 @@
     <span class="kw">pub fn </span>market_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, .. } = <span class="self">self</span>.borrow_mut();
 
-        assert_with_msg(
+        <span class="macro">require!</span>(
             fixed.free_list_head_index == NIL,
             ManifestError::InvalidFreeList,
             <span class="string">"Expected empty free list, but expand wasnt needed"</span>,
@@ -1647,7 +1648,7 @@
             ClaimedSeatTree::new(dynamic, fixed.claimed_seats_root_index, NIL);
 
         <span class="kw">let </span>claimed_seat: ClaimedSeat = ClaimedSeat::new_empty(<span class="kw-2">*</span>trader);
-        assert_with_msg(
+        <span class="macro">require!</span>(
             claimed_seats_tree.lookup_index(<span class="kw-2">&amp;</span>claimed_seat) == NIL,
             ManifestError::AlreadyClaimedSeat,
             <span class="string">"Already claimed seat"</span>,
@@ -1692,7 +1693,7 @@
 
     <span class="kw">pub fn </span>deposit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey, amount_atoms: u64, is_base: bool) -&gt; ProgramResult {
         <span class="kw">let </span>trader_index: DataIndex = <span class="self">self</span>.get_trader_index(trader);
-        assert_with_msg(
+        <span class="macro">require!</span>(
             trader_index != NIL,
             ManifestError::InvalidDepositAccounts,
             <span class="string">"No seat initialized"</span>,
@@ -1724,9 +1725,10 @@
             last_valid_slot,
             order_type,
             global_trade_accounts_opts,
+            current_slot,
         } = args;
         assert_already_has_seat(trader_index)<span class="question-mark">?</span>;
-        <span class="kw">let </span>now_slot: u32 = get_now_slot();
+        <span class="kw">let </span>now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
         assert_not_already_expired(last_valid_slot, now_slot)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
@@ -1743,7 +1745,7 @@
         <span class="comment">// Bump the order sequence number even for IOC orders which do not end
         // up resting.
         </span><span class="kw">let </span>order_sequence_number: u64 = fixed.order_sequence_number;
-        fixed.order_sequence_number += <span class="number">1</span>;
+        fixed.order_sequence_number = order_sequence_number.wrapping_add(<span class="number">1</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = num_base_atoms;
         <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_order_index != NIL {
@@ -2006,7 +2008,7 @@
             } <span class="kw">else </span>{
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
             };
-            assert_with_msg(
+            <span class="macro">require!</span>(
                 global_trade_accounts_opt.is_some(),
                 ManifestError::MissingGlobal,
                 <span class="string">"Missing global accounts when adding a global"</span>,
@@ -2060,12 +2062,12 @@
             };
             <span class="kw">for </span>(index, resting_order) <span class="kw">in </span>tree.iter::&lt;RestingOrder&gt;() {
                 <span class="kw">if </span>resting_order.get_sequence_number() == order_sequence_number {
-                    assert_with_msg(
+                    <span class="macro">require!</span>(
                         resting_order.get_trader_index() == trader_index,
                         ManifestError::InvalidCancel,
                         <span class="string">"Cannot cancel for another trader"</span>,
                     )<span class="question-mark">?</span>;
-                    assert_with_msg(
+                    <span class="macro">require!</span>(
                         index_to_remove == NIL,
                         ManifestError::InvalidCancel,
                         <span class="string">"Book is broken, matched multiple orders"</span>,
@@ -2199,13 +2201,12 @@
                 .base_withdrawable_balance
                 .checked_add(BaseAtoms::new(amount_atoms))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-            assert_with_msg(
+            <span class="macro">require!</span>(
                 claimed_seat.base_withdrawable_balance &gt;= BaseAtoms::new(amount_atoms),
                 ProgramError::InsufficientFunds,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">"Not enough base atoms. Has {}, needs {}"</span>,
-                    claimed_seat.base_withdrawable_balance, amount_atoms
-                ),
+                <span class="string">"Not enough base atoms. Has {}, needs {}"</span>,
+                claimed_seat.base_withdrawable_balance,
+                amount_atoms
             )<span class="question-mark">?</span>;
             claimed_seat.base_withdrawable_balance = claimed_seat
                 .base_withdrawable_balance
@@ -2216,13 +2217,12 @@
             .quote_withdrawable_balance
             .checked_add(QuoteAtoms::new(amount_atoms))<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
-        assert_with_msg(
+        <span class="macro">require!</span>(
             claimed_seat.quote_withdrawable_balance &gt;= QuoteAtoms::new(amount_atoms),
             ProgramError::InsufficientFunds,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">"Not enough quote atoms. Has {}, needs {}"</span>,
-                claimed_seat.quote_withdrawable_balance, amount_atoms
-            ),
+            <span class="string">"Not enough quote atoms. Has {}, needs {}"</span>,
+            claimed_seat.quote_withdrawable_balance,
+            amount_atoms
         )<span class="question-mark">?</span>;
         claimed_seat.quote_withdrawable_balance = claimed_seat
             .quote_withdrawable_balance

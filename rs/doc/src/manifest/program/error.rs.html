@@ -63,7 +63,7 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
+</pre></div><pre class="rust"><code><span class="kw">use </span>solana_program::program_error::ProgramError;
 <span class="kw">use </span>thiserror::Error;
 
 <span class="attr">#[derive(Debug, Error)]
@@ -115,15 +115,15 @@
     }
 }
 
-<span class="attr">#[track_caller]
-#[inline(always)]
-</span><span class="kw">pub fn </span>assert_with_msg(v: bool, err: <span class="kw">impl </span>Into&lt;ProgramError&gt;, msg: <span class="kw-2">&amp;</span>str) -&gt; ProgramResult {
-    <span class="kw">if </span>v {
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> require {
+  (<span class="macro-nonterminal">$test</span>:expr, <span class="macro-nonterminal">$err</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {
+    <span class="kw">if </span><span class="macro-nonterminal">$test </span>{
         <span class="prelude-val">Ok</span>(())
     } <span class="kw">else </span>{
-        <span class="kw">let </span>caller: <span class="kw-2">&amp;</span>std::panic::Location&lt;<span class="lifetime">'_</span>&gt; = std::panic::Location::caller();
-        <span class="macro">solana_program::msg!</span>(<span class="string">"{}. \n{}"</span>, msg, caller);
-        <span class="prelude-val">Err</span>(err.into())
+        <span class="macro">solana_program::msg!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+        <span class="prelude-val">Err</span>((<span class="macro-nonterminal">$err</span>))
     }
+  };
 }
 </code></pre></div></section></main></body></html>

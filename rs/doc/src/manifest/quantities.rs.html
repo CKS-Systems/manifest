@@ -490,7 +490,7 @@
 <a href="#488" id="488">488</a>
 <a href="#489" id="489">489</a>
 <a href="#490" id="490">490</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::{assert_with_msg, ManifestError};
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{program::ManifestError, require};
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::trace;
@@ -763,7 +763,7 @@
         } <span class="kw">else </span>{
             dividend.div(inner)
         };
-        assert_with_msg(
+        <span class="macro">require!</span>(
             base_atoms &lt;= ATOM_LIMIT,
             ManifestError::Overflow,
             <span class="string">"Overflow"</span>,
@@ -787,7 +787,7 @@
             product.div(D20)
         };
         <span class="macro">trace!</span>(<span class="string">"base:{base_atoms} price:{self} quote:{quote_atoms}"</span>);
-        assert_with_msg(
+        <span class="macro">require!</span>(
             quote_atoms &lt;= ATOM_LIMIT,
             ManifestError::Overflow,
             <span class="string">"Overflow"</span>,

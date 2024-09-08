@@ -297,15 +297,27 @@
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::RefMut, mem::size_of};
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
-        claimed_seat::ClaimedSeat, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut,
-        OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
+        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -375,6 +387,7 @@
     <span class="kw">pub fn </span>base_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.base_atoms
     }
+
     <span class="kw">pub fn </span>try_price(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtomsPerBaseAtom, PriceConversionError&gt; {
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
             <span class="self">self</span>.price_mantissa,
@@ -447,6 +460,8 @@
         orders,
     } = BatchUpdateParams::try_from_slice(data)<span class="question-mark">?</span>;
 
+    <span class="kw">let </span>current_slot = <span class="prelude-val">Some</span>(get_now_slot());
+
     <span class="macro">trace!</span>(<span class="string">"batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}"</span>);
 
     <span class="kw">let </span>trader_index: DataIndex = {
@@ -459,19 +474,21 @@
                 dynamic_account.get_trader_index(payer.key)
             }
             <span class="prelude-val">Some</span>(hinted_index) =&gt; {
-                assert_with_msg(
+                <span class="macro">require!</span>(
                     hinted_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
                     ManifestError::WrongIndexHintParams,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid trader hint index {}"</span>, hinted_index),
+                    <span class="string">"Invalid trader hint index {}"</span>,
+                    hinted_index,
                 )<span class="question-mark">?</span>;
-                assert_with_msg(
+                <span class="macro">require!</span>(
                     get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(<span class="kw-2">&amp;</span>dynamic_account.dynamic, hinted_index)
                         .get_payload_type()
                         == MarketDataTreeNodeType::ClaimedSeat <span class="kw">as </span>u8,
                     ManifestError::WrongIndexHintParams,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid trader hint index {}"</span>, hinted_index),
+                    <span class="string">"Invalid trader hint index {}"</span>,
+                    hinted_index,
                 )<span class="question-mark">?</span>;
-                assert_with_msg(
+                <span class="macro">require!</span>(
                     payer
                         .key
                         .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
@@ -500,12 +517,13 @@
                     <span class="comment">// Simple sanity check on the hint given. Make sure that it
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
-                    </span>assert_with_msg(
+                    </span><span class="macro">require!</span>(
                         trader_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
                         ManifestError::WrongIndexHintParams,
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_cancel_index),
+                        <span class="string">"Invalid cancel hint index {}"</span>,
+                        hinted_cancel_index,
                     )<span class="question-mark">?</span>;
-                    assert_with_msg(
+                    <span class="macro">require!</span>(
                         get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(
                             <span class="kw-2">&amp;</span>dynamic_account.dynamic,
                             hinted_cancel_index,
@@ -513,14 +531,16 @@
                         .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8,
                         ManifestError::WrongIndexHintParams,
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_cancel_index),
+                        <span class="string">"Invalid cancel hint index {}"</span>,
+                        hinted_cancel_index,
                     )<span class="question-mark">?</span>;
                     <span class="kw">let </span>order: <span class="kw-2">&amp;</span>RestingOrder =
                         dynamic_account.get_order_by_index(hinted_cancel_index);
-                    assert_with_msg(
+                    <span class="macro">require!</span>(
                         trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
-                        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Invalid cancel hint index {}"</span>, hinted_cancel_index),
+                        <span class="string">"Invalid cancel hint index {}"</span>,
+                        hinted_cancel_index,
                     )<span class="question-mark">?</span>;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
@@ -562,6 +582,7 @@
                     last_valid_slot,
                     order_type,
                     global_trade_accounts_opts: <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+                    current_slot,
                 })<span class="question-mark">?</span>;
 
             <span class="kw">let </span>AddOrderToMarketResult {
@@ -587,7 +608,8 @@
         expand_market_if_needed(<span class="kw-2">&amp;</span>payer, <span class="kw-2">&amp;</span>market, <span class="kw-2">&amp;</span>system_program)<span class="question-mark">?</span>;
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; = Vec::with_capacity(result.len());
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; =
+        Vec::with_capacity(size_of::&lt;BatchUpdateReturn&gt;() + result.len() * <span class="number">2 </span>* size_of::&lt;u64&gt;());
     <span class="kw">let </span>return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
     return_data.serialize(<span class="kw-2">&amp;mut </span>buffer).unwrap();
     set_return_data(<span class="kw-2">&amp;</span>buffer[..]);

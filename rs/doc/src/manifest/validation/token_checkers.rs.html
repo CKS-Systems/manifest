@@ -132,7 +132,7 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::error::assert_with_msg;
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::require;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
@@ -171,13 +171,13 @@
         info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;,
         mint: <span class="kw-2">&amp;</span>Pubkey,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.owner == <span class="kw-2">&amp;</span>spl_token::id() || info.owner == <span class="kw-2">&amp;</span>spl_token_2022::id(),
             ProgramError::IllegalOwner,
             <span class="string">"Token account must be owned by the Token Program"</span>,
         )<span class="question-mark">?</span>;
         <span class="comment">// The mint key is found at offset 0 of the token account
-        </span>assert_with_msg(
+        </span><span class="macro">require!</span>(
             <span class="kw-2">&amp;</span>info.try_borrow_data()<span class="question-mark">?</span>[<span class="number">0</span>..<span class="number">32</span>] == mint.as_ref(),
             ProgramError::InvalidAccountData,
             <span class="string">"Token account mint mismatch"</span>,
@@ -192,7 +192,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
         <span class="kw">let </span>token_account_info = <span class="self">Self</span>::new(info, mint)<span class="question-mark">?</span>;
         <span class="comment">// The owner key is found at offset 32 of the token account
-        </span>assert_with_msg(
+        </span><span class="macro">require!</span>(
             <span class="kw-2">&amp;</span>info.try_borrow_data()<span class="question-mark">?</span>[<span class="number">32</span>..<span class="number">64</span>] == owner.as_ref(),
             ProgramError::IllegalOwner,
             <span class="string">"Token account owner mismatch"</span>,
@@ -206,7 +206,7 @@
         owner: <span class="kw-2">&amp;</span>Pubkey,
         key: <span class="kw-2">&amp;</span>Pubkey,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.key == key,
             ProgramError::InvalidInstructionData,
             <span class="string">"Invalid pubkey for Token Account"</span>,

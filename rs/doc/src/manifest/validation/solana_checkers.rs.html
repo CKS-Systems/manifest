@@ -131,7 +131,8 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::error::assert_with_msg;
+<a href="#132" id="132">132</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::require;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program,
 };
@@ -147,7 +148,7 @@
         info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;,
         expected_program_id: <span class="kw-2">&amp;</span>Pubkey,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.key == expected_program_id,
             ProgramError::IncorrectProgramId,
             <span class="string">"Incorrect program id"</span>,
@@ -169,10 +170,11 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub fn </span>new(info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             <span class="kw-2">*</span>info.key == spl_token::id() || <span class="kw-2">*</span>info.key == spl_token_2022::id(),
             ProgramError::IncorrectProgramId,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Incorrect token program id: {:?}"</span>, info.key),
+            <span class="string">"Incorrect token program id: {:?}"</span>,
+            info.key
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ info })
     }
@@ -199,7 +201,7 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub fn </span>new(info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
             <span class="string">"Missing required signature"</span>,
@@ -208,12 +210,12 @@
     }
 
     <span class="kw">pub fn </span>new_payer(info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.is_writable,
             ProgramError::InvalidInstructionData,
             <span class="string">"Payer is not writable"</span>,
         )<span class="question-mark">?</span>;
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
             <span class="string">"Missing required signature for payer"</span>,
@@ -243,12 +245,12 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; EmptyAccount&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub fn </span>new(info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;EmptyAccount&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.data_is_empty(),
             ProgramError::InvalidAccountData,
             <span class="string">"Account must be uninitialized"</span>,
         )<span class="question-mark">?</span>;
-        assert_with_msg(
+        <span class="macro">require!</span>(
             info.owner == <span class="kw-2">&amp;</span>system_program::id(),
             ProgramError::IllegalOwner,
             <span class="string">"Empty accounts must be owned by the system program"</span>,

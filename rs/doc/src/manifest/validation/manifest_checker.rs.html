@@ -129,17 +129,15 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::error::assert_with_msg;
-<span class="kw">use </span>bytemuck::Pod;
+</pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::Pod;
 <span class="kw">use </span>hypertree::get_helper;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
 };
 <span class="kw">use </span>std::{cell::Ref, mem::size_of, ops::Deref};
+
+<span class="kw">use </span><span class="kw">crate</span>::require;
 
 <span class="doccomment">/// Validation for manifest accounts.
 </span><span class="attr">#[derive(Clone)]
@@ -198,30 +196,26 @@
 }
 
 <span class="kw">fn </span>verify_owned_by_manifest(owner: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
-    assert_with_msg(
+    <span class="macro">require!</span>(
         owner == <span class="kw-2">&amp;</span><span class="kw">crate</span>::ID,
         ProgramError::IllegalOwner,
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">"Account must be owned by the Manifest program expected:{} actual:{}"</span>,
-            <span class="kw">crate</span>::ID,
-            owner
-        ),
+        <span class="string">"Account must be owned by the Manifest program expected:{} actual:{}"</span>,
+        <span class="kw">crate</span>::ID,
+        owner
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">fn </span>verify_uninitialized&lt;T: Pod + ManifestAccount&gt;(info: <span class="kw-2">&amp;</span>AccountInfo) -&gt; ProgramResult {
     <span class="kw">let </span>bytes: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = info.try_borrow_data()<span class="question-mark">?</span>;
-    assert_with_msg(
+    <span class="macro">require!</span>(
         size_of::&lt;T&gt;() == bytes.len(),
         ProgramError::InvalidAccountData,
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">"Incorrect length for uninitialized header expected: {} actual: {}"</span>,
-            size_of::&lt;T&gt;(),
-            bytes.len()
-        ),
+        <span class="string">"Incorrect length for uninitialized header expected: {} actual: {}"</span>,
+        size_of::&lt;T&gt;(),
+        bytes.len()
     )<span class="question-mark">?</span>;
-    assert_with_msg(
+    <span class="macro">require!</span>(
         bytes.iter().all(|<span class="kw-2">&amp;</span>byte| byte == <span class="number">0</span>),
         ProgramError::InvalidAccountData,
         <span class="string">"Expected zeroed"</span>,
