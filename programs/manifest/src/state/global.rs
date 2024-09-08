@@ -15,8 +15,9 @@ use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pub
 use static_assertions::const_assert_eq;
 
 use crate::{
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
+    require,
     validation::{
         get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
     },
@@ -161,13 +162,12 @@ impl GlobalFixed {
 impl ManifestAccount for GlobalFixed {
     fn verify_discriminant(&self) -> ProgramResult {
         // Check the discriminant to make sure it is a global account.
-        assert_with_msg(
+        require!(
             self.discriminant == GLOBAL_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-            &format!(
-                "Invalid market discriminant actual: {} expected: {}",
-                self.discriminant, GLOBAL_FIXED_DISCRIMINANT
-            ),
+            "Invalid market discriminant actual: {} expected: {}",
+            self.discriminant,
+            GLOBAL_FIXED_DISCRIMINANT
         )?;
         Ok(())
     }
@@ -227,7 +227,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     pub fn global_expand(&mut self) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
-        assert_with_msg(
+        require!(
             fixed.free_list_head_index == NIL,
             ManifestError::InvalidFreeList,
             "Expected empty free list, but expand wasnt needed",
@@ -258,7 +258,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
         let global_trader: GlobalTrader = GlobalTrader::new_empty(trader);
 
-        assert_with_msg(
+        require!(
             global_trader_tree.lookup_index(&global_trader) == NIL,
             ManifestError::AlreadyClaimedSeat,
             "Already claimed global trader seat",
@@ -295,7 +295,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         // This can be trivial to circumvent by using flash loans. This is just
         // an informational safety check.
-        assert_with_msg(
+        require!(
             num_global_atoms <= global_atoms_deposited,
             ManifestError::GlobalInsufficient,
             "Insufficient funds for global order",
@@ -359,7 +359,7 @@ fn get_global_trader<'a>(
         GlobalTraderTreeReadOnly::new(dynamic, fixed.global_traders_root_index, NIL);
     let global_trader_index: DataIndex =
         global_trader_tree.lookup_index(&GlobalTrader::new_empty(trader));
-    assert_with_msg(
+    require!(
         global_trader_index != NIL,
         ManifestError::MissingGlobal,
         "Could not find global trader",
@@ -378,7 +378,7 @@ fn get_mut_global_trader<'a>(
         GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
     let global_trader_index: DataIndex =
         global_trader_tree.lookup_index(&GlobalTrader::new_empty(trader));
-    assert_with_msg(
+    require!(
         global_trader_index != NIL,
         ManifestError::MissingGlobal,
         "Could not find global trader",
