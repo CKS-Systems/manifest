@@ -57,7 +57,8 @@ pub(crate) fn process_global_evict(
     require!(
         evictee_balance < GlobalAtoms::new(amount_atoms),
         ManifestError::InvalidEvict,
-        "Evictee balance is more than evictor wants to deposit",
+        "Evictee balance {} is more than evictor wants to deposit",
+        evictee_balance.as_u64(),
     )?;
 
     // Withdraw
