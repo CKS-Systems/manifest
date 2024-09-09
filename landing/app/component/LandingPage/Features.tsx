@@ -16,7 +16,7 @@ const Features = () => {
               FEATURES
             </p>
           </Fade>
-          <div className='w-full grid 2xl:mt-[3rem] grid-cols-1 lg:grid-cols-[1.3fr,2fr] gap-6 2xl:gap-8 3xl:gap-12 lg:mt-0 mt-16'>
+          <div className='w-full grid 2xl:mt-[3rem] grid-cols-1 lg:grid-cols-[1.3fr,2fr] min-h-[670px] gap-6 2xl:gap-8 3xl:gap-12 lg:mt-0 mt-16'>
             <Slide
               direction='left'
               duration={1000}
@@ -35,15 +35,15 @@ const Features = () => {
                     extracting crypto exchanges. Take a seat and manifest your free future.
                   </p>
                 </div>
-              </div>
-              <div className='w-full flex justify-center lg:justify-end lg:absolute lg:right-0 bottom-5 lg:ml-0 -ml-[4rem] sm:-ml-[6rem] md:-ml-[4rem] mt-[1rem]'>
-                <div className='w-full max-w-[120%] max-h-[120%] 2xl:max-w-[256px] 3xl:max-w-[307px] xsm:max-w-[128px] sm:max-w-[179px] csm:max-w-[194px] md:max-w-[230px] lg:max-w-[210px] 2xl:h-[205px] 3xl:h-[256px] h-[128px] xsm:h-[102px] sm:h-[143px] csm:h-[179px] relative'>
-                  <Image
-                    src='/assets/dawn.svg'
-                    className='object-contain'
-                    fill
-                    alt=''
-                  />
+                <div className='w-full flex justify-center lg:justify-end lg:absolute lg:right-0 lg:bottom-0 lg:ml-0 md:ml-0 sm:ml-0 -ml-[4rem] xsm:-ml-[2rem] sm:-ml-[3rem] md:-ml-[4rem] mt-[1rem]'>
+                  <div className='w-full max-w-[120%] max-h-[120%] 2xl:max-w-[256px] 3xl:max-w-[307px] xsm:max-w-[128px] sm:max-w-[179px] csm:max-w-[194px] md:max-w-[230px] lg:max-w-[210px] 2xl:h-[205px] 3xl:h-[256px] h-[128px] xsm:h-[102px] sm:h-[143px] csm:h-[179px] relative'>
+                    <Image
+                      src='/assets/dawn.svg'
+                      className='object-contain'
+                      fill
+                      alt=''
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -57,7 +57,7 @@ const Features = () => {
               <div className='wrapper1 w-full !rounded-tl-[80px] max-w-[550px] lg:max-w-full h-full'>
                 <div className='w-full max-w-[550px] !rounded-tl-[80px] lg:max-w-full borderGradientC1 h-full px-0 sm:px-6 py-6 relative justify-between flex flex-col items-center lg:items-start'>
                 <div className='w-full flex justify-center lg:justify-end lg:absolute right-5 lg:right-10 bottom-20 lg:ml-0 -ml-[5rem] sm:-ml-[7rem] md:-ml-[5rem] mt-[1rem]'>
-                  <div className='w-full flex max-w-[240px] 2xl:max-w-[400px] 3xl:max-w-[480px] xsm:max-w-[200px] sm:max-w-[280px] csm:max-w-[304px] md:max-w-[360px] lg:max-w-[336px] 2xl:h-[320px] 3xl:h-[400px] h-[200px] xsm:h-[160px] sm:h-[224px] csm:h-[280px] relative'>
+                  <div className='w-full flex max-w-[180px] 2xl:max-w-[300px] 3xl:max-w-[360px] xsm:max-w-[150px] sm:max-w-[210px] csm:max-w-[228px] md:max-w-[270px] lg:max-w-[252px] 2xl:h-[240px] 3xl:h-[300px] h-[150px] xsm:h-[120px] sm:h-[168px] csm:h-[210px] relative'>
                     <Image
                       src='/assets/market.svg'
                       className='object-cover'
@@ -90,7 +90,7 @@ const Features = () => {
               className='w-full justify-center items-center flex'
               triggerOnce
             >
-              <div className='w-full max-w-[550px] !rounded-bl-[80px] h-full wrapper1'>
+              <div className='w-full max-w-[550px] min-h-[550px] !rounded-bl-[80px] h-full wrapper1'>
                 <div className='w-full max-w-[550px] !rounded-bl-[80px] borderGradientC1 h-full flex items-center lg:items-start justify-between flex-col px-0 sm:px-6 py-6 lg:pb-6 pb-10 sm:pb-20'>
                   <div className='w-full max-w-[550px] flex flex-col gap-4'>
                     <h2 className='text-[40px] lg:block hidden 2xl:text-[58px] 3xl:text-[75px] tracking-[3px] mt-20 leading-[50px] 2xl:leading-[70px] 3xl:leading-[90px] text-[#bca378] font-terminaExtraDemi'>
@@ -252,16 +252,6 @@ const Features = () => {
             >
               <div className='wrapper1 w-full !rounded-tl-[80px] max-w-[550px] lg:max-w-full h-full'>
                 <div className='w-full max-w-[550px] !rounded-tl-[80px] lg:max-w-full borderGradientC1 h-full px-0 sm:px-6 py-6 relative justify-between flex flex-col items-center lg:items-start'>
-                <div className='lg:w-auto w-full block lg:absolute bottom-1 right-0 lg:right-2 xl:right-1'>
-                    <div className='w-[500px] 2xl:w-[590px] 3xl:w-[750px] lg:block hidden lg:w-[320px] xl:w-[420px] h-[450px] lg:h-[260px] 2xl:h-[500px] 3xl:h-[650px] xl:h-[350px] relative lg:ml-0 -ml-[14rem] -mb-[4rem] lg:mb-0'>
-                      <Image
-                        src='/assets/exchange.svg'
-                        fill
-                        alt=''
-                        className='object-cover'
-                      />
-                    </div>
-                  </div>
                   <div className='flex flex-col items-center lg:items-start w-full gap-2'>
                     <h2 className='text-[26px] sm:text-[32px] 3xl:text-[75px] xl:text-[48px] 2xl:text-[58px] mt-[5rem] sm:mt-[4rem] lg:text-left text-center lg:mt-[6rem] xl:mt-[8rem] tracking-[3px] textColor2 sm:text-[#bca378] font-terminaExtraDemi'>
                       Capitally <br />
@@ -270,11 +260,35 @@ const Features = () => {
                       </span>
                     </h2>
                     <p className='text-[#bca378]/70 w-full lg:text-left 2xl:text-[22px] 3xl:text-[32px] text-center max-w-[400px] 3xl:max-w-[600px] text-[16px] font-normal'>
-                    A novel global order type unlocks unparalleled capital efficiency for a spot exchange. 
-                    Provide multiple bids or offers simultaneously utilizing the same funds. 
-                    Don&apos;t lock up tokens unnecessarily in open order accounts.
+                      A novel global order type unlocks unparalleled capital efficiency for a spot exchange.
+                      Provide multiple bids or offers simultaneously utilizing the same funds.
+                      Don&apos;t lock up tokens unnecessarily in open order accounts.
                     </p>
                   </div>
+                  <div className='w-full flex justify-center lg:justify-end lg:absolute lg:right-0 lg:bottom-0 lg:ml-0 md:ml-0 sm:ml-0 -ml-[4rem] xsm:-ml-[2rem] sm:-ml-[3rem] md:-ml-[4rem] mt-[1rem]'>
+  <div className='w-full max-w-[350px] lg:max-w-[262px] lg:h-[235px] xl:max-w-[294px] xl:h-[263px] 2xl:max-w-[413px] 2xl:h-[367px] 3xl:max-w-[525px] 3xl:h-[472px] relative'>
+    <div className='hidden lg:block'>
+      <Image
+        src='/assets/exchange.svg'
+        fill
+        alt=''
+        className='object-cover'
+      />
+    </div>
+    <div className='lg:hidden'>
+      <div className='w-full max-w-[262px] lg:max-w-[168px] xl:max-w-[220px] 2xl:max-w-[309px] 3xl:max-w-[393px] h-[235px] lg:h-[136px] xl:h-[183px] 2xl:h-[263px] 3xl:h-[340px] relative'>
+        <Image
+          src='/assets/exchange.svg'
+          fill
+          alt=''
+          className='object-cover'
+        />
+      </div>
+    </div>
+  </div>
+</div>
+<div className='h-[4rem] lg:hidden'></div>
+
                 </div>
               </div>
             </Slide>
