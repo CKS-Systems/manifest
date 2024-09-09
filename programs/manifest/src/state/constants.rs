@@ -5,7 +5,7 @@ pub const GLOBAL_FIXED_SIZE: usize = 96;
 
 // Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
 // 64 bytes for a RestingOrder or ClaimedSeat.
-pub const GLOBAL_BLOCK_SIZE: usize = 56;
+pub const GLOBAL_BLOCK_SIZE: usize = 64;
 pub const MARKET_BLOCK_SIZE: usize = 80;
 const MARKET_BLOCK_PAYLOAD_SIZE: usize = MARKET_BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 pub const RESTING_ORDER_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;
@@ -37,8 +37,8 @@ pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
 // capital on the exchange to prevent that.
 pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 
-// TODO: size this so that the full account fits in 2 pages.
 /// Limit on the number of global seats available. Set so that this is hit
 /// before the global account starts running into account size limits, but is
 /// generous enough that it really should only matter in deterring spam.
-pub const MAX_GLOBAL_SEATS: u16 = 200;
+/// Sized to fit in 2 pages.
+pub const MAX_GLOBAL_SEATS: u16 = 998;

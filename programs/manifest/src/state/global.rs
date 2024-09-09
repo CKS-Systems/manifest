@@ -81,7 +81,7 @@ const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 struct GlobalUnusedFreeListPadding {
-    _padding: [u64; 6],
+    _padding: [u64; 7],
     _padding2: [u8; 4],
 }
 // 4 bytes are for the free list, rest is payload.
@@ -103,6 +103,7 @@ pub struct GlobalTrader {
     unclaimed_gas_deposits: u32,
 
     deposit_index: DataIndex,
+    _padding: u64,
 }
 const_assert_eq!(size_of::<GlobalTrader>(), GLOBAL_TRADER_SIZE);
 const_assert_eq!(size_of::<GlobalTrader>() % 8, 0);
@@ -138,6 +139,7 @@ pub struct GlobalDeposit {
     /// Token balance in the global account for this trader. The tokens received
     /// in trades stay in the market.
     balance_atoms: GlobalAtoms,
+    _padding: u64,
 }
 const_assert_eq!(size_of::<GlobalDeposit>(), GLOBAL_DEPOSIT_SIZE);
 const_assert_eq!(size_of::<GlobalDeposit>() % 8, 0);
@@ -220,6 +222,7 @@ impl GlobalTrader {
             trader: *trader,
             unclaimed_gas_deposits: 0,
             deposit_index,
+            _padding: 0,
         }
     }
     pub fn get_trader(&self) -> &Pubkey {
@@ -232,6 +235,7 @@ impl GlobalDeposit {
         GlobalDeposit {
             trader: *trader,
             balance_atoms: GlobalAtoms::ZERO,
+            _padding: 0,
         }
     }
     pub fn get_trader(&self) -> &Pubkey {
