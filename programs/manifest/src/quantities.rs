@@ -8,7 +8,7 @@ use std::{
     cmp::Ordering,
     fmt::Display,
     ops::{Add, AddAssign, Div, Sub, SubAssign},
-    u128, u64,
+    u128, u32, u64,
 };
 
 /// New and as_u64 for creating and switching to u64 when needing to use base or
@@ -233,7 +233,7 @@ const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(00),
 ];
 const_assert_eq!(
-    DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXPONENT as usize],
+    DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
     D18
 );
 
@@ -245,24 +245,24 @@ impl QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
 
-    pub const MIN_EXPONENT: i8 = -18;
-    pub const MAX_EXPONENT: i8 = 8;
+    pub const MIN_EXP: i8 = -18;
+    pub const MAX_EXP: i8 = 8;
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, ProgramError> {
         require!(
-            exponent <= Self::MAX_EXPONENT,
+            exponent <= Self::MAX_EXP,
             ManifestError::PriceConversion,
             "price exponent would truncate: {exponent} > {}",
-            Self::MAX_EXPONENT
+            Self::MAX_EXP
         )?;
         require!(
-            exponent >= Self::MIN_EXPONENT,
+            exponent >= Self::MIN_EXP,
             ManifestError::PriceConversion,
             "price exponent would truncate: {exponent} < {}",
-            Self::MIN_EXPONENT
+            Self::MIN_EXP
         )?;
 
         /* map exponent to array range
@@ -271,7 +271,7 @@ impl QuoteAtomsPerBaseAtom {
         -10 -> [18] -> D08
         -18 -> [26] ->  D0
         */
-        let offset = -(exponent - Self::MAX_EXPONENT) as usize;
+        let offset = -(exponent - Self::MAX_EXP) as usize;
         // can not overflow 10^26 * u32::MAX < u128::MAX
         let inner = DECIMAL_CONSTANTS[offset] * mantissa as u128;
         return Ok(QuoteAtomsPerBaseAtom {
@@ -405,6 +405,11 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         let mantissa = value * D18F;
         require!(
+            mantissa.is_sign_positive(),
+            ManifestError::PriceNotPositive,
+            "negative numbers can not be expressed as fixed point decimal"
+        )?;
+        require!(
             !mantissa.is_infinite(),
             ManifestError::PriceConversion,
             "infinite can not be expressed as fixed point decimal"
@@ -473,6 +478,24 @@ fn test_checked_sub() {
 }
 
 #[test]
+fn test_overflowing_add() {
+    let base_atoms: BaseAtoms = BaseAtoms::new(u64::MAX);
+    let (sum, overflow_detected) = base_atoms.overflowing_add(base_atoms);
+    assert!(overflow_detected);
+
+    let expected = base_atoms - BaseAtoms::ONE;
+    assert_eq!(sum, expected);
+}
+
+#[test]
+fn test_wrapping_add() {
+    let base_atoms: BaseAtoms = BaseAtoms::new(u64::MAX);
+    let sum = base_atoms.wrapping_add(base_atoms);
+    let expected = base_atoms - BaseAtoms::ONE;
+    assert_eq!(sum, expected);
+}
+
+#[test]
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
@@ -484,6 +507,47 @@ fn test_multiply_macro() {
             .unwrap(),
         QuoteAtoms::new(500)
     );
+}
+
+#[test]
+fn test_price_limits() {
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        0,
+        QuoteAtomsPerBaseAtom::MAX_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        u32::MAX,
+        QuoteAtomsPerBaseAtom::MAX_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        0,
+        QuoteAtomsPerBaseAtom::MIN_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        u32::MAX,
+        QuoteAtomsPerBaseAtom::MIN_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(u64::MAX as f64).is_ok());
+
+    // failures
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        0,
+        QuoteAtomsPerBaseAtom::MAX_EXP + 1
+    )
+    .is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        0,
+        QuoteAtomsPerBaseAtom::MIN_EXP - 1
+    )
+    .is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(-1f64).is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(u128::MAX as f64).is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(1f64 / 0f64).is_err());
 }
 
 #[test]
