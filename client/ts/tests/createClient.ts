@@ -96,25 +96,29 @@ describe.only('when creating a client using getClientForMarketNoPrivateKey', () 
     marketAddress = await createMarket(connection, payerKeypair);
   });
 
-  it('should crash if setupIxs NOT executed', () =>
-    testGetClientForMarketNoPrivateKey(
+  it('should crash if setupIxs NOT executed', async () => {
+    await testGetClientForMarketNoPrivateKey(
       connection,
       marketAddress,
       payerKeypair,
       true,
-    ));
+    );
+  });
 
-  it('should get setupIxs using getSetupIxs and execute successfully', () =>
-    testGetSetupIxs(connection, marketAddress, payerKeypair, true, true));
+  it('should get setupIxs using getSetupIxs and execute successfully', async () => {
+    await testGetSetupIxs(connection, marketAddress, payerKeypair, true, true);
+  });
 
-  it('should wait 15 seconds to let state catch up', () =>
-    new Promise((resolve) => setTimeout(resolve, 15_000)));
+  it('should wait 15 seconds to let state catch up', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 15_000));
+  });
 
-  it('should NOT crash if setupIxs already executed', () =>
-    testGetClientForMarketNoPrivateKey(
+  it('should NOT crash if setupIxs already executed', async () => {
+    await testGetClientForMarketNoPrivateKey(
       connection,
       marketAddress,
       payerKeypair,
       false,
-    ));
+    );
+  });
 });
