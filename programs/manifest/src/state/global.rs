@@ -24,9 +24,7 @@ use crate::{
 };
 
 use super::{
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, GLOBAL_BLOCK_SIZE,
-    GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_FREE_LIST_BLOCK_SIZE, GLOBAL_TRADER_SIZE,
-    MAX_GLOBAL_SEATS,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, GLOBAL_BLOCK_SIZE, GLOBAL_DEPOSIT_SIZE, GLOBAL_FIXED_DISCRIMINANT, GLOBAL_FIXED_SIZE, GLOBAL_FREE_LIST_BLOCK_SIZE, GLOBAL_TRADER_SIZE, MAX_GLOBAL_SEATS
 };
 
 #[repr(C)]
@@ -44,7 +42,7 @@ pub struct GlobalFixed {
     /// Red-black tree root representing the global orders for the bank.
     global_traders_root_index: DataIndex,
 
-    /// Red-black tree root representing the global orders for the bank sorted by amount.
+    /// Red-black tree root representing the global deposits sorted by amount.
     global_deposits_root_index: DataIndex,
     /// Max, because the Hypertree provides access to max, but the sort key is
     /// reversed so this is the smallest balance.
@@ -81,7 +79,7 @@ const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 struct GlobalUnusedFreeListPadding {
-    _padding: [u64; 7],
+    _padding: [u64; 6],
     _padding2: [u8; 4],
 }
 // 4 bytes are for the free list, rest is payload.
@@ -99,15 +97,10 @@ pub struct GlobalTrader {
 
     // Number of gas deposits on the global account. This is the number of gas
     // deposits that were paid by the global trader, but were not taken when the
-    // order was removed.
-    // TODO: Make a way to claim gas deposits
-    claimable_gas_deposits: u32,
-
-    /// Track the number of open orders which correlates to the number of gas deposits. This is relevant when purging.
-    open_global_orders: u32,
+    // order was removed. Informational purposes only.
+    unclaimed_gas_deposits: u32,
 
     deposit_index: DataIndex,
-    padding: u32,
 }
 const_assert_eq!(size_of::<GlobalTrader>(), GLOBAL_TRADER_SIZE);
 const_assert_eq!(size_of::<GlobalTrader>() % 8, 0);
@@ -143,10 +136,8 @@ pub struct GlobalDeposit {
     /// Token balance in the global account for this trader. The tokens received
     /// in trades stay in the market.
     balance_atoms: GlobalAtoms,
-
-    _padding: [u8; 8],
 }
-const_assert_eq!(size_of::<GlobalDeposit>(), GLOBAL_TRADER_SIZE);
+const_assert_eq!(size_of::<GlobalDeposit>(), GLOBAL_DEPOSIT_SIZE);
 const_assert_eq!(size_of::<GlobalDeposit>() % 8, 0);
 
 impl Ord for GlobalDeposit {
@@ -225,10 +216,8 @@ impl GlobalTrader {
     pub fn new_empty(trader: &Pubkey, deposit_index: DataIndex) -> Self {
         GlobalTrader {
             trader: *trader,
-            claimable_gas_deposits: 0,
-            open_global_orders: 0,
+            unclaimed_gas_deposits: 0,
             deposit_index,
-            padding: 0,
         }
     }
     pub fn get_trader(&self) -> &Pubkey {
@@ -241,7 +230,6 @@ impl GlobalDeposit {
         GlobalDeposit {
             trader: *trader,
             balance_atoms: GlobalAtoms::ZERO,
-            _padding: [0_u8; 8],
         }
     }
     pub fn get_trader(&self) -> &Pubkey {
@@ -440,10 +428,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
-        let global_trader: &mut GlobalTrader =
-            get_mut_global_trader(fixed, dynamic, global_trade_owner)?;
-        global_trader.open_global_orders += 1;
-
         let num_global_atoms: GlobalAtoms = if resting_order.get_is_bid() {
             GlobalAtoms::new(
                 resting_order
@@ -487,9 +471,8 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let GlobalTradeAccounts { trader, .. } = global_trade_accounts;
         if trader.info.key != global_trade_owner || global_trade_accounts.system_program.is_none() {
-            global_trader.claimable_gas_deposits += 1;
+            global_trader.unclaimed_gas_deposits += 1;
         }
-        global_trader.open_global_orders -= 1;
 
         Ok(())
     }

@@ -46,8 +46,6 @@ pub(crate) fn process_global_evict(
         token_program,
     } = global_evict_context;
 
-    // TODO: Verify that it is eligible for eviction and is the lowest balance of all the global seats.
-
     // 1. Withdraw for the evictee
     // 2. Evict the seat on the global account and claim
     // 3. Deposit for the evictor
