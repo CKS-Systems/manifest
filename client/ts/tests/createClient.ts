@@ -85,7 +85,7 @@ async function testGetSetupIxs(
   console.log(`executed setupIxs: ${signature}`);
 }
 
-describe.only('when creating a client using getClientForMarketNoPrivateKey', () => {
+describe('when creating a client using getClientForMarketNoPrivateKey', () => {
   let connection: Connection;
   let payerKeypair: Keypair;
   let marketAddress: PublicKey;
