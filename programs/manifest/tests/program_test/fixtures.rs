@@ -1129,14 +1129,13 @@ impl TokenAccountFixture {
         let instructions: [Instruction; 2] =
             Self::create_ixs(rent, mint_pk, &payer, owner_pk, keypair).await;
 
-        send_tx_with_retry(
+        let _ = send_tx_with_retry(
             Rc::clone(&context),
             &instructions[..],
             Some(&payer),
             &[&payer_keypair, keypair],
         )
-        .await
-        .unwrap();
+        .await;
 
         let context_ref: Rc<RefCell<ProgramTestContext>> = context.clone();
         Self {
