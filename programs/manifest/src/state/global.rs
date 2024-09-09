@@ -482,7 +482,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
         let global_deposit: &mut GlobalDeposit =
             get_mut_global_deposit(fixed, dynamic, trader).expect("Could not find global deposit");
-        // Checked sub makes sure there are enough funds.
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_add(num_atoms)?;
 
         Ok(())
