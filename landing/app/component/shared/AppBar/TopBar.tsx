@@ -40,7 +40,10 @@ const TopBar = () => {
               );
             })}
           </div>
-          <Link href="/app"
+          <Link 
+            href="https://fill.city/" 
+            target="_blank" 
+            rel="noopener noreferrer"
             className='text-black z-50 px-8 2xl:px-10 3xl:px-16 md:block hidden py-3 bg-[#95C9BD] rounded-lg text-[16px] font-medium hover:opacity-80 active:translate-y-[1px]'>
             Trade Now
           </Link>
@@ -81,7 +84,10 @@ const TopBar = () => {
                     );
                   })}
                 </div>
-                <Link href="/ecosystem"
+                <Link 
+                  href="https://fill.city/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
                   onClick={toggleDrawer}
                   className='inline-block text-center w-full max-w-[400px] mt-6 px-8 py-3 bg-[#95C9BD] text-black rounded-lg text-[18px] font-medium hover:opacity-80 active:translate-y-[1px]'>
                   Trade Now
