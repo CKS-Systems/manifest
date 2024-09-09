@@ -73,7 +73,7 @@ export class ManifestClient {
     connection: Connection,
   ): Promise<PublicKey[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [{ memcmp: { offset: 8, bytes: marketDiscriminator } }],
+      filters: [{ memcmp: { offset: 0, bytes: marketDiscriminator } }],
     });
 
     return accounts.map((a) => a.pubkey);
