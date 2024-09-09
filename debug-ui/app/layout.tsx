@@ -4,7 +4,7 @@ import './globals.css';
 import { ReactElement } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Mainfest',
+  title: 'Manifest Developer UI',
   description: 'Manifest Exchange',
 };
 

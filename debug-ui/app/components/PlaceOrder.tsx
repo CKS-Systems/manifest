@@ -87,7 +87,7 @@ const PlaceOrder = ({
   };
 
   return (
-    <form className="w-full max-w-sm">
+    <form className="w-full">
       <div className="mb-6">
         <label
           className="block text-gray-200 font-bold mb-2"

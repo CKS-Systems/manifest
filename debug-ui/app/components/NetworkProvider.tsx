@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { ReactElement, createContext, useContext } from 'react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
 interface NetworkContextValue {
@@ -26,7 +26,7 @@ interface NetworkProviderProps {
 export const NetworkProvider = ({
   children,
   network,
-}: NetworkProviderProps) => {
+}: NetworkProviderProps): ReactElement => {
   return (
     <NetworkContext.Provider value={{ network }}>
       {children}

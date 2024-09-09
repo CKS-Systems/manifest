@@ -23,8 +23,21 @@ const Home = (): ReactElement => {
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
       <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-center">
-          Manifest Debug UI
+          Manifest Developer UI
         </h1>
+
+        <p>
+          Disclaimer: By accessing and using Manifest, you acknowledge and agree
+          that you do so at your own risk. This platform is intended for
+          developers ONLY and may not be actively supported or maintained. The
+          developers, contributors, and associated parties are not liable for
+          any losses, damages, or claims arising from your use of this platform.
+          This platform is provided &quot;as is&quot; without any warranties or
+          guarantees. Users are responsible for complying with all applicable
+          laws and regulations in their jurisdiction. Please exercise caution.
+        </p>
+
+        <br />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label htmlFor="marketAddress" className="font-semibold">

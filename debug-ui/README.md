@@ -1,4 +1,4 @@
-# Manifest Debug UI
+# Manifest Developer UI
 
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
@@ -21,6 +21,12 @@ yarn run:rando-bot
 
 ## TODOs
 
+- try listing markets on the homepage to go to...
+- three routes now...
+  - market
+  - interact
+  - create which is for creating new markets
+    - check if market exists for given pair, give a link if exists and prevent from creating (in the ui)
 - setup script to create devnet market
 
 ## NOTES

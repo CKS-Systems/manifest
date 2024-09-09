@@ -32,7 +32,7 @@ const AppWalletProvider = ({
   }
 
   const determineNetworkFromRpcUrl = (url: string): WalletAdapterNetwork => {
-    console.log(url)
+    console.log(url);
     if (url.includes('mainnet')) {
       return WalletAdapterNetwork.Mainnet;
     } else if (url.includes('devnet')) {

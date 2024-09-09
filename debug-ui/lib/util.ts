@@ -1,5 +1,8 @@
 import { ManifestClient } from '@cks-systems/manifest-sdk';
-import { SendTransactionOptions } from '@solana/wallet-adapter-base';
+import {
+  SendTransactionOptions,
+  WalletAdapterNetwork,
+} from '@solana/wallet-adapter-base';
 import {
   Connection,
   PublicKey,
@@ -59,4 +62,18 @@ export const setupClient = async (
   );
 
   return mClient;
+};
+
+export const getSolscanUrl = (
+  address: string,
+  cluster: WalletAdapterNetwork,
+): string => {
+  const baseUrl = 'https://solscan.io';
+  const clusterPath =
+    cluster !== WalletAdapterNetwork.Mainnet ? `?cluster=${cluster}` : '';
+  return `${baseUrl}/account/${address}${clusterPath}`;
+};
+
+export const shortenAddress = (address: string): string => {
+  return `${address.slice(0, 3)}...${address.slice(-3)}`;
 };

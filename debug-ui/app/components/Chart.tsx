@@ -171,9 +171,6 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg w-full">
-      <h2 className="text-center text-gray-200 mb-4">
-        Market: {marketAddress}
-      </h2>
       <div ref={chartContainerRef} className="w-full h-96" />
     </div>
   );

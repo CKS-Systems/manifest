@@ -1,5 +1,6 @@
 'use client';
 
+import SolscanAddrLink from './SolscanAddrLink';
 import { FillResultUi } from '@/lib/types';
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
@@ -68,13 +69,16 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   }, []); // Empty dependency array ensures this effect only runs once
 
   return (
-    <div className="m-0 max-w-md text-gray-200 p-4">
+    <div className="m-0 max-w-full text-gray-200 p-4">
       <pre className="bg-gray-800 p-4 rounded-lg text-sm">
         <table className="table-auto w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-700">
               <th className="pb-2">Price</th>
               <th className="pb-2">Base Tokens</th>
+              <th className="pb-2">Maker</th>
+              <th className="pb-2">Taker</th>
+              <th className="pb-2">Taker Side</th>
             </tr>
           </thead>
           <tbody>
@@ -82,6 +86,13 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
               <tr key={i} className="border-b border-gray-700">
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
+                <td className="py-2">
+                  <SolscanAddrLink address={fill.maker} />
+                </td>
+                <td className="py-2">
+                  <SolscanAddrLink address={fill.taker} />
+                </td>
+                <td className="py-2">{fill.takerSide}</td>
               </tr>
             ))}
           </tbody>
