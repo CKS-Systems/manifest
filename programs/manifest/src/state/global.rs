@@ -472,12 +472,14 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         global_trade_accounts: &GlobalTradeAccounts,
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        let global_trader: &mut GlobalTrader =
-            get_mut_global_trader(fixed, dynamic, global_trade_owner)?;
-
-        let GlobalTradeAccounts { trader, .. } = global_trade_accounts;
-        if trader.info.key != global_trade_owner || global_trade_accounts.system_program.is_none() {
-            global_trader.unclaimed_gas_deposits += 1;
+        // Might not exist because of eviction.
+        if let Ok(global_trader) = get_mut_global_trader(fixed, dynamic, global_trade_owner) {
+            let GlobalTradeAccounts { trader, .. } = global_trade_accounts;
+            if trader.info.key != global_trade_owner
+                || global_trade_accounts.system_program.is_none()
+            {
+                global_trader.unclaimed_gas_deposits += 1;
+            }
         }
 
         Ok(())

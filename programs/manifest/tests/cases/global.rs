@@ -649,8 +649,28 @@ async fn global_evict() -> anyhow::Result<()> {
         .await;
     }
 
-    // Adds with payer
+    // Adds global for `payer`
     test_fixture.global_add_trader().await?;
+
+    // Add an order for the user that will be evicted.
+    test_fixture.claim_seat().await?;
+    test_fixture.global_deposit(1_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
 
     let evictee_account_keypair: Keypair = Keypair::new();
     let evictee_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
@@ -691,8 +711,8 @@ async fn global_evict() -> anyhow::Result<()> {
     .await?;
 
     test_fixture.global_fixture.reload().await;
-    let global_dynamic_account: DynamicAccount<GlobalFixed, Vec<u8>> =
-        test_fixture.global_fixture.global;
+    let global_dynamic_account: &DynamicAccount<GlobalFixed, Vec<u8>> =
+        &test_fixture.global_fixture.global;
 
     // First got emptied.
     let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
@@ -700,6 +720,50 @@ async fn global_evict() -> anyhow::Result<()> {
     let balance_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(&test_fixture.second_keypair.pubkey());
     assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
+
+    // This verifies that the old order is not matchable because it would match
+    // here.
+    test_fixture
+        .claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .deposit_for_keypair(
+            Token::SOL,
+            1_000_000,
+            &test_fixture.second_keypair.insecure_clone(),
+        )
+        .await?;
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                false,
+                OrderType::ImmediateOrCancel,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.global_fixture.reload().await;
+    let global_dynamic_account: &DynamicAccount<GlobalFixed, Vec<u8>> =
+        &test_fixture.global_fixture.global;
+    let balance_atoms: GlobalAtoms =
+        global_dynamic_account.get_balance_atoms(&test_fixture.second_keypair.pubkey());
+    assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
+
+    // No match on IOC
+    test_fixture.market_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        1_000_000
+    );
 
     Ok(())
 }
