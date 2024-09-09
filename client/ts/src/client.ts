@@ -48,7 +48,6 @@ export interface SetupData {
 export class ManifestClient {
   private isBase22: boolean;
   private isQuote22: boolean;
-  public initialized: boolean = false;
 
   private constructor(
     public connection: Connection,
