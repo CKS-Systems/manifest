@@ -19,7 +19,7 @@ use solana_program::program::invoke_signed;
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalEvictParams {
     // Deposit amount that must be greater than the evictee deposit amount
-    pub amount_atoms: u64,
+    amount_atoms: u64,
 }
 
 impl GlobalEvictParams {
