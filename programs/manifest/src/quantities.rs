@@ -3,6 +3,7 @@ use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use shank::ShankAccount;
 use solana_program::program_error::ProgramError;
+use static_assertions::const_assert_eq;
 use std::{
     cmp::Ordering,
     fmt::Display,
@@ -202,8 +203,6 @@ const ATOM_LIMIT: u128 = u64::MAX as u128;
 const D18: u128 = 10u128.pow(18);
 const D18F: f64 = D18 as f64;
 
-/// offset of D18 in following DECIMAL_CONSTANTS pre-calc
-const D18_OFFSET: i8 = 8;
 const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(26),
     10u128.pow(25),
@@ -233,6 +232,10 @@ const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(01),
     10u128.pow(00),
 ];
+const_assert_eq!(
+    DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXPONENT as usize],
+    D18
+);
 
 // Prices
 impl QuoteAtomsPerBaseAtom {
@@ -242,19 +245,24 @@ impl QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
 
+    pub const MIN_EXPONENT: i8 = -18;
+    pub const MAX_EXPONENT: i8 = 8;
+
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, ProgramError> {
         require!(
-            exponent < D18_OFFSET,
+            exponent <= Self::MAX_EXPONENT,
             ManifestError::PriceConversion,
-            "price exponent would truncate: {exponent} > {D18_OFFSET}"
+            "price exponent would truncate: {exponent} > {}",
+            Self::MAX_EXPONENT
         )?;
         require!(
-            exponent > -19,
+            exponent >= Self::MIN_EXPONENT,
             ManifestError::PriceConversion,
-            "price exponent would truncate: {exponent} < -20"
+            "price exponent would truncate: {exponent} < {}",
+            Self::MIN_EXPONENT
         )?;
 
         /* map exponent to array range
@@ -263,7 +271,7 @@ impl QuoteAtomsPerBaseAtom {
         -10 -> [18] -> D08
         -18 -> [26] ->  D0
         */
-        let offset = -(exponent - D18_OFFSET) as usize;
+        let offset = -(exponent - Self::MAX_EXPONENT) as usize;
         // can not overflow 10^26 * u32::MAX < u128::MAX
         let inner = DECIMAL_CONSTANTS[offset] * mantissa as u128;
         return Ok(QuoteAtomsPerBaseAtom {
