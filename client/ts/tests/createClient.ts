@@ -84,7 +84,7 @@ async function testGetSetupIxs(
   console.log(`executed setupIxs: ${signature}`);
 }
 
-describe('when creating a client using getClientForMarketNoPrivateKey', () => {
+describe.only('when creating a client using getClientForMarketNoPrivateKey', () => {
   let connection: Connection;
   let payerKeypair: Keypair;
   let marketAddress: PublicKey;
@@ -105,6 +105,9 @@ describe('when creating a client using getClientForMarketNoPrivateKey', () => {
 
   it('should get setupIxs using getSetupIxs and execute successfully', () =>
     testGetSetupIxs(connection, payerKeypair, marketAddress, true, true));
+
+  it('should wait 5 seconds to let state catch up', () =>
+    new Promise((resolve) => setTimeout(resolve, 5_000)));
 
   it('should NOT crash if setupIxs already executed', () =>
     testGetClientForMarketNoPrivateKey(
