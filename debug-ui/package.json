@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "cd ../ && yarn build",
     "dev": "next dev",
-    "build": "next build",
+    "build": "cd ../ && yarn build && cd ./debug-ui && next build",
     "start": "next start",
     "start:feed": "tsx scripts/start-fill-feed.ts",
     "run:rando-bot": "tsx scripts/run-rando-bot.ts",
