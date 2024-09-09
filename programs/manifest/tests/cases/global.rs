@@ -77,7 +77,7 @@ async fn global_withdraw() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     let payer: Pubkey = test_fixture.payer();
     test_fixture.global_add_trader().await?;
-    test_fixture.global_deposit(1_000_000).await?;
+    test_fixture.global_deposit(2_000_000).await?;
     test_fixture.global_withdraw(1_000_000).await?;
 
     test_fixture.global_fixture.reload().await;
@@ -86,7 +86,7 @@ async fn global_withdraw() -> anyhow::Result<()> {
 
     // Verifying that the account exists and that there are tokens there.
     let balance_atoms: GlobalAtoms = global_dynamic_account.get_balance_atoms(&payer);
-    assert_eq!(balance_atoms, GlobalAtoms::new(0));
+    assert_eq!(balance_atoms, GlobalAtoms::new(1_000_000));
     Ok(())
 }
 
