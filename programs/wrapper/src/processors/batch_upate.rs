@@ -12,12 +12,11 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, get_dynamic_account, get_mut_dynamic_account,
-        ManifestInstruction,
+        get_dynamic_account, get_mut_dynamic_account, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType},
-    validation::{loaders::BatchUpdateContext, ManifestAccountInfo, Program, Signer},
+    validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -173,20 +172,19 @@ fn prepare_orders(
                     )
                     .unwrap();
                     let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
-                        .checked_mul(price, false)
+                        .checked_mul(price, true)
                         .unwrap();
                     if desired > *remaining_quote_atoms {
                         num_base_atoms = 0;
                     } else {
-                        *remaining_quote_atoms =
-                            remaining_quote_atoms.checked_sub(desired).unwrap();
+                        *remaining_quote_atoms -= desired;
                     }
                 } else {
                     let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
                     if desired > *remaining_base_atoms {
                         num_base_atoms = 0;
                     } else {
-                        *remaining_base_atoms = remaining_base_atoms.checked_sub(desired).unwrap();
+                        *remaining_base_atoms -= desired;
                     }
                 }
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(
@@ -213,6 +211,8 @@ fn execute_cpi(
     core_orders: Vec<PlaceOrderParams>,
 ) -> ProgramResult {
     let mut acc_metas = Vec::with_capacity(accounts.len());
+    // fist two accounts are for wrapper and manifest program itself
+    // the remainder is passed through directly to manifest
     acc_metas.extend(accounts[2..].iter().map(|ai| {
         if ai.is_writable {
             AccountMeta::new(*ai.key, ai.is_signer)
@@ -231,29 +231,6 @@ fn execute_cpi(
         .concat(),
     };
 
-    invoke(&ix, &accounts[1..])
-}
-
-fn execute_cpi2(
-    accounts: &[AccountInfo],
-    trader_index_hint: Option<DataIndex>,
-    core_cancels: Vec<CancelOrderParams>,
-    core_orders: Vec<PlaceOrderParams>,
-    market_key: &Pubkey,
-    payer_key: &Pubkey,
-) -> ProgramResult {
-    let ix = batch_update_instruction(
-        market_key,
-        payer_key,
-        trader_index_hint,
-        core_cancels,
-        core_orders,
-        None,
-        None,
-        None,
-        None,
-    );
-    // Call the batch update CPI
     invoke(&ix, &accounts[1..])
 }
 
@@ -393,9 +370,6 @@ pub(crate) fn process_batch_update(
     check_signer(&wrapper_state, payer.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
 
-    // // Possibly expand the wrapper.
-    // expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
-
     // Do an initial sync to get all existing orders and balances fresh. This is
     // needed for modifying user orders for insufficient funds.
     sync_fast(&wrapper_state, &market, market_info_index)?;
@@ -435,7 +409,6 @@ pub(crate) fn process_batch_update(
     );
 
     execute_cpi(accounts, trader_index_hint, core_cancels, core_orders)?;
-    // execute_cpi2(accounts, trader_index_hint, core_cancels, core_orders, market.key, payer.key)?;
 
     // Process the cancels
     process_cancels(&wrapper_state, &cancel_indices, market_info_index);

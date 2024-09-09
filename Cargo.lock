@@ -3397,6 +3397,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sbprof"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 2.0.75",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6351,6 +6359,7 @@ dependencies = [
  "hypertree",
  "manifest",
  "num_enum 0.5.9",
+ "sbprof",
  "shank",
  "solana-logger",
  "solana-program",

@@ -426,7 +426,7 @@ pub struct GlobalTradeAccounts<'a, 'info> {
 }
 
 /// BatchUpdate account infos
-pub struct BatchUpdateContext<'a, 'info> {
+pub(crate) struct BatchUpdateContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
     pub system_program: Program<'a, 'info>,
