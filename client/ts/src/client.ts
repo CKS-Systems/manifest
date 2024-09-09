@@ -25,7 +25,7 @@ import {
 import { OrderType, SwapParams } from './manifest/types';
 import { Market } from './market';
 import { MarketInfoParsed, Wrapper, WrapperData } from './wrapperObj';
-import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID, PROGRAM_ID } from './manifest';
 import {
   PROGRAM_ID as WRAPPER_PROGRAM_ID,
   WrapperCancelOrderParams,
@@ -45,6 +45,8 @@ export interface SetupData {
   wrapperKeypair: Keypair | null;
 }
 
+export const marketDiscriminator: string = 'hFwv1prLTHL';
+
 export class ManifestClient {
   private isBase22: boolean;
   private isQuote22: boolean;
@@ -59,6 +61,22 @@ export class ManifestClient {
   ) {
     this.isBase22 = baseMint.tlvData.length > 0;
     this.isQuote22 = quoteMint.tlvData.length > 0;
+  }
+
+  /**
+   * list all Manifest markets using getProgramAccounts. caution: this is a heavy call.
+   *
+   * @param connection Connection
+   * @returns PublicKey[]
+   */
+  public static async listMarketPublicKeys(
+    connection: Connection,
+  ): Promise<PublicKey[]> {
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters: [{ memcmp: { offset: 8, bytes: marketDiscriminator } }],
+    });
+
+    return accounts.map((a) => a.pubkey);
   }
 
   /**
