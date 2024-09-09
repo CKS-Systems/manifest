@@ -266,29 +266,28 @@ const Features = () => {
                     </p>
                   </div>
                   <div className='w-full flex justify-center lg:justify-end lg:absolute lg:right-0 lg:bottom-0 lg:ml-0 md:ml-0 sm:ml-0 -ml-[4rem] xsm:-ml-[2rem] sm:-ml-[3rem] md:-ml-[4rem] mt-[1rem]'>
-  <div className='w-full max-w-[350px] lg:max-w-[262px] lg:h-[235px] xl:max-w-[294px] xl:h-[263px] 2xl:max-w-[413px] 2xl:h-[367px] 3xl:max-w-[525px] 3xl:h-[472px] relative'>
-    <div className='hidden lg:block'>
-      <Image
-        src='/assets/exchange.svg'
-        fill
-        alt=''
-        className='object-cover'
-      />
-    </div>
-    <div className='lg:hidden'>
-      <div className='w-full max-w-[262px] lg:max-w-[168px] xl:max-w-[220px] 2xl:max-w-[309px] 3xl:max-w-[393px] h-[235px] lg:h-[136px] xl:h-[183px] 2xl:h-[263px] 3xl:h-[340px] relative'>
-        <Image
-          src='/assets/exchange.svg'
-          fill
-          alt=''
-          className='object-cover'
-        />
-      </div>
-    </div>
-  </div>
-</div>
-<div className='h-[4rem] lg:hidden'></div>
-
+                  <div className='w-full max-w-[350px] lg:max-w-[262px] lg:h-[235px] xl:max-w-[294px] xl:h-[263px] 2xl:max-w-[413px] 2xl:h-[367px] 3xl:max-w-[525px] 3xl:h-[472px] relative'>
+                    <div className='hidden lg:block'>
+                      <Image
+                        src='/assets/exchange.svg'
+                        fill
+                        alt=''
+                        className='object-cover'
+                      />
+                    </div>
+                    <div className='lg:hidden'>
+                      <div className='w-full max-w-[262px] lg:max-w-[168px] xl:max-w-[220px] 2xl:max-w-[309px] 3xl:max-w-[393px] h-[235px] lg:h-[136px] xl:h-[183px] 2xl:h-[263px] 3xl:h-[340px] relative'>
+                        <Image
+                          src='/assets/exchange.svg'
+                          fill
+                          alt=''
+                          className='object-cover'
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className='h-[4rem] lg:hidden'></div>
                 </div>
               </div>
             </Slide>
