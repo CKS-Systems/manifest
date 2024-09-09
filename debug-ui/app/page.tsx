@@ -23,7 +23,7 @@ const Home = (): ReactElement => {
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
       <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-center">
-          Manifest Debugger UI
+          Manifest Debug UI
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
