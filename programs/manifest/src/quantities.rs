@@ -200,10 +200,14 @@ fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
 }
 
 const ATOM_LIMIT: u128 = u64::MAX as u128;
-const D18: u128 = 10u128.pow(18);
-const D18F: f64 = D18 as f64;
+const D20: u128 = 10u128.pow(20);
+const D20F: f64 = D20 as f64;
 
-const DECIMAL_CONSTANTS: [u128; 27] = [
+const DECIMAL_CONSTANTS: [u128; 31] = [
+    10u128.pow(30),
+    10u128.pow(29),
+    10u128.pow(28),
+    10u128.pow(27),
     10u128.pow(26),
     10u128.pow(25),
     10u128.pow(24),
@@ -234,7 +238,7 @@ const DECIMAL_CONSTANTS: [u128; 27] = [
 ];
 const_assert_eq!(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
-    D18
+    D20
 );
 
 // Prices
@@ -245,8 +249,8 @@ impl QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
 
-    pub const MIN_EXP: i8 = -18;
-    pub const MAX_EXP: i8 = 8;
+    pub const MIN_EXP: i8 = -20;
+    pub const MAX_EXP: i8 = 10;
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
@@ -272,8 +276,9 @@ impl QuoteAtomsPerBaseAtom {
         -18 -> [26] ->  D0
         */
         let offset = -(exponent - Self::MAX_EXP) as usize;
-        // can not overflow 10^26 * u32::MAX < u128::MAX
-        let inner = DECIMAL_CONSTANTS[offset] * mantissa as u128;
+        let inner = DECIMAL_CONSTANTS[offset]
+            .checked_mul(mantissa as u128)
+            .ok_or(ManifestError::Overflow)?;
         return Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         });
@@ -291,8 +296,9 @@ impl QuoteAtomsPerBaseAtom {
         if self == Self::ZERO {
             return Ok(BaseAtoms::ZERO);
         }
-        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let dividend = quote_atoms.inner as u128 * D18;
+        let dividend = D20
+            .checked_mul(quote_atoms.inner as u128)
+            .ok_or(ManifestError::Overflow)?;
         let inner: u128 = u64_slice_to_u128(self.inner);
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
@@ -321,9 +327,9 @@ impl QuoteAtomsPerBaseAtom {
             ManifestError::Overflow
         })?;
         let quote_atoms = if round_up {
-            product.div_ceil(D18)
+            product.div_ceil(D20)
         } else {
-            product.div(D18)
+            product.div(D20)
         };
         require!(
             quote_atoms <= ATOM_LIMIT,
@@ -352,10 +358,11 @@ impl QuoteAtomsPerBaseAtom {
             return Ok(self);
         }
         let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let quote_matched_d18 = quote_matched_atoms * D18;
+        let quote_matched_d20 = quote_matched_atoms
+            .checked_mul(D20)
+            .ok_or(ManifestError::Overflow)?;
         // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d18.div(num_base_atoms.inner as u128);
+        let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
         Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         })
@@ -386,7 +393,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{}",
-            &(u64_slice_to_u128(self.inner) as f64 / D18F)
+            &(u64_slice_to_u128(self.inner) as f64 / D20F)
         ))
     }
 }
@@ -394,7 +401,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
 impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QuoteAtomsPerBaseAtom")
-            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D18F))
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
             .finish()
     }
 }
@@ -403,7 +410,7 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = ProgramError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let mantissa = value * D18F;
+        let mantissa = value * D20F;
         require!(
             mantissa.is_sign_positive(),
             ManifestError::PriceNotPositive,
@@ -499,7 +506,7 @@ fn test_wrapping_add() {
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
-        inner: u128_to_u64_slice(100 * D18 - 1),
+        inner: u128_to_u64_slice(100 * D20 - 1),
     };
     assert_eq!(
         base_atoms
@@ -557,7 +564,7 @@ fn test_print() {
     println!(
         "{}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D18 / 100),
+            inner: u128_to_u64_slice(123 * D20 / 100),
         }
     );
 }
@@ -569,7 +576,7 @@ fn test_debug() {
     println!(
         "{:?}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D18 / 100),
+            inner: u128_to_u64_slice(123 * D20 / 100),
         }
     );
 }
