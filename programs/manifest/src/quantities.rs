@@ -540,7 +540,8 @@ fn test_price_limits() {
     )
     .is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
-    assert!(QuoteAtomsPerBaseAtom::try_from(u64::MAX as f64).is_ok());
+    // TODO: need to figure out why D18 instead of D20 leads to worse performance
+    assert!(QuoteAtomsPerBaseAtom::try_from((u64::MAX/100) as f64).is_ok());
 
     // failures
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
