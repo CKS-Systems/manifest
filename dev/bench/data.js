@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726004623716,
+  "lastUpdate": 1726012585918,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -1737,6 +1737,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7361,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Maximilian Schneider",
+            "username": "mschneider",
+            "email": "mail@maximilianschneider.net"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "881378b44cf4163ffe62a2f722e9633170b9f4ad",
+          "message": "deploy website (#71)\n\n* recover fly toml\r\n\r\n* add dockerfile",
+          "timestamp": "2024-09-10T13:55:20Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/881378b44cf4163ffe62a2f722e9633170b9f4ad"
+        },
+        "date": 1726012584642,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6791,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13211,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13916,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4301,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 6276,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7705,
             "unit": "CU",
             "range": "",
             "extra": ""
