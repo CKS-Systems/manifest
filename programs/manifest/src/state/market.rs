@@ -794,10 +794,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         }
 
         // record volume on market
-        fixed.quote_volume = fixed
-            .quote_volume
-            .overflowing_add(total_quote_atoms_traded)
-            .0;
+        fixed.quote_volume = fixed.quote_volume.wrapping_add(total_quote_atoms_traded);
 
         // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
@@ -1058,7 +1055,7 @@ fn record_volume_by_trader_index(
 ) {
     let claimed_seat: &mut ClaimedSeat =
         get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
-    claimed_seat.quote_volume = claimed_seat.quote_volume.overflowing_add(amount_atoms).0;
+    claimed_seat.quote_volume = claimed_seat.quote_volume.wrapping_add(amount_atoms);
 }
 
 #[inline(always)]

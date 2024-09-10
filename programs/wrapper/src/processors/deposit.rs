@@ -2,7 +2,7 @@ use std::cell::Ref;
 
 use borsh::BorshDeserialize;
 use manifest::{
-    program::{deposit::DepositParams, deposit_instruction, get_dynamic_account},
+    program::{deposit::DepositParams, deposit_instruction},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
@@ -72,11 +72,7 @@ pub(crate) fn process_deposit(
         ],
     )?;
 
-    sync(
-        &wrapper_state,
-        market.key,
-        get_dynamic_account(&market.try_borrow_data().unwrap()),
-    )?;
+    sync(&wrapper_state, &market)?;
 
     Ok(())
 }

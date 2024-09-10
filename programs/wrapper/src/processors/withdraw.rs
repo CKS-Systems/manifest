@@ -2,7 +2,7 @@ use std::cell::Ref;
 
 use borsh::BorshDeserialize;
 use manifest::{
-    program::{get_dynamic_account, withdraw::WithdrawParams, withdraw_instruction},
+    program::{withdraw::WithdrawParams, withdraw_instruction},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo},
 };
@@ -74,11 +74,7 @@ pub(crate) fn process_withdraw(
     )?;
 
     // Sync
-    sync(
-        &wrapper_state,
-        market.key,
-        get_dynamic_account(&market.try_borrow_data().unwrap()),
-    )?;
+    sync(&wrapper_state, &market)?;
 
     Ok(())
 }
