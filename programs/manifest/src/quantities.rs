@@ -200,14 +200,10 @@ fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
 }
 
 const ATOM_LIMIT: u128 = u64::MAX as u128;
-const D20: u128 = 10u128.pow(20);
-const D20F: f64 = D20 as f64;
+const D18: u128 = 10u128.pow(18);
+const D18F: f64 = D18 as f64;
 
-const DECIMAL_CONSTANTS: [u128; 31] = [
-    10u128.pow(30),
-    10u128.pow(29),
-    10u128.pow(28),
-    10u128.pow(27),
+const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(26),
     10u128.pow(25),
     10u128.pow(24),
@@ -238,7 +234,7 @@ const DECIMAL_CONSTANTS: [u128; 31] = [
 ];
 const_assert_eq!(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
-    D20
+    D18
 );
 
 // Prices
@@ -248,31 +244,30 @@ impl QuoteAtomsPerBaseAtom {
     pub const MAX: Self = QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
-    pub const MIN_EXP: i8 = -20;
-    pub const MAX_EXP: i8 = 10;
+    pub const MIN_EXP: i8 = -18;
+    pub const MAX_EXP: i8 = 8;
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
         if exponent > Self::MAX_EXP {
-            msg!("invalid exponent {exponent} > 10 would truncate",);
+            msg!("invalid exponent {exponent} > 8 would truncate",);
             return Err(PriceConversionError(0x0));
         }
         if exponent < Self::MIN_EXP {
-            msg!("invalid exponent {exponent} < -20 would truncate",);
+            msg!("invalid exponent {exponent} < -18 would truncate",);
             return Err(PriceConversionError(0x1));
         }
         /* map exponent to array range
-         10 -> [0]  -> D30
-          0 -> [10] -> D20
-        -10 -> [20] -> D10
-        -20 -> [30] ->  D0
+          8 ->  [0] -> D26
+          0 ->  [8] -> D18
+        -10 -> [18] -> D08
+        -18 -> [26] ->  D0
         */
         let offset = -(exponent - Self::MAX_EXP) as usize;
-        let inner = DECIMAL_CONSTANTS[offset]
-            .checked_mul(mantissa as u128)
-            .ok_or(PriceConversionError(0x2))?;
+        // can not overflow 10^26 * u32::MAX < u128::MAX
+        let inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
         return Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         });
@@ -288,11 +283,10 @@ impl QuoteAtomsPerBaseAtom {
         // is used to calculate error free order sizes and for that purpose
         // it works well.
         if self == Self::ZERO {
-            return Ok(BaseAtoms::new(0));
+            return Ok(BaseAtoms::ZERO);
         }
-        let dividend = D20
-            .checked_mul(quote_atoms.inner as u128)
-            .ok_or(PriceConversionError(0x4))?;
+        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
+        let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
@@ -317,9 +311,9 @@ impl QuoteAtomsPerBaseAtom {
             .checked_mul(base_atoms.inner as u128)
             .ok_or(PriceConversionError(0x8))?;
         let quote_atoms = if round_up {
-            product.div_ceil(D20)
+            product.div_ceil(D18)
         } else {
-            product.div(D20)
+            product.div(D18)
         };
         if quote_atoms <= ATOM_LIMIT {
             Ok(quote_atoms)
@@ -346,11 +340,10 @@ impl QuoteAtomsPerBaseAtom {
             return Ok(self);
         }
         let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        let quote_matched_d20 = quote_matched_atoms
-            .checked_mul(D20)
-            .ok_or(PriceConversionError(0x9))?;
+        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
+        let quote_matched_d18 = quote_matched_atoms * D18;
         // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
+        let inner = quote_matched_d18.div(num_base_atoms.inner as u128);
         Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         })
@@ -381,7 +374,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{}",
-            &(u64_slice_to_u128(self.inner) as f64 / D20F)
+            &(u64_slice_to_u128(self.inner) as f64 / D18F)
         ))
     }
 }
@@ -389,7 +382,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
 impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QuoteAtomsPerBaseAtom")
-            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D18F))
             .finish()
     }
 }
@@ -409,7 +402,7 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let mantissa = value * D20F;
+        let mantissa = value * D18F;
         if mantissa.is_infinite() {
             msg!("infinite can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xC));
@@ -501,7 +494,7 @@ fn test_wrapping_add() {
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
-        inner: u128_to_u64_slice(100 * D20 - 1),
+        inner: u128_to_u64_slice(100 * D18 - 1),
     };
     assert_eq!(
         base_atoms
@@ -561,7 +554,7 @@ fn test_print() {
     println!(
         "{}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D20 / 100),
+            inner: u128_to_u64_slice(123 * D18 / 100),
         }
     );
 }
@@ -573,7 +566,7 @@ fn test_debug() {
     println!(
         "{:?}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D20 / 100),
+            inner: u128_to_u64_slice(123 * D18 / 100),
         }
     );
 }
