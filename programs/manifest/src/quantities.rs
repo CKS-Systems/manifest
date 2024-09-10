@@ -2,13 +2,13 @@ use crate::{program::ManifestError, require};
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use shank::ShankAccount;
-use solana_program::program_error::ProgramError;
+use solana_program::{msg, program_error::ProgramError};
 use static_assertions::const_assert_eq;
 use std::{
     cmp::Ordering,
     fmt::Display,
     ops::{Add, AddAssign, Div, Sub, SubAssign},
-    u128, u32, u64,
+    u128, u64,
 };
 
 /// New and as_u64 for creating and switching to u64 when needing to use base or
@@ -248,27 +248,21 @@ impl QuoteAtomsPerBaseAtom {
     pub const MAX: Self = QuoteAtomsPerBaseAtom {
         inner: [u64::MAX; 2],
     };
-
     pub const MIN_EXP: i8 = -20;
     pub const MAX_EXP: i8 = 10;
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
-    ) -> Result<Self, ProgramError> {
-        require!(
-            exponent <= Self::MAX_EXP,
-            ManifestError::PriceConversion,
-            "price exponent > {} would truncate",
-            Self::MAX_EXP
-        )?;
-        require!(
-            exponent >= Self::MIN_EXP,
-            ManifestError::PriceConversion,
-            "price exponent < {} would truncate",
-            Self::MIN_EXP
-        )?;
-
+    ) -> Result<Self, PriceConversionError> {
+        if exponent > Self::MAX_EXP {
+            msg!("invalid exponent {exponent} > 10 would truncate",);
+            return Err(PriceConversionError(0x0));
+        }
+        if exponent < Self::MIN_EXP {
+            msg!("invalid exponent {exponent} < -20 would truncate",);
+            return Err(PriceConversionError(0x1));
+        }
         /* map exponent to array range
          10 -> [0]  -> D30
           0 -> [10] -> D20
@@ -278,7 +272,7 @@ impl QuoteAtomsPerBaseAtom {
         let offset = -(exponent - Self::MAX_EXP) as usize;
         let inner = DECIMAL_CONSTANTS[offset]
             .checked_mul(mantissa as u128)
-            .ok_or(ManifestError::Overflow)?;
+            .ok_or(PriceConversionError(0x2))?;
         return Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         });
@@ -294,23 +288,22 @@ impl QuoteAtomsPerBaseAtom {
         // is used to calculate error free order sizes and for that purpose
         // it works well.
         if self == Self::ZERO {
-            return Ok(BaseAtoms::ZERO);
+            return Ok(BaseAtoms::new(0));
         }
         let dividend = D20
             .checked_mul(quote_atoms.inner as u128)
-            .ok_or(ManifestError::Overflow)?;
+            .ok_or(PriceConversionError(0x4))?;
         let inner: u128 = u64_slice_to_u128(self.inner);
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
         } else {
             dividend.div(inner)
         };
-        require!(
-            base_atoms <= ATOM_LIMIT,
-            ManifestError::Overflow,
-            "Overflow in checked_base_for_quote",
-        )?;
-        Ok(BaseAtoms::new(base_atoms as u64))
+        if base_atoms <= ATOM_LIMIT {
+            Ok(BaseAtoms::new(base_atoms as u64))
+        } else {
+            Err(PriceConversionError(0x5).into())
+        }
     }
 
     #[inline]
@@ -320,22 +313,19 @@ impl QuoteAtomsPerBaseAtom {
         round_up: bool,
     ) -> Result<u128, ProgramError> {
         let inner: u128 = u64_slice_to_u128(self.inner);
-        let product: u128 = inner.checked_mul(base_atoms.inner as u128).ok_or_else(|| {
-            solana_program::msg!("Overflow in checked_quote_for_base",);
-            ManifestError::Overflow
-        })?;
+        let product: u128 = inner
+            .checked_mul(base_atoms.inner as u128)
+            .ok_or(PriceConversionError(0x8))?;
         let quote_atoms = if round_up {
             product.div_ceil(D20)
         } else {
             product.div(D20)
         };
-        require!(
-            quote_atoms <= ATOM_LIMIT,
-            ManifestError::Overflow,
-            "Overflow in checked_quote_for_base",
-        )?;
-
-        return Ok(quote_atoms);
+        if quote_atoms <= ATOM_LIMIT {
+            Ok(quote_atoms)
+        } else {
+            Err(PriceConversionError(0x9).into())
+        }
     }
 
     pub fn checked_quote_for_base(
@@ -358,7 +348,7 @@ impl QuoteAtomsPerBaseAtom {
         let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
         let quote_matched_d20 = quote_matched_atoms
             .checked_mul(D20)
-            .ok_or(ManifestError::Overflow)?;
+            .ok_or(PriceConversionError(0x9))?;
         // no special case rounding needed because effective price is just a value used to compare for order
         let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
         Ok(QuoteAtomsPerBaseAtom {
@@ -404,31 +394,38 @@ impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     }
 }
 
+#[derive(Debug)]
+pub struct PriceConversionError(u32);
+
+const PRICE_CONVERSION_ERROR_BASE: u32 = 100;
+
+impl From<PriceConversionError> for ProgramError {
+    fn from(value: PriceConversionError) -> Self {
+        ProgramError::Custom(value.0 + PRICE_CONVERSION_ERROR_BASE)
+    }
+}
+
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
-    type Error = ProgramError;
+    type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         let mantissa = value * D20F;
-        require!(
-            mantissa.is_sign_positive(),
-            ManifestError::PriceNotPositive,
-            "negative numbers can not be expressed as fixed point decimal"
-        )?;
-        require!(
-            !mantissa.is_infinite(),
-            ManifestError::PriceConversion,
-            "infinite can not be expressed as fixed point decimal"
-        )?;
-        require!(
-            !mantissa.is_nan(),
-            ManifestError::PriceConversion,
-            "nan can not be expressed as fixed point decimal"
-        )?;
-        require!(
-            mantissa < u128::MAX as f64,
-            ManifestError::PriceConversion,
-            "floating point value is too large"
-        )?;
+        if mantissa.is_infinite() {
+            msg!("infinite can not be expressed as fixed point decimal");
+            return Err(PriceConversionError(0xC));
+        }
+        if mantissa.is_nan() {
+            msg!("nan can not be expressed as fixed point decimal");
+            return Err(PriceConversionError(0xD));
+        }
+        if mantissa > u128::MAX as f64 {
+            msg!("price is too large");
+            return Err(PriceConversionError(0xE));
+        }
+        if mantissa.is_sign_negative() {
+            msg!("price can not be negative");
+            return Err(PriceConversionError(0xF));
+        }
         Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(mantissa as u128),
         })

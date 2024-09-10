@@ -42,8 +42,6 @@ pub enum ManifestError {
     IncorrectAccount = 17,
     #[error("Mint not allowed for market")]
     InvalidMint = 18,
-    #[error("Price specified can not be converted")]
-    PriceConversion = 19,
 }
 
 impl From<ManifestError> for ProgramError {

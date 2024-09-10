@@ -3,7 +3,7 @@ use std::{cell::RefMut, mem::size_of};
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
     program::ManifestError,
-    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
         claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
@@ -14,8 +14,7 @@ use crate::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data,
-    program_error::ProgramError, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data, pubkey::Pubkey,
 };
 
 use super::{expand_market_if_needed, shared::get_mut_dynamic_account};
@@ -79,7 +78,7 @@ impl PlaceOrderParams {
         self.base_atoms
     }
 
-    pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, ProgramError> {
+    pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
             self.price_mantissa,
             self.price_exponent,
