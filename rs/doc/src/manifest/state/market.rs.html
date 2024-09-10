@@ -1175,9 +1175,6 @@
 <a href="#1173" id="1173">1173</a>
 <a href="#1174" id="1174">1174</a>
 <a href="#1175" id="1175">1175</a>
-<a href="#1176" id="1176">1176</a>
-<a href="#1177" id="1177">1177</a>
-<a href="#1178" id="1178">1178</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
@@ -1974,10 +1971,7 @@
         }
 
         <span class="comment">// record volume on market
-        </span>fixed.quote_volume = fixed
-            .quote_volume
-            .overflowing_add(total_quote_atoms_traded)
-            .<span class="number">0</span>;
+        </span>fixed.quote_volume = fixed.quote_volume.wrapping_add(total_quote_atoms_traded);
 
         <span class="comment">// If there is nothing left to rest, then return before resting.
         </span><span class="kw">if </span>!order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
@@ -2238,7 +2232,7 @@
 ) {
     <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;mut </span>ClaimedSeat =
         get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index).get_mut_value();
-    claimed_seat.quote_volume = claimed_seat.quote_volume.overflowing_add(amount_atoms).<span class="number">0</span>;
+    claimed_seat.quote_volume = claimed_seat.quote_volume.wrapping_add(amount_atoms);
 }
 
 <span class="attr">#[inline(always)]
