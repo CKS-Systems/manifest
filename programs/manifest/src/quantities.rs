@@ -321,9 +321,7 @@ impl QuoteAtomsPerBaseAtom {
     ) -> Result<u128, ProgramError> {
         let inner: u128 = u64_slice_to_u128(self.inner);
         let product: u128 = inner.checked_mul(base_atoms.inner as u128).ok_or_else(|| {
-            solana_program::msg!(
-                "Overflow in checked_quote_for_base",
-            );
+            solana_program::msg!("Overflow in checked_quote_for_base",);
             ManifestError::Overflow
         })?;
         let quote_atoms = if round_up {
