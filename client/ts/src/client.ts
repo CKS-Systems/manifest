@@ -112,7 +112,6 @@ export class ManifestClient {
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: payerKeypair.publicKey,
         market: marketPk,
-        payer: payerKeypair.publicKey,
         wrapperState: wrapperKeypair.publicKey,
       });
       transaction.add(createAccountIx);
@@ -174,7 +173,6 @@ export class ManifestClient {
       manifestProgram: MANIFEST_PROGRAM_ID,
       owner: payerKeypair.publicKey,
       market: marketPk,
-      payer: payerKeypair.publicKey,
       wrapperState: wrapperResponse.pubkey,
     });
     transaction.add(claimSeatIx);
