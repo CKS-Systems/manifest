@@ -50,12 +50,11 @@ pub enum ManifestWrapperInstruction {
     Withdraw = 3,
 
     /// Cancels, then places orders.
-    #[account(0, name = "manifest_program", desc = "Manifest program")]
-    #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
-    #[account(2, writable, name = "market", desc = "Account holding all market state")]
-    #[account(3, name = "system_program", desc = "System program")]
-    #[account(4, writable, signer, name = "payer", desc = "Payer of rent and gas")]
-    #[account(5, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, name = "manifest_program", desc = "Manifest program")]
+    #[account(2, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(3, writable, name = "market", desc = "Account holding all market state")]
+    #[account(4, name = "system_program", desc = "System program")]
     BatchUpdate = 4,
 }
 

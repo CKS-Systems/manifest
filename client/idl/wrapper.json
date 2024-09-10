@@ -284,6 +284,14 @@
       "name": "BatchUpdate",
       "accounts": [
         {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
           "name": "manifestProgram",
           "isMut": false,
           "isSigner": false,
@@ -313,22 +321,6 @@
           "isSigner": false,
           "docs": [
             "System program"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
-          ]
-        },
-        {
-          "name": "wrapperState",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Wrapper state"
           ]
         }
       ],
