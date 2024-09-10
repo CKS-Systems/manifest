@@ -1,4 +1,4 @@
-use crate::{program::ManifestError, require};
+use crate::program::ManifestError;
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use shank::ShankAccount;
