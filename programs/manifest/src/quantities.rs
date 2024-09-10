@@ -259,13 +259,13 @@ impl QuoteAtomsPerBaseAtom {
         require!(
             exponent <= Self::MAX_EXP,
             ManifestError::PriceConversion,
-            "price exponent would truncate: {exponent} > {}",
+            "price exponent > {} would truncate",
             Self::MAX_EXP
         )?;
         require!(
             exponent >= Self::MIN_EXP,
             ManifestError::PriceConversion,
-            "price exponent would truncate: {exponent} < {}",
+            "price exponent < {} would truncate",
             Self::MIN_EXP
         )?;
 
@@ -308,7 +308,7 @@ impl QuoteAtomsPerBaseAtom {
         require!(
             base_atoms <= ATOM_LIMIT,
             ManifestError::Overflow,
-            "quote / price would overflow base: {quote_atoms} / {self:?} = {base_atoms}",
+            "Overflow in checked_base_for_quote",
         )?;
         Ok(BaseAtoms::new(base_atoms as u64))
     }
@@ -322,7 +322,7 @@ impl QuoteAtomsPerBaseAtom {
         let inner: u128 = u64_slice_to_u128(self.inner);
         let product: u128 = inner.checked_mul(base_atoms.inner as u128).ok_or_else(|| {
             solana_program::msg!(
-                "base x price would overflow intermediate result: {base_atoms} x {self:?}",
+                "Overflow in checked_quote_for_base",
             );
             ManifestError::Overflow
         })?;
@@ -334,7 +334,7 @@ impl QuoteAtomsPerBaseAtom {
         require!(
             quote_atoms <= ATOM_LIMIT,
             ManifestError::Overflow,
-            "base x price would overflow quote: {base_atoms} x {self:?} = {quote_atoms}",
+            "Overflow in checked_quote_for_base",
         )?;
 
         return Ok(quote_atoms);
