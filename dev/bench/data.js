@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725952077772,
+  "lastUpdate": 1725954471932,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -1479,6 +1479,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7736,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be0c627fd149e6dc696db3f2679b89b86a21c868",
+          "message": "update wrapper (#68)\n\n* update wrapper\r\n* document magic number\r\n* cleanup error handling and improve compute cost\r\n* add more tests\r\n* improve coverage",
+          "timestamp": "2024-09-10T08:26:48+01:00",
+          "tree_id": "d80c2cde9c9ccb279ab5c72e9540d836edc78ae8",
+          "url": "https://github.com/CKS-Systems/manifest/commit/be0c627fd149e6dc696db3f2679b89b86a21c868"
+        },
+        "date": 1725954471331,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6780,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13220,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13944,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4318,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 6149,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7743,
             "unit": "CU",
             "range": "",
             "extra": ""
