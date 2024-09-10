@@ -382,7 +382,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -507,7 +506,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -539,7 +537,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -566,7 +563,6 @@ export class ManifestClient {
   public cancelAllIx(): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
