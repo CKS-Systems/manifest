@@ -214,12 +214,8 @@ async fn sync_remove_test() -> anyhow::Result<()> {
     let second_payer_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     let second_wrapper_keypair: Keypair = Keypair::new();
 
-    let create_wrapper_ixs: Vec<Instruction> = create_wrapper_instructions(
-        &second_payer,
-        &second_payer,
-        &second_wrapper_keypair.pubkey(),
-    )
-    .unwrap();
+    let create_wrapper_ixs: Vec<Instruction> =
+        create_wrapper_instructions(&second_payer, &second_wrapper_keypair.pubkey()).unwrap();
 
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),

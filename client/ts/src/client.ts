@@ -106,7 +106,6 @@ export class ManifestClient {
       const createWrapperIx: TransactionInstruction =
         createCreateWrapperInstruction({
           owner: payerKeypair.publicKey,
-          payer: payerKeypair.publicKey,
           wrapperState: wrapperKeypair.publicKey,
         });
       const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
@@ -264,7 +263,6 @@ export class ManifestClient {
 
     return createDepositInstruction(
       {
-        payer,
         market: this.market.address,
         traderTokenAccount,
         vault,
@@ -312,7 +310,6 @@ export class ManifestClient {
 
     return createWithdrawInstruction(
       {
-        payer,
         market: this.market.address,
         traderTokenAccount,
         vault,
