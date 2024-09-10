@@ -275,6 +275,7 @@ impl QuoteAtomsPerBaseAtom {
     pub const MIN_EXP: i8 = -18;
     pub const MAX_EXP: i8 = 8;
 
+    #[inline(always)]
     const fn from_mantissa_and_exponent_(mantissa: u32, exponent: i8) -> Self {
         /* map exponent to array range
           8 ->  [0] -> D26
@@ -282,7 +283,7 @@ impl QuoteAtomsPerBaseAtom {
         -10 -> [18] -> D08
         -18 -> [26] ->  D0
         */
-        let offset = -(exponent - Self::MAX_EXP) as usize;
+        let offset = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
         // can not overflow 10^26 * u32::MAX < u128::MAX
         let inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
         QuoteAtomsPerBaseAtom {
