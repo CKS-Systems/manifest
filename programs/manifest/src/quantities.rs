@@ -270,10 +270,10 @@ impl QuoteAtomsPerBaseAtom {
         )?;
 
         /* map exponent to array range
-          8 ->  [0] -> D26
-          0 ->  [8] -> D18
-        -10 -> [18] -> D08
-        -18 -> [26] ->  D0
+         10 -> [0]  -> D30
+          0 -> [10] -> D20
+        -10 -> [20] -> D10
+        -20 -> [30] ->  D0
         */
         let offset = -(exponent - Self::MAX_EXP) as usize;
         let inner = DECIMAL_CONSTANTS[offset]
@@ -523,8 +523,9 @@ fn test_price_limits() {
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
+    // TODO: need to figure out why a lower MAX_EXP leads to worse performance
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        u32::MAX,
+        u32::MAX/100,
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
