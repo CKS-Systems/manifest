@@ -182,6 +182,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader)?;
     if desired_global_atoms > num_deposited_atoms {
+        // TODO: Emit a log for global order that could not be matched against being cleaned.
         return Ok(false);
     }
     // TODO: Allow matching against a global that can only partially fill the order.

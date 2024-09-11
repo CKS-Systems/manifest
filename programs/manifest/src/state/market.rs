@@ -520,7 +520,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         )?;
 
         let DynamicAccount { dynamic, .. } = self.borrow_mut();
-        update_balance_by_trader_index(dynamic, trader_index, is_base, true, amount_atoms)?;
+        update_balance(dynamic, trader_index, is_base, true, amount_atoms)?;
         Ok(())
     }
 
@@ -528,10 +528,14 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let trader_index: DataIndex = self.get_trader_index(trader);
 
         let DynamicAccount { dynamic, .. } = self.borrow_mut();
-        update_balance_by_trader_index(dynamic, trader_index, is_base, false, amount_atoms)?;
+        update_balance(dynamic, trader_index, is_base, false, amount_atoms)?;
         Ok(())
     }
 
+    /// Place an order and update the market
+    /// 
+    /// 1. Check the order against the opposite bookside
+    /// 2. Rest any amount of the order leftover on the book
     pub fn place_order(
         &mut self,
         args: AddOrderToMarketArgs,
@@ -561,11 +565,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let mut total_base_atoms_traded: BaseAtoms = BaseAtoms::ZERO;
         let mut total_quote_atoms_traded: QuoteAtoms = QuoteAtoms::ZERO;
-
-        // Bump the order sequence number even for IOC orders which do not end
-        // up resting.
-        let order_sequence_number: u64 = fixed.order_sequence_number;
-        fixed.order_sequence_number = order_sequence_number.wrapping_add(1);
 
         let mut remaining_base_atoms: BaseAtoms = num_base_atoms;
         while remaining_base_atoms > BaseAtoms::ZERO && current_order_index != NIL {
@@ -687,7 +686,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                             .checked_sub(base_atoms_traded)?,
                         false,
                     )?;
-                update_balance_by_trader_index(
+                update_balance(
                     dynamic,
                     other_trader_index,
                     is_bid,
@@ -700,7 +699,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
 
             // Increase maker from the matched amount in the trade.
-            update_balance_by_trader_index(
+            update_balance(
                 dynamic,
                 other_trader_index,
                 !is_bid,
@@ -711,9 +710,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     base_atoms_traded.into()
                 },
             )?;
-
             // Decrease taker
-            update_balance_by_trader_index(
+            update_balance(
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -725,7 +723,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 },
             )?;
             // Increase taker
-            update_balance_by_trader_index(
+            update_balance(
                 dynamic,
                 trader_index,
                 is_bid,
@@ -793,8 +791,13 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
         }
 
-        // record volume on market
+        // Record volume on market
         fixed.quote_volume = fixed.quote_volume.wrapping_add(total_quote_atoms_traded);
+
+        // Bump the order sequence number even for orders which do not end up
+        // resting.
+        let order_sequence_number: u64 = fixed.order_sequence_number;
+        fixed.order_sequence_number = order_sequence_number.wrapping_add(1);
 
         // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
@@ -805,6 +808,30 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 quote_atoms_traded: total_quote_atoms_traded,
             });
         }
+
+        self.rest_remaining(args, remaining_base_atoms, order_sequence_number, total_base_atoms_traded, total_quote_atoms_traded)
+    }
+
+    /// Rest the remaining order onto the market in a RestingOrder.
+    fn rest_remaining(
+        &mut self,
+        args: AddOrderToMarketArgs,
+        remaining_base_atoms: BaseAtoms,
+        order_sequence_number: u64,
+        total_base_atoms_traded: BaseAtoms,
+        total_quote_atoms_traded: QuoteAtoms,
+    )
+    -> Result<AddOrderToMarketResult, ProgramError> {
+        let AddOrderToMarketArgs {
+            trader_index,
+            price,
+            is_bid,
+            last_valid_slot,
+            order_type,
+            global_trade_accounts_opts,
+            ..
+        } = args;
+        let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
         // Put the remaining in an order on the other bookside.
         let free_address: DataIndex = get_free_address_on_market_fixed(fixed, dynamic);
@@ -834,7 +861,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         } else {
             // Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.
-            update_balance_by_trader_index(
+            update_balance(
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -940,7 +967,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 .trader;
             remove_from_global(&global_trade_accounts_opt, trader)?
         } else {
-            update_balance_by_trader_index(dynamic, trader_index, !is_bid, true, amount_atoms)?;
+            update_balance(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
         remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)?;
 
@@ -1001,7 +1028,7 @@ fn remove_order_from_tree_and_free(
     Ok(())
 }
 
-fn update_balance_by_trader_index(
+fn update_balance(
     dynamic: &mut [u8],
     trader_index: DataIndex,
     is_base: bool,
@@ -1162,7 +1189,7 @@ fn remove_and_update_balances(
                 .trader;
         remove_from_global(&global_trade_accounts_opt, maker)?;
     } else {
-        update_balance_by_trader_index(
+        update_balance(
             dynamic,
             other_order.get_trader_index(),
             !other_is_bid,
