@@ -1,18 +1,18 @@
-use std::{cell::RefMut, rc::Rc};
+use std::rc::Rc;
 
 use borsh::ser::BorshSerialize;
 use manifest::program::{deposit::DepositParams, deposit_instruction, ManifestInstruction};
-use solana_program_test::{tokio, ProgramTestContext};
+use solana_program_test::tokio;
 use solana_sdk::{
-    hash::Hash,
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
-    transaction::Transaction,
 };
 
-use crate::{MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE};
+use crate::{
+    send_tx_with_retry, MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
+};
 
 #[tokio::test]
 async fn basic_deposit_test() -> anyhow::Result<()> {
@@ -50,31 +50,22 @@ async fn deposit_fail_insufficient_funds_test() -> anyhow::Result<()> {
 
     let payer: &Pubkey = &test_fixture.payer().clone();
     let payer_keypair: &Keypair = &test_fixture.payer_keypair().insecure_clone();
-    let deposit_ix: Instruction = deposit_instruction(
-        &test_fixture.market_fixture.key,
-        payer,
-        mint,
-        1,
-        &user_token_account,
-        spl_token::id(),
-    );
-    let mut context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
-    let new_blockhash: Hash = context.get_new_latest_blockhash().await?;
 
-    let deposit_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[deposit_ix],
-            Some(payer),
-            &[payer_keypair],
-            new_blockhash,
-        )
-    };
-
-    assert!(context
-        .banks_client
-        .process_transaction(deposit_tx)
-        .await
-        .is_err());
+    assert!(send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[deposit_instruction(
+            &test_fixture.market_fixture.key,
+            payer,
+            mint,
+            1,
+            &user_token_account,
+            spl_token::id(),
+        )],
+        Some(payer),
+        &[payer_keypair],
+    )
+    .await
+    .is_err());
 
     Ok(())
 }
@@ -103,35 +94,28 @@ async fn deposit_fail_incorrect_mint_test() -> anyhow::Result<()> {
 
     let payer: &Pubkey = &test_fixture.payer().clone();
     let payer_keypair: &Keypair = &test_fixture.payer_keypair().insecure_clone();
-    let deposit_ix: Instruction = deposit_instruction(
-        &test_fixture.market_fixture.key,
-        payer,
-        mint,
-        SOL_UNIT_SIZE,
-        &user_token_account,
-        spl_token::id(),
-    );
-    let mut context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
-    let new_blockhash: Hash = context.get_new_latest_blockhash().await?;
 
-    let deposit_tx: Transaction = Transaction::new_signed_with_payer(
-        &[deposit_ix],
+    assert!(send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[deposit_instruction(
+            &test_fixture.market_fixture.key,
+            payer,
+            mint,
+            SOL_UNIT_SIZE,
+            &user_token_account,
+            spl_token::id(),
+        )],
         Some(payer),
         &[payer_keypair],
-        new_blockhash,
-    );
-
-    assert!(context
-        .banks_client
-        .process_transaction(deposit_tx)
-        .await
-        .is_err());
+    )
+    .await
+    .is_err());
 
     Ok(())
 }
 
 #[tokio::test]
-async fn deposit_fail_incorrect_vault_test() -> anyhow::Result<()> {
+async fn global_deposit_fail_incorrect_vault_test() -> anyhow::Result<()> {
     let test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
 
@@ -142,7 +126,6 @@ async fn deposit_fail_incorrect_vault_test() -> anyhow::Result<()> {
     let deposit_ix: Instruction = Instruction {
         program_id: manifest::id(),
         accounts: vec![
-            AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*payer, true),
             AccountMeta::new(test_fixture.market_fixture.key, false),
             AccountMeta::new(user_token_account, false),
@@ -155,23 +138,14 @@ async fn deposit_fail_incorrect_vault_test() -> anyhow::Result<()> {
         ]
         .concat(),
     };
-    let mut context: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
-    let new_blockhash: Hash = context.get_new_latest_blockhash().await?;
-
-    let deposit_tx: Transaction = {
-        Transaction::new_signed_with_payer(
-            &[deposit_ix],
-            Some(payer),
-            &[payer_keypair],
-            new_blockhash,
-        )
-    };
-
-    assert!(context
-        .banks_client
-        .process_transaction(deposit_tx)
-        .await
-        .is_err());
+    assert!(send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[deposit_ix],
+        Some(payer),
+        &[payer_keypair],
+    )
+    .await
+    .is_err());
 
     Ok(())
 }
