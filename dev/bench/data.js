@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726023315225,
+  "lastUpdate": 1726025346247,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -1865,6 +1865,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7376,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48b60b7bd8e63fb29d234c6804326bfbb98ba282",
+          "message": "switch decimal fixed point to 10^18 (#73)\n\n* reduce fixed point to 10^18\r\n* optimize implementation for float to fixed conversion",
+          "timestamp": "2024-09-11T04:06:39+01:00",
+          "tree_id": "1762d8756c6138939601a377331e41527d3740fe",
+          "url": "https://github.com/CKS-Systems/manifest/commit/48b60b7bd8e63fb29d234c6804326bfbb98ba282"
+        },
+        "date": 1726025344942,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6791,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13211,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13916,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4094,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 6120,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7425,
             "unit": "CU",
             "range": "",
             "extra": ""
