@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726025346247,
+  "lastUpdate": 1726032012329,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -1931,6 +1931,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7425,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Maximilian Schneider",
+            "username": "mschneider",
+            "email": "mail@maximilianschneider.net"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "48b60b7bd8e63fb29d234c6804326bfbb98ba282",
+          "message": "switch decimal fixed point to 10^18 (#73)\n\n* reduce fixed point to 10^18\r\n* optimize implementation for float to fixed conversion",
+          "timestamp": "2024-09-11T03:06:39Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/48b60b7bd8e63fb29d234c6804326bfbb98ba282"
+        },
+        "date": 1726032011017,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6897,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13208,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13902,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4113,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7207,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7456,
             "unit": "CU",
             "range": "",
             "extra": ""
