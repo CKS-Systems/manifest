@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726032012329,
+  "lastUpdate": 1726069979656,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -1995,6 +1995,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7456,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c355ac4587d117d8a3b78422dab803447ed0ac4d",
+          "message": "forbid zero prices for sanity (#75)\n\n* forbid zero prices for sanity\r\n* update price limit test cases",
+          "timestamp": "2024-09-11T16:28:57+01:00",
+          "tree_id": "21004b35ba112223931462be79008d2c36720280",
+          "url": "https://github.com/CKS-Systems/manifest/commit/c355ac4587d117d8a3b78422dab803447ed0ac4d"
+        },
+        "date": 1726069978288,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6897,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13208,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13902,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4133,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7211,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7470,
             "unit": "CU",
             "range": "",
             "extra": ""
