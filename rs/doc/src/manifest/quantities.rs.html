@@ -579,6 +579,64 @@
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -589,7 +647,7 @@
     cmp::Ordering,
     fmt::Display,
     ops::{Add, AddAssign, Div, Sub, SubAssign},
-    u128, u64,
+    u128, u32, u64,
 };
 
 <span class="doccomment">/// New and as_u64 for creating and switching to u64 when needing to use base or
@@ -602,7 +660,8 @@
 <span class="macro">macro_rules!</span> checked_math {
     (<span class="macro-nonterminal">$type_name</span>:ident) =&gt; {
         <span class="kw">impl </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">pub fn </span>checked_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="macro-nonterminal">$type_name</span>, ManifestError&gt; {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>checked_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="macro-nonterminal">$type_name</span>, ManifestError&gt; {
                 <span class="kw">let </span>result_or: <span class="prelude-ty">Option</span>&lt;u64&gt; = <span class="self">self</span>.inner.checked_add(other.inner);
                 <span class="kw">if </span>result_or.is_none() {
                     <span class="prelude-val">Err</span>(ManifestError::Overflow)
@@ -611,7 +670,8 @@
                 }
             }
 
-            <span class="kw">pub fn </span>checked_sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="macro-nonterminal">$type_name</span>, ManifestError&gt; {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>checked_sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="macro-nonterminal">$type_name</span>, ManifestError&gt; {
                 <span class="kw">let </span>result_or: <span class="prelude-ty">Option</span>&lt;u64&gt; = <span class="self">self</span>.inner.checked_sub(other.inner);
                 <span class="kw">if </span>result_or.is_none() {
                     <span class="prelude-val">Err</span>(ManifestError::Overflow)
@@ -626,12 +686,14 @@
 <span class="macro">macro_rules!</span> overflow_math {
     (<span class="macro-nonterminal">$type_name</span>:ident) =&gt; {
         <span class="kw">impl </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">pub fn </span>overflowing_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; (<span class="macro-nonterminal">$type_name</span>, bool) {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>overflowing_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; (<span class="macro-nonterminal">$type_name</span>, bool) {
                 <span class="kw">let </span>(sum, overflow) = <span class="self">self</span>.inner.overflowing_add(other.inner);
                 (<span class="macro-nonterminal">$type_name::new</span>(sum), overflow)
             }
 
-            <span class="kw">pub fn </span>wrapping_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>wrapping_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
                 <span class="kw">let </span>sum = <span class="self">self</span>.inner.wrapping_add(other.inner);
                 <span class="macro-nonterminal">$type_name::new</span>(sum)
             }
@@ -643,44 +705,53 @@
     (<span class="macro-nonterminal">$type_name</span>:ident) =&gt; {
         <span class="kw">impl </span>Add <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
             <span class="kw">type </span>Output = <span class="self">Self</span>;
-            <span class="kw">fn </span>add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
+
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="macro-nonterminal">$type_name::new</span>(<span class="self">self</span>.inner + other.inner)
             }
         }
 
         <span class="kw">impl </span>AddAssign <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="self">Self</span>) {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="self">Self</span>) {
                 <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>+ other;
             }
         }
 
         <span class="kw">impl </span>Sub <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
             <span class="kw">type </span>Output = <span class="self">Self</span>;
-            <span class="kw">fn </span>sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
+
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="macro-nonterminal">$type_name::new</span>(<span class="self">self</span>.inner - other.inner)
             }
         }
 
         <span class="kw">impl </span>SubAssign <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>sub_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="self">Self</span>) {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>sub_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="self">Self</span>) {
                 <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>- other;
             }
         }
 
         <span class="kw">impl </span>Default <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>::ZERO
             }
         }
 
         <span class="kw">impl </span>Display <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
                 <span class="self">self</span>.inner.fmt(f)
             }
         }
 
         <span class="kw">impl </span>PartialEq <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
                 <span class="self">self</span>.inner == other.inner
             }
         }
@@ -692,11 +763,13 @@
 <span class="macro">macro_rules!</span> basic_u64 {
     (<span class="macro-nonterminal">$type_name</span>:ident) =&gt; {
         <span class="kw">impl </span>WrapperU64 <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>new(value: u64) -&gt; <span class="self">Self </span>{
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>new(value: u64) -&gt; <span class="self">Self </span>{
                 <span class="macro-nonterminal">$type_name </span>{ inner: value }
             }
 
-            <span class="kw">fn </span>as_u64(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>as_u64(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
                 <span class="self">self</span>.inner
             }
         }
@@ -705,7 +778,8 @@
             <span class="kw">pub const </span>ZERO: <span class="self">Self </span>= <span class="macro-nonterminal">$type_name </span>{ inner: <span class="number">0 </span>};
             <span class="kw">pub const </span>ONE: <span class="self">Self </span>= <span class="macro-nonterminal">$type_name </span>{ inner: <span class="number">1 </span>};
 
-            <span class="kw">pub fn </span>min(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>min(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">if </span><span class="self">self</span>.inner &lt;= other.inner {
                     <span class="self">self
                 </span>} <span class="kw">else </span>{
@@ -715,20 +789,23 @@
         }
 
         <span class="kw">impl </span>From&lt;<span class="macro-nonterminal">$type_name</span>&gt; <span class="kw">for </span>u64 {
-            <span class="kw">fn </span>from(x: <span class="macro-nonterminal">$type_name</span>) -&gt; u64 {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>from(x: <span class="macro-nonterminal">$type_name</span>) -&gt; u64 {
                 x.inner
             }
         }
 
         <span class="comment">// Below should only be used in tests.
         </span><span class="kw">impl </span>PartialEq&lt;u64&gt; <span class="kw">for </span><span class="macro-nonterminal">$type_name </span>{
-            <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>u64) -&gt; bool {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>u64) -&gt; bool {
                 <span class="self">self</span>.inner == <span class="kw-2">*</span>other
             }
         }
 
         <span class="kw">impl </span>PartialEq&lt;<span class="macro-nonterminal">$type_name</span>&gt; <span class="kw">for </span>u64 {
-            <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="macro-nonterminal">$type_name</span>) -&gt; bool {
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="macro-nonterminal">$type_name</span>) -&gt; bool {
                 <span class="kw-2">*</span><span class="self">self </span>== other.inner
             }
         }
@@ -773,22 +850,28 @@
     inner: [u64; <span class="number">2</span>],
 }
 
-<span class="kw">fn </span>u128_to_u64_slice(a: u128) -&gt; [u64; <span class="number">2</span>] {
-    bytemuck::cast(a)
+<span class="comment">// These conversions are necessary, bc. the compiler forces 16 byte alignment
+// on the u128 type, which is not necessary given that the target architecture
+// has no native support for u128 math and requires us only to be 8 byte
+// aligned.
+</span><span class="kw">const fn </span>u128_to_u64_slice(a: u128) -&gt; [u64; <span class="number">2</span>] {
+    <span class="kw">unsafe </span>{
+        <span class="kw">let </span>ptr: <span class="kw-2">*const </span>u128 = <span class="kw-2">&amp;</span>a;
+        <span class="kw-2">*</span>ptr.cast::&lt;[u64; <span class="number">2</span>]&gt;()
+    }
 }
 <span class="kw">fn </span>u64_slice_to_u128(a: [u64; <span class="number">2</span>]) -&gt; u128 {
-    bytemuck::cast(a)
+    <span class="kw">unsafe </span>{
+        <span class="kw">let </span>ptr: <span class="kw-2">*const </span>[u64; <span class="number">2</span>] = <span class="kw-2">&amp;</span>a;
+        <span class="kw-2">*</span>ptr.cast::&lt;u128&gt;()
+    }
 }
 
 <span class="kw">const </span>ATOM_LIMIT: u128 = u64::MAX <span class="kw">as </span>u128;
-<span class="kw">const </span>D20: u128 = <span class="number">10u128</span>.pow(<span class="number">20</span>);
-<span class="kw">const </span>D20F: f64 = D20 <span class="kw">as </span>f64;
+<span class="kw">const </span>D18: u128 = <span class="number">10u128</span>.pow(<span class="number">18</span>);
+<span class="kw">const </span>D18F: f64 = D18 <span class="kw">as </span>f64;
 
-<span class="kw">const </span>DECIMAL_CONSTANTS: [u128; <span class="number">31</span>] = [
-    <span class="number">10u128</span>.pow(<span class="number">30</span>),
-    <span class="number">10u128</span>.pow(<span class="number">29</span>),
-    <span class="number">10u128</span>.pow(<span class="number">28</span>),
-    <span class="number">10u128</span>.pow(<span class="number">27</span>),
+<span class="kw">const </span>DECIMAL_CONSTANTS: [u128; <span class="number">27</span>] = [
     <span class="number">10u128</span>.pow(<span class="number">26</span>),
     <span class="number">10u128</span>.pow(<span class="number">25</span>),
     <span class="number">10u128</span>.pow(<span class="number">24</span>),
@@ -819,47 +902,51 @@
 ];
 <span class="macro">const_assert_eq!</span>(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP <span class="kw">as </span>usize],
-    D20
+    D18
 );
 
 <span class="comment">// Prices
 </span><span class="kw">impl </span>QuoteAtomsPerBaseAtom {
     <span class="kw">pub const </span>ZERO: <span class="self">Self </span>= QuoteAtomsPerBaseAtom { inner: [<span class="number">0</span>; <span class="number">2</span>] };
-    <span class="kw">pub const </span>MIN: <span class="self">Self </span>= QuoteAtomsPerBaseAtom::ZERO;
-    <span class="kw">pub const </span>MAX: <span class="self">Self </span>= QuoteAtomsPerBaseAtom {
-        inner: [u64::MAX; <span class="number">2</span>],
-    };
-    <span class="kw">pub const </span>MIN_EXP: i8 = -<span class="number">20</span>;
-    <span class="kw">pub const </span>MAX_EXP: i8 = <span class="number">10</span>;
+    <span class="kw">pub const </span>MIN: <span class="self">Self </span>= QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(<span class="number">1</span>, <span class="self">Self</span>::MIN_EXP);
+    <span class="kw">pub const </span>MAX: <span class="self">Self </span>=
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, <span class="self">Self</span>::MAX_EXP);
+    <span class="kw">pub const </span>MIN_EXP: i8 = -<span class="number">18</span>;
+    <span class="kw">pub const </span>MAX_EXP: i8 = <span class="number">8</span>;
+
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">const fn </span>from_mantissa_and_exponent_(mantissa: u32, exponent: i8) -&gt; <span class="self">Self </span>{
+        <span class="comment">/* map exponent to array range
+          8 -&gt;  [0] -&gt; D26
+          0 -&gt;  [8] -&gt; D18
+        -10 -&gt; [18] -&gt; D08
+        -18 -&gt; [26] -&gt;  D0
+        */
+        </span><span class="kw">let </span>offset = (<span class="self">Self</span>::MAX_EXP <span class="kw">as </span>i64).wrapping_sub(exponent <span class="kw">as </span>i64) <span class="kw">as </span>usize;
+        <span class="comment">// can not overflow 10^26 * u32::MAX &lt; u128::MAX
+        </span><span class="kw">let </span>inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa <span class="kw">as </span>u128);
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(inner),
+        }
+    }
 
     <span class="kw">pub fn </span>try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PriceConversionError&gt; {
         <span class="kw">if </span>exponent &gt; <span class="self">Self</span>::MAX_EXP {
-            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &gt; 10 would truncate"</span>,);
+            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &gt; 8 would truncate"</span>,);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x0</span>));
         }
         <span class="kw">if </span>exponent &lt; <span class="self">Self</span>::MIN_EXP {
-            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &lt; -20 would truncate"</span>,);
+            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &lt; -18 would truncate"</span>,);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x1</span>));
         }
-        <span class="comment">/* map exponent to array range
-         10 -&gt; [0]  -&gt; D30
-          0 -&gt; [10] -&gt; D20
-        -10 -&gt; [20] -&gt; D10
-        -20 -&gt; [30] -&gt;  D0
-        */
-        </span><span class="kw">let </span>offset = -(exponent - <span class="self">Self</span>::MAX_EXP) <span class="kw">as </span>usize;
-        <span class="kw">let </span>inner = DECIMAL_CONSTANTS[offset]
-            .checked_mul(mantissa <span class="kw">as </span>u128)
-            .ok_or(PriceConversionError(<span class="number">0x2</span>))<span class="question-mark">?</span>;
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(inner),
-        });
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from_mantissa_and_exponent_(mantissa, exponent))
     }
 
-    <span class="kw">pub fn </span>checked_base_for_quote(
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">pub fn </span>checked_base_for_quote(
         <span class="self">self</span>,
         quote_atoms: QuoteAtoms,
         round_up: bool,
@@ -869,11 +956,10 @@
         // is used to calculate error free order sizes and for that purpose
         // it works well.
         </span><span class="kw">if </span><span class="self">self </span>== <span class="self">Self</span>::ZERO {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(BaseAtoms::new(<span class="number">0</span>));
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(BaseAtoms::ZERO);
         }
-        <span class="kw">let </span>dividend = D20
-            .checked_mul(quote_atoms.inner <span class="kw">as </span>u128)
-            .ok_or(PriceConversionError(<span class="number">0x4</span>))<span class="question-mark">?</span>;
+        <span class="comment">// this doesn't need a check, will never overflow: u64::MAX * D18 &lt; u128::MAX
+        </span><span class="kw">let </span>dividend = D18.wrapping_mul(quote_atoms.inner <span class="kw">as </span>u128);
         <span class="kw">let </span>inner: u128 = u64_slice_to_u128(<span class="self">self</span>.inner);
         <span class="kw">let </span>base_atoms = <span class="kw">if </span>round_up {
             dividend.div_ceil(inner)
@@ -887,7 +973,7 @@
         }
     }
 
-    <span class="attr">#[inline]
+    <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>checked_quote_for_base_(
         <span class="self">self</span>,
         base_atoms: BaseAtoms,
@@ -898,9 +984,9 @@
             .checked_mul(base_atoms.inner <span class="kw">as </span>u128)
             .ok_or(PriceConversionError(<span class="number">0x8</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>quote_atoms = <span class="kw">if </span>round_up {
-            product.div_ceil(D20)
+            product.div_ceil(D18)
         } <span class="kw">else </span>{
-            product.div(D20)
+            product.div(D18)
         };
         <span class="kw">if </span>quote_atoms &lt;= ATOM_LIMIT {
             <span class="prelude-val">Ok</span>(quote_atoms)
@@ -909,7 +995,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>checked_quote_for_base(
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">pub fn </span>checked_quote_for_base(
         <span class="self">self</span>,
         other: BaseAtoms,
         round_up: bool,
@@ -918,7 +1005,8 @@
             .map(|r| QuoteAtoms::new(r <span class="kw">as </span>u64))
     }
 
-    <span class="kw">pub fn </span>checked_effective_price(
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">pub fn </span>checked_effective_price(
         <span class="self">self</span>,
         num_base_atoms: BaseAtoms,
         is_bid: bool,
@@ -927,11 +1015,10 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>);
         }
         <span class="kw">let </span>quote_matched_atoms = <span class="self">self</span>.checked_quote_for_base_(num_base_atoms, !is_bid)<span class="question-mark">?</span>;
-        <span class="kw">let </span>quote_matched_d20 = quote_matched_atoms
-            .checked_mul(D20)
-            .ok_or(PriceConversionError(<span class="number">0x9</span>))<span class="question-mark">?</span>;
+        <span class="comment">// this doesn't need a check, will never overflow: u64::MAX * D18 &lt; u128::MAX
+        </span><span class="kw">let </span>quote_matched_d18 = quote_matched_atoms.wrapping_mul(D18);
         <span class="comment">// no special case rounding needed because effective price is just a value used to compare for order
-        </span><span class="kw">let </span>inner = quote_matched_d20.div(num_base_atoms.inner <span class="kw">as </span>u128);
+        </span><span class="kw">let </span>inner = quote_matched_d18.div(num_base_atoms.inner <span class="kw">as </span>u128);
         <span class="prelude-val">Ok</span>(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         })
@@ -939,19 +1026,22 @@
 }
 
 <span class="kw">impl </span>Ord <span class="kw">for </span>QuoteAtomsPerBaseAtom {
-    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Ordering {
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Ordering {
         (u64_slice_to_u128(<span class="self">self</span>.inner)).cmp(<span class="kw-2">&amp;</span>u64_slice_to_u128(other.inner))
     }
 }
 
 <span class="kw">impl </span>PartialOrd <span class="kw">for </span>QuoteAtomsPerBaseAtom {
-    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ordering&gt; {
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ordering&gt; {
         <span class="prelude-val">Some</span>(<span class="self">self</span>.cmp(other))
     }
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>QuoteAtomsPerBaseAtom {
-    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
         (<span class="self">self</span>.inner) == (other.inner)
     }
 }
@@ -962,7 +1052,7 @@
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
             <span class="string">"{}"</span>,
-            <span class="kw-2">&amp;</span>(u64_slice_to_u128(<span class="self">self</span>.inner) <span class="kw">as </span>f64 / D20F)
+            <span class="kw-2">&amp;</span>(u64_slice_to_u128(<span class="self">self</span>.inner) <span class="kw">as </span>f64 / D18F)
         ))
     }
 }
@@ -970,7 +1060,7 @@
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>QuoteAtomsPerBaseAtom {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         f.debug_struct(<span class="string">"QuoteAtomsPerBaseAtom"</span>)
-            .field(<span class="string">"value"</span>, <span class="kw-2">&amp;</span>(u64_slice_to_u128(<span class="self">self</span>.inner) <span class="kw">as </span>f64 / D20F))
+            .field(<span class="string">"value"</span>, <span class="kw-2">&amp;</span>(u64_slice_to_u128(<span class="self">self</span>.inner) <span class="kw">as </span>f64 / D18F))
             .finish()
     }
 }
@@ -990,7 +1080,7 @@
     <span class="kw">type </span>Error = PriceConversionError;
 
     <span class="kw">fn </span>try_from(value: f64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span>mantissa = value * D20F;
+        <span class="kw">let </span>mantissa = value * D18F;
         <span class="kw">if </span>mantissa.is_infinite() {
             <span class="macro">msg!</span>(<span class="string">"infinite can not be expressed as fixed point decimal"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xC</span>));
@@ -1008,13 +1098,14 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xF</span>));
         }
         <span class="prelude-val">Ok</span>(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(mantissa <span class="kw">as </span>u128),
+            inner: u128_to_u64_slice(mantissa.round() <span class="kw">as </span>u128),
         })
     }
 }
 
 <span class="kw">impl </span>BaseAtoms {
-    <span class="kw">pub fn </span>checked_mul(
+    <span class="attr">#[inline(always)]
+    </span><span class="kw">pub fn </span>checked_mul(
         <span class="self">self</span>,
         other: QuoteAtomsPerBaseAtom,
         round_up: bool,
@@ -1082,7 +1173,7 @@
 </span><span class="kw">fn </span>test_multiply_macro() {
     <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(<span class="number">5</span>);
     <span class="kw">let </span>quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
-        inner: u128_to_u64_slice(<span class="number">100 </span>* D20 - <span class="number">1</span>),
+        inner: u128_to_u64_slice(<span class="number">100 </span>* D18 - <span class="number">1</span>),
     };
     <span class="macro">assert_eq!</span>(
         base_atoms
@@ -1099,9 +1190,8 @@
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
-    <span class="comment">// TODO: need to figure out why a lower MAX_EXP leads to worse performance
-    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        u32::MAX / <span class="number">100</span>,
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        u32::MAX,
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
@@ -1116,8 +1206,7 @@
     )
     .is_ok());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(<span class="number">0f64</span>).is_ok());
-    <span class="comment">// TODO: need to figure out why D18 instead of D20 leads to worse performance
-    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from((u64::MAX / <span class="number">100</span>) <span class="kw">as </span>f64).is_ok());
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(u64::MAX <span class="kw">as </span>f64).is_ok());
 
     <span class="comment">// failures
     </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
@@ -1135,6 +1224,33 @@
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(<span class="number">1f64 </span>/ <span class="number">0f64</span>).is_err());
 }
 
+<span class="attr">#[derive(Clone, Copy, Default, Debug)]
+#[repr(C)]
+</span><span class="kw">struct </span>AlignmentTest {
+    _alignment_fix: u128,
+    _pad: u64,
+    price: QuoteAtomsPerBaseAtom,
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>test_alignment() {
+    <span class="kw">let </span><span class="kw-2">mut </span>t = AlignmentTest::default();
+    t.price = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, <span class="number">0</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>s = t.clone();
+    t.price = s
+        .price
+        .checked_effective_price(BaseAtoms::new(u32::MAX <span class="kw">as </span>u64), <span class="bool-val">true</span>)
+        .unwrap();
+    <span class="kw">let </span>q = t
+        .price
+        .checked_base_for_quote(QuoteAtoms::new(u32::MAX <span class="kw">as </span>u64), <span class="bool-val">true</span>)
+        .unwrap();
+    t._pad = q.as_u64();
+    s._pad = s.price.checked_quote_for_base(q, <span class="bool-val">true</span>).unwrap().as_u64();
+
+    <span class="macro">println!</span>(<span class="string">"s:{s:?} t:{t:?}"</span>);
+}
+
 <span class="attr">#[test]
 </span><span class="kw">fn </span>test_print() {
     <span class="macro">println!</span>(<span class="string">"{}"</span>, BaseAtoms::new(<span class="number">1</span>));
@@ -1142,7 +1258,7 @@
     <span class="macro">println!</span>(
         <span class="string">"{}"</span>,
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(<span class="number">123 </span>* D20 / <span class="number">100</span>),
+            inner: u128_to_u64_slice(<span class="number">123 </span>* D18 / <span class="number">100</span>),
         }
     );
 }
@@ -1154,7 +1270,7 @@
     <span class="macro">println!</span>(
         <span class="string">"{:?}"</span>,
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(<span class="number">123 </span>* D20 / <span class="number">100</span>),
+            inner: u128_to_u64_slice(<span class="number">123 </span>* D18 / <span class="number">100</span>),
         }
     );
 }
