@@ -9,13 +9,13 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   metadataBase: new URL('https://manifest.trade'),
   title: 'Manifest',
-  description: 'The Unlimited Exchange',
+  description: 'The Unlimited Orderbook',
    keywords: ['DeFi', 'Crypto', 'Solana', 'Manifest', 'DEX', 'Finance', 'Decentralized Finance', 'Token Vaults', 'Crypto API', 'DeFi Data'],
    creator: 'CKS Systems',
    twitter: {
     card: 'summary_large_image',
     title: 'Manifest',
-    description: 'Forever free 🗽 3rd-gen Solana orderbook 📚 Unstoppable DEX positivity✨',
+    description: 'Forever free 🗽 3rd-gen Solana Orderbook 📚',
     siteId: '',
     creator: '@manifest.trades',
     creatorId: '',
