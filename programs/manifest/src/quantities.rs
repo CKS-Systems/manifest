@@ -50,9 +50,24 @@ macro_rules! overflow_math {
                 ($type_name::new(sum), overflow)
             }
 
+            pub fn saturating_add(self, other: Self) -> $type_name {
+                let sum = self.inner.saturating_add(other.inner);
+                $type_name::new(sum)
+            }
+
+            pub fn saturating_sub(self, other: Self) -> $type_name {
+                let difference = self.inner.saturating_sub(other.inner);
+                $type_name::new(difference)
+            }
+
             pub fn wrapping_add(self, other: Self) -> $type_name {
                 let sum = self.inner.wrapping_add(other.inner);
                 $type_name::new(sum)
+            }
+
+            pub fn wrapping_sub(self, other: Self) -> $type_name {
+                let difference = self.inner.wrapping_sub(other.inner);
+                $type_name::new(difference)
             }
         }
     };

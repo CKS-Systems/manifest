@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Maximilian Schneider <max@mango.markets>"]
-description = "Wrapper for Manifest"
+description = "UI Wrapper for Manifest"
 license-file = "LICENSE"
 
 [lib]

@@ -10,8 +10,8 @@ pub mod wrapper_state;
 
 use instruction::ManifestWrapperInstruction;
 use processors::{
-    batch_upate::process_batch_update, claim_seat::process_claim_seat,
-    create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
+    claim_seat::process_claim_seat, create_wrapper::process_create_wrapper,
+    place_order::process_place_order,
 };
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
@@ -59,14 +59,17 @@ pub fn process_instruction(
         ManifestWrapperInstruction::ClaimSeat => {
             process_claim_seat(program_id, accounts, data)?;
         }
-        ManifestWrapperInstruction::Deposit => {
-            process_deposit(program_id, accounts, data)?;
+        ManifestWrapperInstruction::PlaceOrder => {
+            process_place_order(program_id, accounts, data)?;
         }
-        ManifestWrapperInstruction::Withdraw => {
-            process_withdraw(program_id, accounts, data)?;
+        ManifestWrapperInstruction::EditOrder => {
+            unimplemented!("todo");
         }
-        ManifestWrapperInstruction::BatchUpdate => {
-            process_batch_update(program_id, accounts, data)?;
+        ManifestWrapperInstruction::CancelOrder => {
+            unimplemented!("todo");
+        }
+        ManifestWrapperInstruction::SettleFunds => {
+            unimplemented!("todo");
         }
     }
 

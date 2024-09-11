@@ -4,6 +4,7 @@ members = [
   "lib",
   "client/rust",
   "programs/*",
+  "programs/ui-wrapper",
 ]
 
 [workspace.dependencies]

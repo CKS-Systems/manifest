@@ -235,6 +235,12 @@ pub(crate) fn sync_fast(
         get_helper::<RBNode<ClaimedSeat>>(market_ref.dynamic, market_info.trader_index).get_value();
     market_info.base_balance = claimed_seat.base_withdrawable_balance;
     market_info.quote_balance = claimed_seat.quote_withdrawable_balance;
+    let quote_volume_difference = claimed_seat
+        .quote_volume
+        .wrapping_sub(market_info.quote_volume);
+    market_info.quote_volume_unpaid = market_info
+        .quote_volume_unpaid
+        .saturating_add(quote_volume_difference);
     market_info.quote_volume = claimed_seat.quote_volume;
     market_info.last_updated_slot = Clock::get().unwrap().slot as u32;
 

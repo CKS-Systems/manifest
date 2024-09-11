@@ -24,12 +24,15 @@ pub struct MarketInfo {
     /// Withdrawable quote balance on the market.
     pub quote_balance: QuoteAtoms,
 
-    /// Quote volume traded over lifetime, can overflow.
+    /// Quote volume traded over lifetime, can overflow
     pub quote_volume: QuoteAtoms,
+
+    /// Quote volume not yet paid for
+    pub quote_volume_unpaid: QuoteAtoms,
 
     /// Last slot that a sync was called on.
     pub last_updated_slot: u32,
-    pub _padding: [u32; 3],
+    pub _padding: [u32; 1],
 }
 
 // Blocks on wrapper are bigger than blocks on the market because there is more
@@ -41,8 +44,9 @@ pub struct MarketInfo {
 // 8 +  // base_balance
 // 8 +  // quote_balance
 // 8 +  // quote_volume
+// 8 +  // quote_volume_paid_for
 // 4 +  // last_updated_slot
-// 12   // padding
+// 4   // padding
 // = 80
 const_assert_eq!(size_of::<MarketInfo>(), WRAPPER_BLOCK_PAYLOAD_SIZE);
 const_assert_eq!(size_of::<MarketInfo>() % 16, 0);

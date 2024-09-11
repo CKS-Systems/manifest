@@ -48,7 +48,7 @@ pub struct WrapperPlaceOrderParams {
     is_bid: bool,
     last_valid_slot: u32,
     order_type: OrderType,
-    min_out_atoms: u64,
+    min_out_atoms: u64, // TODO: is this still needed?
 }
 impl WrapperPlaceOrderParams {
     pub fn new(
