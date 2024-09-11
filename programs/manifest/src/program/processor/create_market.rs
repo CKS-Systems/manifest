@@ -61,12 +61,14 @@ pub(crate) fn process_create_market(
                     );
                 }
             }
-            // Closable mints can be replaced with different ones, breaking some saved info on the market.
+            // Permanent delegates can steal your tokens. This will break all
+            // accounting in the market, so there is no assertion of security
+            // against loss of funds on these markets.
             if let Ok(extension) = pool_mint.get_extension::<PermanentDelegate>() {
                 let permanent_delegate: Option<Pubkey> = extension.delegate.into();
                 if permanent_delegate.is_some() {
                     solana_program::msg!(
-                        "Warning, you are creating a market with a permanent delegate. There is no loss of funds guarantee for funds on this market"
+                        "Warning, you are creating a market with a permanent delegate. There is no loss of funds protection for funds on this market"
                     );
                 }
             }
