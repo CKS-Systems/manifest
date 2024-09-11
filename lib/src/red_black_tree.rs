@@ -635,7 +635,7 @@ where
 
         current_index
     }
-    
+
     /// Get the next index. This walks the tree, so does not care about equal
     /// keys. Used in swapping when insert/delete requires an internal node.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
@@ -850,9 +850,7 @@ where
                         assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
                     }
                     #[allow(unused_assignments)] // the compiler has issues with "match"
-                    None => {
-                        num_black = Some(self.num_black_nodes_through_root::<V>(index))
-                    },
+                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
                 }
             }
         }
@@ -2330,7 +2328,10 @@ pub(crate) mod test {
         let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
         tree.pretty_print::<TestOrderBid>();
         for i in 1..11 {
-            assert_eq!(tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i), TEST_BLOCK_WIDTH * (i + 1));
+            assert_eq!(
+                tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i),
+                TEST_BLOCK_WIDTH * (i + 1)
+            );
         }
         assert_eq!(tree.get_next_higher_index::<TestOrderBid>(NIL), NIL);
     }
