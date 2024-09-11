@@ -41,4 +41,7 @@ pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 /// before the global account starts running into account size limits, but is
 /// generous enough that it really should only matter in deterring spam.
 /// Sized to fit in 4 pages.
+#[cfg(test)]
+pub const MAX_GLOBAL_SEATS: u16 = 4;
+#[cfg(not(test))]
 pub const MAX_GLOBAL_SEATS: u16 = 999;
