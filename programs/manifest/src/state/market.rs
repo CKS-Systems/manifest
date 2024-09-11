@@ -533,7 +533,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     }
 
     /// Place an order and update the market
-    /// 
+    ///
     /// 1. Check the order against the opposite bookside
     /// 2. Rest any amount of the order leftover on the book
     pub fn place_order(
@@ -809,7 +809,13 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             });
         }
 
-        self.rest_remaining(args, remaining_base_atoms, order_sequence_number, total_base_atoms_traded, total_quote_atoms_traded)
+        self.rest_remaining(
+            args,
+            remaining_base_atoms,
+            order_sequence_number,
+            total_base_atoms_traded,
+            total_quote_atoms_traded,
+        )
     }
 
     /// Rest the remaining order onto the market in a RestingOrder.
@@ -820,8 +826,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         order_sequence_number: u64,
         total_base_atoms_traded: BaseAtoms,
         total_quote_atoms_traded: QuoteAtoms,
-    )
-    -> Result<AddOrderToMarketResult, ProgramError> {
+    ) -> Result<AddOrderToMarketResult, ProgramError> {
         let AddOrderToMarketArgs {
             trader_index,
             price,
