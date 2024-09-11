@@ -69,7 +69,7 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 // trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>>
 //    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
-//    fn pretty_print<V: Payload>(&'a self);
+//    fn debug_print<V: Payload>(&'a self);
 //    fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
 //    fn verify_rb_tree<V: Payload>(&'a self);
 //    fn num_black_nodes_through_root<V: Payload>(&'a self, index: DataIndex) -> i32;
@@ -635,8 +635,9 @@ where
 
         current_index
     }
-
-    /// Get the next index. This walks the tree, so does not care about equal keys.
+    
+    /// Get the next index. This walks the tree, so does not care about equal
+    /// keys. Used in swapping when insert/delete requires an internal node.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         if index == NIL {
             return NIL;
@@ -803,8 +804,8 @@ where
                 }
             };
 
-            let color = if node.color == Color::Black { 'B' } else { 'R' };
-            let str = &format!("{color}:{index}:{node}");
+            let color: char = if node.color == Color::Black { 'B' } else { 'R' };
+            let str: &String = &format!("{color}:{index}:{node}");
             if node.color == Color::Red {
                 // Cannot use with sbf. Enable when debugging
                 // locally without sbf.
@@ -827,6 +828,9 @@ where
     }
 
     fn verify_rb_tree<V: Payload>(&'a self) {
+        // Verify that all leaf nodes have the same number of black nodes to the root.
+        let mut num_black: Option<i32> = None;
+
         for (index, node) in self.node_iter::<V>() {
             // Verify that all red nodes only have black children
             if node.color == Color::Red {
@@ -840,15 +844,15 @@ where
                 );
             }
 
-            // Verify that all leaf nodes have the same number of black nodes to the root.
-            let mut num_black = None;
             if !self.has_left::<V>(index) || !self.has_right::<V>(index) {
                 match num_black {
                     Some(num_black) => {
                         assert_eq!(num_black, self.num_black_nodes_through_root::<V>(index))
                     }
                     #[allow(unused_assignments)] // the compiler has issues with "match"
-                    None => num_black = Some(self.num_black_nodes_through_root::<V>(index)),
+                    None => {
+                        num_black = Some(self.num_black_nodes_through_root::<V>(index))
+                    },
                 }
             }
         }
@@ -1509,6 +1513,13 @@ pub(crate) mod test {
     }
 
     #[test]
+    fn test_debug_print() {
+        let mut data: [u8; 100000] = [0; 100000];
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.debug_print::<TestOrderBid>();
+    }
+
+    #[test]
     fn test_insert_fix() {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
@@ -1786,6 +1797,10 @@ pub(crate) mod test {
         tree.insert(TEST_BLOCK_WIDTH * 13, TestOrderBid::new(5000));
         tree.insert(TEST_BLOCK_WIDTH * 14, TestOrderBid::new(1000));
         tree.insert(TEST_BLOCK_WIDTH * 15, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 16, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 17, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 18, TestOrderBid::new(1000));
+        tree.insert(TEST_BLOCK_WIDTH * 19, TestOrderBid::new(1000));
         tree.verify_rb_tree::<TestOrderBid>();
     }
 
@@ -1810,6 +1825,9 @@ pub(crate) mod test {
         tree.remove_by_index(TEST_BLOCK_WIDTH * 2);
 
         tree.verify_rb_tree::<TestOrderBid>();
+
+        // Silently fails to remove NIL
+        tree.remove_by_index(NIL);
     }
 
     //                   B
@@ -2303,5 +2321,17 @@ pub(crate) mod test {
         tree.lookup_index(&TestOrder2::new(1_000, 1234));
         tree.lookup_index(&TestOrder2::new(1_000, 4567));
         tree.lookup_index(&TestOrder2::new(1_000, 7890));
+    }
+
+    // Get next higher index
+    #[test]
+    fn test_get_next_higher_index() {
+        let mut data: [u8; 100000] = [0; 100000];
+        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
+        tree.pretty_print::<TestOrderBid>();
+        for i in 1..11 {
+            assert_eq!(tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i), TEST_BLOCK_WIDTH * (i + 1));
+        }
+        assert_eq!(tree.get_next_higher_index::<TestOrderBid>(NIL), NIL);
     }
 }
