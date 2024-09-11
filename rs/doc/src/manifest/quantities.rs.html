@@ -637,12 +637,22 @@
 <a href="#635" id="635">635</a>
 <a href="#636" id="636">636</a>
 <a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>shank::ShankAccount;
 <span class="kw">use </span>solana_program::{msg, program_error::ProgramError};
-<span class="kw">use </span>static_assertions::const_assert_eq;
+<span class="kw">use </span>static_assertions::{const_assert, const_assert_eq};
 <span class="kw">use </span>std::{
     cmp::Ordering,
     fmt::Display,
@@ -900,10 +910,15 @@
     <span class="number">10u128</span>.pow(<span class="number">01</span>),
     <span class="number">10u128</span>.pow(<span class="number">00</span>),
 ];
-<span class="macro">const_assert_eq!</span>(
+<span class="comment">// ensures that the index lookup is correct when converting from floating point
+</span><span class="macro">const_assert_eq!</span>(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP <span class="kw">as </span>usize],
     D18
 );
+
+<span class="comment">// ensures that we can remove bounds checks on certain multiplications
+</span><span class="macro">const_assert!</span>(DECIMAL_CONSTANTS[<span class="number">0</span>] * (u32::MAX <span class="kw">as </span>u128) &lt; u128::MAX);
+<span class="macro">const_assert!</span>(D18 * (u64::MAX <span class="kw">as </span>u128) &lt; u128::MAX);
 
 <span class="comment">// Prices
 </span><span class="kw">impl </span>QuoteAtomsPerBaseAtom {
@@ -934,13 +949,17 @@
         mantissa: u32,
         exponent: i8,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PriceConversionError&gt; {
+        <span class="kw">if </span>mantissa == <span class="number">0 </span>{
+            <span class="macro">msg!</span>(<span class="string">"price can not be zero"</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x0</span>));
+        }
         <span class="kw">if </span>exponent &gt; <span class="self">Self</span>::MAX_EXP {
             <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &gt; 8 would truncate"</span>,);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x0</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x1</span>));
         }
         <span class="kw">if </span>exponent &lt; <span class="self">Self</span>::MIN_EXP {
             <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &lt; -18 would truncate"</span>,);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x1</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x2</span>));
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from_mantissa_and_exponent_(mantissa, exponent))
     }
@@ -1186,7 +1205,7 @@
 <span class="attr">#[test]
 </span><span class="kw">fn </span>test_price_limits() {
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        <span class="number">0</span>,
+        <span class="number">1</span>,
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
@@ -1196,7 +1215,7 @@
     )
     .is_ok());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        <span class="number">0</span>,
+        <span class="number">1</span>,
         QuoteAtomsPerBaseAtom::MIN_EXP
     )
     .is_ok());
@@ -1209,13 +1228,14 @@
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(u64::MAX <span class="kw">as </span>f64).is_ok());
 
     <span class="comment">// failures
-    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        <span class="number">0</span>,
+    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(<span class="number">0</span>, <span class="number">0</span>).is_err());
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        <span class="number">1</span>,
         QuoteAtomsPerBaseAtom::MAX_EXP + <span class="number">1
     </span>)
     .is_err());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        <span class="number">0</span>,
+        <span class="number">1</span>,
         QuoteAtomsPerBaseAtom::MIN_EXP - <span class="number">1
     </span>)
     .is_err());
