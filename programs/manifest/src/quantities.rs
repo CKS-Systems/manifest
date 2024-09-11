@@ -556,7 +556,7 @@ fn test_multiply_macro() {
 #[test]
 fn test_price_limits() {
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
@@ -566,7 +566,7 @@ fn test_price_limits() {
     )
     .is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MIN_EXP
     )
     .is_ok());
@@ -581,11 +581,16 @@ fn test_price_limits() {
     // failures
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
         0,
+        0
+    )
+    .is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        1,
         QuoteAtomsPerBaseAtom::MAX_EXP + 1
     )
     .is_err());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MIN_EXP - 1
     )
     .is_err());
