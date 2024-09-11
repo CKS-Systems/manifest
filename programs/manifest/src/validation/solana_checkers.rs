@@ -67,7 +67,6 @@ pub struct Signer<'a, 'info> {
 
 impl<'a, 'info> Signer<'a, 'info> {
     pub fn new(info: &'a AccountInfo<'info>) -> Result<Signer<'a, 'info>, ProgramError> {
-        solana_program::msg!("{:?}", info);
         require!(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
