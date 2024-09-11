@@ -441,7 +441,7 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
     let base_global: Pubkey = test_fixture.sol_global_fixture.key;
     let quote_global: Pubkey = test_fixture.global_fixture.key;
     let (base_global_vault, _) = get_global_vault_address(&base_mint);
-    let (quote_global_vault, _) = get_global_vault_address(&base_mint);
+    let (quote_global_vault, _) = get_global_vault_address(&quote_mint);
 
     // Show that it is correct for the first iteration, then modify all the other accounts.
     {
@@ -455,10 +455,12 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
                 AccountMeta::new(base_global, false),
                 AccountMeta::new(base_global_vault, false),
                 AccountMeta::new(base_vault, false),
+                AccountMeta::new(spl_token::id(), false),
                 AccountMeta::new_readonly(quote_mint, false),
                 AccountMeta::new(quote_global, false),
                 AccountMeta::new(quote_global_vault, false),
                 AccountMeta::new(quote_vault, false),
+                AccountMeta::new(spl_token::id(), false),
             ],
             data: [
                 ManifestInstruction::BatchUpdate.to_vec(),
@@ -489,10 +491,12 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
                 AccountMeta::new(quote_global, false),
                 AccountMeta::new(base_global_vault, false),
                 AccountMeta::new(base_vault, false),
+                AccountMeta::new(spl_token::id(), false),
                 AccountMeta::new_readonly(quote_mint, false),
                 AccountMeta::new(quote_global, false),
                 AccountMeta::new(quote_global_vault, false),
                 AccountMeta::new(quote_vault, false),
+                AccountMeta::new(spl_token::id(), false),
             ],
             data: [
                 ManifestInstruction::BatchUpdate.to_vec(),
@@ -509,7 +513,7 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
             &[payer_keypair],
         )
         .await
-        .is_ok());
+        .is_err());
     }
     // Wrong market vault
     {
@@ -523,10 +527,12 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
                 AccountMeta::new(base_global, false),
                 AccountMeta::new(base_global_vault, false),
                 AccountMeta::new(quote_vault, false),
+                AccountMeta::new(spl_token::id(), false),
                 AccountMeta::new_readonly(quote_mint, false),
                 AccountMeta::new(quote_global, false),
                 AccountMeta::new(quote_global_vault, false),
                 AccountMeta::new(quote_vault, false),
+                AccountMeta::new(spl_token::id(), false),
             ],
             data: [
                 ManifestInstruction::BatchUpdate.to_vec(),
@@ -543,7 +549,7 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
             &[payer_keypair],
         )
         .await
-        .is_ok());
+        .is_err());
     }
     // Global for an unrelated mint
     {
@@ -562,10 +568,12 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
                 AccountMeta::new(base_global, false),
                 AccountMeta::new(base_global_vault, false),
                 AccountMeta::new(base_vault, false),
+                AccountMeta::new(spl_token::id(), false),
                 AccountMeta::new_readonly(quote_mint, false),
                 AccountMeta::new(*global, false),
                 AccountMeta::new(global_vault, false),
                 AccountMeta::new(quote_vault, false),
+                AccountMeta::new(spl_token::id(), false),
             ],
             data: [
                 ManifestInstruction::BatchUpdate.to_vec(),
@@ -582,7 +590,7 @@ async fn batch_update_wrong_global_accounts() -> anyhow::Result<()> {
             &[payer_keypair],
         )
         .await
-        .is_ok());
+        .is_err());
     }
 
     Ok(())
