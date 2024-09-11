@@ -15,8 +15,8 @@ use solana_program::{
 };
 use spl_token_2022::{
     extension::{
-        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
-        BaseStateWithExtensions, StateWithExtensions,
+        mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
+        transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
     },
     state::Mint,
 };
@@ -55,12 +55,22 @@ pub(crate) fn process_create_market(
             // Closable mints can be replaced with different ones, breaking some saved info on the market.
             if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
                 let close_authority: Option<Pubkey> = extension.close_authority.into();
-                require!(
-                    close_authority.is_none(),
-                    ManifestError::InvalidMint,
-                    "Closable mints are not allowed",
-                )?;
+                if close_authority.is_some() {
+                    solana_program::msg!(
+                        "Warning, you are creating a market with a close authority."
+                    );
+                }
             }
+            // Closable mints can be replaced with different ones, breaking some saved info on the market.
+            if let Ok(extension) = pool_mint.get_extension::<PermanentDelegate>() {
+                let permanent_delegate: Option<Pubkey> = extension.delegate.into();
+                if permanent_delegate.is_some() {
+                    solana_program::msg!(
+                        "Warning, you are creating a market with a permanent delegate. There is no loss of funds guarantee for funds on this market"
+                    );
+                }
+            }
+
             // Transfer fees make the amounts on withdraw and deposit not match what is expected.
             require!(
                 pool_mint.get_extension::<TransferFeeConfig>().is_err(),
