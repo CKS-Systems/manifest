@@ -43,13 +43,28 @@ const Onchain = () => {
               >
                 <div className='w-full flex md:justify-start justify-center items-center gap-4 sm:gap-4 mt-0 2xl:mt-4'>
                   <div className='gradient-wrapper rounded-lg !p-[1px] 2xl:!p-[2px] 3xl:!p-[4px]'>
-                  <a href='https://x.com/ManifestTrade'
-                    target='_blank' 
-                    rel='noopener noreferrer' 
-                    className='inline-block px-[20px] borderGradient cursor-pointer 2xl:px-[25px] 3xl:px-[38px] sm:px-[24px] hover:opacity-80 rounded-lg 2xl:py-[16px] 3xl:py-[24px] py-[10px] sm:py-[12px] bg-transparent text-[16px] 3xl:text-[40px] 2xl:text-[24px] sm:text-[18px] text-[#bca378]'>
-                     Manifest That
-                      </a>
+                    <a
+                      href='https://x.com/ManifestTrade'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='inline-block px-[20px] borderGradient cursor-pointer 2xl:px-[25px] 3xl:px-[38px] sm:px-[24px] hover:opacity-80 rounded-lg 2xl:py-[16px] 3xl:py-[24px] py-[10px] sm:py-[12px] bg-transparent text-[16px] 3xl:text-[40px] 2xl:text-[24px] sm:text-[18px] text-[#bca378]'
+                    >
+                      Manifest Together
+                    </a>
                   </div>
+                </div>
+                <div className='flex items-center gap-2 group mt-4'>
+                  <a
+                    href='/assets/The_Orderbook_Manifesto.pdf'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='flex items-center gap-2'
+                  >
+                    <p className='textColor 3xl:text-[32px] 2xl:text-[22px] text-[16px] font-normal'>
+                      Read the Manifesto
+                    </p>
+                    <FiArrowRight className='text-[20px] 3xl:text-[36px] 2xl:text-[26px] text-[#bca378] group-hover:text-[#00ffe5]' />
+                  </a>
                 </div>
               </Fade>
             </div>
