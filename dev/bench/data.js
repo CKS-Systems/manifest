@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726102899720,
+  "lastUpdate": 1726178714295,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2127,6 +2127,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7478,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1f87c4be8db8425ec15d97fd948e11c16931d773",
+          "message": "Fix wrapper idl for batch update and add global withdraw (#72)\n\n* Fix wrapper idl for batch update and add global withdraw\r\n\r\n* Update client\r\n\r\n* unify payer and owner\r\n\r\n* update idl\r\n\r\n* fix test\r\n\r\n* fix tests for d18",
+          "timestamp": "2024-09-12T17:41:30-04:00",
+          "tree_id": "eeb2e84137932af41c87dd97345542e5afb6906b",
+          "url": "https://github.com/CKS-Systems/manifest/commit/1f87c4be8db8425ec15d97fd948e11c16931d773"
+        },
+        "date": 1726178713575,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6897,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13208,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13902,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4117,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7215,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7467,
             "unit": "CU",
             "range": "",
             "extra": ""
