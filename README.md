@@ -25,7 +25,7 @@ Maximal freedom to exchange risk.
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
 | Anchor |Yes |No|No|
-| Rent|2 SOL |12 SOL |.003 SOL|
+| Creation Rent|2 SOL |3+ SOL |.004 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
 | Swap accounts| 16 | 8 | 7 |
