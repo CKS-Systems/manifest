@@ -55,7 +55,7 @@ const Onchain = () => {
                 </div>
                 <div className='flex items-center gap-2 group mt-4'>
                   <a
-                    href='/assets/The_Orderbook_Manifesto.pdf'
+                    href='/whitepaper.pdf'
                     target='_blank'
                     rel='noopener noreferrer'
                     className='flex items-center gap-2'
