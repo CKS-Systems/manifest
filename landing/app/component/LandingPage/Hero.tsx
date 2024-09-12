@@ -45,7 +45,7 @@ const Hero: React.FC = () => {
                   </div>
                   <div className='flex justify-center items-center flex-col gap-4'>
                     <p className='text-[#95C9BD] text-[10px] sm:text-[16px] md:text-[20px] 2xl:text-[28px] 3xl:text-[36px] font-terminaExtraDemi'>
-                      0.002 SOL
+                      0.004 SOL
                     </p>
                     <p className='text-[12px] sm:text-[14px] md:text-[16px] 2xl:text-[24px] font-normal 3xl:text-[32px] text-[#bca378]/90'>
                       Listing Cost
