@@ -192,6 +192,15 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'GlobalWithdraw': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalWithdrawParams',
+            },
+          });
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');
