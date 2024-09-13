@@ -16,17 +16,22 @@ use manifest::{
         get_mut_dynamic_account, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{
+        claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, OrderType,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
     program::{get_return_data, invoke},
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
+    sysvar::Sysvar,
 };
 
 use crate::{
@@ -154,11 +159,20 @@ pub(crate) fn process_cancel_order(
         get_mut_helper::<RBNode<MarketInfo>>(wrapper.dynamic, market_info_index).get_mut_value();
     market_info.orders_root_index = orders_root_index;
 
+    // update balances from seat
+    let market_data = market.info.data.borrow();
+    let market_ref = get_dynamic_account::<MarketFixed>(&market_data);
+    let claimed_seat: &ClaimedSeat =
+        get_helper::<RBNode<ClaimedSeat>>(market_ref.dynamic, market_info.trader_index).get_value();
+    market_info.base_balance = claimed_seat.base_withdrawable_balance;
+    market_info.quote_balance = claimed_seat.quote_withdrawable_balance;
+    market_info.quote_volume = claimed_seat.quote_volume;
+    market_info.last_updated_slot = Clock::get().unwrap().slot as u32;
+
     // add node to freelist
     let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
         FreeList::new(wrapper.dynamic, wrapper.fixed.free_list_head_index);
     free_list.add(wrapper_index);
-
     wrapper.fixed.free_list_head_index = free_list.get_head();
 
     Ok(())
