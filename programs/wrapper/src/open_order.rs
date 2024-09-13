@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool, NIL};
 use manifest::{
-    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
     state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
 };
 use static_assertions::const_assert_eq;
