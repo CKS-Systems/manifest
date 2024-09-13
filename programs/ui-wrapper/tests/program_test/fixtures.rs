@@ -71,10 +71,11 @@ impl TestFixture {
             processor!(manifest::process_instruction),
         );
 
+        // silently ignore when executor sbf is not loaded and just stub it out with a no-op
         program.add_program(
             "executor",
             Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-            None,
+            processor!(|_, _, _|{ Ok(())}),
         );
 
         let second_keypair: Keypair = Keypair::new();
