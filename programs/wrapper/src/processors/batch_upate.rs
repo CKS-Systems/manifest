@@ -321,16 +321,12 @@ fn process_orders<'a, 'info>(
         };
 
         let original_order: &WrapperPlaceOrderParams = &orders[index];
-        let price: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-            original_order.price_mantissa,
-            original_order.price_exponent,
-        )?;
+        // Base atoms & price can be wrong, will be fixed in the sync.
         let order: WrapperOpenOrder = WrapperOpenOrder::new(
             original_order.client_order_id,
             order_sequence_number,
-            price,
-            // Base atoms can be wrong, will be fixed in the sync.
-            original_order.base_atoms,
+            QuoteAtomsPerBaseAtom::ZERO,
+            BaseAtoms::ZERO,
             original_order.last_valid_slot,
             order_index,
             original_order.is_bid,
