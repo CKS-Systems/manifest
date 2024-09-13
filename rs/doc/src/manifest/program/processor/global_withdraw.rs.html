@@ -138,7 +138,7 @@
         global,
         mint,
         global_vault,
-        trader_token: trader_token_account,
+        trader_token,
         token_program,
     } = global_withdraw_context;
 
@@ -155,7 +155,7 @@
                 token_program.key,
                 global_vault.key,
                 mint.info.key,
-                trader_token_account.key,
+                trader_token.key,
                 global_vault.key,
                 <span class="kw-2">&amp;</span>[],
                 amount_atoms,
@@ -163,7 +163,7 @@
             )<span class="question-mark">?</span>,
             <span class="kw-2">&amp;</span>[
                 token_program.as_ref().clone(),
-                trader_token_account.as_ref().clone(),
+                trader_token.as_ref().clone(),
                 mint.as_ref().clone(),
                 global_vault.as_ref().clone(),
             ],
@@ -174,7 +174,7 @@
             <span class="kw-2">&amp;</span>spl_token::instruction::transfer(
                 token_program.key,
                 global_vault.key,
-                trader_token_account.key,
+                trader_token.key,
                 global_vault.key,
                 <span class="kw-2">&amp;</span>[],
                 amount_atoms,
@@ -182,7 +182,7 @@
             <span class="kw-2">&amp;</span>[
                 token_program.as_ref().clone(),
                 global_vault.as_ref().clone(),
-                trader_token_account.as_ref().clone(),
+                trader_token.as_ref().clone(),
             ],
             <span class="macro">global_vault_seeds_with_bump!</span>(mint.info.key, bump),
         )<span class="question-mark">?</span>;

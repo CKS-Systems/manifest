@@ -146,13 +146,20 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     cell::{Ref, RefMut},
     mem::size_of,
 };
 
 <span class="kw">use crate</span>::{
-    state::{constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
+    state::{
+        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, GLOBAL_BLOCK_SIZE,
+    },
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 <span class="kw">use </span>bytemuck::Pod;
@@ -176,7 +183,7 @@
     <span class="kw">if </span>!need_expand {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
-    expand_dynamic(payer, manifest_account, system_program)<span class="question-mark">?</span>;
+    expand_dynamic(payer, manifest_account, system_program, MARKET_BLOCK_SIZE)<span class="question-mark">?</span>;
     expand_market_fixed(manifest_account.info)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
@@ -187,7 +194,9 @@
     manifest_account: <span class="kw-2">&amp;</span>ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt;,
     system_program: <span class="kw-2">&amp;</span>Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 ) -&gt; ProgramResult {
-    expand_dynamic(payer, manifest_account, system_program)<span class="question-mark">?</span>;
+    <span class="comment">// Expand twice because of two trees at once.
+    </span>expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)<span class="question-mark">?</span>;
+    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)<span class="question-mark">?</span>;
     expand_global_fixed(manifest_account.info)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
@@ -196,11 +205,12 @@
     payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     manifest_account: <span class="kw-2">&amp;</span>ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt;,
     system_program: <span class="kw-2">&amp;</span>Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    block_size: usize,
 ) -&gt; ProgramResult {
     <span class="comment">// Account types were already validated, so do not need to reverify that the
     // accounts are in order: payer, expandable_account, system_program, ...
     </span><span class="kw">let </span>expandable_account: <span class="kw-2">&amp;</span>AccountInfo = manifest_account.info;
-    <span class="kw">let </span>new_size: usize = expandable_account.data_len() + MARKET_BLOCK_SIZE;
+    <span class="kw">let </span>new_size: usize = expandable_account.data_len() + block_size;
 
     <span class="kw">let </span>rent: Rent = Rent::get()<span class="question-mark">?</span>;
     <span class="kw">let </span>new_minimum_balance: u64 = rent.minimum_balance(new_size);
@@ -210,7 +220,7 @@
     <span class="kw">let </span>system_program: <span class="kw-2">&amp;</span>AccountInfo = system_program.info;
 
     <span class="macro">trace!</span>(
-        <span class="string">"expand_if_needed -&gt; transfer {} {:?}"</span>,
+        <span class="string">"expand_dynamic-&gt; transfer {} {:?}"</span>,
         lamports_diff,
         expandable_account.key
     );
@@ -224,7 +234,7 @@
     )<span class="question-mark">?</span>;
 
     <span class="macro">trace!</span>(
-        <span class="string">"expand_if_needed -&gt; realloc {} {:?}"</span>,
+        <span class="string">"expand_dynamic-&gt; realloc {} {:?}"</span>,
         new_size,
         expandable_account.key
     );

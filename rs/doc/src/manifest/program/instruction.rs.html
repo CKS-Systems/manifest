@@ -157,6 +157,15 @@
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>num_enum::TryFromPrimitive;
 <span class="kw">use </span>shank::ShankInstruction;
 
@@ -276,12 +285,21 @@
     #[account(<span class="number">5</span>, name = <span class="string">"token_program"</span>, desc = <span class="string">"Token program(22)"</span>)]
     </span>GlobalWithdraw = <span class="number">10</span>,
 
+    <span class="doccomment">/// Evict another trader from the global account.
+    </span><span class="attr">#[account(<span class="number">0</span>, writable, signer, name = <span class="string">"payer"</span>, desc = <span class="string">"Payer"</span>)]
+    #[account(<span class="number">1</span>, writable, name = <span class="string">"global"</span>, desc = <span class="string">"Global account"</span>)]
+    #[account(<span class="number">2</span>, name = <span class="string">"mint"</span>, desc = <span class="string">"Mint for this global account"</span>)]
+    #[account(<span class="number">3</span>, writable, name = <span class="string">"global_vault"</span>, desc = <span class="string">"Global vault"</span>)]
+    #[account(<span class="number">4</span>, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
+    #[account(<span class="number">5</span>, name = <span class="string">"evictee_token"</span>, desc = <span class="string">"Evictee token account"</span>)]
+    #[account(<span class="number">6</span>, name = <span class="string">"token_program"</span>, desc = <span class="string">"Token program(22)"</span>)]
+    </span>GlobalEvict = <span class="number">11</span>,
 
     <span class="comment">// TODO: Implement this. Users can clean another users unbacked or expired
     // orders off the orderbook.
     //#[account(0, writable, signer, name = "payer", desc = "Payer")]
     // GlobalCleanOrder = 11,
-    // GlobalPurgeTrader = 12,
+
 </span>}
 
 <span class="kw">impl </span>ManifestInstruction {
@@ -292,7 +310,7 @@
 
 <span class="attr">#[test]
 </span><span class="kw">fn </span>test_instruction_serialization() {
-    <span class="kw">let </span>num_instructions: u8 = <span class="number">10</span>;
+    <span class="kw">let </span>num_instructions: u8 = <span class="number">11</span>;
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..=<span class="number">255 </span>{
         <span class="kw">let </span>instruction: ManifestInstruction = <span class="kw">match </span>ManifestInstruction::try_from(i) {
             <span class="prelude-val">Ok</span>(j) =&gt; {

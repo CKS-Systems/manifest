@@ -132,6 +132,14 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::require;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
@@ -183,6 +191,14 @@
             <span class="string">"Token account mint mismatch"</span>,
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ info })
+    }
+
+    <span class="kw">pub fn </span>get_owner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pubkey {
+        Pubkey::new_from_array(
+            <span class="self">self</span>.info.try_borrow_data().unwrap()[<span class="number">32</span>..<span class="number">64</span>]
+                .try_into()
+                .unwrap(),
+        )
     }
 
     <span class="kw">pub fn </span>new_with_owner(

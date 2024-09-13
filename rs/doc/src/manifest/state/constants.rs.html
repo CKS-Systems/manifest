@@ -33,10 +33,24 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>hypertree::RBTREE_OVERHEAD_BYTES;
 
 <span class="kw">pub const </span>MARKET_FIXED_SIZE: usize = <span class="number">256</span>;
-<span class="kw">pub const </span>GLOBAL_FIXED_SIZE: usize = <span class="number">88</span>;
+<span class="kw">pub const </span>GLOBAL_FIXED_SIZE: usize = <span class="number">96</span>;
 
 <span class="comment">// Red black tree overhead is 16 bytes. If each block is 80 bytes, then we get
 // 64 bytes for a RestingOrder or ClaimedSeat.
@@ -47,6 +61,7 @@
 <span class="kw">pub const </span>CLAIMED_SEAT_SIZE: usize = MARKET_BLOCK_PAYLOAD_SIZE;
 <span class="kw">const </span>GLOBAL_BLOCK_PAYLOAD_SIZE: usize = GLOBAL_BLOCK_SIZE - RBTREE_OVERHEAD_BYTES;
 <span class="kw">pub const </span>GLOBAL_TRADER_SIZE: usize = GLOBAL_BLOCK_PAYLOAD_SIZE;
+<span class="kw">pub const </span>GLOBAL_DEPOSIT_SIZE: usize = GLOBAL_BLOCK_PAYLOAD_SIZE;
 <span class="kw">const </span>FREE_LIST_OVERHEAD: usize = <span class="number">4</span>;
 <span class="kw">pub const </span>MARKET_FREE_LIST_BLOCK_SIZE: usize = MARKET_BLOCK_SIZE - FREE_LIST_OVERHEAD;
 <span class="kw">pub const </span>GLOBAL_FREE_LIST_BLOCK_SIZE: usize = GLOBAL_BLOCK_SIZE - FREE_LIST_OVERHEAD;
@@ -65,5 +80,18 @@
 // - When you remove an order because you fill it, you cancel it yourself, you try
 // to match and the funds for it dont exist, or you remove it because it is
 // expired, you get the 5000 lamports.
+//
+// Note that if your seat gets evicted, then all your orders are unbacked and
+// now are free to have their deposits claimed. So there is an incentive to keep
+// capital on the exchange to prevent that.
 </span><span class="kw">pub const </span>GAS_DEPOSIT_LAMPORTS: u64 = <span class="number">5_000</span>;
+
+<span class="doccomment">/// Limit on the number of global seats available. Set so that this is hit
+/// before the global account starts running into account size limits, but is
+/// generous enough that it really should only matter in deterring spam.
+/// Sized to fit in 4 pages.
+</span><span class="attr">#[cfg(test)]
+</span><span class="kw">pub const </span>MAX_GLOBAL_SEATS: u16 = <span class="number">4</span>;
+<span class="attr">#[cfg(not(test))]
+</span><span class="kw">pub const </span>MAX_GLOBAL_SEATS: u16 = <span class="number">999</span>;
 </code></pre></div></section></main></body></html>

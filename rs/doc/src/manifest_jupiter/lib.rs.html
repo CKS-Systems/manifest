@@ -1455,7 +1455,7 @@
         <span class="kw">let </span>global_account_info: AccountInfo = {
             <span class="kw">let </span><span class="kw-2">mut </span>global_value: DynamicAccount&lt;GlobalFixed, Vec&lt;u8&gt;&gt; = GlobalValue {
                 fixed: GlobalFixed::new_empty(<span class="kw-2">&amp;</span>quote_mint_key),
-                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; GLOBAL_BLOCK_SIZE * <span class="number">1</span>],
+                dynamic: <span class="macro">vec!</span>[<span class="number">0</span>; GLOBAL_BLOCK_SIZE * <span class="number">2</span>],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(<span class="kw-2">&amp;</span>trader_key).unwrap();

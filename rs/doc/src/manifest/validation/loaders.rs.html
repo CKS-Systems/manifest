@@ -669,6 +669,58 @@
 <a href="#667" id="667">667</a>
 <a href="#668" id="668">668</a>
 <a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -1334,6 +1386,58 @@
             mint,
             global_vault,
             trader_token,
+            token_program,
+        })
+    }
+}
+
+<span class="doccomment">/// Global evict
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GlobalEvictContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+    <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
+    <span class="kw">pub </span>mint: MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>trader_token: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>evictee_token: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>token_program: TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; GlobalEvictContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+        <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
+
+        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
+            ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>global_data: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = global.data.borrow();
+        <span class="kw">let </span>global_fixed: <span class="kw-2">&amp;</span>GlobalFixed = get_helper::&lt;GlobalFixed&gt;(<span class="kw-2">&amp;</span>global_data, <span class="number">0_u32</span>);
+        <span class="kw">let </span>expected_global_vault_address: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_vault();
+
+        <span class="kw">let </span>global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
+            next_account_info(account_iter)<span class="question-mark">?</span>,
+            mint.info.key,
+            <span class="kw-2">&amp;</span>expected_global_vault_address,
+            <span class="kw-2">&amp;</span>expected_global_vault_address,
+        )<span class="question-mark">?</span>;
+        drop(global_data);
+
+        <span class="kw">let </span>token_account_info: <span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt; = next_account_info(account_iter)<span class="question-mark">?</span>;
+        <span class="kw">let </span>trader_token: TokenAccountInfo =
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)<span class="question-mark">?</span>;
+        <span class="kw">let </span>token_account_info: <span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt; = next_account_info(account_iter)<span class="question-mark">?</span>;
+        <span class="kw">let </span>evictee_token: TokenAccountInfo =
+            TokenAccountInfo::new(token_account_info, mint.info.key)<span class="question-mark">?</span>;
+        <span class="kw">let </span>token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            payer,
+            global,
+            mint,
+            global_vault,
+            trader_token,
+            evictee_token,
             token_program,
         })
     }

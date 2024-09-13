@@ -221,6 +221,21 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -359,6 +374,15 @@
     <span class="kw">pub </span>global_atoms: GlobalAtoms,
 }
 
+<span class="attr">#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+</span><span class="kw">pub struct </span>GlobalEvictLog {
+    <span class="kw">pub </span>evictor: Pubkey,
+    <span class="kw">pub </span>evictee: Pubkey,
+    <span class="kw">pub </span>evictor_atoms: GlobalAtoms,
+    <span class="kw">pub </span>evictee_atoms: GlobalAtoms,
+}
+
 <span class="kw">pub trait </span>Discriminant {
     <span class="kw">fn </span>discriminant() -&gt; [u8; <span class="number">8</span>];
 }
@@ -393,6 +417,7 @@
 <span class="kw">const </span>GLOBAL_CLAIM_SEAT_LOG_DISCRIMINANT: [u8; <span class="number">8</span>] = [<span class="number">164</span>, <span class="number">46</span>, <span class="number">227</span>, <span class="number">175</span>, <span class="number">3</span>, <span class="number">143</span>, <span class="number">73</span>, <span class="number">86</span>];
 <span class="kw">const </span>GLOBAL_DEPOSIT_LOG_DISCRIMINANT: [u8; <span class="number">8</span>] = [<span class="number">16</span>, <span class="number">26</span>, <span class="number">72</span>, <span class="number">1</span>, <span class="number">145</span>, <span class="number">232</span>, <span class="number">182</span>, <span class="number">71</span>];
 <span class="kw">const </span>GLOBAL_WITHDRAW_LOG_DISCRIMINANT: [u8; <span class="number">8</span>] = [<span class="number">206</span>, <span class="number">118</span>, <span class="number">67</span>, <span class="number">64</span>, <span class="number">124</span>, <span class="number">109</span>, <span class="number">157</span>, <span class="number">201</span>];
+<span class="kw">const </span>GLOBAL_EVICT_LOG_DISCRIMINANT: [u8; <span class="number">8</span>] = [<span class="number">250</span>, <span class="number">180</span>, <span class="number">155</span>, <span class="number">38</span>, <span class="number">98</span>, <span class="number">223</span>, <span class="number">82</span>, <span class="number">223</span>];
 
 <span class="macro">discriminant!</span>(
     CreateMarketLog,
@@ -441,5 +466,10 @@
     GlobalWithdrawLog,
     GLOBAL_WITHDRAW_LOG_DISCRIMINANT,
     test_global_withdraw_log
+);
+<span class="macro">discriminant!</span>(
+    GlobalEvictLog,
+    GLOBAL_EVICT_LOG_DISCRIMINANT,
+    test_global_evict_log
 );
 </code></pre></div></section></main></body></html>
