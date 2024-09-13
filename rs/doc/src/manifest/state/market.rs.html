@@ -1175,6 +1175,38 @@
 <a href="#1173" id="1173">1173</a>
 <a href="#1174" id="1174">1174</a>
 <a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
@@ -1697,7 +1729,7 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_mut();
-        update_balance_by_trader_index(dynamic, trader_index, is_base, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
+        update_balance(dynamic, trader_index, is_base, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1705,11 +1737,15 @@
         <span class="kw">let </span>trader_index: DataIndex = <span class="self">self</span>.get_trader_index(trader);
 
         <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_mut();
-        update_balance_by_trader_index(dynamic, trader_index, is_base, <span class="bool-val">false</span>, amount_atoms)<span class="question-mark">?</span>;
+        update_balance(dynamic, trader_index, is_base, <span class="bool-val">false</span>, amount_atoms)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>place_order(
+    <span class="doccomment">/// Place an order and update the market
+    ///
+    /// 1. Check the order against the opposite bookside
+    /// 2. Rest any amount of the order leftover on the book
+    </span><span class="kw">pub fn </span>place_order(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         args: AddOrderToMarketArgs,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
@@ -1738,11 +1774,6 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>total_base_atoms_traded: BaseAtoms = BaseAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_traded: QuoteAtoms = QuoteAtoms::ZERO;
-
-        <span class="comment">// Bump the order sequence number even for IOC orders which do not end
-        // up resting.
-        </span><span class="kw">let </span>order_sequence_number: u64 = fixed.order_sequence_number;
-        fixed.order_sequence_number = order_sequence_number.wrapping_add(<span class="number">1</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = num_base_atoms;
         <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_order_index != NIL {
@@ -1864,7 +1895,7 @@
                             .checked_sub(base_atoms_traded)<span class="question-mark">?</span>,
                         <span class="bool-val">false</span>,
                     )<span class="question-mark">?</span>;
-                update_balance_by_trader_index(
+                update_balance(
                     dynamic,
                     other_trader_index,
                     is_bid,
@@ -1877,7 +1908,7 @@
             }
 
             <span class="comment">// Increase maker from the matched amount in the trade.
-            </span>update_balance_by_trader_index(
+            </span>update_balance(
                 dynamic,
                 other_trader_index,
                 !is_bid,
@@ -1888,9 +1919,8 @@
                     base_atoms_traded.into()
                 },
             )<span class="question-mark">?</span>;
-
             <span class="comment">// Decrease taker
-            </span>update_balance_by_trader_index(
+            </span>update_balance(
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -1902,7 +1932,7 @@
                 },
             )<span class="question-mark">?</span>;
             <span class="comment">// Increase taker
-            </span>update_balance_by_trader_index(
+            </span>update_balance(
                 dynamic,
                 trader_index,
                 is_bid,
@@ -1970,8 +2000,13 @@
             }
         }
 
-        <span class="comment">// record volume on market
+        <span class="comment">// Record volume on market
         </span>fixed.quote_volume = fixed.quote_volume.wrapping_add(total_quote_atoms_traded);
+
+        <span class="comment">// Bump the order sequence number even for orders which do not end up
+        // resting.
+        </span><span class="kw">let </span>order_sequence_number: u64 = fixed.order_sequence_number;
+        fixed.order_sequence_number = order_sequence_number.wrapping_add(<span class="number">1</span>);
 
         <span class="comment">// If there is nothing left to rest, then return before resting.
         </span><span class="kw">if </span>!order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
@@ -1982,6 +2017,35 @@
                 quote_atoms_traded: total_quote_atoms_traded,
             });
         }
+
+        <span class="self">self</span>.rest_remaining(
+            args,
+            remaining_base_atoms,
+            order_sequence_number,
+            total_base_atoms_traded,
+            total_quote_atoms_traded,
+        )
+    }
+
+    <span class="doccomment">/// Rest the remaining order onto the market in a RestingOrder.
+    </span><span class="kw">fn </span>rest_remaining(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        args: AddOrderToMarketArgs,
+        remaining_base_atoms: BaseAtoms,
+        order_sequence_number: u64,
+        total_base_atoms_traded: BaseAtoms,
+        total_quote_atoms_traded: QuoteAtoms,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
+        <span class="kw">let </span>AddOrderToMarketArgs {
+            trader_index,
+            price,
+            is_bid,
+            last_valid_slot,
+            order_type,
+            global_trade_accounts_opts,
+            ..
+        } = args;
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
         <span class="comment">// Put the remaining in an order on the other bookside.
         </span><span class="kw">let </span>free_address: DataIndex = get_free_address_on_market_fixed(fixed, dynamic);
@@ -2011,7 +2075,7 @@
         } <span class="kw">else </span>{
             <span class="comment">// Place the remaining. This rounds down quote atoms because it is a best
             // case for the maker.
-            </span>update_balance_by_trader_index(
+            </span>update_balance(
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -2117,7 +2181,7 @@
                 .trader;
             remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, trader)<span class="question-mark">?
         </span>} <span class="kw">else </span>{
-            update_balance_by_trader_index(dynamic, trader_index, !is_bid, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
+            update_balance(dynamic, trader_index, !is_bid, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
         }
         remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)<span class="question-mark">?</span>;
 
@@ -2178,7 +2242,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>update_balance_by_trader_index(
+<span class="kw">fn </span>update_balance(
     dynamic: <span class="kw-2">&amp;mut </span>[u8],
     trader_index: DataIndex,
     is_base: bool,
@@ -2339,7 +2403,7 @@
                 .trader;
         remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, maker)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
-        update_balance_by_trader_index(
+        update_balance(
             dynamic,
             other_order.get_trader_index(),
             !other_is_bid,
