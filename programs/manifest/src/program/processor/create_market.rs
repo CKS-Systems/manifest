@@ -2,7 +2,8 @@ use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{assert_with_msg, expand_market_if_needed, ManifestError},
+    program::{expand_market_if_needed, ManifestError},
+    require,
     state::MarketFixed,
     utils::create_account,
     validation::{get_vault_address, loaders::CreateMarketContext},
@@ -40,7 +41,7 @@ pub(crate) fn process_create_market(
         token_program_22,
     } = create_market_context;
 
-    assert_with_msg(
+    require!(
         base_mint.info.key != quote_mint.info.key,
         ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
@@ -54,14 +55,14 @@ pub(crate) fn process_create_market(
             // Closable mints can be replaced with different ones, breaking some saved info on the market.
             if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
                 let close_authority: Option<Pubkey> = extension.close_authority.into();
-                assert_with_msg(
+                require!(
                     close_authority.is_none(),
                     ManifestError::InvalidMint,
                     "Closable mints are not allowed",
                 )?;
             }
             // Transfer fees make the amounts on withdraw and deposit not match what is expected.
-            assert_with_msg(
+            require!(
                 pool_mint.get_extension::<TransferFeeConfig>().is_err(),
                 ManifestError::InvalidMint,
                 "Transfer fee mints are not allowed",

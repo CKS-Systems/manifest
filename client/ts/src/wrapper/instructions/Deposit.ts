@@ -42,7 +42,6 @@ export const DepositStruct = new beet.BeetArgsStruct<
  * @property [_writable_] market
  * @property [_writable_] traderTokenAccount
  * @property [_writable_] vault
- * @property [_writable_, **signer**] payer
  * @property [_writable_] wrapperState
  * @property [] mint
  * @category Instructions
@@ -56,7 +55,6 @@ export type DepositInstructionAccounts = {
   traderTokenAccount: web3.PublicKey;
   vault: web3.PublicKey;
   tokenProgram?: web3.PublicKey;
-  payer: web3.PublicKey;
   wrapperState: web3.PublicKey;
   mint: web3.PublicKey;
 };
@@ -112,11 +110,6 @@ export function createDepositInstruction(
       pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
       isSigner: false,
-    },
-    {
-      pubkey: accounts.payer,
-      isWritable: true,
-      isSigner: true,
     },
     {
       pubkey: accounts.wrapperState,

@@ -10,8 +10,9 @@ use std::mem::size_of;
 
 use crate::{
     logs::{emit_stack, FillLog},
-    program::{assert_with_msg, batch_update::MarketDataTreeNodeType, ManifestError},
+    program::{batch_update::MarketDataTreeNodeType, ManifestError},
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         utils::{assert_can_take, remove_from_global, try_to_move_global_tokens},
         OrderType,
@@ -41,6 +42,7 @@ pub struct AddOrderToMarketArgs<'a, 'info> {
     pub last_valid_slot: u32,
     pub order_type: OrderType,
     pub global_trade_accounts_opts: &'a [Option<GlobalTradeAccounts<'a, 'info>>; 2],
+    pub current_slot: Option<u32>,
 }
 
 pub struct AddOrderToMarketResult {
@@ -108,10 +110,17 @@ pub struct MarketFixed {
     /// LinkedList representing all free blocks that could be used for ClaimedSeats or RestingOrders
     free_list_head_index: DataIndex,
 
+    _padding2: [u32; 1],
+
+    /// Quote volume traded over lifetime, can overflow. This is for
+    /// informational and monitoring purposes only. This is not guaranteed to
+    /// be maintained. It does not secure any value in manifest.
+    /// Use at your own risk.
+    quote_volume: QuoteAtoms,
+
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
-    _padding2: [u32; 3],
     _padding3: [u64; 8],
 }
 const_assert_eq!(
@@ -170,7 +179,8 @@ impl MarketFixed {
             asks_best_index: NIL,
             claimed_seats_root_index: NIL,
             free_list_head_index: NIL,
-            _padding2: [0; 3],
+            _padding2: [0; 1],
+            quote_volume: QuoteAtoms::ZERO,
             _padding3: [0; 8],
         }
     }
@@ -199,6 +209,9 @@ impl MarketFixed {
     pub fn get_quote_vault_bump(&self) -> u8 {
         self.quote_vault_bump
     }
+    pub fn get_quote_volume(&self) -> QuoteAtoms {
+        self.quote_volume
+    }
 
     // Used only in this file to construct iterator
     pub(crate) fn get_bids_root_index(&self) -> DataIndex {
@@ -222,13 +235,12 @@ impl MarketFixed {
 
 impl ManifestAccount for MarketFixed {
     fn verify_discriminant(&self) -> ProgramResult {
-        assert_with_msg(
+        require!(
             self.discriminant == MARKET_FIXED_DISCRIMINANT,
             ProgramError::InvalidAccountData,
-            &format!(
-                "Invalid market discriminant actual: {} expected: {}",
-                self.discriminant, MARKET_FIXED_DISCRIMINANT
-            ),
+            "Invalid market discriminant actual: {} expected: {}",
+            self.discriminant,
+            MARKET_FIXED_DISCRIMINANT
         )?;
         Ok(())
     }
@@ -381,6 +393,19 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             .trader
     }
 
+    pub fn get_trader_voume(&self, trader: &Pubkey) -> QuoteAtoms {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+
+        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        let trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
+        let claimed_seat: &ClaimedSeat =
+            get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_value();
+
+        claimed_seat.quote_volume
+    }
+
     pub fn get_bids(&self) -> BooksideReadOnly {
         let DynamicAccount { dynamic, fixed } = self.borrow_market();
         BooksideReadOnly::new(
@@ -426,7 +451,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     pub fn market_expand(&mut self) -> ProgramResult {
         let DynamicAccount { fixed, .. } = self.borrow_mut();
 
-        assert_with_msg(
+        require!(
             fixed.free_list_head_index == NIL,
             ManifestError::InvalidFreeList,
             "Expected empty free list, but expand wasnt needed",
@@ -443,7 +468,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             ClaimedSeatTree::new(dynamic, fixed.claimed_seats_root_index, NIL);
 
         let claimed_seat: ClaimedSeat = ClaimedSeat::new_empty(*trader);
-        assert_with_msg(
+        require!(
             claimed_seats_tree.lookup_index(&claimed_seat) == NIL,
             ManifestError::AlreadyClaimedSeat,
             "Already claimed seat",
@@ -488,7 +513,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
     pub fn deposit(&mut self, trader: &Pubkey, amount_atoms: u64, is_base: bool) -> ProgramResult {
         let trader_index: DataIndex = self.get_trader_index(trader);
-        assert_with_msg(
+        require!(
             trader_index != NIL,
             ManifestError::InvalidDepositAccounts,
             "No seat initialized",
@@ -520,9 +545,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             last_valid_slot,
             order_type,
             global_trade_accounts_opts,
+            current_slot,
         } = args;
         assert_already_has_seat(trader_index)?;
-        let now_slot: u32 = get_now_slot();
+        let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
         assert_not_already_expired(last_valid_slot, now_slot)?;
 
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
@@ -539,7 +565,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         // Bump the order sequence number even for IOC orders which do not end
         // up resting.
         let order_sequence_number: u64 = fixed.order_sequence_number;
-        fixed.order_sequence_number += 1;
+        fixed.order_sequence_number = order_sequence_number.wrapping_add(1);
 
         let mut remaining_base_atoms: BaseAtoms = num_base_atoms;
         while remaining_base_atoms > BaseAtoms::ZERO && current_order_index != NIL {
@@ -626,8 +652,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 }
             }
 
-            total_base_atoms_traded += base_atoms_traded;
-            total_quote_atoms_traded += quote_atoms_traded;
+            total_base_atoms_traded = total_base_atoms_traded.checked_add(base_atoms_traded)?;
+            total_quote_atoms_traded = total_quote_atoms_traded.checked_add(quote_atoms_traded)?;
 
             // Possibly increase bonus atom maker gets from the rounding the
             // quote in their favor. They will get one less than expected when
@@ -711,6 +737,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 },
             )?;
 
+            // record maker & taker volume
+            record_volume_by_trader_index(dynamic, other_trader_index, quote_atoms_traded);
+            record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded);
+
             emit_stack(FillLog {
                 market,
                 maker,
@@ -763,6 +793,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             }
         }
 
+        // record volume on market
+        fixed.quote_volume = fixed.quote_volume.wrapping_add(total_quote_atoms_traded);
+
         // If there is nothing left to rest, then return before resting.
         if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
             return Ok(AddOrderToMarketResult {
@@ -792,7 +825,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            assert_with_msg(
+            require!(
                 global_trade_accounts_opt.is_some(),
                 ManifestError::MissingGlobal,
                 "Missing global accounts when adding a global",
@@ -846,12 +879,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             };
             for (index, resting_order) in tree.iter::<RestingOrder>() {
                 if resting_order.get_sequence_number() == order_sequence_number {
-                    assert_with_msg(
+                    require!(
                         resting_order.get_trader_index() == trader_index,
                         ManifestError::InvalidCancel,
                         "Cannot cancel for another trader",
                     )?;
-                    assert_with_msg(
+                    require!(
                         index_to_remove == NIL,
                         ManifestError::InvalidCancel,
                         "Book is broken, matched multiple orders",
@@ -985,13 +1018,12 @@ fn update_balance_by_trader_index(
                 .base_withdrawable_balance
                 .checked_add(BaseAtoms::new(amount_atoms))?;
         } else {
-            assert_with_msg(
+            require!(
                 claimed_seat.base_withdrawable_balance >= BaseAtoms::new(amount_atoms),
                 ProgramError::InsufficientFunds,
-                &format!(
-                    "Not enough base atoms. Has {}, needs {}",
-                    claimed_seat.base_withdrawable_balance, amount_atoms
-                ),
+                "Not enough base atoms. Has {}, needs {}",
+                claimed_seat.base_withdrawable_balance,
+                amount_atoms
             )?;
             claimed_seat.base_withdrawable_balance = claimed_seat
                 .base_withdrawable_balance
@@ -1002,19 +1034,28 @@ fn update_balance_by_trader_index(
             .quote_withdrawable_balance
             .checked_add(QuoteAtoms::new(amount_atoms))?;
     } else {
-        assert_with_msg(
+        require!(
             claimed_seat.quote_withdrawable_balance >= QuoteAtoms::new(amount_atoms),
             ProgramError::InsufficientFunds,
-            &format!(
-                "Not enough quote atoms. Has {}, needs {}",
-                claimed_seat.quote_withdrawable_balance, amount_atoms
-            ),
+            "Not enough quote atoms. Has {}, needs {}",
+            claimed_seat.quote_withdrawable_balance,
+            amount_atoms
         )?;
         claimed_seat.quote_withdrawable_balance = claimed_seat
             .quote_withdrawable_balance
             .checked_sub(QuoteAtoms::new(amount_atoms))?;
     }
     Ok(())
+}
+
+fn record_volume_by_trader_index(
+    dynamic: &mut [u8],
+    trader_index: DataIndex,
+    amount_atoms: QuoteAtoms,
+) {
+    let claimed_seat: &mut ClaimedSeat =
+        get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index).get_mut_value();
+    claimed_seat.quote_volume = claimed_seat.quote_volume.wrapping_add(amount_atoms);
 }
 
 #[inline(always)]

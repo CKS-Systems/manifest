@@ -1,4 +1,3 @@
-use crate::program::error::assert_with_msg;
 use bytemuck::Pod;
 use hypertree::get_helper;
 use solana_program::{
@@ -6,6 +5,8 @@ use solana_program::{
     pubkey::Pubkey,
 };
 use std::{cell::Ref, mem::size_of, ops::Deref};
+
+use crate::require;
 
 /// Validation for manifest accounts.
 #[derive(Clone)]
@@ -64,30 +65,26 @@ pub trait ManifestAccount {
 }
 
 fn verify_owned_by_manifest(owner: &Pubkey) -> ProgramResult {
-    assert_with_msg(
+    require!(
         owner == &crate::ID,
         ProgramError::IllegalOwner,
-        &format!(
-            "Account must be owned by the Manifest program expected:{} actual:{}",
-            crate::ID,
-            owner
-        ),
+        "Account must be owned by the Manifest program expected:{} actual:{}",
+        crate::ID,
+        owner
     )?;
     Ok(())
 }
 
 fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> ProgramResult {
     let bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-    assert_with_msg(
+    require!(
         size_of::<T>() == bytes.len(),
         ProgramError::InvalidAccountData,
-        &format!(
-            "Incorrect length for uninitialized header expected: {} actual: {}",
-            size_of::<T>(),
-            bytes.len()
-        ),
+        "Incorrect length for uninitialized header expected: {} actual: {}",
+        size_of::<T>(),
+        bytes.len()
     )?;
-    assert_with_msg(
+    require!(
         bytes.iter().all(|&byte| byte == 0),
         ProgramError::InvalidAccountData,
         "Expected zeroed",

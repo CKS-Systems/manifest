@@ -7,22 +7,22 @@ import { Fade, Zoom, Slide } from 'react-awesome-reveal';
 const Hero: React.FC = () => {
   return (
     <div className='w-full overflow-x-hidden overflow-y-hidden h-[calc(100vh-60px)] md:h-[calc(100vh-90px)] justify-center items-center flex relative'>
-      <div className="absolute inset-0 bg-[url('/assets/logo.svg')] bg-no-repeat bg-center bg-[length:80%_auto] opacity-5"></div>
+      <div className="absolute inset-0 bg-[url('/assets/logo.svg')] bg-no-repeat bg-center bg-[length:65%_auto] opacity-5"></div>
       
       <Wrapper style='h-full'>
         <Fade duration={1200} triggerOnce className='w-full h-full'>
           <div className='w-full flex flex-col gap-5 justify-center items-center h-full'>
             <Zoom duration={1500} triggerOnce>
-              <div className="w-full -mt-28 max-w-[300px] sm:max-w-[450px] md:max-w-[940px] 2xl:max-w-[1800px] 3xl:w-[2500px] 2xl:h-[800px] 3xl:h-[1700px] h-[300px] sm:h-[400px] md:h-[490px] flex flex-col justify-center items-center">
-                <p className='text-[#bca378] mt-[5rem] sm:mt-[9rem] 3xl:mt-[19rem] text-[16px] 2xl:text-[42px] 3xl:text-[75px] sm:text-[24px] md:text-[30px] font-semibold'>
+              <div className="w-full -mt-28 max-w-[300px] sm:max-w-[450px] md:max-w-[940px] 2xl:max-w-[1800px] 2xl:h-[800px] h-[300px] sm:h-[400px] md:h-[490px] flex flex-col justify-center items-center">
+                <p className='text-[#bca378] mt-[5rem] sm:mt-[9rem] text-[16px] 2xl:text-[42px] sm:text-[24px] md:text-[30px] font-semibold'>
                 M A N I F E S T
                 </p>
 
-                <h1 className='text-[38px] sm:block hidden sm:text-[50px] md:text-[70px] lg:text-[96px] 2xl:text-[140px] 3xl:text-[240px] tracking-[4px] leading-[50px] sm:leading-[60px] md:leading-[90px] lg:leading-[120px] 2xl:leading-[180px] 3xl:leading-[300px] text-center font-bold font-terminaExtraBold text-[#bca378] mt-0 2xl:mt-3'>
-                  The Unlimited <br /> Exchange
+                <h1 className='text-[38px] sm:block hidden sm:text-[50px] md:text-[70px] lg:text-[96px] 2xl:text-[140px] tracking-[4px] leading-[50px] sm:leading-[60px] md:leading-[90px] lg:leading-[120px] 2xl:leading-[180px] text-center font-bold font-terminaExtraBold text-[#bca378] mt-0 2xl:mt-3'>
+                  The Unlimited <br /> Orderbook
                 </h1>
                 <h1 className='text-[36px] sm:hidden block sm:text-[50px] md:text-[70px] lg:text-[96px] 2xl:text-[120px] 3xl:text-[160px] tracking-[4px] leading-[50px] sm:leading-[60px] md:leading-[90px] lg:leading-[120px] text-center font-bold font-terminaExtraBold text-[#bca378]'>
-                  The Unlimited Exchange
+                  The Unlimited Orderbook
                 </h1>
               </div>
             </Zoom>
@@ -45,7 +45,7 @@ const Hero: React.FC = () => {
                   </div>
                   <div className='flex justify-center items-center flex-col gap-4'>
                     <p className='text-[#95C9BD] text-[10px] sm:text-[16px] md:text-[20px] 2xl:text-[28px] 3xl:text-[36px] font-terminaExtraDemi'>
-                      0.002 SOL
+                      0.004 SOL
                     </p>
                     <p className='text-[12px] sm:text-[14px] md:text-[16px] 2xl:text-[24px] font-normal 3xl:text-[32px] text-[#bca378]/90'>
                       Listing Cost

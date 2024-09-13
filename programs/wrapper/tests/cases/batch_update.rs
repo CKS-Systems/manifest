@@ -106,7 +106,7 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 1 * SOL_UNIT_SIZE,
                 1,
                 0,
-                false,
+                true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
                 0,
@@ -114,9 +114,9 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
             WrapperPlaceOrderParams::new(
                 0,
                 1 * SOL_UNIT_SIZE,
-                1,
+                2,
                 0,
-                false,
+                true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
                 0,
@@ -124,17 +124,7 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
             WrapperPlaceOrderParams::new(
                 0,
                 1 * SOL_UNIT_SIZE,
-                1,
-                0,
-                false,
-                NO_EXPIRATION_LAST_VALID_SLOT,
-                OrderType::Limit,
-                0,
-            ),
-            WrapperPlaceOrderParams::new(
-                0,
-                1 * SOL_UNIT_SIZE,
-                1,
+                3,
                 0,
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -144,7 +134,7 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
             WrapperPlaceOrderParams::new(
                 0,
                 1 * SOL_UNIT_SIZE,
-                1,
+                4,
                 0,
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
@@ -224,12 +214,8 @@ async fn sync_remove_test() -> anyhow::Result<()> {
     let second_payer_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     let second_wrapper_keypair: Keypair = Keypair::new();
 
-    let create_wrapper_ixs: Vec<Instruction> = create_wrapper_instructions(
-        &second_payer,
-        &second_payer,
-        &second_wrapper_keypair.pubkey(),
-    )
-    .unwrap();
+    let create_wrapper_ixs: Vec<Instruction> =
+        create_wrapper_instructions(&second_payer, &second_wrapper_keypair.pubkey()).unwrap();
 
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),

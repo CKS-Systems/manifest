@@ -3,8 +3,9 @@ use std::cell::RefMut;
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
-    program::{assert_with_msg, ManifestError},
+    program::ManifestError,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
         NO_EXPIRATION_LAST_VALID_SLOT,
@@ -131,6 +132,7 @@ pub(crate) fn process_swap(
         last_valid_slot,
         order_type,
         global_trade_accounts_opts: &global_trade_accounts_opts,
+        current_slot: None,
     })?;
 
     if is_exact_in {
@@ -139,13 +141,12 @@ pub(crate) fn process_swap(
         } else {
             base_atoms_traded.as_u64()
         };
-        assert_with_msg(
+        require!(
             out_atoms <= out_atoms_traded,
             ManifestError::InsufficientOut,
-            &format!(
-                "Insufficient out atoms returned. Minimum: {} Actual: {}",
-                out_atoms, out_atoms_traded
-            ),
+            "Insufficient out atoms returned. Minimum: {} Actual: {}",
+            out_atoms,
+            out_atoms_traded
         )?;
     } else {
         let in_atoms_traded = if is_base_in {
@@ -153,13 +154,12 @@ pub(crate) fn process_swap(
         } else {
             quote_atoms_traded.as_u64()
         };
-        assert_with_msg(
+        require!(
             in_atoms >= in_atoms_traded,
             ManifestError::InsufficientOut,
-            &format!(
-                "Excessive in atoms charged. Maximum: {} Actual: {}",
-                in_atoms, in_atoms_traded
-            ),
+            "Excessive in atoms charged. Maximum: {} Actual: {}",
+            in_atoms,
+            in_atoms_traded
         )?;
     }
 

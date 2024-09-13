@@ -19,16 +19,16 @@ Maximal freedom to exchange risk.
 
 ## Comparison
 
-|                                                         | Openbook           | Phoenix            | Manifest                              |
-| ------------------------------------------------------- | ------------------ | ------------------ | ------------------------------------- |
-| Crankless                                               | No                 | Yes                | Yes                                   |
-| Feeless                                                 | No                 | No                 | Yes                                   |
-| Atomic lot sizes                                        | No                 | No                 | Yes                                   |
-| Anchor                                                  | Yes                | No                 | No                                    |
-| Rent                                                    | 2 SOL              | 2 SOL              | .002 SOL                              |
-| License                                                 | GPL                | Business           | GPL                                   |
-| Read optimized                                          | Yes                | No                 | Yes                                   |
-| Swap accounts                                           | 16                 | 8                  | 7                                     |
+|  |    Openbook    | Phoenix  |Manifest              |
+|--|----------------|-------------------|----------------------|
+| Crankless |No |Yes |Yes |
+| Feeless |No |No |Yes|
+| Atomic lot sizes |No |No |Yes|
+| Anchor |Yes |No|No|
+| Creation Rent|2 SOL |3+ SOL |.004 SOL|
+| License|GPL |Business |GPL|
+| Read optimized| Yes | No | Yes |
+| Swap accounts| 16 | 8 | 7 |
 | [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Silent failures                                         | Yes                | Yes                | No                                    |
 | Token 22                                                | No                 | No                 | Yes                                   |
