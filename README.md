@@ -1,6 +1,6 @@
 # ![Logo](assets/brown-contrast-split.png)
 # <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
-*The feeless orderbook exchange that supercharges your on-chain trading.*
+*The Unlimited Orderbook.*
 
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
@@ -16,6 +16,10 @@ No more expensive rent to start a market.
 Capital efficiency built-in. 
 Maximal freedom to exchange risk.
 
+## Whitepaper
+
+Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
+
 ## Comparison
 
 
@@ -25,7 +29,7 @@ Maximal freedom to exchange risk.
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
 | Anchor |Yes |No|No|
-| Rent|2 SOL |2 SOL |.002 SOL|
+| Creation Rent|2 SOL |3+ SOL |.004 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
 | Swap accounts| 16 | 8 | 7 |
