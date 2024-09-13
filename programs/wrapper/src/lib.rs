@@ -12,6 +12,7 @@ use instruction::ManifestWrapperInstruction;
 use processors::{
     batch_upate::process_batch_update, claim_seat::process_claim_seat,
     create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
+    global_add_trader::process_global_add_trader,
 };
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
@@ -67,6 +68,9 @@ pub fn process_instruction(
         }
         ManifestWrapperInstruction::BatchUpdate => {
             process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction:GlobalAddTrader => {
+            process_global_add_trader(program_id, accounts, data)?;
         }
     }
 

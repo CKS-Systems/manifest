@@ -4,3 +4,4 @@ pub mod create_wrapper;
 pub mod deposit;
 pub mod shared;
 pub mod withdraw;
+pub mod global_add_trader;

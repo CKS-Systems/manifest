@@ -51,6 +51,18 @@ pub enum ManifestWrapperInstruction {
     #[account(3, writable, name = "market", desc = "Account holding all market state")]
     #[account(4, name = "system_program", desc = "System program")]
     BatchUpdate = 4,
+
+    /// TODO: Create global account for a given token.
+
+    /// Add a trader to the global account
+    #[account(0, name = "manifest_program", desc = "Manifest program")]
+    #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(2, writable, name = "global", desc = "Global account")]
+    #[account(3, name = "system_program", desc = "System program")]
+    #[account(4, writable, name = "wrapper_state", desc = "Wrapper state")]
+    GlobalAddTrader = 6,
+
+    /// TODO Add other Global Ixs
 }
 
 impl ManifestWrapperInstruction {

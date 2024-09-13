@@ -20,6 +20,7 @@ use spl_token::state::Mint;
 use std::rc::Rc;
 use wrapper::instruction_builders::{
     claim_seat_instruction, create_wrapper_instructions, deposit_instruction, withdraw_instruction,
+    global_add_trader_instruction,
 };
 
 #[derive(PartialEq)]
@@ -189,6 +190,37 @@ impl TestFixture {
         send_tx_with_retry(
             Rc::clone(&self.context),
             &[claim_seat_ix],
+            Some(&keypair.pubkey()),
+            &[&keypair.insecure_clone()],
+        )
+        .await
+        .unwrap();
+        Ok(())
+    }
+
+    pub async fn global_add_trader(&self) -> anyhow::Result<(), BanksClientError> {
+        self.global_add_trader_for_keypair(&self.payer_keypair()).await
+    }
+
+    pub async fn global_add_trader_for_keypair(
+        &self,
+        keypair: &Keypair,
+    ) -> anyhow::Result<(), BanksClientError> {
+        let wrapper_key: Pubkey = self.wrapper.key;
+        self.global_add_trader_for_keypair_with_wrapper(keypair, &wrapper_key)
+            .await
+    }
+
+    pub async fn global_add_trader_for_keypair_with_wrapper(
+        &self,
+        keypair: &Keypair,
+        wrapper_state: &Pubkey,
+    ) -> anyhow::Result<(), BanksClientError> {
+        let global_add_trader_ix: Instruction =
+            global_add_trader_instruction(&self.global.key, &keypair.pubkey(), wrapper_state);
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[global_add_trader_ix],
             Some(&keypair.pubkey()),
             &[&keypair.insecure_clone()],
         )
