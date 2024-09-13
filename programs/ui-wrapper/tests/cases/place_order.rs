@@ -1,4 +1,4 @@
-use std::{mem::size_of, rc::Rc};
+use std::{mem::size_of, rc::Rc, str::FromStr};
 
 use borsh::BorshSerialize;
 use hypertree::{
@@ -14,6 +14,7 @@ use solana_program::{instruction::AccountMeta, system_program};
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    program_pack::Pack
 };
 use spl_token;
 // use ;
@@ -25,6 +26,7 @@ use ui_wrapper::{
     processors::{
         cancel_order::WrapperCancelOrderParams,
         place_order::WrapperPlaceOrderParams,
+        settle_funds::WrapperSettleFundsParams,
         shared::{
             MarketInfosTree, MarketInfosTreeReadOnly, OpenOrdersTree, OpenOrdersTreeReadOnly,
         },
@@ -41,13 +43,21 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let (mint, trader_token_account) = test_fixture
+    let (base_mint, trader_token_account_base) = test_fixture
+        .fund_trader_wallet(&payer_keypair, Token::SOL, 1)
+        .await;
+    let (quote_mint, trader_token_account_quote) = test_fixture
         .fund_trader_wallet(&payer_keypair, Token::USDC, 1)
         .await;
-    let (vault, _) = get_vault_address(&test_fixture.market.key, &mint);
+
+    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
+
+    let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
 
     trace!(
-        "market:{:?} mint:{mint:?} vault:{vault:?}",
+        "market:{:?} mint:{quote_mint:?} vault:{quote_vault:?}",
         test_fixture.market.key
     );
 
@@ -57,10 +67,10 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
         accounts: vec![
             AccountMeta::new(test_fixture.wrapper.key, false),
             AccountMeta::new(payer, true),
-            AccountMeta::new(trader_token_account, false),
+            AccountMeta::new(trader_token_account_quote, false),
             AccountMeta::new(test_fixture.market.key, false),
-            AccountMeta::new(vault, false),
-            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(quote_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
@@ -149,19 +159,20 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
 
     // cancel the same order
 
+    
+
     let cancel_order_ix = Instruction {
         program_id: ui_wrapper::id(),
         accounts: vec![
             AccountMeta::new(test_fixture.wrapper.key, false),
             AccountMeta::new(payer, true),
-            AccountMeta::new(trader_token_account, false),
+            AccountMeta::new(trader_token_account_quote, false),
             AccountMeta::new(test_fixture.market.key, false),
-            AccountMeta::new(vault, false),
-            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(quote_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
-            AccountMeta::new(payer, true),
         ],
         data: [
             ManifestWrapperInstruction::CancelOrder.to_vec(),
@@ -224,6 +235,59 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
         .iter::<WrapperOpenOrder>()
         .find(|(_, o)| o.get_client_order_id() == 1);
     assert!(found.is_none());
+
+    // release funds
+    let settle_funds_ix = Instruction {
+        program_id: ui_wrapper::id(),
+        accounts: vec![
+            AccountMeta::new(test_fixture.wrapper.key, false),
+            AccountMeta::new(payer, true),
+            AccountMeta::new(trader_token_account_base, false),
+            AccountMeta::new(trader_token_account_quote, false),
+            AccountMeta::new(test_fixture.market.key, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new(quote_vault, false),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new_readonly(
+                Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
+                false,
+            ),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(manifest::id(), false),
+            AccountMeta::new(payer, true),
+            AccountMeta::new(platform_token_account, false),
+            AccountMeta::new(referred_token_account, false),
+        ],
+        data: [
+            ManifestWrapperInstruction::SettleFunds.to_vec(),
+            WrapperSettleFundsParams::new(1_000_000_000, 50)
+                .try_to_vec()
+                .unwrap(),
+        ]
+        .concat(),
+    };
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[settle_funds_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    // verify no fees were charged and user has deposit back in his wallet
+    let trader_token_account_quote: Account = test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(trader_token_account_quote)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let trader_token_account_quote = spl_token::state::Account::unpack(&trader_token_account_quote.data)?;
+    assert_eq!(trader_token_account_quote.amount, 1);
 
     Ok(())
 }

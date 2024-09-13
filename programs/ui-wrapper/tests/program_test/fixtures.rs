@@ -1,6 +1,6 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
-    io::Error,
+    io::Error, str::FromStr,
 };
 
 use manifest::{
@@ -69,6 +69,12 @@ impl TestFixture {
             "manifest",
             manifest::ID,
             processor!(manifest::process_instruction),
+        );
+
+        program.add_program(
+            "executor",
+            Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
+            None,
         );
 
         let second_keypair: Keypair = Keypair::new();
@@ -169,6 +175,19 @@ impl TestFixture {
         self.context.borrow().payer.insecure_clone()
     }
 
+    pub async fn fund_token_account(&self, mint_pk: &Pubkey, owner_pk: &Pubkey) -> Pubkey {
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture =
+            TokenAccountFixture::new_with_keypair(
+                Rc::clone(&self.context),
+                mint_pk,
+                owner_pk,
+                &token_account_keypair,
+            )
+            .await;
+        token_account_fixture.key
+    }
+
     /// returns (mint, trader_token_account)
     pub async fn fund_trader_wallet(
         &mut self,
@@ -182,16 +201,7 @@ impl TestFixture {
                 self.payer_sol.key
             } else {
                 // Make a temporary token account
-                let token_account_keypair: Keypair = Keypair::new();
-                let token_account_fixture: TokenAccountFixture =
-                    TokenAccountFixture::new_with_keypair(
-                        Rc::clone(&self.context),
-                        &self.sol_mint.key,
-                        &keypair.pubkey(),
-                        &token_account_keypair,
-                    )
-                    .await;
-                token_account_fixture.key
+                self.fund_token_account(&self.sol_mint.key, &keypair.pubkey()).await
             };
             self.sol_mint
                 .mint_to(&trader_token_account, amount_atoms)
@@ -202,16 +212,7 @@ impl TestFixture {
                 self.payer_usdc.key
             } else {
                 // Make a temporary token account
-                let token_account_keypair: Keypair = Keypair::new();
-                let token_account_fixture: TokenAccountFixture =
-                    TokenAccountFixture::new_with_keypair(
-                        Rc::clone(&self.context),
-                        &self.usdc_mint.key,
-                        &keypair.pubkey(),
-                        &token_account_keypair,
-                    )
-                    .await;
-                token_account_fixture.key
+                self.fund_token_account(&self.usdc_mint.key, &keypair.pubkey()).await
             };
             self.usdc_mint
                 .mint_to(&trader_token_account, amount_atoms)

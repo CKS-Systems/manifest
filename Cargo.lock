@@ -5907,6 +5907,7 @@ dependencies = [
  "solana-sdk",
  "solana-security-txt",
  "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
  "static_assertions",
  "thiserror",
  "tokio",

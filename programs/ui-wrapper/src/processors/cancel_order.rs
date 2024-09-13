@@ -129,7 +129,6 @@ pub(crate) fn process_cancel_order(
     )?;
 
     // Process the order result
-
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let wrapper: DynamicAccount<&mut ManifestWrapperStateFixed, &mut [u8]> =
         get_mut_dynamic_account(&mut wrapper_data);
@@ -142,7 +141,7 @@ pub(crate) fn process_cancel_order(
         market_info.orders_root_index
     };
 
-    // remove nodes from order tree
+    // remove node from order tree
     let orders_root_index = {
         let mut open_orders_tree: OpenOrdersTree =
             OpenOrdersTree::new(wrapper.dynamic, orders_root_index, NIL);
@@ -155,13 +154,10 @@ pub(crate) fn process_cancel_order(
         get_mut_helper::<RBNode<MarketInfo>>(wrapper.dynamic, market_info_index).get_mut_value();
     market_info.orders_root_index = orders_root_index;
 
-    // add nodes to freelist
+    // add node to freelist
     let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
         FreeList::new(wrapper.dynamic, wrapper.fixed.free_list_head_index);
-
-    if wrapper_index != NIL {
-        free_list.add(wrapper_index);
-    }
+    free_list.add(wrapper_index);
 
     wrapper.fixed.free_list_head_index = free_list.get_head();
 
