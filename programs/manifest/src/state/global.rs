@@ -309,8 +309,15 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
     pub fn reduce(&mut self, trader: &Pubkey, num_atoms: GlobalAtoms) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        let global_deposit: &mut GlobalDeposit =
-            get_mut_global_deposit(fixed, dynamic, trader).expect("Could not find GlobalDeposit");
+        let global_deposit_opt: Option<&mut GlobalDeposit> =
+            get_mut_global_deposit(fixed, dynamic, trader);
+        require!(
+            global_deposit_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global deposit for {}",
+            trader
+        )?;
+        let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_sub(num_atoms)?;
         Ok(())
     }
@@ -363,11 +370,26 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         // TODO: Make this expensive so it cannot be composed and used in attacks where bumping.
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
-        let existing_global_trader: GlobalTrader =
-            *get_global_trader(fixed, dynamic, existing_trader)
-                .expect("Trader to evict must exist");
-        let existing_global_deposit: &GlobalDeposit =
-            get_global_deposit(fixed, dynamic, existing_trader).expect("GlobalDeposit not found");
+        let existing_global_trader_opt: Option<&GlobalTrader> =
+            get_global_trader(fixed, dynamic, existing_trader);
+        require!(
+            existing_global_trader_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global trader for {}",
+            existing_trader
+        )?;
+        let existing_global_trader: GlobalTrader = *existing_global_trader_opt.unwrap();
+
+        let existing_global_deposit_opt: Option<&mut GlobalDeposit> =
+            get_mut_global_deposit(fixed, dynamic, existing_trader);
+        require!(
+            existing_global_deposit_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global deposit for {}",
+            existing_trader
+        )?;
+        let existing_global_deposit: &mut GlobalDeposit = existing_global_deposit_opt.unwrap();
+
         let existing_global_atoms_deposited: GlobalAtoms = existing_global_deposit.balance_atoms;
         require!(
             existing_global_atoms_deposited == GlobalAtoms::ZERO,
@@ -448,9 +470,16 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         // Verify that there are enough deposited atoms.
         {
-            let global_deposit: &GlobalDeposit =
-                get_global_deposit(fixed, dynamic, global_trade_owner)
-                    .expect("GlobalDeposit not found");
+            let global_deposit_opt: Option<&mut GlobalDeposit> =
+                get_mut_global_deposit(fixed, dynamic, global_trade_owner);
+            require!(
+                global_deposit_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Could not find global deposit for {}",
+                global_trade_owner
+            )?;
+            let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
+
             let global_atoms_deposited: GlobalAtoms = global_deposit.balance_atoms;
 
             // This can be trivial to circumvent by using flash loans. This is just
@@ -488,8 +517,15 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     /// Deposit to global account.
     pub fn deposit_global(&mut self, trader: &Pubkey, num_atoms: GlobalAtoms) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        let global_deposit: &mut GlobalDeposit =
-            get_mut_global_deposit(fixed, dynamic, trader).expect("Could not find global deposit");
+        let global_deposit_opt: Option<&mut GlobalDeposit> =
+            get_mut_global_deposit(fixed, dynamic, trader);
+        require!(
+            global_deposit_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global deposit for {}",
+            trader
+        )?;
+        let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_add(num_atoms)?;
 
         Ok(())
@@ -498,8 +534,15 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     /// Withdraw from global account.
     pub fn withdraw_global(&mut self, trader: &Pubkey, num_atoms: GlobalAtoms) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        let global_deposit: &mut GlobalDeposit =
-            get_mut_global_deposit(fixed, dynamic, trader).expect("Could not find GlobalDeposit");
+        let global_deposit_opt: Option<&mut GlobalDeposit> =
+            get_mut_global_deposit(fixed, dynamic, trader);
+        require!(
+            global_deposit_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global deposit for {}",
+            trader
+        )?;
+        let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         // Checked sub makes sure there are enough funds.
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_sub(num_atoms)?;
 
