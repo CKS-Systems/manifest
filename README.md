@@ -1,6 +1,6 @@
 # ![Logo](assets/brown-contrast-split.png)
 # <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
-*The feeless orderbook exchange that supercharges your on-chain trading.*
+*The Unlimited Orderbook.*
 
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
@@ -15,6 +15,10 @@ No more trading fees.
 No more expensive rent to start a market.
 Capital efficiency built-in. 
 Maximal freedom to exchange risk.
+
+## Whitepaper
+
+Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
 
 ## Comparison
 
