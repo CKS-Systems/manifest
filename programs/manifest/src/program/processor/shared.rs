@@ -4,7 +4,9 @@ use std::{
 };
 
 use crate::{
-    state::{constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
+    state::{
+        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, GLOBAL_BLOCK_SIZE,
+    },
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
@@ -28,7 +30,7 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
-    expand_dynamic(payer, manifest_account, system_program)?;
+    expand_dynamic(payer, manifest_account, system_program, MARKET_BLOCK_SIZE)?;
     expand_market_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -39,7 +41,9 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
     system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
-    expand_dynamic(payer, manifest_account, system_program)?;
+    // Expand twice because of two trees at once.
+    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -48,11 +52,12 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
     system_program: &Program<'a, 'info>,
+    block_size: usize,
 ) -> ProgramResult {
     // Account types were already validated, so do not need to reverify that the
     // accounts are in order: payer, expandable_account, system_program, ...
     let expandable_account: &AccountInfo = manifest_account.info;
-    let new_size: usize = expandable_account.data_len() + MARKET_BLOCK_SIZE;
+    let new_size: usize = expandable_account.data_len() + block_size;
 
     let rent: Rent = Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
@@ -62,7 +67,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let system_program: &AccountInfo = system_program.info;
 
     trace!(
-        "expand_if_needed -> transfer {} {:?}",
+        "expand_dynamic-> transfer {} {:?}",
         lamports_diff,
         expandable_account.key
     );
@@ -76,7 +81,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     )?;
 
     trace!(
-        "expand_if_needed -> realloc {} {:?}",
+        "expand_dynamic-> realloc {} {:?}",
         new_size,
         expandable_account.key
     );

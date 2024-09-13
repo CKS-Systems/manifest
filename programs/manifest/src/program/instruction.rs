@@ -117,12 +117,21 @@ pub enum ManifestInstruction {
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalWithdraw = 10,
 
+    /// Evict another trader from the global account.
+    #[account(0, writable, signer, name = "payer", desc = "Payer")]
+    #[account(1, writable, name = "global", desc = "Global account")]
+    #[account(2, name = "mint", desc = "Mint for this global account")]
+    #[account(3, writable, name = "global_vault", desc = "Global vault")]
+    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(5, name = "evictee_token", desc = "Evictee token account")]
+    #[account(6, name = "token_program", desc = "Token program(22)")]
+    GlobalEvict = 11,
 
     // TODO: Implement this. Users can clean another users unbacked or expired
     // orders off the orderbook.
     //#[account(0, writable, signer, name = "payer", desc = "Payer")]
     // GlobalCleanOrder = 11,
-    // GlobalPurgeTrader = 12,
+
 }
 
 impl ManifestInstruction {
@@ -133,7 +142,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 10;
+    let num_instructions: u8 = 11;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {
