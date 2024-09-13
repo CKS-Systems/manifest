@@ -1,7 +1,7 @@
 'use client';
 
 import { fetchMarket } from '@/lib/data';
-import { setupClient } from '@/lib/util';
+import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import {
   Market,
   RestingOrder,
@@ -15,6 +15,9 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { useEffect, useState, ReactElement, ChangeEvent } from 'react';
+import { toast } from 'react-toastify';
+import { useAppState } from './AppWalletProvider';
+import { ensureError } from '@/lib/error';
 
 const MyStatus = ({
   marketAddress,
@@ -23,6 +26,7 @@ const MyStatus = ({
 }): ReactElement => {
   const { connected, sendTransaction, publicKey: signerPub } = useWallet();
   const { connection: conn } = useConnection();
+  const { network } = useAppState();
 
   const [baseWalletBalance, setBaseWalletBalance] = useState<number>(0);
   const [quoteWalletBalance, setQuoteWalletBalance] = useState<number>(0);
@@ -62,6 +66,7 @@ const MyStatus = ({
       signerPub,
       connected,
       sendTransaction,
+      network,
     );
 
     const mintPub = actOnQuote
@@ -75,17 +80,18 @@ const MyStatus = ({
     );
     try {
       const sig = await sendTransaction(new Transaction().add(depositIx), conn);
-      console.log(
-        `deposit: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
+      console.log(`deposit: ${getSolscanSigUrl(sig, network)}`);
+      toast.success(`deposit: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
       console.log(err);
+      toast.error(`deposit: ${ensureError(err).message}`);
     }
   };
 
   const withdraw = async (): Promise<void> => {
     const marketPub = new PublicKey(marketAddress);
     if (!connected) {
+      toast.error('withdraw: must be connected before setting up client');
       throw new Error('must be connected before setting up client');
     }
 
@@ -95,6 +101,7 @@ const MyStatus = ({
       signerPub,
       connected,
       sendTransaction,
+      network,
     );
 
     const mintPub = actOnQuote
@@ -111,11 +118,11 @@ const MyStatus = ({
         new Transaction().add(withdrawIx),
         conn,
       );
-      console.log(
-        `withdraw: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
+      console.log(`withdraw: ${getSolscanSigUrl(sig, network)}`);
+      toast.success(`withdraw: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
       console.log(err);
+      toast.error(`withdraw: ${ensureError(err).message}`);
     }
   };
 
@@ -127,6 +134,7 @@ const MyStatus = ({
       signerPub as PublicKey,
       connected,
       sendTransaction,
+      network,
     );
 
     const cancelParams: WrapperCancelOrderParams = {
@@ -139,11 +147,11 @@ const MyStatus = ({
         new Transaction().add(cancelOrderIx),
         conn,
       );
-      console.log(
-        `cancelOrder: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
+      console.log(`cancelOrder: ${getSolscanSigUrl(sig, network)}`);
+      toast.success(`cancelOrder: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
       console.log(err);
+      toast.error(`cancelOrder: ${ensureError(err).message}`);
     }
   };
 
@@ -155,6 +163,7 @@ const MyStatus = ({
       signerPub as PublicKey,
       connected,
       sendTransaction,
+      network,
     );
 
     const cancelAllIx = mClient.cancelAllIx();
@@ -164,11 +173,11 @@ const MyStatus = ({
         new Transaction().add(cancelAllIx),
         conn,
       );
-      console.log(
-        `cancelAllOrders: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
+      console.log(`cancelAllOrders: ${getSolscanSigUrl(sig, network)}`);
+      toast.success(`cancelAllOrders: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
       console.log(err);
+      toast.error(`cancelAllOrders: ${ensureError(err).message}`);
     }
   };
 
@@ -184,6 +193,7 @@ const MyStatus = ({
           setBaseWalletBalance(baseBalance.value.uiAmount!);
         } catch (err) {
           console.log(err);
+          toast.error(`baseBalance: ${ensureError(err).message}`);
         }
         try {
           const quoteBalance = await conn.getTokenAccountBalance(
@@ -192,6 +202,7 @@ const MyStatus = ({
           setQuoteWalletBalance(quoteBalance.value.uiAmount!);
         } catch (err) {
           console.log(err);
+          toast.error(`quoteBalance: ${ensureError(err).message}`);
         }
 
         const signerAddr = signerPub.toBase58();
@@ -220,7 +231,10 @@ const MyStatus = ({
         );
       };
 
-      updateState().catch(console.error);
+      updateState().catch((e) => {
+        toast.error(`updateState: ${ensureError(e).message}`);
+      });
+
       const id = setInterval(updateState, 10_000);
 
       return (): void => clearInterval(id);

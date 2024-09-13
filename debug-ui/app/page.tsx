@@ -1,36 +1,11 @@
 'use client';
 
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement } from 'react';
 import Link from 'next/link';
-import { ManifestClient } from '@cks-systems/manifest-sdk';
-import { useConnection } from '@solana/wallet-adapter-react';
-import { shortenAddress } from '@/lib/util';
+import { useAppState } from './components/AppWalletProvider';
 
 const Home = (): ReactElement => {
-  const [markets, setMarkets] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const { connection } = useConnection();
-
-  const fetchMarkets = async (): Promise<string[]> => {
-    const marketPubs = await ManifestClient.listMarketPublicKeys(connection);
-    return marketPubs.map((p) => p.toBase58());
-  };
-
-  useEffect(() => {
-    const getMarkets = async () => {
-      try {
-        const data = await fetchMarkets();
-        console.log(data);
-        setMarkets(data);
-      } catch (error) {
-        console.error('Error fetching markets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getMarkets();
-  }, []);
+  const { marketAddrs, loading } = useAppState();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
@@ -43,20 +18,20 @@ const Home = (): ReactElement => {
           developers ONLY and may not be actively supported or maintained. The
           developers, contributors, and associated parties are not liable for
           any losses, damages, or claims arising from your use of this platform.
-          This platform is provided "as is" without any warranties or
+          This platform is provided &quot;as is&quot; without any warranties or
           guarantees. Users are responsible for complying with all applicable
           laws and regulations in their jurisdiction. Please exercise caution.
         </p>
 
         {loading ? (
           <p className="text-center">Loading markets...</p>
-        ) : markets.length > 0 ? (
+        ) : marketAddrs.length > 0 ? (
           <>
             <h2 className="text-xl font-semibold mb-4 text-center">
               Existing Markets
             </h2>
             <ul className="space-y-4 bg-gray-700 p-4 rounded-lg">
-              {markets.map((market, index) => (
+              {marketAddrs.map((market, index) => (
                 <li
                   key={index}
                   className="bg-gray-600 p-2 rounded-lg hover:bg-gray-500 transition-colors"

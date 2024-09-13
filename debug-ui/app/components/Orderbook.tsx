@@ -7,6 +7,8 @@ import { PublicKey } from '@solana/web3.js';
 import { useEffect, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
+import { toast } from 'react-toastify';
+import { ensureError } from '@/lib/error';
 
 const Orderbook = ({
   marketAddress,
@@ -19,7 +21,7 @@ const Orderbook = ({
   const { connection: conn } = useConnection();
 
   useEffect(() => {
-    const updateOrderbooks = async (): Promise<void> => {
+    const updateOrderbook = async (): Promise<void> => {
       try {
         const market: Market = await fetchMarket(
           conn,
@@ -30,12 +32,13 @@ const Orderbook = ({
         setBids(bids.reverse());
         setAsks(asks);
       } catch (e) {
-        console.error('updateOrderbooks:', e);
+        console.error('updateOrderbook:', e);
+        toast.error(`updateOrderbook: ${ensureError(e).message}`);
       }
     };
 
-    updateOrderbooks();
-    const id = setInterval(updateOrderbooks, 10_000);
+    updateOrderbook();
+    const id = setInterval(updateOrderbook, 10_000);
 
     return (): void => clearInterval(id);
   }, [conn, marketAddress]);
@@ -55,9 +58,13 @@ const Orderbook = ({
           <tbody>
             {asks.slice(Math.max(asks.length - 5, 0)).map((restingOrder, i) => (
               <tr key={i} className="border-b border-gray-700">
-                <td className="py-2">{Number(restingOrder.tokenPrice.toFixed(3))}</td>
+                <td className="py-2">
+                  {Number(restingOrder.tokenPrice.toFixed(3))}
+                </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{<SolscanAddrLink address={restingOrder.trader.toBase58()} />}</td>
+                <td className="py-2">
+                  {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -79,9 +86,13 @@ const Orderbook = ({
           <tbody>
             {bids.slice(Math.max(bids.length - 5, 0)).map((restingOrder, i) => (
               <tr key={i} className="border-b border-gray-700">
-                <td className="py-2">{Number(restingOrder.tokenPrice.toFixed(3))}</td>
+                <td className="py-2">
+                  {Number(restingOrder.tokenPrice.toFixed(3))}
+                </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{<SolscanAddrLink address={restingOrder.trader.toBase58()} />}</td>
+                <td className="py-2">
+                  {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
+                </td>
               </tr>
             ))}
           </tbody>

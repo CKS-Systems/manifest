@@ -11,7 +11,10 @@ import {
   OrderType,
   WrapperPlaceOrderParamsExternal,
 } from '@cks-systems/manifest-sdk';
-import { setupClient } from '@/lib/util';
+import { getSolscanSigUrl, setupClient } from '@/lib/util';
+import { useAppState } from './AppWalletProvider';
+import { toast } from 'react-toastify';
+import { ensureError } from '@/lib/error';
 
 const PlaceOrder = ({
   marketAddress,
@@ -20,6 +23,7 @@ const PlaceOrder = ({
 }): ReactElement => {
   const { connected, sendTransaction, publicKey: signerPub } = useWallet();
   const { connection: conn } = useConnection();
+  const { network } = useAppState();
 
   const [price, setPrice] = useState('0');
   const [amount, setAmount] = useState('0');
@@ -57,6 +61,7 @@ const PlaceOrder = ({
       signerPub,
       connected,
       sendTransaction,
+      network,
     );
 
     const orderParams: WrapperPlaceOrderParamsExternal = {
@@ -78,11 +83,11 @@ const PlaceOrder = ({
         conn,
         { skipPreflight: true },
       );
-      console.log(
-        `placeOrderTx: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-      );
+      console.log(`placeOrderTx: ${getSolscanSigUrl(sig, network)}`);
+      toast.success(`placeOrderTx: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
       console.log(err);
+      toast.error(`placeOrder: ${ensureError(err).message}`);
     }
   };
 

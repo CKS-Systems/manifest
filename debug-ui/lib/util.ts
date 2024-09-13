@@ -10,6 +10,7 @@ import {
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
+import { toast } from 'react-toastify';
 
 type SendTransaction = (
   transaction: Transaction | VersionedTransaction,
@@ -26,6 +27,7 @@ export const setupClient = async (
   signerPub: PublicKey | null,
   connected: boolean,
   sendTransaction: SendTransaction,
+  network: WalletAdapterNetwork | null = WalletAdapterNetwork.Devnet,
 ): Promise<ManifestClient> => {
   if (!connected) {
     throw new Error('must be connected before setting up client');
@@ -46,9 +48,8 @@ export const setupClient = async (
 
     const sig = await sendTransaction(tx, conn);
 
-    console.log(
-      `setupTx: https://explorer.solana.com/tx/${sig}?cluster=devnet`,
-    );
+    console.log(`setupTx: ${getSolscanUrl(sig, network)}`);
+    toast.success(`setup: ${getSolscanSigUrl(sig, network)}`);
 
     console.log('sleeping 5 seconds to ensure state catches up');
 
@@ -66,7 +67,7 @@ export const setupClient = async (
 
 export const getSolscanUrl = (
   address: string,
-  cluster: WalletAdapterNetwork,
+  cluster: WalletAdapterNetwork | null = WalletAdapterNetwork.Devnet,
 ): string => {
   const baseUrl = 'https://solscan.io';
   const clusterPath =
@@ -74,6 +75,20 @@ export const getSolscanUrl = (
   return `${baseUrl}/account/${address}${clusterPath}`;
 };
 
+export const getSolscanSigUrl = (
+  sig: string,
+  cluster: WalletAdapterNetwork | null = WalletAdapterNetwork.Devnet,
+): string => {
+  const baseUrl = 'https://solscan.io';
+  const clusterPath =
+    cluster !== WalletAdapterNetwork.Mainnet ? `?cluster=${cluster}` : '';
+  return `${baseUrl}/tx/${sig}${clusterPath}`;
+};
+
 export const shortenAddress = (address: string): string => {
   return `${address.slice(0, 3)}...${address.slice(-3)}`;
+};
+
+export const shortenSig = (address: string): string => {
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
 };

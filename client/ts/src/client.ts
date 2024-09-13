@@ -270,7 +270,6 @@ export class ManifestClient {
       const createWrapperIx: TransactionInstruction =
         createCreateWrapperInstruction({
           owner: payerPub,
-          payer: payerPub,
           wrapperState: wrapperKeypair.publicKey,
         });
       setupData.instructions.push(createWrapperIx);
@@ -279,7 +278,6 @@ export class ManifestClient {
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: payerPub,
         market: marketPk,
-        payer: payerPub,
         wrapperState: wrapperKeypair.publicKey,
       });
       setupData.instructions.push(claimSeatIx);
@@ -310,7 +308,6 @@ export class ManifestClient {
       manifestProgram: MANIFEST_PROGRAM_ID,
       owner: payerPub,
       market: marketPk,
-      payer: payerPub,
       wrapperState: wrapperResponse.pubkey,
     });
     setupData.instructions.push(claimSeatIx);
@@ -406,7 +403,7 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction
    */
-  private static createMarketIx(
+  public static createMarketIx(
     payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,

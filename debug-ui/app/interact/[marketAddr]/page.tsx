@@ -1,9 +1,12 @@
+'use client';
+
 import Chart from '@/app/components/Chart';
 import Fills from '../../components/Fills';
 import MyStatus from '../../components/MyStatus';
 import Orderbook from '../../components/Orderbook';
 import PlaceOrder from '../../components/PlaceOrder';
 import { ReactElement } from 'react';
+import { withAccessControl } from '@/lib/withAccessControl';
 
 const Market = ({
   params: { marketAddr },
@@ -40,4 +43,4 @@ const Market = ({
   </main>
 );
 
-export default Market;
+export default withAccessControl(Market);

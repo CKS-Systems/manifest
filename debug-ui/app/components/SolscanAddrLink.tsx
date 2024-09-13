@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { useNetwork } from './NetworkProvider';
+import { useAppState } from './AppWalletProvider';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { getSolscanUrl, shortenAddress } from '@/lib/util';
 
@@ -12,7 +12,7 @@ const SolscanAddrLink = ({
   address,
   shorten = true,
 }: SolscanLinkProps): ReactElement => {
-  const { network } = useNetwork();
+  const { network } = useAppState();
   const solscanUrl = getSolscanUrl(
     address,
     network || WalletAdapterNetwork.Devnet,
