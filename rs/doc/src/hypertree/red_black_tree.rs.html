@@ -2307,6 +2307,37 @@
 <a href="#2305" id="2305">2305</a>
 <a href="#2306" id="2306">2306</a>
 <a href="#2307" id="2307">2307</a>
+<a href="#2308" id="2308">2308</a>
+<a href="#2309" id="2309">2309</a>
+<a href="#2310" id="2310">2310</a>
+<a href="#2311" id="2311">2311</a>
+<a href="#2312" id="2312">2312</a>
+<a href="#2313" id="2313">2313</a>
+<a href="#2314" id="2314">2314</a>
+<a href="#2315" id="2315">2315</a>
+<a href="#2316" id="2316">2316</a>
+<a href="#2317" id="2317">2317</a>
+<a href="#2318" id="2318">2318</a>
+<a href="#2319" id="2319">2319</a>
+<a href="#2320" id="2320">2320</a>
+<a href="#2321" id="2321">2321</a>
+<a href="#2322" id="2322">2322</a>
+<a href="#2323" id="2323">2323</a>
+<a href="#2324" id="2324">2324</a>
+<a href="#2325" id="2325">2325</a>
+<a href="#2326" id="2326">2326</a>
+<a href="#2327" id="2327">2327</a>
+<a href="#2328" id="2328">2328</a>
+<a href="#2329" id="2329">2329</a>
+<a href="#2330" id="2330">2330</a>
+<a href="#2331" id="2331">2331</a>
+<a href="#2332" id="2332">2332</a>
+<a href="#2333" id="2333">2333</a>
+<a href="#2334" id="2334">2334</a>
+<a href="#2335" id="2335">2335</a>
+<a href="#2336" id="2336">2336</a>
+<a href="#2337" id="2337">2337</a>
+<a href="#2338" id="2338">2338</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -2378,7 +2409,7 @@
 //    fn update_parent_child&lt;V: Payload&gt;(&amp;mut self, index: DataIndex);
 // trait RedBlackTreeTestHelpers&lt;'a, T: GetRedBlackTreeReadOnlyData&lt;'a&gt;&gt;
 //    fn node_iter&lt;V: Payload&gt;(&amp;'a self) -&gt; RedBlackTreeReadOnlyIterator&lt;T, V&gt;;
-//    fn pretty_print&lt;V: Payload&gt;(&amp;'a self);
+//    fn debug_print&lt;V: Payload&gt;(&amp;'a self);
 //    fn depth&lt;V: Payload&gt;(&amp;'a self, index: DataIndex) -&gt; i32;
 //    fn verify_rb_tree&lt;V: Payload&gt;(&amp;'a self);
 //    fn num_black_nodes_through_root&lt;V: Payload&gt;(&amp;'a self, index: DataIndex) -&gt; i32;
@@ -2945,7 +2976,8 @@
         current_index
     }
 
-    <span class="doccomment">/// Get the next index. This walks the tree, so does not care about equal keys.
+    <span class="doccomment">/// Get the next index. This walks the tree, so does not care about equal
+    /// keys. Used in swapping when insert/delete requires an internal node.
     </span><span class="kw">fn </span>get_next_higher_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
         <span class="kw">if </span>index == NIL {
             <span class="kw">return </span>NIL;
@@ -3112,8 +3144,8 @@
                 </span>}
             };
 
-            <span class="kw">let </span>color = <span class="kw">if </span>node.color == Color::Black { <span class="string">'B' </span>} <span class="kw">else </span>{ <span class="string">'R' </span>};
-            <span class="kw">let </span>str = <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{color}:{index}:{node}"</span>);
+            <span class="kw">let </span>color: char = <span class="kw">if </span>node.color == Color::Black { <span class="string">'B' </span>} <span class="kw">else </span>{ <span class="string">'R' </span>};
+            <span class="kw">let </span>str: <span class="kw-2">&amp;</span>String = <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{color}:{index}:{node}"</span>);
             <span class="kw">if </span>node.color == Color::Red {
                 <span class="comment">// Cannot use with sbf. Enable when debugging
                 // locally without sbf.
@@ -3136,6 +3168,9 @@
     }
 
     <span class="kw">fn </span>verify_rb_tree&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) {
+        <span class="comment">// Verify that all leaf nodes have the same number of black nodes to the root.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>num_black: <span class="prelude-ty">Option</span>&lt;i32&gt; = <span class="prelude-val">None</span>;
+
         <span class="kw">for </span>(index, node) <span class="kw">in </span><span class="self">self</span>.node_iter::&lt;V&gt;() {
             <span class="comment">// Verify that all red nodes only have black children
             </span><span class="kw">if </span>node.color == Color::Red {
@@ -3149,8 +3184,6 @@
                 );
             }
 
-            <span class="comment">// Verify that all leaf nodes have the same number of black nodes to the root.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>num_black = <span class="prelude-val">None</span>;
             <span class="kw">if </span>!<span class="self">self</span>.has_left::&lt;V&gt;(index) || !<span class="self">self</span>.has_right::&lt;V&gt;(index) {
                 <span class="kw">match </span>num_black {
                     <span class="prelude-val">Some</span>(num_black) =&gt; {
@@ -3818,6 +3851,13 @@
     }
 
     <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_debug_print() {
+        <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.debug_print::&lt;TestOrderBid&gt;();
+    }
+
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_insert_fix() {
         <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
@@ -4095,6 +4135,10 @@
         tree.insert(TEST_BLOCK_WIDTH * <span class="number">13</span>, TestOrderBid::new(<span class="number">5000</span>));
         tree.insert(TEST_BLOCK_WIDTH * <span class="number">14</span>, TestOrderBid::new(<span class="number">1000</span>));
         tree.insert(TEST_BLOCK_WIDTH * <span class="number">15</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">16</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">17</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">18</span>, TestOrderBid::new(<span class="number">1000</span>));
+        tree.insert(TEST_BLOCK_WIDTH * <span class="number">19</span>, TestOrderBid::new(<span class="number">1000</span>));
         tree.verify_rb_tree::&lt;TestOrderBid&gt;();
     }
 
@@ -4119,6 +4163,9 @@
         tree.remove_by_index(TEST_BLOCK_WIDTH * <span class="number">2</span>);
 
         tree.verify_rb_tree::&lt;TestOrderBid&gt;();
+
+        <span class="comment">// Silently fails to remove NIL
+        </span>tree.remove_by_index(NIL);
     }
 
     <span class="comment">//                   B
@@ -4612,6 +4659,21 @@
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">1234</span>));
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">4567</span>));
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">7890</span>));
+    }
+
+    <span class="comment">// Get next higher index
+    </span><span class="attr">#[test]
+    </span><span class="kw">fn </span>test_get_next_higher_index() {
+        <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
+        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
+        tree.pretty_print::&lt;TestOrderBid&gt;();
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..<span class="number">11 </span>{
+            <span class="macro">assert_eq!</span>(
+                tree.get_next_higher_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * i),
+                TEST_BLOCK_WIDTH * (i + <span class="number">1</span>)
+            );
+        }
+        <span class="macro">assert_eq!</span>(tree.get_next_higher_index::&lt;TestOrderBid&gt;(NIL), NIL);
     }
 }
 </code></pre></div></section></main></body></html>
