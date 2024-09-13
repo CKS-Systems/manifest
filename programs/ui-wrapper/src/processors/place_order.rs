@@ -93,6 +93,10 @@ pub(crate) fn process_place_order(
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
 
+    if spl_token_2022::id() == *token_program.key {
+        unimplemented!("token2022 not yet supported")
+    }
+
     check_signer(&wrapper_state, owner.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
 

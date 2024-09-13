@@ -167,33 +167,6 @@ pub(crate) fn process_settle_funds(
 
     if *vault_quote.owner == spl_token_2022::id() {
         unimplemented!("token2022 not yet supported")
-        // TODO: token_2022
-        //   &spl_token_2022::instruction::transfer_checked(
-        //       token_program.key,
-        //       trader_token.key,
-        //       if is_base {
-        //           dynamic_account.fixed.get_base_mint()
-        //       } else {
-        //           dynamic_account.get_quote_mint()
-        //       },
-        //       vault.key,
-        //       payer.key,
-        //       &[],
-        //       amount_atoms,
-        //       if is_base {
-        //           dynamic_account.fixed.get_base_mint_decimals()
-        //       } else {
-        //           dynamic_account.fixed.get_quote_mint_decimals()
-        //       },
-        //   )?,
-        //   &[
-        //       token_program_quote.clone(),
-        //       trader_token_account_quote.clone(),
-        //       mint_quote.clone(),
-        //       trader_token.as_ref().clone(),
-        //       payer.as_ref().clone(),
-        //   ],
-        // )?;
     } else {
         let mut accounts = vec![
             AccountMeta::new_readonly(*token_program_quote.key, false),
