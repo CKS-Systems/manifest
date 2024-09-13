@@ -54,15 +54,14 @@ pub(crate) fn process_global_evict(
     let evictee_balance: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(&evictee_token.get_owner());
 
-    require!(
-        evictee_balance < GlobalAtoms::new(amount_atoms),
-        ManifestError::InvalidEvict,
-        "Evictee balance {} is more than evictor wants to deposit",
-        evictee_balance.as_u64(),
-    )?;
-
     {
-        // Verify that it is the min that is being evicted.
+        // Do verifications that this is a valid eviction.
+        require!(
+            evictee_balance < GlobalAtoms::new(amount_atoms),
+            ManifestError::InvalidEvict,
+            "Evictee balance {} is more than evictor wants to deposit",
+            evictee_balance.as_u64(),
+        )?;
         global_dynamic_account.verify_min_balance(&evictee_token.get_owner())?;
     }
 

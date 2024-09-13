@@ -288,8 +288,11 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
             trader
         )?;
         let existing_global_trader: GlobalTrader = *existing_global_trader_opt.unwrap();
-        let global_trader_tree: GlobalTraderTreeReadOnly =
-            GlobalTraderTreeReadOnly::new(dynamic, fixed.global_traders_root_index, fixed.global_deposits_max_index);
+        let global_trader_tree: GlobalTraderTreeReadOnly = GlobalTraderTreeReadOnly::new(
+            dynamic,
+            fixed.global_traders_root_index,
+            fixed.global_deposits_max_index,
+        );
         let existing_trader_index: DataIndex =
             global_trader_tree.lookup_index(&existing_global_trader);
         let existing_global_trader: &GlobalTrader =
