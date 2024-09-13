@@ -61,6 +61,11 @@ pub(crate) fn process_global_evict(
         evictee_balance.as_u64(),
     )?;
 
+    {
+        // Verify that it is the min that is being evicted.
+        global_dynamic_account.verify_min_balance(&evictee_token.get_owner())?;
+    }
+
     // Withdraw
     {
         let evictee_balance: GlobalAtoms =

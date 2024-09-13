@@ -275,6 +275,35 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
             GlobalAtoms::ZERO
         }
     }
+
+    pub fn verify_min_balance(&self, trader: &Pubkey) -> ProgramResult {
+        let DynamicAccount { fixed, dynamic } = self.borrow_global();
+
+        let existing_global_trader_opt: Option<&GlobalTrader> =
+            get_global_trader(fixed, dynamic, trader);
+        require!(
+            existing_global_trader_opt.is_some(),
+            ManifestError::MissingGlobal,
+            "Could not find global trader for {}",
+            trader
+        )?;
+        let existing_global_trader: GlobalTrader = *existing_global_trader_opt.unwrap();
+        let global_trader_tree: GlobalTraderTreeReadOnly =
+            GlobalTraderTreeReadOnly::new(dynamic, fixed.global_traders_root_index, fixed.global_deposits_max_index);
+        let existing_trader_index: DataIndex =
+            global_trader_tree.lookup_index(&existing_global_trader);
+        let existing_global_trader: &GlobalTrader =
+            get_helper::<RBNode<GlobalTrader>>(dynamic, existing_trader_index).get_value();
+        let existing_deposit_index: DataIndex = existing_global_trader.deposit_index;
+
+        require!(
+            existing_deposit_index == fixed.global_deposits_max_index,
+            ManifestError::GlobalInsufficient,
+            "Only can remove trader with lowest deposit"
+        )?;
+
+        Ok(())
+    }
 }
 
 impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
@@ -397,7 +426,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             "Error in emptying the existing global",
         )?;
 
-        // Assert that the max index is the deposit index we are taking.
+        // Verification that the max index is the deposit index we are taking happens before withdraw.
         let global_trader_tree: GlobalTraderTree =
             GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
         let existing_trader_index: DataIndex =
