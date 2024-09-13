@@ -611,48 +611,6 @@
       }
     },
     {
-      "name": "GlobalClaimSeat",
-      "accounts": [
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer"
-          ]
-        },
-        {
-          "name": "global",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Global account"
-          ]
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "System program"
-          ]
-        },
-        {
-          "name": "market",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Account holding all market state"
-          ]
-        }
-      ],
-      "args": [],
-      "discriminant": {
-        "type": "u8",
-        "value": 9
-      }
-    },
-    {
       "name": "GlobalDeposit",
       "accounts": [
         {
@@ -681,7 +639,7 @@
         },
         {
           "name": "globalVault",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Global vault"
@@ -709,6 +667,71 @@
           "name": "params",
           "type": {
             "defined": "GlobalDepositParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
+    },
+    {
+      "name": "GlobalWithdraw",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint for this global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global vault"
+          ]
+        },
+        {
+          "name": "traderToken",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalWithdrawParams"
           }
         }
       ],
@@ -1004,6 +1027,28 @@
       }
     },
     {
+      "name": "GlobalWithdrawLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "global",
+            "type": "publicKey"
+          },
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "globalAtoms",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "QuoteAtoms",
       "type": {
         "kind": "struct",
@@ -1179,6 +1224,18 @@
       }
     },
     {
+      "name": "GlobalWithdrawParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "SwapParams",
       "type": {
         "kind": "struct",
@@ -1325,6 +1382,11 @@
       "code": 17,
       "name": "IncorrectAccount",
       "msg": "Account key did not match expected"
+    },
+    {
+      "code": 18,
+      "name": "InvalidMint",
+      "msg": "Mint not allowed for market"
     }
   ],
   "metadata": {
@@ -1675,6 +1737,35 @@
         232,
         182,
         71
+      ],
+      "fields": [
+        {
+          "name": "global",
+          "type": "publicKey"
+        },
+        {
+          "name": "trader",
+          "type": "publicKey"
+        },
+        {
+          "name": "globalAtoms",
+          "type": {
+            "defined": "GlobalAtoms"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GlobalWithdrawLog",
+      "discriminator": [
+        206,
+        118,
+        67,
+        64,
+        124,
+        109,
+        157,
+        201
       ],
       "fields": [
         {

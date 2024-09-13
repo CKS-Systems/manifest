@@ -3,7 +3,7 @@ use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use shank::ShankAccount;
 use solana_program::{msg, program_error::ProgramError};
-use static_assertions::const_assert_eq;
+use static_assertions::{const_assert, const_assert_eq};
 use std::{
     cmp::Ordering,
     fmt::Display,
@@ -261,10 +261,15 @@ const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(01),
     10u128.pow(00),
 ];
+// ensures that the index lookup is correct when converting from floating point
 const_assert_eq!(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
     D18
 );
+
+// ensures that we can remove bounds checks on certain multiplications
+const_assert!(DECIMAL_CONSTANTS[0] * (u32::MAX as u128) < u128::MAX);
+const_assert!(D18 * (u64::MAX as u128) < u128::MAX);
 
 // Prices
 impl QuoteAtomsPerBaseAtom {
@@ -295,13 +300,17 @@ impl QuoteAtomsPerBaseAtom {
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
+        if mantissa == 0 {
+            msg!("price can not be zero");
+            return Err(PriceConversionError(0x0));
+        }
         if exponent > Self::MAX_EXP {
             msg!("invalid exponent {exponent} > 8 would truncate",);
-            return Err(PriceConversionError(0x0));
+            return Err(PriceConversionError(0x1));
         }
         if exponent < Self::MIN_EXP {
             msg!("invalid exponent {exponent} < -18 would truncate",);
-            return Err(PriceConversionError(0x1));
+            return Err(PriceConversionError(0x2));
         }
         Ok(Self::from_mantissa_and_exponent_(mantissa, exponent))
     }
@@ -547,7 +556,7 @@ fn test_multiply_macro() {
 #[test]
 fn test_price_limits() {
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MAX_EXP
     )
     .is_ok());
@@ -557,7 +566,7 @@ fn test_price_limits() {
     )
     .is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MIN_EXP
     )
     .is_ok());
@@ -570,13 +579,14 @@ fn test_price_limits() {
     assert!(QuoteAtomsPerBaseAtom::try_from(u64::MAX as f64).is_ok());
 
     // failures
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(0, 0).is_err());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MAX_EXP + 1
     )
     .is_err());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-        0,
+        1,
         QuoteAtomsPerBaseAtom::MIN_EXP - 1
     )
     .is_err());

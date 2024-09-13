@@ -22,7 +22,6 @@ export const ClaimSeatStruct = new beet.BeetArgsStruct<{
  * @property [] manifestProgram
  * @property [_writable_, **signer**] owner
  * @property [_writable_] market
- * @property [_writable_, **signer**] payer
  * @property [_writable_] wrapperState
  * @category Instructions
  * @category ClaimSeat
@@ -33,7 +32,6 @@ export type ClaimSeatInstructionAccounts = {
   owner: web3.PublicKey;
   market: web3.PublicKey;
   systemProgram?: web3.PublicKey;
-  payer: web3.PublicKey;
   wrapperState: web3.PublicKey;
 };
 
@@ -74,11 +72,6 @@ export function createClaimSeatInstruction(
       pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
       isWritable: false,
       isSigner: false,
-    },
-    {
-      pubkey: accounts.payer,
-      isWritable: true,
-      isSigner: true,
     },
     {
       pubkey: accounts.wrapperState,
