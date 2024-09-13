@@ -417,6 +417,26 @@ createErrorFromNameLookup.set(
 );
 
 /**
+ * InvalidMint: 'Mint not allowed for market'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidMintError extends Error {
+  readonly code: number = 0x12;
+  readonly name: string = 'InvalidMint';
+  constructor() {
+    super('Mint not allowed for market');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidMintError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x12, () => new InvalidMintError());
+createErrorFromNameLookup.set('InvalidMint', () => new InvalidMintError());
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

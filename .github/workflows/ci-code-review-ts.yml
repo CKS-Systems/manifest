@@ -3,7 +3,12 @@ name: Code Review - TypeScript
 on:
   pull_request:
     branches: ['main']
-    paths: ['client/ts/**', 'yarn.lock']
+    paths: [
+      'client/ts/**',
+      'client/idl/*.json',
+      'programs/**/instruction.rs',
+      'yarn.lock'
+    ]
   push:
     branches: ['main']
   workflow_dispatch:
