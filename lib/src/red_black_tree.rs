@@ -2,7 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use std::cmp::Ordering;
 
 use crate::{
-    get_helper, get_mut_helper, trace, DataIndex, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, Get, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload,
     NIL,
 };
@@ -661,7 +661,7 @@ where
     }
 }
 
-#[cfg(any(test, feature = "fuzz"))]
+#[cfg(any(test, feature = "fuzz", feature = "trace"))]
 pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
     fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
@@ -910,7 +910,6 @@ pub(crate) enum Color {
     Black = 0,
     Red = 1,
 }
-
 unsafe impl Zeroable for Color {
     fn zeroed() -> Self {
         unsafe { core::mem::zeroed() }
@@ -935,6 +934,7 @@ pub struct RBNode<V> {
     pub(crate) value: V,
 }
 unsafe impl<V: Payload> Pod for RBNode<V> {}
+impl<V: Payload> Get for RBNode<V> {}
 
 impl<V: Payload> Ord for RBNode<V> {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -1343,7 +1343,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
 
 // Iterator that gives the RBNode information is only needed for testing.
 // External users should use the HyperTreeValueIteratorTrait.
-#[cfg(any(test, feature = "fuzz"))]
+#[cfg(any(test, feature = "fuzz", feature = "trace"))]
 pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: Payload> {
     tree: &'a T,
     index: DataIndex,
@@ -1351,7 +1351,7 @@ pub struct RedBlackTreeReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V: P
     phantom: std::marker::PhantomData<&'a V>,
 }
 
-#[cfg(any(test, feature = "fuzz"))]
+#[cfg(any(test, feature = "fuzz", feature = "trace"))]
 impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Payload> Iterator
     for RedBlackTreeReadOnlyIterator<'a, T, V>
 {

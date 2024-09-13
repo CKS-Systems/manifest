@@ -3,7 +3,8 @@ resolver = "2"
 members = [
   "lib",
   "client/rust",
-  "programs/*",
+  "programs/manifest",
+  "programs/wrapper",
   "programs/ui-wrapper",
 ]
 

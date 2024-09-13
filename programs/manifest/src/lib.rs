@@ -8,6 +8,7 @@ pub mod state;
 pub mod utils;
 pub mod validation;
 
+use hypertree::trace;
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
     create_market::process_create_market, deposit::process_deposit,
@@ -52,8 +53,7 @@ pub fn process_instruction(
     let instruction: ManifestInstruction =
         ManifestInstruction::try_from(*tag).or(Err(ProgramError::InvalidInstructionData))?;
 
-    #[cfg(not(feature = "no-log-ix-name"))]
-    solana_program::msg!("Instruction: {:?}", instruction);
+    trace!("Instruction: {:?}", instruction);
 
     match instruction {
         ManifestInstruction::CreateMarket => {

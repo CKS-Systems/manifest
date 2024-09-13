@@ -6,13 +6,14 @@ use std::{
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, NIL,
 };
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        get_dynamic_account, get_mut_dynamic_account, ManifestInstruction,
+        batch_update_instruction, deposit_instruction, get_dynamic_account,
+        get_mut_dynamic_account, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -79,15 +80,17 @@ pub(crate) fn process_place_order(
     let account_iter: &mut std::slice::Iter<AccountInfo> = &mut accounts.iter();
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
-    let manifest_program: Program =
-        Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let owner: Signer = Signer::new(next_account_info(account_iter)?)?;
     let trader_token_account: &AccountInfo = next_account_info(account_iter)?;
-    let vault: &AccountInfo = next_account_info(account_iter)?;
     let market: ManifestAccountInfo<MarketFixed> =
         ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+    let vault: &AccountInfo = next_account_info(account_iter)?;
+    let mint: &AccountInfo = next_account_info(account_iter)?;
     let system_program: Program =
         Program::new(next_account_info(account_iter)?, &system_program::id())?;
+    let token_program: &AccountInfo = next_account_info(account_iter)?;
+    let manifest_program: Program =
+        Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
 
     check_signer(&wrapper_state, owner.key);
@@ -107,6 +110,7 @@ pub(crate) fn process_place_order(
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
     let remaining_base_atoms: BaseAtoms = market_info.base_balance;
     let remaining_quote_atoms: QuoteAtoms = market_info.quote_balance;
+    let trader_index: DataIndex = market_info.trader_index;
     drop(wrapper_data);
 
     let base_atoms = BaseAtoms::new(order.base_atoms);
@@ -115,17 +119,42 @@ pub(crate) fn process_place_order(
         order.price_exponent,
     )?;
 
-    if order.is_bid {
+    let deposit_amount: u64 = if order.is_bid {
         let required_quote_atoms = base_atoms.checked_mul(price, true)?;
         if remaining_quote_atoms < required_quote_atoms {
-            let deposit_quote_atoms = required_quote_atoms - remaining_quote_atoms;
-            // TODO: cpi
+            (required_quote_atoms - remaining_quote_atoms).as_u64()
+        } else {
+            0
         }
     } else {
         if remaining_base_atoms < base_atoms {
-            let deposit_base_atoms = base_atoms - remaining_base_atoms;
-            // TODO: cpi
+            (base_atoms - remaining_base_atoms).as_u64()
+        } else {
+            0
         }
+    };
+
+    trace!("deposit amount:{deposit_amount} mint:{:?}", mint.key);
+    if deposit_amount > 0 {
+        invoke(
+            &deposit_instruction(
+                market.key,
+                payer.key,
+                mint.key,
+                deposit_amount,
+                trader_token_account.key,
+                *token_program.key,
+            ),
+            &[
+                manifest_program.info.clone(),
+                owner.info.clone(),
+                market.info.clone(),
+                trader_token_account.clone(),
+                vault.clone(),
+                token_program.clone(),
+                mint.clone(),
+            ],
+        )?;
     }
 
     let core_place: PlaceOrderParams = PlaceOrderParams::new(
@@ -137,8 +166,33 @@ pub(crate) fn process_place_order(
         NO_EXPIRATION_LAST_VALID_SLOT,
     );
 
-    // TODO: cpi
-    {}
+    trace!("cpi place {core_place:?}");
+
+    // TODO: optionally pass global orders accounts to cpi
+    invoke(
+        &batch_update_instruction(
+            market.key,
+            payer.key,
+            Some(trader_index),
+            vec![],
+            vec![core_place],
+            None,
+            None,
+            None,
+            None,
+        ),
+        &[
+            payer.info.clone(),
+            system_program.info.clone(),
+            manifest_program.info.clone(),
+            owner.info.clone(),
+            market.info.clone(),
+            trader_token_account.clone(),
+            vault.clone(),
+            token_program.clone(),
+            mint.clone(),
+        ],
+    )?;
 
     // Process the order result
 
@@ -146,6 +200,8 @@ pub(crate) fn process_place_order(
     let BatchUpdateReturn {
         orders: batch_update_orders,
     } = BatchUpdateReturn::try_from_slice(&cpi_return_data.unwrap().1[..])?;
+
+    trace!("cpi return orders:{batch_update_orders:?}");
 
     let (order_sequence_number, order_index) = batch_update_orders[0];
     // Order index is NIL when it did not rest. In that case, do not need to store in wrapper.
@@ -195,8 +251,6 @@ pub(crate) fn process_place_order(
 
     // Sync to get the balance correct and remove any expired orders.
     sync_fast(&wrapper_state, &market, market_info_index)?;
-
-    // time to pay fees
 
     Ok(())
 }

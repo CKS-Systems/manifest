@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
     RedBlackTreeReadOnly, NIL,
 };
@@ -150,6 +150,7 @@ const_assert_eq!(
 );
 const_assert_eq!(size_of::<MarketFixed>(), MARKET_FIXED_SIZE);
 const_assert_eq!(size_of::<MarketFixed>() % 8, 0);
+impl Get for MarketFixed {}
 
 impl MarketFixed {
     pub fn new_empty(

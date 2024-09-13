@@ -8,10 +8,11 @@ pub mod open_order;
 pub mod processors;
 pub mod wrapper_state;
 
+use hypertree::trace;
 use instruction::ManifestWrapperInstruction;
 use processors::{
-    claim_seat::process_claim_seat, create_wrapper::process_create_wrapper,
-    place_order::process_place_order,
+    cancel_order::process_cancel_order, claim_seat::process_claim_seat,
+    create_wrapper::process_create_wrapper, place_order::process_place_order,
 };
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
@@ -49,8 +50,7 @@ pub fn process_instruction(
     let instruction: ManifestWrapperInstruction =
         ManifestWrapperInstruction::try_from(*tag).or(Err(ProgramError::InvalidInstructionData))?;
 
-    #[cfg(not(feature = "no-log-ix-name"))]
-    solana_program::msg!("Instruction: {:?}", instruction);
+    trace!("Instruction: {:?}", instruction);
 
     match instruction {
         ManifestWrapperInstruction::CreateWrapper => {
@@ -66,7 +66,7 @@ pub fn process_instruction(
             unimplemented!("todo");
         }
         ManifestWrapperInstruction::CancelOrder => {
-            unimplemented!("todo");
+            process_cancel_order(program_id, accounts, data)?;
         }
         ManifestWrapperInstruction::SettleFunds => {
             unimplemented!("todo");

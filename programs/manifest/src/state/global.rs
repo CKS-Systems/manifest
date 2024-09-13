@@ -8,7 +8,7 @@ use std::{cmp::Ordering, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
@@ -68,6 +68,7 @@ const_assert_eq!(
 );
 const_assert_eq!(size_of::<GlobalFixed>(), GLOBAL_FIXED_SIZE);
 const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
+impl Get for GlobalFixed {}
 
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]

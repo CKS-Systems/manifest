@@ -8,7 +8,7 @@ use crate::{
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
-use hypertree::{get_helper, get_mut_helper, trace};
+use hypertree::{get_helper, get_mut_helper, trace, Get};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
     system_instruction, sysvar::Sysvar,
@@ -111,7 +111,7 @@ fn expand_global_fixed(expandable_account: &AccountInfo) -> ProgramResult {
 }
 
 /// Generic get dynamic account from the data bytes of the account.
-pub fn get_dynamic_account<'a, T: Pod>(
+pub fn get_dynamic_account<'a, T: Get>(
     data: &'a Ref<'a, &'a mut [u8]>,
 ) -> DynamicAccount<&'a T, &'a [u8]> {
     let (fixed_data, dynamic) = data.split_at(size_of::<T>());
@@ -122,7 +122,7 @@ pub fn get_dynamic_account<'a, T: Pod>(
 }
 
 /// Generic get mutable dynamic account from the data bytes of the account.
-pub fn get_mut_dynamic_account<'a, T: Pod>(
+pub fn get_mut_dynamic_account<'a, T: Get>(
     data: &'a mut RefMut<'_, &mut [u8]>,
 ) -> DynamicAccount<&'a mut T, &'a mut [u8]> {
     let (fixed_data, dynamic) = data.split_at_mut(size_of::<T>());
@@ -134,7 +134,7 @@ pub fn get_mut_dynamic_account<'a, T: Pod>(
 }
 
 /// Generic get owned dynamic account from the data bytes of the account.
-pub fn get_dynamic_value<T: Pod>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
+pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
     let (fixed_data, dynamic_data) = data.split_at(size_of::<T>());
     let market_fixed: &T = get_helper::<T>(fixed_data, 0_u32);
 

@@ -1,14 +1,15 @@
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use hypertree::{DataIndex, NIL};
+use hypertree::{DataIndex, Get, NIL};
+use manifest::state::DynamicAccount;
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 
 use crate::processors::shared::WRAPPER_STATE_DISCRIMINANT;
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable)]
+#[derive(Default, Debug, Copy, Clone, Pod, Zeroable)]
 pub struct ManifestWrapperStateFixed {
     pub discriminant: u64,
 
@@ -35,7 +36,7 @@ const_assert_eq!(
 pub const WRAPPER_FIXED_SIZE: usize = 64;
 const_assert_eq!(size_of::<ManifestWrapperStateFixed>(), WRAPPER_FIXED_SIZE);
 const_assert_eq!(size_of::<ManifestWrapperStateFixed>() % 8, 0);
-unsafe impl Pod for ManifestWrapperStateFixed {}
+impl Get for ManifestWrapperStateFixed {}
 
 impl ManifestWrapperStateFixed {
     pub fn new_empty(trader: &Pubkey) -> ManifestWrapperStateFixed {
@@ -49,3 +50,10 @@ impl ManifestWrapperStateFixed {
         }
     }
 }
+
+/// Fully owned Wrapper User account, used in clients that can copy.
+pub type WrapperStateValue = DynamicAccount<ManifestWrapperStateFixed, Vec<u8>>;
+/// Full market reference type.
+pub type WrapperStateRef<'a> = DynamicAccount<&'a ManifestWrapperStateFixed, &'a [u8]>;
+/// Full market reference type.
+pub type WrapperStateRefMut<'a> = DynamicAccount<&'a mut ManifestWrapperStateFixed, &'a mut [u8]>;

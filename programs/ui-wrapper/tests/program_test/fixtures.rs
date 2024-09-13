@@ -6,7 +6,7 @@ use std::{
 use manifest::{
     program::{create_market_instructions, get_dynamic_value},
     quantities::WrapperU64,
-    state::{MarketFixed, MarketValue},
+    state::{DynamicAccount, MarketFixed, MarketValue},
     validation::MintAccountInfo,
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
@@ -18,7 +18,11 @@ use solana_sdk::{
 };
 use spl_token::state::Mint;
 use std::rc::Rc;
-use ui_wrapper::instruction_builders::{claim_seat_instruction, create_wrapper_instructions};
+use ui_wrapper::{
+    instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
+    open_order::WrapperOpenOrder,
+    wrapper_state::{ManifestWrapperStateFixed, WrapperStateValue},
+};
 
 #[derive(PartialEq)]
 pub enum Token {
@@ -165,6 +169,59 @@ impl TestFixture {
         self.context.borrow().payer.insecure_clone()
     }
 
+    /// returns (mint, trader_token_account)
+    pub async fn fund_trader_wallet(
+        &mut self,
+        keypair: &Keypair,
+        token: Token,
+        amount_atoms: u64,
+    ) -> (Pubkey, Pubkey) {
+        let is_base: bool = token == Token::SOL;
+        let (mint, trader_token_account) = if is_base {
+            let trader_token_account: Pubkey = if keypair.pubkey() == self.payer() {
+                self.payer_sol.key
+            } else {
+                // Make a temporary token account
+                let token_account_keypair: Keypair = Keypair::new();
+                let token_account_fixture: TokenAccountFixture =
+                    TokenAccountFixture::new_with_keypair(
+                        Rc::clone(&self.context),
+                        &self.sol_mint.key,
+                        &keypair.pubkey(),
+                        &token_account_keypair,
+                    )
+                    .await;
+                token_account_fixture.key
+            };
+            self.sol_mint
+                .mint_to(&trader_token_account, amount_atoms)
+                .await;
+            (self.sol_mint.key.clone(), trader_token_account)
+        } else {
+            let trader_token_account: Pubkey = if keypair.pubkey() == self.payer() {
+                self.payer_usdc.key
+            } else {
+                // Make a temporary token account
+                let token_account_keypair: Keypair = Keypair::new();
+                let token_account_fixture: TokenAccountFixture =
+                    TokenAccountFixture::new_with_keypair(
+                        Rc::clone(&self.context),
+                        &self.usdc_mint.key,
+                        &keypair.pubkey(),
+                        &token_account_keypair,
+                    )
+                    .await;
+                token_account_fixture.key
+            };
+            self.usdc_mint
+                .mint_to(&trader_token_account, amount_atoms)
+                .await;
+            (self.usdc_mint.key.clone(), trader_token_account)
+        };
+
+        (mint, trader_token_account)
+    }
+
     pub async fn claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
         self.claim_seat_for_keypair(&self.payer_keypair()).await
     }
@@ -294,6 +351,7 @@ impl MarketFixture {
 pub struct WrapperFixture {
     pub context: Rc<RefCell<ProgramTestContext>>,
     pub key: Pubkey,
+    pub wrapper: WrapperStateValue,
 }
 
 impl WrapperFixture {
@@ -302,7 +360,25 @@ impl WrapperFixture {
         WrapperFixture {
             context: context_ref,
             key,
+            wrapper: WrapperStateValue {
+                fixed: ManifestWrapperStateFixed::new_empty(&key),
+                dynamic: Vec::new(),
+            },
         }
+    }
+
+    pub async fn reload(&mut self) {
+        let wrapper_account: Account = self
+            .context
+            .borrow_mut()
+            .banks_client
+            .get_account(self.key)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let wrapper: WrapperStateValue = get_dynamic_value(wrapper_account.data.as_slice());
+        self.wrapper = wrapper;
     }
 }
 
