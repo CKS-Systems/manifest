@@ -13,8 +13,8 @@ use manifest::{
 use solana_program::{instruction::AccountMeta, system_program};
 use solana_program_test::tokio;
 use solana_sdk::{
-    account::Account, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
-    program_pack::Pack
+    account::Account, instruction::Instruction, program_pack::Pack, pubkey::Pubkey,
+    signature::Keypair, signer::Signer,
 };
 use spl_token;
 // use ;
@@ -159,8 +159,6 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
 
     // cancel the same order
 
-    
-
     let cancel_order_ix = Instruction {
         program_id: ui_wrapper::id(),
         accounts: vec![
@@ -286,7 +284,8 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
         .unwrap()
         .unwrap();
 
-    let trader_token_account_quote = spl_token::state::Account::unpack(&trader_token_account_quote.data)?;
+    let trader_token_account_quote =
+        spl_token::state::Account::unpack(&trader_token_account_quote.data)?;
     assert_eq!(trader_token_account_quote.amount, 1);
 
     Ok(())

@@ -184,3 +184,10 @@ fn test_cmp() {
     );
     assert!(open_order2 > open_order);
 }
+
+#[test]
+fn test_eq() {
+    let open_order: WrapperOpenOrder = WrapperOpenOrder::new_empty(1);
+    let open_order2: WrapperOpenOrder = WrapperOpenOrder::new_empty(2);
+    assert!(open_order2 != open_order);
+}

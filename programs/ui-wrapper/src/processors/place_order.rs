@@ -121,17 +121,11 @@ pub(crate) fn process_place_order(
 
     let deposit_amount: u64 = if order.is_bid {
         let required_quote_atoms = base_atoms.checked_mul(price, true)?;
-        if remaining_quote_atoms < required_quote_atoms {
-            (required_quote_atoms - remaining_quote_atoms).as_u64()
-        } else {
-            0
-        }
+        required_quote_atoms
+            .saturating_sub(remaining_quote_atoms)
+            .as_u64()
     } else {
-        if remaining_base_atoms < base_atoms {
-            (base_atoms - remaining_base_atoms).as_u64()
-        } else {
-            0
-        }
+        base_atoms.saturating_sub(remaining_base_atoms).as_u64()
     };
 
     trace!("deposit amount:{deposit_amount} mint:{:?}", mint.key);
