@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726259302057,
+  "lastUpdate": 1726260087263,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2389,6 +2389,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7469,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "882315120ebc491e2daee33fc5f6da29a8af5d2a",
+          "message": "Add test coverage on red black tree (#77)\n\n* Add test coverage on red black tree\r\n\r\n* fmt",
+          "timestamp": "2024-09-13T16:17:56-04:00",
+          "tree_id": "ff0dca3f88bd6151a073fb9c5d2f3eb0ebbd9a02",
+          "url": "https://github.com/CKS-Systems/manifest/commit/882315120ebc491e2daee33fc5f6da29a8af5d2a"
+        },
+        "date": 1726260085952,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6897,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13208,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13902,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4115,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7227,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7474,
             "unit": "CU",
             "range": "",
             "extra": ""
