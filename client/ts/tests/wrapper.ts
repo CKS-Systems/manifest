@@ -122,7 +122,6 @@ async function testWrapper(): Promise<void> {
   const createWrapperIx: TransactionInstruction =
     createCreateWrapperInstruction({
       owner: payerKeypair2.publicKey,
-      payer: payerKeypair2.publicKey,
       wrapperState: wrapperKeypair2.publicKey,
     });
 

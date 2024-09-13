@@ -9,36 +9,36 @@ import * as splToken from '@solana/spl-token';
 import * as beet from '@metaplex-foundation/beet';
 import * as web3 from '@solana/web3.js';
 import {
-  GlobalDepositParams,
-  globalDepositParamsBeet,
-} from '../types/GlobalDepositParams';
+  GlobalWithdrawParams,
+  globalWithdrawParamsBeet,
+} from '../types/GlobalWithdrawParams';
 
 /**
  * @category Instructions
- * @category GlobalDeposit
+ * @category GlobalWithdraw
  * @category generated
  */
-export type GlobalDepositInstructionArgs = {
-  params: GlobalDepositParams;
+export type GlobalWithdrawInstructionArgs = {
+  params: GlobalWithdrawParams;
 };
 /**
  * @category Instructions
- * @category GlobalDeposit
+ * @category GlobalWithdraw
  * @category generated
  */
-export const GlobalDepositStruct = new beet.BeetArgsStruct<
-  GlobalDepositInstructionArgs & {
+export const GlobalWithdrawStruct = new beet.BeetArgsStruct<
+  GlobalWithdrawInstructionArgs & {
     instructionDiscriminator: number;
   }
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', globalDepositParamsBeet],
+    ['params', globalWithdrawParamsBeet],
   ],
-  'GlobalDepositInstructionArgs',
+  'GlobalWithdrawInstructionArgs',
 );
 /**
- * Accounts required by the _GlobalDeposit_ instruction
+ * Accounts required by the _GlobalWithdraw_ instruction
  *
  * @property [_writable_, **signer**] payer
  * @property [_writable_] global
@@ -46,10 +46,10 @@ export const GlobalDepositStruct = new beet.BeetArgsStruct<
  * @property [_writable_] globalVault
  * @property [] traderToken
  * @category Instructions
- * @category GlobalDeposit
+ * @category GlobalWithdraw
  * @category generated
  */
-export type GlobalDepositInstructionAccounts = {
+export type GlobalWithdrawInstructionAccounts = {
   payer: web3.PublicKey;
   global: web3.PublicKey;
   mint: web3.PublicKey;
@@ -58,25 +58,25 @@ export type GlobalDepositInstructionAccounts = {
   tokenProgram?: web3.PublicKey;
 };
 
-export const globalDepositInstructionDiscriminator = 9;
+export const globalWithdrawInstructionDiscriminator = 10;
 
 /**
- * Creates a _GlobalDeposit_ instruction.
+ * Creates a _GlobalWithdraw_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category GlobalDeposit
+ * @category GlobalWithdraw
  * @category generated
  */
-export function createGlobalDepositInstruction(
-  accounts: GlobalDepositInstructionAccounts,
-  args: GlobalDepositInstructionArgs,
+export function createGlobalWithdrawInstruction(
+  accounts: GlobalWithdrawInstructionAccounts,
+  args: GlobalWithdrawInstructionArgs,
   programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
-  const [data] = GlobalDepositStruct.serialize({
-    instructionDiscriminator: globalDepositInstructionDiscriminator,
+  const [data] = GlobalWithdrawStruct.serialize({
+    instructionDiscriminator: globalWithdrawInstructionDiscriminator,
     ...args,
   });
   const keys: web3.AccountMeta[] = [

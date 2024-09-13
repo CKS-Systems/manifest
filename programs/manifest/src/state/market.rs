@@ -653,8 +653,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 }
             }
 
-            total_base_atoms_traded += base_atoms_traded;
-            total_quote_atoms_traded += quote_atoms_traded;
+            total_base_atoms_traded = total_base_atoms_traded.checked_add(base_atoms_traded)?;
+            total_quote_atoms_traded = total_quote_atoms_traded.checked_add(quote_atoms_traded)?;
 
             // Possibly increase bonus atom maker gets from the rounding the
             // quote in their favor. They will get one less than expected when

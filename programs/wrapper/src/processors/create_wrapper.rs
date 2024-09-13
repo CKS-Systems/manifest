@@ -21,8 +21,6 @@ pub(crate) fn process_create_wrapper(
     let owner: Signer = Signer::new(next_account_info(account_iter)?)?;
     let system_program: Program =
         Program::new(next_account_info(account_iter)?, &system_program::id())?;
-    // Payer only here for completeness. Is required just for the gas on this tx.
-    let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new_init(next_account_info(account_iter)?)?;
 
@@ -38,7 +36,7 @@ pub(crate) fn process_create_wrapper(
     }
 
     // Expand wrapper so there is an initial block available.
-    expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
+    expand_wrapper_if_needed(&wrapper_state, &owner, &system_program)?;
 
     Ok(())
 }

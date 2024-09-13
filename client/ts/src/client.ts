@@ -106,14 +106,12 @@ export class ManifestClient {
       const createWrapperIx: TransactionInstruction =
         createCreateWrapperInstruction({
           owner: payerKeypair.publicKey,
-          payer: payerKeypair.publicKey,
           wrapperState: wrapperKeypair.publicKey,
         });
       const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: payerKeypair.publicKey,
         market: marketPk,
-        payer: payerKeypair.publicKey,
         wrapperState: wrapperKeypair.publicKey,
       });
       transaction.add(createAccountIx);
@@ -175,7 +173,6 @@ export class ManifestClient {
       manifestProgram: MANIFEST_PROGRAM_ID,
       owner: payerKeypair.publicKey,
       market: marketPk,
-      payer: payerKeypair.publicKey,
       wrapperState: wrapperResponse.pubkey,
     });
     transaction.add(claimSeatIx);
@@ -264,7 +261,6 @@ export class ManifestClient {
 
     return createDepositInstruction(
       {
-        payer,
         market: this.market.address,
         traderTokenAccount,
         vault,
@@ -312,7 +308,6 @@ export class ManifestClient {
 
     return createWithdrawInstruction(
       {
-        payer,
         market: this.market.address,
         traderTokenAccount,
         vault,
@@ -382,7 +377,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -507,7 +501,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -539,7 +532,6 @@ export class ManifestClient {
   ): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
@@ -566,7 +558,6 @@ export class ManifestClient {
   public cancelAllIx(): TransactionInstruction {
     return createBatchUpdateInstruction(
       {
-        payer: this.payer,
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
