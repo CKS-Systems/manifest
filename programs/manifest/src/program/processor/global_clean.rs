@@ -40,6 +40,17 @@ pub(crate) fn process_global_clean(
         system_program,
     } = global_clean_context;
 
+    let global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
+        mint_opt: None,
+        global: global.clone(),
+        global_vault_opt: None,
+        market_vault_opt: None,
+        token_program_opt: None,
+        system_program: Some(system_program),
+        trader: payer,
+        market: *market.key,
+    };
+
     let GlobalCleanParams { order_index } = GlobalCleanParams::try_from_slice(data)?;
 
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
@@ -115,22 +126,15 @@ pub(crate) fn process_global_clean(
         order_index,
     )?;
 
+    drop(global_dynamic_account);
+
     // Do the actual clean on the market.
-    let global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
-        mint_opt: None,
-        global: global.clone(),
-        global_vault_opt: None,
-        market_vault_opt: None,
-        token_program_opt: None,
-        system_program: Some(system_program),
-        trader: payer,
-        market: *market.key,
-    };
     let global_trade_accounts: [Option<GlobalTradeAccounts>; 2] = if resting_order.get_is_bid() {
         [None, Some(global_trade_accounts)]
     } else {
         [Some(global_trade_accounts), None]
     };
+
     market_dynamic_account.cancel_order_by_index(
         maker_index,
         order_index,

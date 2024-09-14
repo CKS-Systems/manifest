@@ -738,7 +738,7 @@ impl<'a, 'info> GlobalCleanContext<'a, 'info> {
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new_init(next_account_info(account_iter)?)?;
+            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
         let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let global: ManifestAccountInfo<GlobalFixed> =

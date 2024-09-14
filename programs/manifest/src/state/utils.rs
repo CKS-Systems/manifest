@@ -50,11 +50,14 @@ pub(crate) fn remove_from_global(
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
-    {
+
+    // This check is a hack since the global data is borrowed in cleaning, so
+    // avoid reborrowing.
+    if global_trade_accounts.global_vault_opt.is_some() {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
         global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
-    };
+    }
 
     // The simple implementation gets
     //
