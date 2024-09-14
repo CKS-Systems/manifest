@@ -5,7 +5,7 @@ use crate::{
     program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
-    validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
+    validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
 };
 use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
@@ -169,10 +169,10 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,
-        mint,
-        global_vault,
-        market_vault,
-        token_program,
+        mint_opt,
+        global_vault_opt,
+        market_vault_opt,
+        token_program_opt,
         ..
     } = global_trade_accounts;
 
@@ -193,13 +193,18 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let mint_key: &Pubkey = global_dynamic_account.fixed.get_mint();
 
     let global_vault_bump: u8 = global_dynamic_account.fixed.get_vault_bump();
+
+    let global_vault: &TokenAccountInfo<'a, 'info> = global_vault_opt.as_ref().unwrap();
+    let market_vault: &TokenAccountInfo<'a, 'info> = market_vault_opt.as_ref().unwrap();
+    let token_program: &TokenProgram<'a, 'info> = token_program_opt.as_ref().unwrap();
+
     if *token_program.key == spl_token_2022::id() {
         require!(
-            mint.is_some(),
+            mint_opt.is_some(),
             ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
-        let mint_account_info: &MintAccountInfo = mint.as_ref().unwrap();
+        let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,

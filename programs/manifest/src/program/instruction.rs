@@ -127,11 +127,19 @@ pub enum ManifestInstruction {
     #[account(6, name = "token_program", desc = "Token program(22)")]
     GlobalEvict = 11,
 
-    // TODO: Implement this. Users can clean another users unbacked or expired
-    // orders off the orderbook.
-    //#[account(0, writable, signer, name = "payer", desc = "Payer")]
-    // GlobalCleanOrder = 11,
-
+    /// Removes an order from a market that cannot be filled. There are 3
+    /// reasons. It is expired, the global trader got evicted, or the global
+    /// trader no longer has deposited the funds to back the order. This
+    /// function results in cleaner orderbooks which helps reduce variance and
+    /// thus compute unit estimates for traders. It is incentivized by receiving
+    /// gas prepayment deposits. This is not required for normal operation of
+    /// market. It exists as a deterrent to unfillable and unmaintained global
+    /// spam.
+    #[account(0, writable, signer, name = "payer", desc = "Payer for this tx, receiver of rent deposit")]
+    #[account(1, writable, name = "market", desc = "Account holding all market state")]
+    #[account(2, name = "system_program", desc = "System program")]
+    #[account(3, writable, name = "global", desc = "Global account")]
+    GlobalClean = 12,
 }
 
 impl ManifestInstruction {
@@ -142,7 +150,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 11;
+    let num_instructions: u8 = 12;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {

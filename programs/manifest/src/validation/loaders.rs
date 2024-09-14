@@ -370,22 +370,22 @@ impl<'a, 'info> SwapContext<'a, 'info> {
 
             drop(global_data);
             global_trade_accounts_opts[index] = Some(GlobalTradeAccounts {
-                mint: if index == 0 {
+                mint_opt: if index == 0 {
                     base_mint.clone()
                 } else {
                     quote_mint.clone()
                 },
                 global,
-                global_vault,
-                market_vault: if index == 0 {
-                    base_vault.clone()
+                global_vault_opt: Some(global_vault),
+                market_vault_opt: if index == 0 {
+                    Some(base_vault.clone())
                 } else {
-                    quote_vault.clone()
+                    Some(quote_vault.clone())
                 },
-                token_program: if index == 0 {
-                    token_program_base.clone()
+                token_program_opt: if index == 0 {
+                    Some(token_program_base.clone())
                 } else {
-                    token_program_quote.clone()
+                    Some(token_program_quote.clone())
                 },
                 trader: payer.clone(),
                 market: *market.info.key,
@@ -413,11 +413,15 @@ impl<'a, 'info> SwapContext<'a, 'info> {
 /// clients can place orders on markets in testing.
 pub struct GlobalTradeAccounts<'a, 'info> {
     /// Required if this is a token22 token.
-    pub mint: Option<MintAccountInfo<'a, 'info>>,
+    pub mint_opt: Option<MintAccountInfo<'a, 'info>>,
     pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub global_vault: TokenAccountInfo<'a, 'info>,
-    pub market_vault: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
+
+    // These are required when matching a global order, not necessarily when
+    // cancelling since tokens dont move in that case.
+    pub global_vault_opt: Option<TokenAccountInfo<'a, 'info>>,
+    pub market_vault_opt: Option<TokenAccountInfo<'a, 'info>>,
+    pub token_program_opt: Option<TokenProgram<'a, 'info>>,
+
     pub system_program: Option<Program<'a, 'info>>,
     // Trader is sending or cancelling the order. They are the one who will pay
     // or receive gas prepayments.
@@ -495,11 +499,11 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     TokenProgram::new(next_account_info(account_iter)?)?;
 
                 global_trade_accounts_opts[index] = Some(GlobalTradeAccounts {
-                    mint: Some(mint),
+                    mint_opt: Some(mint),
                     global,
-                    global_vault,
-                    market_vault,
-                    token_program,
+                    global_vault_opt: Some(global_vault),
+                    market_vault_opt: Some(market_vault),
+                    token_program_opt: Some(token_program),
                     system_program: Some(system_program.clone()),
                     trader: payer.clone(),
                     market: *market.info.key,
@@ -716,6 +720,35 @@ impl<'a, 'info> GlobalEvictContext<'a, 'info> {
             trader_token,
             evictee_token,
             token_program,
+        })
+    }
+}
+
+/// Global clean
+pub(crate) struct GlobalCleanContext<'a, 'info> {
+    pub payer: Signer<'a, 'info>,
+    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
+    pub system_program: Program<'a, 'info>,
+    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
+}
+
+impl<'a, 'info> GlobalCleanContext<'a, 'info> {
+    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+
+        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let market: ManifestAccountInfo<MarketFixed> =
+            ManifestAccountInfo::<MarketFixed>::new_init(next_account_info(account_iter)?)?;
+        let system_program: Program =
+            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let global: ManifestAccountInfo<GlobalFixed> =
+            ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+
+        Ok(Self {
+            payer,
+            market,
+            system_program,
+            global,
         })
     }
 }

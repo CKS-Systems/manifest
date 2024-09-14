@@ -713,13 +713,15 @@ mod test {
         };
 
         let quote_global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
-            mint: Some(quote_mint_info.clone()),
+            mint_opt: Some(quote_mint_info.clone()),
             global: ManifestAccountInfo::new(&global_account_info).unwrap(),
-            global_vault: TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            market_vault: TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            token_program: TokenProgram::new(&token_program_account_info).unwrap(),
+            global_vault_opt: Some(
+                TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            market_vault_opt: Some(
+                TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            token_program_opt: Some(TokenProgram::new(&token_program_account_info).unwrap()),
             system_program: None,
             trader: Signer::new(&trader_account_info).unwrap(),
             market: market_key.clone(),
