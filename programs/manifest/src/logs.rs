@@ -135,6 +135,15 @@ pub struct GlobalWithdrawLog {
     pub global_atoms: GlobalAtoms,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+pub struct GlobalEvictLog {
+    pub evictor: Pubkey,
+    pub evictee: Pubkey,
+    pub evictor_atoms: GlobalAtoms,
+    pub evictee_atoms: GlobalAtoms,
+}
+
 pub trait Discriminant {
     fn discriminant() -> [u8; 8];
 }
@@ -169,6 +178,7 @@ const GLOBAL_ADD_TRADER_LOG_DISCRIMINANT: [u8; 8] = [129, 246, 90, 94, 87, 186, 
 const GLOBAL_CLAIM_SEAT_LOG_DISCRIMINANT: [u8; 8] = [164, 46, 227, 175, 3, 143, 73, 86];
 const GLOBAL_DEPOSIT_LOG_DISCRIMINANT: [u8; 8] = [16, 26, 72, 1, 145, 232, 182, 71];
 const GLOBAL_WITHDRAW_LOG_DISCRIMINANT: [u8; 8] = [206, 118, 67, 64, 124, 109, 157, 201];
+const GLOBAL_EVICT_LOG_DISCRIMINANT: [u8; 8] = [250, 180, 155, 38, 98, 223, 82, 223];
 
 discriminant!(
     CreateMarketLog,
@@ -217,4 +227,9 @@ discriminant!(
     GlobalWithdrawLog,
     GLOBAL_WITHDRAW_LOG_DISCRIMINANT,
     test_global_withdraw_log
+);
+discriminant!(
+    GlobalEvictLog,
+    GLOBAL_EVICT_LOG_DISCRIMINANT,
+    test_global_evict_log
 );

@@ -180,15 +180,15 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     let num_deposited_atoms: GlobalAtoms =
-        global_dynamic_account.get_balance_atoms(resting_order_trader)?;
+        global_dynamic_account.get_balance_atoms(resting_order_trader);
     if desired_global_atoms > num_deposited_atoms {
+        // TODO: Emit a log for global order that could not be matched against being cleaned.
         return Ok(false);
     }
     // TODO: Allow matching against a global that can only partially fill the order.
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;
-    global_dynamic_account.remove_order(resting_order_trader, global_trade_accounts)?;
 
     let mint_key: &Pubkey = global_dynamic_account.fixed.get_mint();
 
