@@ -126,8 +126,6 @@ pub(crate) fn process_global_clean(
         order_index,
     )?;
 
-    drop(global_dynamic_account);
-
     // Do the actual clean on the market.
     let global_trade_accounts: [Option<GlobalTradeAccounts>; 2] = if resting_order.get_is_bid() {
         [None, Some(global_trade_accounts)]
