@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726272218809,
+  "lastUpdate": 1726272258232,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2585,6 +2585,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7375,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fd4152063ca17eaeeb9cc5485597425d4b6605d",
+          "message": "Global seat eviction (#66)\n\n* evict helper start\r\n\r\n* more impl\r\n\r\n* evict\r\n\r\n* evict\r\n\r\n* test fix\r\n\r\n* second tree implementation\r\n\r\n* tests pass\r\n\r\n* double sized global\r\n\r\n* comments\r\n\r\n* comment\r\n\r\n* fmt\r\n\r\n* scoping\r\n\r\n* change sizes\r\n\r\n* constant\r\n\r\n* deflake tests\r\n\r\n* log evictee balance\r\n\r\n* test change\r\n\r\n* test fix\r\n\r\n* reduce max seats for test\r\n\r\n* Do not crash when not found\r\n\r\n* move check\r\n\r\n* fmt",
+          "timestamp": "2024-09-13T19:40:42-04:00",
+          "tree_id": "bdf4a4febc28fda5a52776f6f520f5214768009f",
+          "url": "https://github.com/CKS-Systems/manifest/commit/4fd4152063ca17eaeeb9cc5485597425d4b6605d"
+        },
+        "date": 1726272257570,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4062,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7147,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7399,
             "unit": "CU",
             "range": "",
             "extra": ""
