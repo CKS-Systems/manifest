@@ -312,7 +312,6 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
         )
         .await
         .unwrap();
-    
 
         let claim_seat_ix: Instruction = claim_seat_instruction(
             &test_fixture.market.key,

@@ -81,11 +81,7 @@ impl TestFixture {
         let second_keypair: Keypair = Keypair::new();
         program.add_account(
             second_keypair.pubkey(),
-            solana_sdk::account::Account::new(
-                1u64,
-                0,
-                &solana_sdk::system_program::id(),
-            ),
+            solana_sdk::account::Account::new(1u64, 0, &solana_sdk::system_program::id()),
         );
 
         let usdc_keypair: Keypair = Keypair::new();

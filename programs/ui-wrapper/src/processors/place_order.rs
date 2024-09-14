@@ -10,7 +10,9 @@ use hypertree::{
 };
 use manifest::{
     program::{
-        batch_update::{BatchUpdateReturn, PlaceOrderParams}, batch_update_instruction, deposit_instruction, expand_market_instruction, get_mut_dynamic_account
+        batch_update::{BatchUpdateReturn, PlaceOrderParams},
+        batch_update_instruction, deposit_instruction, expand_market_instruction,
+        get_mut_dynamic_account,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -160,7 +162,6 @@ pub(crate) fn process_place_order(
             system_program.info.clone(),
         ],
     )?;
-
 
     let core_place: PlaceOrderParams = PlaceOrderParams::new(
         order.base_atoms,
