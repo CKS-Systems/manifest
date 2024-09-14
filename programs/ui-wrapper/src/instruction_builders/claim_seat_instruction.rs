@@ -21,6 +21,6 @@ pub fn claim_seat_instruction(
             AccountMeta::new(*payer, true),
             AccountMeta::new(*wrapper_state, false),
         ],
-        data: [ManifestWrapperInstruction::ClaimSeat.to_vec()].concat(),
+        data: ManifestWrapperInstruction::ClaimSeat.to_vec(),
     }
 }

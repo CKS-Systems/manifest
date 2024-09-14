@@ -28,6 +28,14 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
+    expand_market(payer, manifest_account, system_program)
+}
+
+pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
+    payer: &Signer<'a, 'info>,
+    manifest_account: &ManifestAccountInfo<'a, 'info, T>,
+    system_program: &Program<'a, 'info>,
+) -> ProgramResult {
     expand_dynamic(payer, manifest_account, system_program)?;
     expand_market_fixed(manifest_account.info)?;
     Ok(())

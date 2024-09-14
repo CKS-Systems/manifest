@@ -1,8 +1,4 @@
-use std::{
-    cell::{Ref, RefMut},
-    collections::HashSet,
-    mem::size_of,
-};
+use std::cell::{Ref, RefMut};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{
@@ -11,23 +7,17 @@ use hypertree::{
 };
 use manifest::{
     program::{
-        batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, deposit_instruction, get_dynamic_account,
-        get_mut_dynamic_account, ManifestInstruction,
+        batch_update::CancelOrderParams, batch_update_instruction, get_dynamic_account,
+        get_mut_dynamic_account,
     },
-    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, OrderType,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
     entrypoint::ProgramResult,
-    instruction::{AccountMeta, Instruction},
-    program::{get_return_data, invoke},
+    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
@@ -35,16 +25,13 @@ use solana_program::{
 };
 
 use crate::{
-    market_info::MarketInfo,
-    open_order::{self, WrapperOpenOrder},
-    processors::shared::OpenOrdersTreeReadOnly,
-    wrapper_state::ManifestWrapperStateFixed,
+    market_info::MarketInfo, open_order::WrapperOpenOrder,
+    processors::shared::OpenOrdersTreeReadOnly, wrapper_state::ManifestWrapperStateFixed,
 };
 
 use super::shared::{
-    check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
-    OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
-    EXPECTED_ORDER_BATCH_SIZE,
+    check_signer, get_market_info_index_for_market, OpenOrdersTree, UnusedWrapperFreeListPadding,
+    WrapperStateAccountInfo,
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Clone)]

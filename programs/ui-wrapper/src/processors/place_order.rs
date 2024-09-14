@@ -1,19 +1,16 @@
 use std::{
     cell::{Ref, RefMut},
-    collections::HashSet,
     mem::size_of,
 };
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
-    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, NIL,
+    HyperTreeWriteOperations, RBNode, NIL,
 };
 use manifest::{
     program::{
-        batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, deposit_instruction, get_dynamic_account,
-        get_mut_dynamic_account, ManifestInstruction,
+        batch_update::{BatchUpdateReturn, PlaceOrderParams}, batch_update_instruction, deposit_instruction, expand_market_instruction, get_mut_dynamic_account
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -22,22 +19,18 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::{AccountMeta, Instruction},
     program::{get_return_data, invoke},
-    program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder,
-    processors::shared::OpenOrdersTreeReadOnly, wrapper_state::ManifestWrapperStateFixed,
+    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperStateFixed,
 };
 
 use super::shared::{
     check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
     OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
-    EXPECTED_ORDER_BATCH_SIZE,
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
@@ -137,7 +130,7 @@ pub(crate) fn process_place_order(
         invoke(
             &deposit_instruction(
                 market.key,
-                payer.key,
+                owner.key,
                 mint.key,
                 deposit_amount,
                 trader_token_account.key,
@@ -155,6 +148,20 @@ pub(crate) fn process_place_order(
         )?;
     }
 
+    // Call expand so claim seat has enough free space
+    // and owner doesn't get charged rent
+    // TODO: could check if needed before
+    invoke(
+        &expand_market_instruction(market.key, payer.key),
+        &[
+            manifest_program.info.clone(),
+            payer.info.clone(),
+            market.info.clone(),
+            system_program.info.clone(),
+        ],
+    )?;
+
+
     let core_place: PlaceOrderParams = PlaceOrderParams::new(
         order.base_atoms,
         order.price_mantissa,
@@ -170,7 +177,7 @@ pub(crate) fn process_place_order(
     invoke(
         &batch_update_instruction(
             market.key,
-            payer.key,
+            owner.key,
             Some(trader_index),
             vec![],
             vec![core_place],
@@ -180,7 +187,6 @@ pub(crate) fn process_place_order(
             None,
         ),
         &[
-            payer.info.clone(),
             system_program.info.clone(),
             manifest_program.info.clone(),
             owner.info.clone(),

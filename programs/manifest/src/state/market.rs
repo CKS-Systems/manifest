@@ -452,11 +452,11 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     pub fn market_expand(&mut self) -> ProgramResult {
         let DynamicAccount { fixed, .. } = self.borrow_mut();
 
-        require!(
-            fixed.free_list_head_index == NIL,
-            ManifestError::InvalidFreeList,
-            "Expected empty free list, but expand wasnt needed",
-        )?;
+        // require!(
+        //     fixed.free_list_head_index == NIL,
+        //     ManifestError::InvalidFreeList,
+        //     "Expected empty free list, but expand wasnt needed",
+        // )?;
         self.expand_unchecked()?;
         Ok(())
     }

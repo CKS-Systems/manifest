@@ -1,44 +1,26 @@
-use std::{
-    cell::{Ref, RefMut},
-    collections::HashSet,
-    mem::size_of,
-    str::FromStr,
-};
+use std::{cell::RefMut, str::FromStr};
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
-    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, NIL,
-};
+use hypertree::{get_mut_helper, DataIndex, RBNode};
 use manifest::{
-    program::{
-        batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, deposit_instruction, get_dynamic_account,
-        get_mut_dynamic_account, withdraw_instruction, ManifestInstruction,
-    },
-    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    program::{get_mut_dynamic_account, withdraw_instruction},
+    quantities::{QuoteAtoms, WrapperU64},
+    state::{DynamicAccount, MarketFixed},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
-    program::{get_return_data, invoke},
+    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
-    system_program,
 };
 
-use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder,
-    processors::shared::OpenOrdersTreeReadOnly, wrapper_state::ManifestWrapperStateFixed,
-};
+use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
 
 use super::shared::{
-    check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
-    OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
-    EXPECTED_ORDER_BATCH_SIZE,
+    check_signer, get_market_info_index_for_market, sync_fast, WrapperStateAccountInfo,
 };
 
 const FEE_DENOMINATOR: u128 = 10u128.pow(9);
@@ -125,7 +107,7 @@ pub(crate) fn process_settle_funds(
     invoke(
         &withdraw_instruction(
             market.key,
-            payer.key,
+            owner.key,
             mint_base.key,
             base_balance.as_u64(),
             trader_token_account_base.key,
@@ -133,7 +115,7 @@ pub(crate) fn process_settle_funds(
         ),
         &[
             market.info.clone(),
-            payer.info.clone(),
+            owner.info.clone(),
             mint_base.clone(),
             trader_token_account_base.clone(),
             vault_base.clone(),
@@ -146,7 +128,7 @@ pub(crate) fn process_settle_funds(
     invoke(
         &withdraw_instruction(
             market.key,
-            payer.key,
+            owner.key,
             mint_quote.key,
             quote_balance.as_u64(),
             trader_token_account_quote.key,
@@ -154,7 +136,7 @@ pub(crate) fn process_settle_funds(
         ),
         &[
             market.info.clone(),
-            payer.info.clone(),
+            owner.info.clone(),
             mint_quote.clone(),
             trader_token_account_quote.clone(),
             vault_quote.clone(),

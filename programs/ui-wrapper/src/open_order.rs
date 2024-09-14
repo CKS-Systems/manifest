@@ -1,8 +1,8 @@
 use bytemuck::{Pod, Zeroable};
-use hypertree::{DataIndex, PodBool, NIL};
+use hypertree::{DataIndex, PodBool};
 use manifest::{
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::OrderType,
 };
 use static_assertions::const_assert_eq;
 use std::{cmp::Ordering, mem::size_of};

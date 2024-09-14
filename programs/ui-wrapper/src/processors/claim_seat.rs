@@ -42,12 +42,14 @@ pub(crate) fn process_claim_seat(
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
 
-    // Call the Expand CPI
+    // Call expand so claim seat has enough free space
+    // and owner doesn't get charged rent
+    // TODO: could check if needed before
     invoke(
         &expand_market_instruction(market.key, payer.key),
         &[
             manifest_program.info.clone(),
-            owner.info.clone(),
+            payer.info.clone(),
             market.info.clone(),
             system_program.info.clone(),
         ],
@@ -77,7 +79,7 @@ pub(crate) fn process_claim_seat(
     // Get the free block and setup the new MarketInfo there
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-    let trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
+    let trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
     let market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
 
     // Put that market_info at the free list head

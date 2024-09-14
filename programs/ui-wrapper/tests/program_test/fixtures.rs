@@ -7,7 +7,7 @@ use std::{
 use manifest::{
     program::{create_market_instructions, get_dynamic_value},
     quantities::WrapperU64,
-    state::{DynamicAccount, MarketFixed, MarketValue},
+    state::{MarketFixed, MarketValue},
     validation::MintAccountInfo,
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
@@ -21,7 +21,6 @@ use spl_token::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
     instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
-    open_order::WrapperOpenOrder,
     wrapper_state::{ManifestWrapperStateFixed, WrapperStateValue},
 };
 
@@ -83,7 +82,7 @@ impl TestFixture {
         program.add_account(
             second_keypair.pubkey(),
             solana_sdk::account::Account::new(
-                u32::MAX as u64,
+                1u64,
                 0,
                 &solana_sdk::system_program::id(),
             ),
