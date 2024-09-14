@@ -132,7 +132,7 @@ pub(crate) fn process_global_clean(
     } else {
         [Some(global_trade_accounts), None]
     };
-    
+
     // Should drop global, but cancel_order_by_index actually does not need to
     // borrow in this case.
 
