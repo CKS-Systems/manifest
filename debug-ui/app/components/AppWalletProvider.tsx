@@ -18,10 +18,6 @@ import {
 } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
 import WalletConnection from './WalletConnection';
 import { ManifestClient } from '@cks-systems/manifest-sdk';
 import { Connection } from '@solana/web3.js';
@@ -114,8 +110,7 @@ const AppWalletProvider = ({
 
   const wallets = useMemo(() => {
     if (!network) return [];
-    return [
-    ];
+    return [];
   }, [network]);
 
   if (!network) {

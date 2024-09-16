@@ -73,7 +73,6 @@ const PlaceOrder = ({
       minOutTokens: 0,
       clientOrderId: Number(clientOrderId),
     };
-    console.log(orderParams);
 
     const placeOrderIx: TransactionInstruction =
       mClient.placeOrderIx(orderParams);

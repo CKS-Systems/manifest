@@ -6,7 +6,6 @@ import {
   ParsedAccountData,
   PublicKey,
   RpcResponseAndContext,
-  SendTransactionError,
   Transaction,
 } from '@solana/web3.js';
 import { ChangeEvent, ReactElement, useState } from 'react';
@@ -23,15 +22,17 @@ const MintTo = (): ReactElement => {
   const [mintUiAmount, setMintUiAmount] = useState<string>('');
   const [mintToMintAddr, setMintToMintAddr] = useState<string>('');
 
-  const handleMintToAddrChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMintToAddrChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setMintToAddr(e.target.value);
   };
 
-  const handleMintUiAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMintUiAmountChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setMintUiAmount(e.target.value);
   };
 
-  const handleMintToMintAddrChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMintToMintAddrChange = (
+    e: ChangeEvent<HTMLInputElement>,
+  ): void => {
     setMintToMintAddr(e.target.value);
   };
 
@@ -78,7 +79,12 @@ const MintTo = (): ReactElement => {
         Number(mintUiAmount) * Math.pow(10, decimals),
       );
 
-      const mintToIx = getMintToIx(mintPub, destAta.address, signerPub, amountToMint);
+      const mintToIx = getMintToIx(
+        mintPub,
+        destAta.address,
+        signerPub,
+        amountToMint,
+      );
       const tx = new Transaction().add(mintToIx);
 
       const { blockhash } = await conn.getLatestBlockhash();

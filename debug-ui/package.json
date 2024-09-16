@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "cd ../ && yarn build",
+    "preinstall": "cd ../ && yarn build",
     "dev": "next dev",
     "build": "cd ../ && yarn build && cd ./debug-ui && next build",
     "start": "next start",
@@ -11,8 +11,7 @@
     "run:pk-solflare-to-phantom": "tsx scripts/pk-solflare-to-phantom.ts",
     "lint": "tsc --noEmit && next lint",
     "lint:fix": "tsc --noEmit && next lint --fix",
-    "run:rando-bot": "tsx scripts/run-rando-bot.ts",
-    "deposit": "tsx scripts/deposit.ts"
+    "run:rando-bot": "tsx scripts/run-rando-bot.ts"
   },
   "dependencies": {
     "@cks-systems/manifest-sdk": "file:../dist/cjs",

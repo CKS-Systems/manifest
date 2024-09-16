@@ -10,7 +10,6 @@ import {
   createMintToInstruction,
   getAccount,
   getAssociatedTokenAddressSync,
-  getMint,
 } from '@solana/spl-token';
 import {
   Commitment,
@@ -96,10 +95,5 @@ export const getMintToIx = (
   authPub: PublicKey,
   amount: number | bigint,
 ): TransactionInstruction => {
-  return createMintToInstruction(
-    mintPub,
-    destPub,
-    authPub,
-    amount,
-  );
+  return createMintToInstruction(mintPub, destPub, authPub, amount);
 };

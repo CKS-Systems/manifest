@@ -212,7 +212,6 @@ const CreateMarket = (): ReactElement => {
 
   useEffect(() => {
     const fetchMarketPairs = async (): Promise<void> => {
-      console.log(marketAddrs);
       try {
         const fetchPromises = marketAddrs.map(async (m: string) => {
           const marketPub = new PublicKey(m);

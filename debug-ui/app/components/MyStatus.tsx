@@ -90,9 +90,7 @@ const MyStatus = ({
       const { blockhash } = await conn.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = signerPub!;
-      console.log(signerPub?.toBase58());
       const signedTx = await signTransaction!(tx);
-      console.log(signedTx);
       const sig = await conn.sendRawTransaction(signedTx.serialize());
       console.log(`deposit: ${getSolscanSigUrl(sig, network)}`);
       toast.success(`deposit: ${getSolscanSigUrl(sig, network)}`);

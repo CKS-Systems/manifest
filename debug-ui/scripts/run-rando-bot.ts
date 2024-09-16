@@ -449,7 +449,7 @@ async function createMarket(
     ),
     programId: PROGRAM_ID,
   });
-  const createMarketIx = ManifestClient['createMarketIx'](
+  const createMarketIx = ManifestClient.createMarketIx(
     keypair.publicKey,
     baseMint,
     quoteMint,
@@ -497,6 +497,7 @@ async function main() {
   let marketAddress: PublicKey;
   if (process.env.MARKET_ADDRESS) {
     marketAddress = new PublicKey(process.env.MARKET_ADDRESS);
+    console.log('loading market...');
     const market: Market = await Market.loadFromAddress({
       connection: connection,
       address: marketAddress,
@@ -504,6 +505,7 @@ async function main() {
     baseMint = market.baseMint();
     quoteMint = market.quoteMint();
   } else {
+    console.log('creating market...');
     baseMint = await createMint(
       connection,
       creatorKeypair,
