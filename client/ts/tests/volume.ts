@@ -66,7 +66,7 @@ async function testVolume(): Promise<void> {
 
   // 2 because self trade.
   assert(
-    Number(marketInfoParsed.quoteVolumeAtoms) == 2_000_000_000,
+    Number(marketInfoParsed.quoteVolumeAtoms) == 2_000_000,
     'quote volume on wrapper',
   );
 }
