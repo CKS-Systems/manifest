@@ -6,7 +6,7 @@ pub mod instruction_builders;
 pub mod market_info;
 pub mod open_order;
 pub mod processors;
-pub mod wrapper_state;
+pub mod wrapper_user;
 
 use hypertree::trace;
 use instruction::ManifestWrapperInstruction;

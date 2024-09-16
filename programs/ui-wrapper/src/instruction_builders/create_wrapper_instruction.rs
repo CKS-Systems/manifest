@@ -1,4 +1,4 @@
-use crate::{wrapper_state::ManifestWrapperUserFixed, ManifestWrapperInstruction};
+use crate::{wrapper_user::ManifestWrapperUserFixed, ManifestWrapperInstruction};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,

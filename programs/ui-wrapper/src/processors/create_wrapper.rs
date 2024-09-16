@@ -7,7 +7,7 @@ use solana_program::{
     system_program,
 };
 
-use crate::wrapper_state::ManifestWrapperUserFixed;
+use crate::wrapper_user::ManifestWrapperUserFixed;
 
 use super::shared::{expand_wrapper_if_needed, WrapperStateAccountInfo};
 

@@ -17,7 +17,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperUserFixed};
+use crate::{market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed};
 
 use super::shared::{
     check_signer, get_market_info_index_for_market, sync_fast, WrapperStateAccountInfo,

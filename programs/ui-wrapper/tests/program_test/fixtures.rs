@@ -21,7 +21,7 @@ use spl_token::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
     instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
-    wrapper_state::{ManifestWrapperUserFixed, WrapperUserValue},
+    wrapper_user::{ManifestWrapperUserFixed, WrapperUserValue},
 };
 
 #[derive(PartialEq)]

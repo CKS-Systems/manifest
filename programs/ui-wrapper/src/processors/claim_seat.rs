@@ -9,7 +9,7 @@ use manifest::{
     validation::ManifestAccountInfo,
 };
 
-use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperUserFixed};
+use crate::{market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed};
 use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},

@@ -27,7 +27,7 @@ use solana_program::{
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperUserFixed,
+    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_user::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
