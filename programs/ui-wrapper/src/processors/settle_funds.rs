@@ -148,6 +148,7 @@ pub(crate) fn process_settle_funds(
 
     if *vault_quote.owner == spl_token_2022::id() {
         unimplemented!("token2022 not yet supported")
+        // TODO: make sure to use least amount of transfers possible to avoid transfer fee
     } else {
         let mut accounts = vec![
             AccountMeta::new_readonly(*token_program_quote.key, false),

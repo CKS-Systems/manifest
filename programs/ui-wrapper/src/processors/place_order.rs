@@ -118,7 +118,7 @@ pub(crate) fn process_place_order(
         order.price_exponent,
     )?;
 
-    let deposit_amount: u64 = if order.is_bid {
+    let deposit_amount_atoms: u64 = if order.is_bid {
         let required_quote_atoms = base_atoms.checked_mul(price, true)?;
         required_quote_atoms
             .saturating_sub(remaining_quote_atoms)
@@ -128,13 +128,13 @@ pub(crate) fn process_place_order(
     };
 
     trace!("deposit amount:{deposit_amount} mint:{:?}", mint.key);
-    if deposit_amount > 0 {
+    if deposit_amount_atoms > 0 {
         invoke(
             &deposit_instruction(
                 market.key,
                 owner.key,
                 mint.key,
-                deposit_amount,
+                deposit_amount_atoms,
                 trader_token_account.key,
                 *token_program.key,
             ),

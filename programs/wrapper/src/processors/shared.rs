@@ -264,8 +264,6 @@ pub(crate) fn get_market_info_index_for_market(
     // Just need to lookup by market key so the rest doesnt matter.
     let market_info_index: DataIndex =
         market_infos_tree.lookup_index(&MarketInfo::new_empty(*market, NIL));
-
-    drop(wrapper_data);
     market_info_index
 }
 
