@@ -26,7 +26,7 @@ use solana_program::{
 
 use crate::{
     market_info::MarketInfo, open_order::WrapperOpenOrder,
-    processors::shared::OpenOrdersTreeReadOnly, wrapper_state::ManifestWrapperStateFixed,
+    processors::shared::OpenOrdersTreeReadOnly, wrapper_state::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
@@ -71,7 +71,7 @@ pub(crate) fn process_cancel_order(
 
     // prepare cancel
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
-    let wrapper: DynamicAccount<&ManifestWrapperStateFixed, &[u8]> =
+    let wrapper: DynamicAccount<&ManifestWrapperUserFixed, &[u8]> =
         get_dynamic_account(&wrapper_data);
 
     let market_info: MarketInfo =
@@ -122,7 +122,7 @@ pub(crate) fn process_cancel_order(
 
     // Process the order result
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
-    let wrapper: DynamicAccount<&mut ManifestWrapperStateFixed, &mut [u8]> =
+    let wrapper: DynamicAccount<&mut ManifestWrapperUserFixed, &mut [u8]> =
         get_mut_dynamic_account(&mut wrapper_data);
 
     // fetch current root first to not borrow wrapper.dynamic twice

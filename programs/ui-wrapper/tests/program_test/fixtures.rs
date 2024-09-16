@@ -21,7 +21,7 @@ use spl_token::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
     instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
-    wrapper_state::{ManifestWrapperStateFixed, WrapperStateValue},
+    wrapper_state::{ManifestWrapperUserFixed, WrapperUserValue},
 };
 
 #[derive(PartialEq)]
@@ -350,7 +350,7 @@ impl MarketFixture {
 pub struct WrapperFixture {
     pub context: Rc<RefCell<ProgramTestContext>>,
     pub key: Pubkey,
-    pub wrapper: WrapperStateValue,
+    pub wrapper: WrapperUserValue,
 }
 
 impl WrapperFixture {
@@ -359,8 +359,8 @@ impl WrapperFixture {
         WrapperFixture {
             context: context_ref,
             key,
-            wrapper: WrapperStateValue {
-                fixed: ManifestWrapperStateFixed::new_empty(&key),
+            wrapper: WrapperUserValue {
+                fixed: ManifestWrapperUserFixed::new_empty(&key),
                 dynamic: Vec::new(),
             },
         }
@@ -376,7 +376,7 @@ impl WrapperFixture {
             .unwrap()
             .unwrap();
 
-        let wrapper: WrapperStateValue = get_dynamic_value(wrapper_account.data.as_slice());
+        let wrapper: WrapperUserValue = get_dynamic_value(wrapper_account.data.as_slice());
         self.wrapper = wrapper;
     }
 }

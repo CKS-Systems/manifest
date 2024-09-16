@@ -9,7 +9,7 @@ use manifest::{
     validation::ManifestAccountInfo,
 };
 
-use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
+use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperUserFixed};
 use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -73,8 +73,8 @@ pub(crate) fn process_claim_seat(
     let wrapper_state_info: &AccountInfo = wrapper_state.info;
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state_info.try_borrow_mut_data().unwrap();
     let (fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
-    let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
+        wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
+    let wrapper_fixed: &mut ManifestWrapperUserFixed = get_mut_helper(fixed_data, 0);
 
     // Get the free block and setup the new MarketInfo there
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;

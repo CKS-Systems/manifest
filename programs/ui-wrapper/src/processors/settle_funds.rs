@@ -17,7 +17,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
+use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperUserFixed};
 
 use super::shared::{
     check_signer, get_market_info_index_for_market, sync_fast, WrapperStateAccountInfo,
@@ -76,7 +76,7 @@ pub(crate) fn process_settle_funds(
     sync_fast(&wrapper_state, &market, market_info_index)?;
 
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data()?;
-    let mut wrapper: DynamicAccount<&mut ManifestWrapperStateFixed, &mut [u8]> =
+    let mut wrapper: DynamicAccount<&mut ManifestWrapperUserFixed, &mut [u8]> =
         get_mut_dynamic_account(&mut wrapper_data);
 
     let market_info: &mut MarketInfo =

@@ -6,11 +6,11 @@ use manifest::state::DynamicAccount;
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 
-use crate::processors::shared::WRAPPER_STATE_DISCRIMINANT;
+use crate::processors::shared::WRAPPER_USER_DISCRIMINANT;
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Pod, Zeroable)]
-pub struct ManifestWrapperStateFixed {
+pub struct ManifestWrapperUserFixed {
     pub discriminant: u64,
 
     // This is the same signer for the core program.
@@ -25,7 +25,7 @@ pub struct ManifestWrapperStateFixed {
     pub _padding: [u32; 3],
 }
 const_assert_eq!(
-    size_of::<ManifestWrapperStateFixed>(),
+    size_of::<ManifestWrapperUserFixed>(),
     8 +   // discriminant
     32 +  // trader
     4 +   // num_bytes_allocated
@@ -34,14 +34,14 @@ const_assert_eq!(
     12 // padding
 );
 pub const WRAPPER_FIXED_SIZE: usize = 64;
-const_assert_eq!(size_of::<ManifestWrapperStateFixed>(), WRAPPER_FIXED_SIZE);
-const_assert_eq!(size_of::<ManifestWrapperStateFixed>() % 8, 0);
-impl Get for ManifestWrapperStateFixed {}
+const_assert_eq!(size_of::<ManifestWrapperUserFixed>(), WRAPPER_FIXED_SIZE);
+const_assert_eq!(size_of::<ManifestWrapperUserFixed>() % 8, 0);
+impl Get for ManifestWrapperUserFixed {}
 
-impl ManifestWrapperStateFixed {
-    pub fn new_empty(trader: &Pubkey) -> ManifestWrapperStateFixed {
-        ManifestWrapperStateFixed {
-            discriminant: WRAPPER_STATE_DISCRIMINANT,
+impl ManifestWrapperUserFixed {
+    pub fn new_empty(trader: &Pubkey) -> ManifestWrapperUserFixed {
+        ManifestWrapperUserFixed {
+            discriminant: WRAPPER_USER_DISCRIMINANT,
             trader: *trader,
             num_bytes_allocated: 0,
             free_list_head_index: NIL,
@@ -52,8 +52,8 @@ impl ManifestWrapperStateFixed {
 }
 
 /// Fully owned Wrapper User account, used in clients that can copy.
-pub type WrapperStateValue = DynamicAccount<ManifestWrapperStateFixed, Vec<u8>>;
-/// Full market reference type.
-pub type WrapperStateRef<'a> = DynamicAccount<&'a ManifestWrapperStateFixed, &'a [u8]>;
-/// Full market reference type.
-pub type WrapperStateRefMut<'a> = DynamicAccount<&'a mut ManifestWrapperStateFixed, &'a mut [u8]>;
+pub type WrapperUserValue = DynamicAccount<ManifestWrapperUserFixed, Vec<u8>>;
+/// Full wrapper reference type.
+pub type WrapperUserRef<'a> = DynamicAccount<&'a ManifestWrapperUserFixed, &'a [u8]>;
+/// Mutable wrapper reference type.
+pub type WrapperUserRefMut<'a> = DynamicAccount<&'a mut ManifestWrapperUserFixed, &'a mut [u8]>;

@@ -1,4 +1,4 @@
-use crate::{wrapper_state::ManifestWrapperStateFixed, ManifestWrapperInstruction};
+use crate::{wrapper_state::ManifestWrapperUserFixed, ManifestWrapperInstruction};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -11,7 +11,7 @@ pub fn create_wrapper_instructions(
     owner: &Pubkey,
     wrapper_state: &Pubkey,
 ) -> Result<Vec<Instruction>, ProgramError> {
-    let space: usize = std::mem::size_of::<ManifestWrapperStateFixed>();
+    let space: usize = std::mem::size_of::<ManifestWrapperUserFixed>();
     Ok(vec![
         system_instruction::create_account(
             payer,

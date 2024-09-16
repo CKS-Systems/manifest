@@ -27,7 +27,7 @@ use solana_program::{
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperStateFixed,
+    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
@@ -103,7 +103,7 @@ pub(crate) fn process_place_order(
 
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
     let (_fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
+        wrapper_data.split_at(size_of::<ManifestWrapperUserFixed>());
 
     let market_info: MarketInfo =
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
@@ -214,7 +214,7 @@ pub(crate) fn process_place_order(
         expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
 
         let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
-        let wrapper: DynamicAccount<&mut ManifestWrapperStateFixed, &mut [u8]> =
+        let wrapper: DynamicAccount<&mut ManifestWrapperUserFixed, &mut [u8]> =
             get_mut_dynamic_account(&mut wrapper_data);
 
         let orders_root_index: DataIndex = {

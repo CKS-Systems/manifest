@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperStateFixed,
+    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperUserFixed,
 };
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
@@ -110,9 +110,9 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
 
 pub fn expand_wrapper(wrapper_data: &mut [u8]) {
     let (fixed_data, dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
+        wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
 
-    let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
+    let wrapper_fixed: &mut ManifestWrapperUserFixed = get_mut_helper(fixed_data, 0);
     let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
         FreeList::new(dynamic_data, wrapper_fixed.free_list_head_index);
 
@@ -123,18 +123,18 @@ pub fn expand_wrapper(wrapper_data: &mut [u8]) {
 
 fn does_need_expand(wrapper_state: &WrapperStateAccountInfo) -> bool {
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data().unwrap();
-    let (fixed_data, _dynamic_data) = wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
+    let (fixed_data, _dynamic_data) = wrapper_data.split_at(size_of::<ManifestWrapperUserFixed>());
 
-    let wrapper_fixed: &ManifestWrapperStateFixed = get_helper(fixed_data, 0);
+    let wrapper_fixed: &ManifestWrapperUserFixed = get_helper(fixed_data, 0);
     wrapper_fixed.free_list_head_index == NIL
 }
 
 pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &Pubkey) {
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let (header_bytes, _wrapper_dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
-    let header: &ManifestWrapperStateFixed =
-        get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
+        wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
+    let header: &ManifestWrapperUserFixed =
+        get_helper::<ManifestWrapperUserFixed>(header_bytes, 0_u32);
     assert_eq!(header.trader, *owner_key);
 }
 
@@ -148,7 +148,7 @@ pub(crate) fn sync_fast(
 
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data()?;
     let (fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
+        wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
 
     let market_info: &mut MarketInfo =
         get_mut_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index)
@@ -204,7 +204,7 @@ pub(crate) fn sync_fast(
         }
         orders_root_index = orders_tree.get_root_index();
 
-        let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
+        let wrapper_fixed: &mut ManifestWrapperUserFixed = get_mut_helper(fixed_data, 0);
         let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
             FreeList::new(wrapper_dynamic_data, wrapper_fixed.free_list_head_index);
         for open_order_index in to_remove_indices.iter() {
@@ -244,9 +244,9 @@ pub(crate) fn get_market_info_index_for_market(
 ) -> DataIndex {
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
     let (fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
+        wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
 
-    let wrapper_fixed: &ManifestWrapperStateFixed = get_helper(fixed_data, 0);
+    let wrapper_fixed: &ManifestWrapperUserFixed = get_helper(fixed_data, 0);
     let market_infos_tree: MarketInfosTree = MarketInfosTree::new(
         wrapper_dynamic_data,
         wrapper_fixed.market_infos_root_index,
@@ -271,7 +271,7 @@ pub type MarketInfosTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, MarketInfo>;
 pub type OpenOrdersTree<'a> = RedBlackTree<'a, WrapperOpenOrder>;
 pub type OpenOrdersTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, WrapperOpenOrder>;
 
-pub const WRAPPER_STATE_DISCRIMINANT: u64 = 1;
+pub const WRAPPER_USER_DISCRIMINANT: u64 = 1;
 
 impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     #[inline(always)]
@@ -292,12 +292,12 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let wrapper_state: WrapperStateAccountInfo<'a, 'info> = Self::_new_unchecked(info)?;
 
         let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
-        let header: &ManifestWrapperStateFixed =
-            get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
+        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperUserFixed>());
+        let header: &ManifestWrapperUserFixed =
+            get_helper::<ManifestWrapperUserFixed>(header_bytes, 0_u32);
 
         require!(
-            header.discriminant == WRAPPER_STATE_DISCRIMINANT,
+            header.discriminant == WRAPPER_USER_DISCRIMINANT,
             ProgramError::InvalidAccountData,
             "Invalid wrapper state discriminant",
         )?;
@@ -309,9 +309,9 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
         let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
-        let header: &ManifestWrapperStateFixed =
-            get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
+        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperUserFixed>());
+        let header: &ManifestWrapperUserFixed =
+            get_helper::<ManifestWrapperUserFixed>(header_bytes, 0_u32);
         require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
