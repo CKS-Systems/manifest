@@ -102,7 +102,7 @@ export const marketInfoBeet = new BeetArgsStruct<MarketInfoRaw>(
  */
 export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
   [
-    ['price', fixedSizeUint8Array(8)],
+    ['price', fixedSizeUint8Array(16)],
     ['clientOrderId', u64],
     ['orderSequenceNumber', u64],
     ['numBaseAtoms', u64],
