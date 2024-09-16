@@ -18,15 +18,18 @@ import {
 } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import WalletConnection from './WalletConnection';
 import { ManifestClient } from '@cks-systems/manifest-sdk';
 import { Connection } from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
 
-require('@solana/wallet-adapter-react-ui/styles.css');
 require('react-toastify/dist/ReactToastify.css');
+require('@solana/wallet-adapter-react-ui/styles.css');
 
 interface AppStateContextValue {
   loading: boolean;
@@ -111,7 +114,8 @@ const AppWalletProvider = ({
 
   const wallets = useMemo(() => {
     if (!network) return [];
-    return [new SolflareWalletAdapter({ network })];
+    return [
+    ];
   }, [network]);
 
   if (!network) {
@@ -130,7 +134,12 @@ const AppWalletProvider = ({
             <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 pointer-events-none">
               {network ? `connected to ${network}` : 'loading network...'}
             </div>
-            <ToastContainer />
+            <ToastContainer
+              position="bottom-right"
+              autoClose={15_000}
+              theme="dark"
+              pauseOnHover={true}
+            />
           </AppStateContext.Provider>
         </WalletModalProvider>
       </WalletProvider>

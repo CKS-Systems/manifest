@@ -24,12 +24,19 @@ const MyStatus = ({
 }: {
   marketAddress: string;
 }): ReactElement => {
-  const { connected, sendTransaction, publicKey: signerPub } = useWallet();
+  const {
+    connected,
+    sendTransaction,
+    signTransaction,
+    publicKey: signerPub,
+  } = useWallet();
   const { connection: conn } = useConnection();
   const { network } = useAppState();
 
   const [baseWalletBalance, setBaseWalletBalance] = useState<number>(0);
   const [quoteWalletBalance, setQuoteWalletBalance] = useState<number>(0);
+  const [baseMint, setBaseMint] = useState<string>('');
+  const [quoteMint, setQuoteMint] = useState<string>('');
   const [baseExchangeBalance, setBaseExchangeBalance] = useState<number>(0);
   const [quoteExchangeBalance, setQuoteExchangeBalance] = useState<number>(0);
   const [myBids, setMyBids] = useState<RestingOrder[]>([]);
@@ -79,7 +86,14 @@ const MyStatus = ({
       Number(amountTokens),
     );
     try {
-      const sig = await sendTransaction(new Transaction().add(depositIx), conn);
+      const tx = new Transaction().add(depositIx);
+      const { blockhash } = await conn.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = signerPub!;
+      console.log(signerPub?.toBase58());
+      const signedTx = await signTransaction!(tx);
+      console.log(signedTx);
+      const sig = await conn.sendRawTransaction(signedTx.serialize());
       console.log(`deposit: ${getSolscanSigUrl(sig, network)}`);
       toast.success(`deposit: ${getSolscanSigUrl(sig, network)}`);
     } catch (err) {
@@ -186,6 +200,9 @@ const MyStatus = ({
       const updateState = async (): Promise<void> => {
         const marketPub = new PublicKey(marketAddress);
         const market: Market = await fetchMarket(conn, marketPub);
+        setBaseMint(market.baseMint().toBase58());
+        setQuoteMint(market.quoteMint().toBase58());
+
         try {
           const baseBalance = await conn.getTokenAccountBalance(
             getAssociatedTokenAddressSync(market.baseMint(), signerPub),
@@ -193,7 +210,7 @@ const MyStatus = ({
           setBaseWalletBalance(baseBalance.value.uiAmount!);
         } catch (err) {
           console.log(err);
-          toast.error(`baseBalance: ${ensureError(err).message}`);
+          // don't notify since not having an ata would trigger spammy notifications...
         }
         try {
           const quoteBalance = await conn.getTokenAccountBalance(
@@ -202,7 +219,7 @@ const MyStatus = ({
           setQuoteWalletBalance(quoteBalance.value.uiAmount!);
         } catch (err) {
           console.log(err);
-          toast.error(`quoteBalance: ${ensureError(err).message}`);
+          // don't notify since not having an ata would trigger spammy notifications...
         }
 
         const signerAddr = signerPub.toBase58();
@@ -249,7 +266,11 @@ const MyStatus = ({
     <div className="flex min-h-screen flex-col items-center justify-evenly p-10">
       <div className="flex flex-col gap-6 text-gray-200">
         <pre className="bg-gray-800 p-4 rounded-lg text-sm">
-          <strong>Public Key:</strong> {signerPub?.toString()}
+          <strong>Wallet PublicKey:</strong> {signerPub?.toBase58()}
+          <br />
+          <strong>Base Mint PublicKey:</strong> {baseMint}
+          <br />
+          <strong>Quote Mint PublicKey:</strong> {quoteMint}
         </pre>
         <pre className="bg-gray-800 p-4 rounded-lg text-sm">
           <strong>Wallet Balances:</strong>

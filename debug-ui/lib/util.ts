@@ -29,7 +29,7 @@ export const setupClient = async (
   sendTransaction: SendTransaction,
   network: WalletAdapterNetwork | null = WalletAdapterNetwork.Devnet,
 ): Promise<ManifestClient> => {
-  if (!connected) {
+  if (!connected || !signerPub) {
     throw new Error('must be connected before setting up client');
   }
 

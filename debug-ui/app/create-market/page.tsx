@@ -20,9 +20,10 @@ import {
 import { ChangeEvent, ReactElement, useEffect, useState } from 'react';
 import { useAppState } from '../components/AppWalletProvider';
 import { withAccessControl } from '@/lib/withAccessControl';
-import { getSolscanSigUrl } from '@/lib/util';
+import { getSolscanSigUrl, sleep } from '@/lib/util';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
+import MintTo from '../components/MintTo';
 
 const CreateMarket = (): ReactElement => {
   const { connection: conn } = useConnection();
@@ -192,7 +193,11 @@ const CreateMarket = (): ReactElement => {
     const signedTx = await signTransaction!(tx);
     const sig = await conn.sendRawTransaction(signedTx.serialize());
 
-    console.log(`created market at ${marketAddr} in ${sig}`);
+    console.log(`createMarket: ${getSolscanSigUrl(sig, network)}`);
+    toast.success(`createMarket: ${getSolscanSigUrl(sig, network)}`);
+
+    // give on-chain state time to catch up
+    await sleep(5_000);
 
     setMarketAddrs([...marketAddrs, marketAddr]);
   };
@@ -225,7 +230,7 @@ const CreateMarket = (): ReactElement => {
         const pairs = await Promise.all(fetchPromises);
         setOccupiedPairs(pairs);
       } catch (e) {
-        console.error('error fetching market pairs');
+        console.error('error fetching market pairs', e);
         toast.error(`fetchmarketpairs: ${ensureError(e).message}`);
       }
     };
@@ -268,7 +273,6 @@ const CreateMarket = (): ReactElement => {
         )}
       </div>
 
-      {/* New section for creating a token mint */}
       <div className="w-full max-w-4xl bg-gray-800 p-8 rounded-lg shadow-lg text-center mt-10">
         <h2 className="text-3xl font-bold mb-6">Create Token Mint</h2>
 
@@ -311,7 +315,6 @@ const CreateMarket = (): ReactElement => {
         </button>
       </div>
 
-      {/* New section for creating a market */}
       <div className="w-full max-w-4xl bg-gray-800 p-8 rounded-lg shadow-lg text-center mt-10">
         <h2 className="text-3xl font-bold mb-6">Create Market</h2>
 
@@ -371,6 +374,8 @@ const CreateMarket = (): ReactElement => {
           </button>
         )}
       </div>
+
+      <MintTo />
     </main>
   );
 };

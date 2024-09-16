@@ -52,6 +52,7 @@ export function createClaimSeatInstruction(
   const [data] = ClaimSeatStruct.serialize({
     instructionDiscriminator: claimSeatInstructionDiscriminator,
   });
+
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.manifestProgram,
