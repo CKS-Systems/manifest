@@ -8,7 +8,7 @@ import { assert } from 'chai';
 import { placeOrder } from './placeOrder';
 import { MarketInfoParsed, Wrapper } from '../src';
 
-async function testPlaceOrder(): Promise<void> {
+async function testVolume(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
 
@@ -63,11 +63,12 @@ async function testPlaceOrder(): Promise<void> {
   });
   const marketInfoParsed: MarketInfoParsed =
     wrapper.marketInfoForMarket(marketAddress)!;
-  assert(marketInfoParsed.quoteVolumeAtoms == 5, 'quote volume on wrapper');
+  console.log('actual', marketInfoParsed.quoteVolumeAtoms);
+  assert(marketInfoParsed.quoteVolumeAtoms == 5_000_000_000, 'quote volume on wrapper');
 }
 
 describe('Volume test', () => {
   it('Volume', async () => {
-    await testPlaceOrder();
+    await testVolume();
   });
 });
