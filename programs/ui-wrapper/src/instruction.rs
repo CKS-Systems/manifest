@@ -8,15 +8,16 @@ use shank::ShankInstruction;
 pub enum ManifestWrapperInstruction {
     // Create a market is not needed for the wrapper
 
-    /// Create a wrapper for owner. Note that owner and payer are separate for
-    /// use as a PDA.
+    /// Create and initialize a wrapper for owner. Note that owner and payer
+    /// are separate to enable PDA owners.
     #[account(0, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(1, name = "system_program", desc = "System program")]
     #[account(2, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     #[account(3, writable, name = "wrapper_state", desc = "Wrapper state")]
     CreateWrapper = 0,
 
-    /// Allocate a seat. Also initializes this wrapper state
+    /// Allocate a seat on a given market, this adds a market info to the given
+    /// wrapper.
     #[account(0, name = "manifest_program", desc = "Manifest program")]
     #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "market", desc = "Account holding all market state")]
@@ -25,7 +26,9 @@ pub enum ManifestWrapperInstruction {
     #[account(5, writable, name = "wrapper_state", desc = "Wrapper state")]
     ClaimSeat = 1,
 
-    /// Place order, deposits additional funds needed
+    /// Place order, deposits additional funds needed.
+    /// Syncs both balances and open orders on the wrapper.
+    /// TODO: document return data
     #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
     #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
@@ -38,10 +41,13 @@ pub enum ManifestWrapperInstruction {
     #[account(9, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     PlaceOrder = 2,
 
-    /// Edit order, deposits additional funds needed. Not implemented yet
+    /// Edit order, deposits additional funds needed. TODO: Not implemented yet
     EditOrder = 3,
 
-    /// Cancel order
+    /// Cancel order, no funds are transferred, but token accounts are passed
+    /// writeable anyways as it cpis into manifest::BatchUpdate.
+    /// Syncs the wrapper balances but not open orders.
+    /// TODO: also sync open orders
     #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
     #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
@@ -53,7 +59,11 @@ pub enum ManifestWrapperInstruction {
     #[account(8, name = "manifest_program", desc = "Manifest program")]
     CancelOrder = 4,
 
-    /// Settle withdrawable funds
+    /// Settle withdrawable funds.
+    /// Syncs both balances and open orders on the wrapper.
+    /// Instruction also charges fees for UI platform and optional referral.
+    /// Execution fails if the user can not pay the full amount of fees owed
+    /// in quote currency.
     #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
     #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "trader_token_account_base", desc = "Trader base token account")]
