@@ -251,8 +251,8 @@ export class ManifestClient {
       payer,
     );
     const is22: boolean =
-      (mint == this.baseMint.address && this.isBase22) ||
-      (mint == this.baseMint.address && this.isBase22);
+      (mint.equals(this.baseMint.address) && this.isBase22) ||
+      (mint.equals(this.quoteMint.address) && this.isQuote22);
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
@@ -298,8 +298,8 @@ export class ManifestClient {
       payer,
     );
     const is22: boolean =
-      (mint == this.baseMint.address && this.isBase22) ||
-      (mint == this.baseMint.address && this.isBase22);
+      (mint.equals(this.baseMint.address) && this.isBase22) ||
+      (mint.equals(this.quoteMint.address) && this.isQuote22);
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()

@@ -39,8 +39,10 @@ pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 
 /// Limit on the number of global seats available. Set so that this is hit
 /// before the global account starts running into account size limits, but is
-/// generous enough that it really should only matter in deterring spam.
-/// Sized to fit in 4 pages.
+/// generous enough that it really should only matter in deterring spam.  Sized
+/// to fit in 4 pages. This is sufficiently big such that it is not possible to
+/// fully evict all seats in one flash loan transaction due to the withdraw
+/// accounts limit.
 #[cfg(test)]
 pub const MAX_GLOBAL_SEATS: u16 = 4;
 #[cfg(not(test))]
