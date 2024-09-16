@@ -442,11 +442,7 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
     test_fixture.market.reload().await;
     let trader_index = test_fixture.market.market.get_trader_index(&payer);
 
-    let asks = test_fixture.market.market.get_asks();
-    asks.debug_print::<RestingOrder>();
-
     let bids = test_fixture.market.market.get_bids();
-    bids.debug_print::<RestingOrder>();
     let found: Option<(DataIndex, &RestingOrder)> = bids
         .iter::<RestingOrder>()
         .find(|(_, o)| o.get_trader_index() == trader_index);
