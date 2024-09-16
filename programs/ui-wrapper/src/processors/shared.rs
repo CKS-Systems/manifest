@@ -138,15 +138,6 @@ pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &
     assert_eq!(header.trader, *owner_key);
 }
 
-pub(crate) fn sync(
-    wrapper_state: &WrapperStateAccountInfo,
-    market: &ManifestAccountInfo<MarketFixed>,
-) -> ProgramResult {
-    let market_info_index: DataIndex =
-        get_market_info_index_for_market(wrapper_state, market.info.key);
-    sync_fast(wrapper_state, market, market_info_index)
-}
-
 pub(crate) fn sync_fast(
     wrapper_state: &WrapperStateAccountInfo,
     market: &ManifestAccountInfo<MarketFixed>,

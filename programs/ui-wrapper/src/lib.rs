@@ -34,7 +34,7 @@ security_txt! {
     auditors: ""
 }
 
-declare_id!("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL");
+declare_id!("UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh");
 
 #[cfg(not(feature = "no-entrypoint"))]
 solana_program::entrypoint!(process_instruction);

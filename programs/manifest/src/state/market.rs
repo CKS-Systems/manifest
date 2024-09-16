@@ -438,7 +438,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         }
     }
 
-    pub fn expand_unchecked(&mut self) -> ProgramResult {
+    pub fn market_expand(&mut self) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
         let mut free_list: FreeList<MarketUnusedFreeListPadding> =
             FreeList::new(dynamic, fixed.free_list_head_index);
@@ -446,18 +446,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         free_list.add(fixed.num_bytes_allocated);
         fixed.num_bytes_allocated += MARKET_BLOCK_SIZE as u32;
         fixed.free_list_head_index = free_list.get_head();
-        Ok(())
-    }
-
-    pub fn market_expand(&mut self) -> ProgramResult {
-        let DynamicAccount { fixed, .. } = self.borrow_mut();
-
-        // require!(
-        //     fixed.free_list_head_index == NIL,
-        //     ManifestError::InvalidFreeList,
-        //     "Expected empty free list, but expand wasnt needed",
-        // )?;
-        self.expand_unchecked()?;
         Ok(())
     }
 

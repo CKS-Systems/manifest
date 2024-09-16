@@ -64,7 +64,6 @@ pub(crate) fn process_settle_funds(
     let token_program_quote: &AccountInfo = next_account_info(account_iter)?;
     let manifest_program: Program =
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
-    let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
     let platform_token_account: &AccountInfo = next_account_info(account_iter)?;
     let referrer_token_account: Result<&AccountInfo, ProgramError> =
         next_account_info(account_iter);
