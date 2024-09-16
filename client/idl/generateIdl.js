@@ -287,18 +287,6 @@ function modifyIdlCore(programName) {
       }
     }
   } else if (programName == 'wrapper') {
-    // // Solita does not support f64
-    // // https://github.com/metaplex-foundation/beet/issues/48
-    // for (const idlType of idl.types) {
-    //   if (idlType.type && idlType.type.fields) {
-    //     idlType.type.fields = idlType.type.fields.map((field) => {
-    //       if (field.name == 'price') {
-    //         field.type = 'FixedSizeUint8Array';
-    //       }
-    //       return field;
-    //     });
-    //   }
-    // }
     idl.types.push({
       name: 'DepositParams',
       type: {
