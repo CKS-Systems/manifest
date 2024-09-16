@@ -1,9 +1,7 @@
 import {
   Connection,
   Keypair,
-  sendAndConfirmTransaction,
   PublicKey,
-  Transaction,
 } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
 import { OrderType } from '../src/manifest/types';
@@ -25,7 +23,13 @@ async function testPlaceOrder(): Promise<void> {
   });
 
   await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
-  await deposit(connection, payerKeypair, marketAddress, market.quoteMint(), 10);
+  await deposit(
+    connection,
+    payerKeypair,
+    marketAddress,
+    market.quoteMint(),
+    10,
+  );
   await placeOrder(
     connection,
     payerKeypair,
@@ -49,7 +53,6 @@ async function testPlaceOrder(): Promise<void> {
 
   await market.reload(connection);
 
-
   const client: ManifestClient = await ManifestClient.getClientForMarket(
     connection,
     marketAddress,
@@ -62,7 +65,8 @@ async function testPlaceOrder(): Promise<void> {
     connection,
     address: client.wrapper.address,
   });
-  const marketInfoParsed: MarketInfoParsed = wrapper.marketInfoForMarket(marketAddress)!;
+  const marketInfoParsed: MarketInfoParsed =
+    wrapper.marketInfoForMarket(marketAddress)!;
   assert(marketInfoParsed.quoteVolumeAtoms == 5, 'quote volume on wrapper');
 }
 
