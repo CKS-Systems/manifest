@@ -201,6 +201,15 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'GlobalEvict': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalEvictParams',
+            },
+          });
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');
