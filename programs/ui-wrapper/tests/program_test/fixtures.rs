@@ -381,6 +381,7 @@ impl WrapperFixture {
     }
 }
 
+// TODO: share below utilities with other test runners
 #[derive(Clone)]
 pub struct MintFixture {
     pub context: Rc<RefCell<ProgramTestContext>>,
