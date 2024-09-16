@@ -66,8 +66,8 @@ async function testPlaceOrder(): Promise<void> {
   assert(marketInfoParsed.quoteVolumeAtoms == 5, 'quote volume on wrapper');
 }
 
-describe('Place Order test', () => {
-  it('Place Order', async () => {
+describe('Volume test', () => {
+  it('Volume', async () => {
     await testPlaceOrder();
   });
 });
