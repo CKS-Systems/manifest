@@ -13,6 +13,7 @@ import {
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { MarketInfoRaw, OpenOrderInternal } from '../wrapperObj';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
+import { GlobalSeat } from '../global';
 
 type PubkeyWrapper = {
   publicKey: PublicKey;
@@ -112,4 +113,18 @@ export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
     ['padding', uniformFixedSizeArray(u8, 26)],
   ],
   'OpenOrder',
+);
+
+/**
+ * GlobalSeat deserializer.
+ *
+ * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/global.rs
+ */
+export const globalSeatBeet = new BeetArgsStruct<GlobalSeat>(
+  [
+    ['trader', beetPublicKey],
+    ['tokenBalance', u64],
+    ['unclaimedGasBalance', u32],
+  ],
+  'globalSeat',
 );
