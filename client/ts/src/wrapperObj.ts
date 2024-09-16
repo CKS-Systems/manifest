@@ -26,6 +26,8 @@ export interface MarketInfoParsed {
   baseBalanceAtoms: bignum;
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
+  /** Quote volume in atoms. */
+  quoteVolumeAtoms: bignum;
   /** Open orders. */
   orders: OpenOrder[];
   /** Last update slot number. */
@@ -41,6 +43,7 @@ export interface MarketInfoRaw {
   traderIndex: number;
   baseBalanceAtoms: bignum;
   quoteBalanceAtoms: bignum;
+  quoteVolumeAtoms: bignum;
   lastUpdatedSlot: number;
   padding: number; // 4 bytes
 }
@@ -287,6 +290,7 @@ export class Wrapper {
           market: marketInfoRaw.market,
           baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
           quoteBalanceAtoms: marketInfoRaw.quoteBalanceAtoms,
+          quoteVolumeAtoms: marketInfoRaw.quoteVolumeAtoms,
           orders: parsedOpenOrdersWithPrice,
           lastUpdatedSlot: marketInfoRaw.lastUpdatedSlot,
         };

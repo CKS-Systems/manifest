@@ -88,6 +88,7 @@ export const marketInfoBeet = new BeetArgsStruct<MarketInfoRaw>(
     ['traderIndex', u32],
     ['baseBalanceAtoms', u64],
     ['quoteBalanceAtoms', u64],
+    ['quoteVolumeAtoms', u64],
     ['lastUpdatedSlot', u32],
     ['padding', u32],
   ],
