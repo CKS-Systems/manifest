@@ -14,7 +14,7 @@ pub enum ManifestWrapperInstruction {
     #[account(1, name = "system_program", desc = "System program")]
     #[account(2, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     #[account(3, writable, name = "wrapper_state", desc = "Wrapper state")]
-    CreateWrapper= 0,
+    CreateWrapper = 0,
 
     /// Allocate a seat. Also initializes this wrapper state
     #[account(0, name = "manifest_program", desc = "Manifest program")]
@@ -26,44 +26,50 @@ pub enum ManifestWrapperInstruction {
     ClaimSeat = 1,
 
     /// Place order, deposits additional funds needed
-    #[account(0, name = "manifest_program", desc = "Manifest program")]
-    #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
-    #[account(3, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
-    #[account(4, writable, name = "market", desc = "Account holding all market state")]
-    #[account(5, name = "system_program", desc = "System program")]
-    #[account(6, writable, signer, name = "payer", desc = "Payer of rent and gas")]
-    #[account(7, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(3, writable, name = "market", desc = "Account holding all market state")]
+    #[account(4, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(5, writable, name = "mint", desc = "Mint of trader token account")]
+    #[account(6, name = "system_program", desc = "System program")]
+    #[account(7, name = "token_program", desc = "Token program owning trader token account")]
+    #[account(8, name = "manifest_program", desc = "Manifest program")]
+    #[account(9, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     PlaceOrder = 2,
 
-    /// Edit order, deposits additional funds needed
-    #[account(0, name = "manifest_program", desc = "Manifest program")]
-    #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
-    #[account(2, writable, name = "market", desc = "Account holding all market state")]
-    #[account(3, name = "system_program", desc = "System program")]
-    #[account(4, writable, signer, name = "payer", desc = "Payer of rent and gas")]
-    #[account(5, writable, name = "wrapper_state", desc = "Wrapper state")]
-    #[account(6, writable, name = "trader_token_account", desc = "Trader token account")]
-    #[account(7, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    /// Edit order, deposits additional funds needed. Not implemented yet
     EditOrder = 3,
 
     /// Cancel order
-
     #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
     #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
-    #[account(2, writable, name = "market", desc = "Account holding all market state")]
-    #[account(3, name = "manifest_program", desc = "Manifest program")]
+    #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
+    #[account(3, writable, name = "market", desc = "Account holding all market state")]
+    #[account(4, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(5, writable, name = "mint", desc = "Mint of trader token account")]
+    #[account(6, name = "system_program", desc = "System program")]
+    #[account(7, name = "token_program", desc = "Token program owning trader token account")]
+    #[account(8, name = "manifest_program", desc = "Manifest program")]
     CancelOrder = 4,
 
     /// Settle withdrawable funds
-    #[account(0, name = "manifest_program", desc = "Manifest program")]
-    #[account(1, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
-    #[account(2, writable, name = "market", desc = "Account holding all market state")]
-    #[account(3, name = "system_program", desc = "System program")]
-    #[account(4, writable, signer, name = "payer", desc = "Payer of rent and gas")]
-    #[account(5, writable, name = "wrapper_state", desc = "Wrapper state")]
-    #[account(6, writable, name = "trader_token_account", desc = "Trader token account")]
-    #[account(7, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(2, writable, name = "trader_token_account_base", desc = "Trader base token account")]
+    #[account(3, writable, name = "trader_token_account_quote", desc = "Trader quote token account")]
+    #[account(4, writable, name = "market", desc = "Account holding all market state")]
+    #[account(5, writable, name = "vault_base", desc = "Base currency vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(6, writable, name = "vault_quote", desc = "Quote currency vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(7, writable, name = "mint_base", desc = "Mint of trader base token account")]
+    #[account(8, writable, name = "mint_quote", desc = "Mint of trader quote token account")]
+    #[account(9, name = "executor_program", desc = "Executor program")]
+    #[account(10, name = "token_program_base", desc = "Token program for base token")]
+    #[account(11, name = "token_program_quote", desc = "Token program for quote token")]
+    #[account(12, name = "manifest_program", desc = "Manifest program")]
+    #[account(13, writable, name = "platform_token_account", desc = "Platform fee token account")]
+    // optional
+    #[account(14, writable, name = "referrer_token_account", desc = "Referrer fee token account")]
     SettleFunds = 5,
 }
 
