@@ -64,11 +64,9 @@ async function testVolume(): Promise<void> {
   const marketInfoParsed: MarketInfoParsed =
     wrapper.marketInfoForMarket(marketAddress)!;
 
-    console.log(marketInfoParsed.quoteVolumeAtoms);
-    console.log(Number(marketInfoParsed.quoteVolumeAtoms));
   // 2 because self trade.
   assert(
-    marketInfoParsed.quoteVolumeAtoms == 2_000_000_000,
+    Number(marketInfoParsed.quoteVolumeAtoms) == 2_000_000_000,
     'quote volume on wrapper',
   );
 }
