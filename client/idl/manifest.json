@@ -170,14 +170,7 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "DepositParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 2
@@ -235,14 +228,7 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "WithdrawParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 3
@@ -350,14 +336,7 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "SwapParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 4
@@ -505,14 +484,7 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "BatchUpdateParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 6
@@ -662,14 +634,7 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalDepositParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 9
@@ -727,17 +692,76 @@
           ]
         }
       ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalWithdrawParams"
-          }
-        }
-      ],
+      "args": [],
       "discriminant": {
         "type": "u8",
         "value": 10
+      }
+    },
+    {
+      "name": "GlobalEvict",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint for this global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global vault"
+          ]
+        },
+        {
+          "name": "traderToken",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "evicteeToken",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Evictee token account"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22)"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
       }
     }
   ],
@@ -859,7 +883,9 @@
           },
           {
             "name": "takerIsBuy",
-            "type": "bool"
+            "type": {
+              "defined": "PodBool"
+            }
           },
           {
             "name": "padding",
@@ -918,7 +944,9 @@
           },
           {
             "name": "isBid",
-            "type": "bool"
+            "type": {
+              "defined": "PodBool"
+            }
           },
           {
             "name": "padding",
@@ -1049,6 +1077,34 @@
       }
     },
     {
+      "name": "GlobalEvictLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "evictor",
+            "type": "publicKey"
+          },
+          {
+            "name": "evictee",
+            "type": "publicKey"
+          },
+          {
+            "name": "evictorAtoms",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          },
+          {
+            "name": "evicteeAtoms",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "QuoteAtoms",
       "type": {
         "kind": "struct",
@@ -1091,7 +1147,12 @@
         "fields": [
           {
             "name": "inner",
-            "type": "u128"
+            "type": {
+              "array": [
+                "u64",
+                2
+              ]
+            }
           }
         ]
       }
@@ -1110,7 +1171,9 @@
           {
             "name": "orderIndexHint",
             "type": {
-              "option": "u32"
+              "option": {
+                "defined": "DataIndex"
+              }
             }
           }
         ]
@@ -1158,7 +1221,9 @@
           {
             "name": "traderIndexHint",
             "type": {
-              "option": "u32"
+              "option": {
+                "defined": "DataIndex"
+              }
             }
           },
           {
@@ -1191,7 +1256,9 @@
               "vec": {
                 "tuple": [
                   "u64",
-                  "u32"
+                  {
+                    "defined": "DataIndex"
+                  }
                 ]
               }
             }
@@ -1213,6 +1280,18 @@
     },
     {
       "name": "GlobalDepositParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalEvictParams",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1387,402 +1466,20 @@
       "code": 18,
       "name": "InvalidMint",
       "msg": "Mint not allowed for market"
+    },
+    {
+      "code": 19,
+      "name": "TooManyGlobalSeats",
+      "msg": "Cannot claim a new global seat, use evict"
+    },
+    {
+      "code": 20,
+      "name": "InvalidEvict",
+      "msg": "Can only evict the lowest depositor"
     }
   ],
   "metadata": {
     "origin": "shank",
     "address": "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"
-  },
-  "events": [
-    {
-      "name": "CreateMarketLog",
-      "discriminator": [
-        33,
-        31,
-        11,
-        6,
-        133,
-        143,
-        39,
-        71
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "creator",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "ClaimSeatLog",
-      "discriminator": [
-        129,
-        77,
-        152,
-        210,
-        218,
-        144,
-        163,
-        56
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "DepositLog",
-      "discriminator": [
-        23,
-        214,
-        24,
-        34,
-        52,
-        104,
-        109,
-        188
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "mint",
-          "type": "publicKey"
-        },
-        {
-          "name": "amountAtoms",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "WithdrawLog",
-      "discriminator": [
-        112,
-        218,
-        111,
-        63,
-        18,
-        95,
-        136,
-        35
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "mint",
-          "type": "publicKey"
-        },
-        {
-          "name": "amountAtoms",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "FillLog",
-      "discriminator": [
-        58,
-        230,
-        242,
-        3,
-        75,
-        113,
-        4,
-        169
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "maker",
-          "type": "publicKey"
-        },
-        {
-          "name": "taker",
-          "type": "publicKey"
-        },
-        {
-          "name": "price",
-          "type": {
-            "defined": "QuoteAtomsPerBaseAtom"
-          }
-        },
-        {
-          "name": "baseAtoms",
-          "type": {
-            "defined": "BaseAtoms"
-          }
-        },
-        {
-          "name": "quoteAtoms",
-          "type": {
-            "defined": "QuoteAtoms"
-          }
-        },
-        {
-          "name": "takerIsBuy",
-          "type": "bool"
-        },
-        {
-          "name": "padding",
-          "type": {
-            "array": [
-              "u8",
-              15
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "PlaceOrderLog",
-      "discriminator": [
-        157,
-        118,
-        247,
-        213,
-        47,
-        19,
-        164,
-        120
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "price",
-          "type": {
-            "defined": "QuoteAtomsPerBaseAtom"
-          }
-        },
-        {
-          "name": "baseAtoms",
-          "type": {
-            "defined": "BaseAtoms"
-          }
-        },
-        {
-          "name": "orderSequenceNumber",
-          "type": "u64"
-        },
-        {
-          "name": "orderIndex",
-          "type": "u32"
-        },
-        {
-          "name": "lastValidSlot",
-          "type": "u32"
-        },
-        {
-          "name": "orderType",
-          "type": {
-            "defined": "OrderType"
-          }
-        },
-        {
-          "name": "isBid",
-          "type": "bool"
-        },
-        {
-          "name": "padding",
-          "type": {
-            "array": [
-              "u8",
-              6
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "CancelOrderLog",
-      "discriminator": [
-        22,
-        65,
-        71,
-        33,
-        244,
-        235,
-        255,
-        215
-      ],
-      "fields": [
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "orderSequenceNumber",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "GlobalCreateLog",
-      "discriminator": [
-        188,
-        25,
-        199,
-        77,
-        26,
-        15,
-        142,
-        193
-      ],
-      "fields": [
-        {
-          "name": "global",
-          "type": "publicKey"
-        },
-        {
-          "name": "creator",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "GlobalAddTraderLog",
-      "discriminator": [
-        129,
-        246,
-        90,
-        94,
-        87,
-        186,
-        242,
-        7
-      ],
-      "fields": [
-        {
-          "name": "global",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "GlobalClaimSeatLog",
-      "discriminator": [
-        164,
-        46,
-        227,
-        175,
-        3,
-        143,
-        73,
-        86
-      ],
-      "fields": [
-        {
-          "name": "global",
-          "type": "publicKey"
-        },
-        {
-          "name": "market",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "GlobalDepositLog",
-      "discriminator": [
-        16,
-        26,
-        72,
-        1,
-        145,
-        232,
-        182,
-        71
-      ],
-      "fields": [
-        {
-          "name": "global",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "globalAtoms",
-          "type": {
-            "defined": "GlobalAtoms"
-          }
-        }
-      ]
-    },
-    {
-      "name": "GlobalWithdrawLog",
-      "discriminator": [
-        206,
-        118,
-        67,
-        64,
-        124,
-        109,
-        157,
-        201
-      ],
-      "fields": [
-        {
-          "name": "global",
-          "type": "publicKey"
-        },
-        {
-          "name": "trader",
-          "type": "publicKey"
-        },
-        {
-          "name": "globalAtoms",
-          "type": {
-            "defined": "GlobalAtoms"
-          }
-        }
-      ]
-    }
-  ]
+  }
 }

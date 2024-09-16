@@ -61,7 +61,7 @@ export interface OpenOrder {
   /** Number of base atoms in the order. */
   numBaseAtoms: bignum;
   /** Hint for the location of the order in the manifest dynamic data. */
-  dataIndex: number;
+  marketDataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
   lastValidSlot: number;
   /** Boolean for whether this order is on the bid side. */
@@ -75,11 +75,11 @@ export interface OpenOrderInternal {
   orderSequenceNumber: bignum;
   price: Uint8Array;
   numBaseAtoms: bignum;
-  dataIndex: number;
+  marketDataIndex: number;
   lastValidSlot: number;
   isBid: boolean;
   orderType: number;
-  padding: bignum[]; // 22 bytes
+  padding: bignum[]; // 30 bytes
 }
 
 /**

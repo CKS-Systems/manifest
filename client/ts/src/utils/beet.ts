@@ -102,15 +102,15 @@ export const marketInfoBeet = new BeetArgsStruct<MarketInfoRaw>(
  */
 export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
   [
+    ['price', fixedSizeUint8Array(8)],
     ['clientOrderId', u64],
     ['orderSequenceNumber', u64],
-    ['price', fixedSizeUint8Array(8)],
     ['numBaseAtoms', u64],
-    ['dataIndex', u32],
+    ['marketDataIndex', u32],
     ['lastValidSlot', u32],
     ['isBid', u8],
     ['orderType', u8],
-    ['padding', uniformFixedSizeArray(u8, 26)],
+    ['padding', uniformFixedSizeArray(u8, 30)],
   ],
   'OpenOrder',
 );
