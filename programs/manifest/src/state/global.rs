@@ -400,7 +400,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         existing_trader: &Pubkey,
         new_trader: &Pubkey,
     ) -> ProgramResult {
-        // TODO: Make this expensive so it cannot be composed and used in attacks where bumping.
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
         let existing_global_trader_opt: Option<&GlobalTrader> =
