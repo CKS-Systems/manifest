@@ -2,8 +2,7 @@ use std::{rc::Rc, str::FromStr};
 
 use borsh::BorshSerialize;
 use hypertree::{
-    get_helper, DataIndex, HyperTreeReadOperations, HyperTreeValueIteratorTrait, RBNode,
-    RedBlackTreeTestHelpers, NIL,
+    get_helper, DataIndex, HyperTreeReadOperations, HyperTreeValueIteratorTrait, RBNode, NIL,
 };
 use manifest::{
     quantities::QuoteAtomsPerBaseAtom,
@@ -98,11 +97,7 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
     test_fixture.market.reload().await;
     let trader_index = test_fixture.market.market.get_trader_index(&payer);
 
-    let asks = test_fixture.market.market.get_asks();
-    asks.debug_print::<RestingOrder>();
-
     let bids = test_fixture.market.market.get_bids();
-    bids.debug_print::<RestingOrder>();
     let found: Option<(DataIndex, &RestingOrder)> = bids
         .iter::<RestingOrder>()
         .find(|(_, o)| o.get_trader_index() == trader_index);
@@ -179,12 +174,7 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
     // verify order is no longer on book
     test_fixture.market.reload().await;
     let trader_index = test_fixture.market.market.get_trader_index(&payer);
-
-    let asks = test_fixture.market.market.get_asks();
-    asks.debug_print::<RestingOrder>();
-
     let bids = test_fixture.market.market.get_bids();
-    bids.debug_print::<RestingOrder>();
     let found: Option<(DataIndex, &RestingOrder)> = bids
         .iter::<RestingOrder>()
         .find(|(_, o)| o.get_trader_index() == trader_index);
@@ -376,12 +366,7 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
     // verify order is on book
     test_fixture.market.reload().await;
     let trader_index = test_fixture.market.market.get_trader_index(&owner);
-
-    let asks = test_fixture.market.market.get_asks();
-    asks.debug_print::<RestingOrder>();
-
     let bids = test_fixture.market.market.get_bids();
-    bids.debug_print::<RestingOrder>();
     let found: Option<(DataIndex, &RestingOrder)> = bids
         .iter::<RestingOrder>()
         .find(|(_, o)| o.get_trader_index() == trader_index);
@@ -657,11 +642,7 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
     test_fixture.market.reload().await;
     let maker_index = test_fixture.market.market.get_trader_index(&maker);
 
-    let asks = test_fixture.market.market.get_asks();
-    asks.debug_print::<RestingOrder>();
-
     let bids = test_fixture.market.market.get_bids();
-    bids.debug_print::<RestingOrder>();
     let found: Option<(DataIndex, &RestingOrder)> = bids
         .iter::<RestingOrder>()
         .find(|(_, o)| o.get_trader_index() == maker_index);
