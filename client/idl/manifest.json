@@ -739,6 +739,72 @@
         "type": "u8",
         "value": 10
       }
+    },
+    {
+      "name": "GlobalEvict",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint for this global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global vault"
+          ]
+        },
+        {
+          "name": "traderToken",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "evicteeToken",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Evictee token account"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22)"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
     }
   ],
   "accounts": [
@@ -1049,6 +1115,34 @@
       }
     },
     {
+      "name": "GlobalEvictLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "evictor",
+            "type": "publicKey"
+          },
+          {
+            "name": "evictee",
+            "type": "publicKey"
+          },
+          {
+            "name": "evictorAtoms",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          },
+          {
+            "name": "evicteeAtoms",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "QuoteAtoms",
       "type": {
         "kind": "struct",
@@ -1224,6 +1318,18 @@
       }
     },
     {
+      "name": "GlobalEvictParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "GlobalWithdrawParams",
       "type": {
         "kind": "struct",
@@ -1387,6 +1493,16 @@
       "code": 18,
       "name": "InvalidMint",
       "msg": "Mint not allowed for market"
+    },
+    {
+      "code": 19,
+      "name": "TooManyGlobalSeats",
+      "msg": "Cannot claim a new global seat, use evict"
+    },
+    {
+      "code": 20,
+      "name": "InvalidEvict",
+      "msg": "Can only evict the lowest depositor"
     }
   ],
   "metadata": {
@@ -1778,6 +1894,41 @@
         },
         {
           "name": "globalAtoms",
+          "type": {
+            "defined": "GlobalAtoms"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GlobalEvictLog",
+      "discriminator": [
+        250,
+        180,
+        155,
+        38,
+        98,
+        223,
+        82,
+        223
+      ],
+      "fields": [
+        {
+          "name": "evictor",
+          "type": "publicKey"
+        },
+        {
+          "name": "evictee",
+          "type": "publicKey"
+        },
+        {
+          "name": "evictorAtoms",
+          "type": {
+            "defined": "GlobalAtoms"
+          }
+        },
+        {
+          "name": "evicteeAtoms",
           "type": {
             "defined": "GlobalAtoms"
           }
