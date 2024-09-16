@@ -63,8 +63,11 @@ async function testVolume(): Promise<void> {
   });
   const marketInfoParsed: MarketInfoParsed =
     wrapper.marketInfoForMarket(marketAddress)!;
-  console.log('actual', marketInfoParsed.quoteVolumeAtoms);
-  assert(marketInfoParsed.quoteVolumeAtoms == 5_000_000_000, 'quote volume on wrapper');
+  console.log('actual', marketInfoParsed.quoteVolumeAtom.toNumber(), smarketInfoParsed.quoteVolumeAtoms);
+  assert(
+    marketInfoParsed.quoteVolumeAtoms == 5_000_000_000,
+    'quote volume on wrapper',
+  );
 }
 
 describe('Volume test', () => {
