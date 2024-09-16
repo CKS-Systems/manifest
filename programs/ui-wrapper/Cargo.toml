@@ -14,7 +14,7 @@ name = "ui_wrapper"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
-default = [ "trace" ]
+default = []
 trace = [ "hypertree/fuzz", "hypertree/trace", "manifest/trace" ]
 test = []
 
