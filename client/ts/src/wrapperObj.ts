@@ -268,7 +268,7 @@ export class Wrapper {
         : [];
 
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
-      (marketInfoRaw: MarketInfoRaw, i: number) => {
+      (marketInfoRaw: MarketInfoRaw) => {
         const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
         const parsedOpenOrders: OpenOrderInternal[] =
           rootIndex != NIL

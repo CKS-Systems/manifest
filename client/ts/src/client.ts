@@ -7,7 +7,6 @@ import {
   SystemProgram,
   Transaction,
   sendAndConfirmTransaction,
-  GetProgramAccountsResponse,
   AccountInfo,
   TransactionSignature,
 } from '@solana/web3.js';
