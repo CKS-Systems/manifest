@@ -88,7 +88,7 @@ const AppWalletProvider = ({
         const detectedNetwork = determineNetworkFromRpcUrl(rpcUrl);
         setNetwork(detectedNetwork);
 
-        const conn = new Connection(rpcUrl);
+        const conn = new Connection(rpcUrl, "confirmed");
         const marketPubs = await ManifestClient.listMarketPublicKeys(conn);
         const marketAddrs = marketPubs.map((p) => p.toBase58());
         const filteredAddrs = marketAddrs.filter(

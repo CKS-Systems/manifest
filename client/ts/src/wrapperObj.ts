@@ -137,7 +137,7 @@ export class Wrapper {
     address: PublicKey;
   }): Promise<Wrapper> {
     const buffer = await connection
-      .getAccountInfo(address, 'confirmed')
+      .getAccountInfo(address)
       .then((accountInfo) => accountInfo?.data);
 
     if (buffer === undefined) {
@@ -153,7 +153,7 @@ export class Wrapper {
    */
   public async reload(connection: Connection): Promise<void> {
     const buffer = await connection
-      .getAccountInfo(this.address, 'confirmed')
+      .getAccountInfo(this.address)
       .then((accountInfo) => accountInfo?.data);
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);

@@ -158,7 +158,6 @@ class DummyTrader {
       (
         await this.connection.getTokenAccountBalance(
           traderTokenAccount,
-          'finalized',
         )
       ).value.uiAmount,
     );
@@ -177,7 +176,6 @@ class DummyTrader {
         new Transaction().add(depositIx),
         [this.keypair],
         {
-          commitment: 'finalized',
           skipPreflight: true,
         },
       );
@@ -225,7 +223,6 @@ class DummyTrader {
         new Transaction().add(withdrawIx),
         [this.keypair],
         {
-          commitment: 'finalized',
           skipPreflight: true,
         },
       );
@@ -262,7 +259,6 @@ class DummyTrader {
       new Transaction().add(cancelOrderIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -324,7 +320,6 @@ class DummyTrader {
       new Transaction().add(placeOrderIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -353,7 +348,6 @@ class DummyTrader {
       (
         await this.connection.getTokenAccountBalance(
           traderTokenAccount,
-          'finalized',
         )
       ).value.uiAmount,
     );
@@ -387,7 +381,6 @@ class DummyTrader {
       new Transaction().add(swapIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -471,16 +464,13 @@ async function createMarket(
     connection,
     tx,
     [keypair, marketKeypair],
-    {
-      commitment: 'finalized',
-    },
   );
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
   return marketKeypair.publicKey;
 }
 
 async function main() {
-  const connection: Connection = new Connection(RPC_URL as string);
+  const connection: Connection = new Connection(RPC_URL as string, "confirmed");
 
   const creatorKeypair: Keypair = process.env.MARKET_CREATOR_PRIVATE_KEY
     ? Keypair.fromSecretKey(

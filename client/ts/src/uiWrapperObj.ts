@@ -143,7 +143,7 @@ export class UiWrapper {
    */
   public async reload(connection: Connection): Promise<void> {
     const buffer = await connection
-      .getAccountInfo(this.address, 'confirmed')
+      .getAccountInfo(this.address)
       .then((accountInfo) => accountInfo?.data);
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
