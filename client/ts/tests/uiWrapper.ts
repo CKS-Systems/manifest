@@ -12,23 +12,19 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import { OpenOrder, Wrapper } from '../src/wrapperObj';
+import { OpenOrder } from '../src/wrapperObj';
 import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
 import {
   PROGRAM_ID,
-  OrderType,
   createCreateWrapperInstruction,
   createClaimSeatInstruction,
-  createPlaceOrderInstruction,
 } from '../src/ui_wrapper';
 import { UiWrapper } from '../src/uiWrapperObj';
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
   createMintToInstruction,
   getAssociatedTokenAddressSync,
-  mintTo,
 } from '@solana/spl-token';
 
 type WrapperResponse = Readonly<{
