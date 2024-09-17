@@ -723,7 +723,7 @@ mod test {
             ),
             token_program_opt: Some(TokenProgram::new(&token_program_account_info).unwrap()),
             system_program: None,
-            gas_payer_opt: None,
+            gas_payer_opt: Some(Signer::new(&trader_account_info).unwrap()),
             gas_receiver_opt: Some(Signer::new(&trader_account_info).unwrap()),
             market: market_key.clone(),
         };
