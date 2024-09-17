@@ -52,18 +52,29 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">pub type </span>DataIndex = u32;
 
+<span class="doccomment">/// Marker trait to emit warnings when using get_helper on the Value type
+/// rather than on Node&lt;Value&gt;
+</span><span class="kw">pub trait </span>Get: bytemuck::Pod {}
+
 <span class="doccomment">/// Read a struct of type T in an array of data at a given index.
-</span><span class="kw">pub fn </span>get_helper&lt;T: bytemuck::Pod&gt;(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>T {
+</span><span class="kw">pub fn </span>get_helper&lt;T: Get&gt;(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>T {
     <span class="kw">let </span>index_usize: usize = index <span class="kw">as </span>usize;
     bytemuck::from_bytes(<span class="kw-2">&amp;</span>data[index_usize..index_usize + size_of::&lt;T&gt;()])
 }
 
 <span class="doccomment">/// Read a struct of type T in an array of data at a given index.
-</span><span class="kw">pub fn </span>get_mut_helper&lt;T: bytemuck::Pod&gt;(data: <span class="kw-2">&amp;mut </span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;mut </span>T {
+</span><span class="kw">pub fn </span>get_mut_helper&lt;T: Get&gt;(data: <span class="kw-2">&amp;mut </span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;mut </span>T {
     <span class="kw">let </span>index_usize: usize = index <span class="kw">as </span>usize;
     bytemuck::from_bytes_mut(<span class="kw-2">&amp;mut </span>data[index_usize..index_usize + size_of::&lt;T&gt;()])
 }
@@ -93,15 +104,18 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> trace {
-  ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {
-      <span class="attr">#[cfg(feature = <span class="string">"trace"</span>)]
-      </span>{
-        <span class="macro">std::println!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-      }
-      <span class="attr">#[cfg(feature = <span class="string">"trace-svm"</span>)]
-      </span>{
-        <span class="macro">solana_program::msg!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-      }
-  };
+    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {
+        <span class="attr">#[cfg(feature = <span class="string">"trace"</span>)]
+        </span>{
+            <span class="attr">#[cfg(target_os = <span class="string">"solana"</span>)]
+            </span>{
+            <span class="macro">solana_program::msg!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+            }
+            <span class="attr">#[cfg(not(target_os = <span class="string">"solana"</span>))]
+            </span>{
+            <span class="macro">std::println!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+            }
+        }
+    };
 }
 </code></pre></div></section></main></body></html>

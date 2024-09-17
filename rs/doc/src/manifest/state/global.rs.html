@@ -681,6 +681,7 @@
 <a href="#679" id="679">679</a>
 <a href="#680" id="680">680</a>
 <a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -691,7 +692,7 @@
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
@@ -760,6 +761,7 @@
 </span>);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalFixed&gt;(), GLOBAL_FIXED_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;GlobalFixed&gt;() % <span class="number">8</span>, <span class="number">0</span>);
+<span class="kw">impl </span>Get <span class="kw">for </span>GlobalFixed {}
 
 <span class="attr">#[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]

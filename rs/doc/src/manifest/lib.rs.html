@@ -108,6 +108,7 @@
 <span class="kw">pub mod </span>utils;
 <span class="kw">pub mod </span>validation;
 
+<span class="kw">use </span>hypertree::trace;
 <span class="kw">use </span>program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
     create_market::process_create_market, deposit::process_deposit,
@@ -152,8 +153,7 @@
     <span class="kw">let </span>instruction: ManifestInstruction =
         ManifestInstruction::try_from(<span class="kw-2">*</span>tag).or(<span class="prelude-val">Err</span>(ProgramError::InvalidInstructionData))<span class="question-mark">?</span>;
 
-    <span class="attr">#[cfg(not(feature = <span class="string">"no-log-ix-name"</span>))]
-    </span><span class="macro">solana_program::msg!</span>(<span class="string">"Instruction: {:?}"</span>, instruction);
+    <span class="macro">trace!</span>(<span class="string">"Instruction: {:?}"</span>, instruction);
 
     <span class="kw">match </span>instruction {
         ManifestInstruction::CreateMarket =&gt; {

@@ -151,6 +151,14 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     cell::{Ref, RefMut},
     mem::size_of,
@@ -163,7 +171,7 @@
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 <span class="kw">use </span>bytemuck::Pod;
-<span class="kw">use </span>hypertree::{get_helper, get_mut_helper, trace};
+<span class="kw">use </span>hypertree::{get_helper, get_mut_helper, trace, Get};
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
     system_instruction, sysvar::Sysvar,
@@ -183,6 +191,14 @@
     <span class="kw">if </span>!need_expand {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
+    expand_market(payer, manifest_account, system_program)
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>expand_market&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T: ManifestAccount + Pod + Clone&gt;(
+    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    manifest_account: <span class="kw-2">&amp;</span>ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt;,
+    system_program: <span class="kw-2">&amp;</span>Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+) -&gt; ProgramResult {
     expand_dynamic(payer, manifest_account, system_program, MARKET_BLOCK_SIZE)<span class="question-mark">?</span>;
     expand_market_fixed(manifest_account.info)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
@@ -269,7 +285,7 @@
 }
 
 <span class="doccomment">/// Generic get dynamic account from the data bytes of the account.
-</span><span class="kw">pub fn </span>get_dynamic_account&lt;<span class="lifetime">'a</span>, T: Pod&gt;(
+</span><span class="kw">pub fn </span>get_dynamic_account&lt;<span class="lifetime">'a</span>, T: Get&gt;(
     data: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ref&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[u8]&gt;,
 ) -&gt; DynamicAccount&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]&gt; {
     <span class="kw">let </span>(fixed_data, dynamic) = data.split_at(size_of::&lt;T&gt;());
@@ -280,7 +296,7 @@
 }
 
 <span class="doccomment">/// Generic get mutable dynamic account from the data bytes of the account.
-</span><span class="kw">pub fn </span>get_mut_dynamic_account&lt;<span class="lifetime">'a</span>, T: Pod&gt;(
+</span><span class="kw">pub fn </span>get_mut_dynamic_account&lt;<span class="lifetime">'a</span>, T: Get&gt;(
     data: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>RefMut&lt;<span class="lifetime">'_</span>, <span class="kw-2">&amp;mut </span>[u8]&gt;,
 ) -&gt; DynamicAccount&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[u8]&gt; {
     <span class="kw">let </span>(fixed_data, dynamic) = data.split_at_mut(size_of::&lt;T&gt;());
@@ -292,7 +308,7 @@
 }
 
 <span class="doccomment">/// Generic get owned dynamic account from the data bytes of the account.
-</span><span class="kw">pub fn </span>get_dynamic_value&lt;T: Pod&gt;(data: <span class="kw-2">&amp;</span>[u8]) -&gt; DynamicAccount&lt;T, Vec&lt;u8&gt;&gt; {
+</span><span class="kw">pub fn </span>get_dynamic_value&lt;T: Get&gt;(data: <span class="kw-2">&amp;</span>[u8]) -&gt; DynamicAccount&lt;T, Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>(fixed_data, dynamic_data) = data.split_at(size_of::&lt;T&gt;());
     <span class="kw">let </span>market_fixed: <span class="kw-2">&amp;</span>T = get_helper::&lt;T&gt;(fixed_data, <span class="number">0_u32</span>);
 

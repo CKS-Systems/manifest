@@ -37,6 +37,7 @@
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     program::{deposit::DepositParams, ManifestInstruction},
     validation::get_vault_address,
@@ -47,7 +48,8 @@
     pubkey::Pubkey,
 };
 
-<span class="kw">pub fn </span>deposit_instruction(
+<span class="comment">// TODO: would be nice it it had a trader index hint as well
+</span><span class="kw">pub fn </span>deposit_instruction(
     market: <span class="kw-2">&amp;</span>Pubkey,
     payer: <span class="kw-2">&amp;</span>Pubkey,
     mint: <span class="kw-2">&amp;</span>Pubkey,

@@ -2342,7 +2342,7 @@
 <span class="kw">use </span>std::cmp::Ordering;
 
 <span class="kw">use crate</span>::{
-    get_helper, get_mut_helper, trace, DataIndex, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, Get, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeValueReadOnlyIterator, HyperTreeWriteOperations, Payload,
     NIL,
 };
@@ -3002,7 +3002,7 @@
     }
 }
 
-<span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
+<span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>, feature = <span class="string">"trace"</span>))]
 </span><span class="kw">pub trait </span>RedBlackTreeTestHelpers&lt;<span class="lifetime">'a</span>, T: GetRedBlackTreeReadOnlyData&lt;<span class="lifetime">'a</span>&gt;&gt; {
     <span class="kw">fn </span>node_iter&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>) -&gt; RedBlackTreeReadOnlyIterator&lt;T, V&gt;;
     <span class="kw">fn </span>depth&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; i32;
@@ -3252,7 +3252,6 @@
     </span>Black = <span class="number">0</span>,
     Red = <span class="number">1</span>,
 }
-
 <span class="kw">unsafe impl </span>Zeroable <span class="kw">for </span>Color {
     <span class="kw">fn </span>zeroed() -&gt; <span class="self">Self </span>{
         <span class="kw">unsafe </span>{ core::mem::zeroed() }
@@ -3277,6 +3276,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) value: V,
 }
 <span class="kw">unsafe impl</span>&lt;V: Payload&gt; Pod <span class="kw">for </span>RBNode&lt;V&gt; {}
+<span class="kw">impl</span>&lt;V: Payload&gt; Get <span class="kw">for </span>RBNode&lt;V&gt; {}
 
 <span class="kw">impl</span>&lt;V: Payload&gt; Ord <span class="kw">for </span>RBNode&lt;V&gt; {
     <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Ordering {
@@ -3685,7 +3685,7 @@
 
 <span class="comment">// Iterator that gives the RBNode information is only needed for testing.
 // External users should use the HyperTreeValueIteratorTrait.
-</span><span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
+</span><span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>, feature = <span class="string">"trace"</span>))]
 </span><span class="kw">pub struct </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, T: HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt;, V: Payload&gt; {
     tree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
     index: DataIndex,
@@ -3693,7 +3693,7 @@
     phantom: std::marker::PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;,
 }
 
-<span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>))]
+<span class="attr">#[cfg(any(test, feature = <span class="string">"fuzz"</span>, feature = <span class="string">"trace"</span>))]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: HyperTreeReadOperations&lt;<span class="lifetime">'a</span>&gt; + GetRedBlackTreeReadOnlyData&lt;<span class="lifetime">'a</span>&gt;, V: Payload&gt; Iterator
     <span class="kw">for </span>RedBlackTreeReadOnlyIterator&lt;<span class="lifetime">'a</span>, T, V&gt;
 {

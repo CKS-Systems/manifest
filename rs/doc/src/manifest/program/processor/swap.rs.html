@@ -480,20 +480,20 @@
 
     <span class="kw">let </span>base_atoms: BaseAtoms = <span class="kw">if </span>is_exact_in {
         <span class="kw">if </span>is_base_in {
-            <span class="comment">// input=max(base)* output=min(quote)
+            <span class="comment">// input=desired max(base) output=checked min(quote)
             </span>BaseAtoms::new(in_atoms)
         } <span class="kw">else </span>{
-            <span class="comment">// input=max(quote)* output=min(base)
+            <span class="comment">// input=desired max(quote) output=checked min(base)
             // round down base amount to not cross quote limit
             </span>dynamic_account.impact_base_atoms(<span class="bool-val">true</span>, <span class="bool-val">false</span>, QuoteAtoms::new(in_atoms))<span class="question-mark">?
         </span>}
     } <span class="kw">else </span>{
         <span class="kw">if </span>is_base_in {
-            <span class="comment">// input=max(base) output=min(quote)*
+            <span class="comment">// input=checked max(base) output=desired min(quote)
             // round up base amount to ensure not staying below quote limit
             </span>dynamic_account.impact_base_atoms(<span class="bool-val">false</span>, <span class="bool-val">true</span>, QuoteAtoms::new(out_atoms))<span class="question-mark">?
         </span>} <span class="kw">else </span>{
-            <span class="comment">// input=max(quote) output=min(base)*
+            <span class="comment">// input=checked max(quote) output=desired min(base)
             </span>BaseAtoms::new(out_atoms)
         }
     };

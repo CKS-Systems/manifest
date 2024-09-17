@@ -130,7 +130,7 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::Pod;
-<span class="kw">use </span>hypertree::get_helper;
+<span class="kw">use </span>hypertree::{get_helper, Get};
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
@@ -147,7 +147,7 @@
     phantom: std::marker::PhantomData&lt;T&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T: ManifestAccount + Pod + Clone&gt; ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T: ManifestAccount + Get + Clone&gt; ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt; {
     <span class="kw">pub fn </span>new(
         info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T&gt;, ProgramError&gt; {

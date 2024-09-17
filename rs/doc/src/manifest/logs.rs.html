@@ -235,11 +235,10 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
-<span class="kw">use </span>hypertree::{get_mut_helper, PodBool};
+<span class="kw">use </span>hypertree::PodBool;
 <span class="kw">use </span>shank::ShankAccount;
 <span class="kw">use </span>solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
@@ -261,8 +260,7 @@
     <span class="comment">// stack buffer, stack frames are 4kb
     </span><span class="kw">let </span><span class="kw-2">mut </span>buffer: [u8; <span class="number">3000</span>] = [<span class="number">0u8</span>; <span class="number">3000</span>];
     buffer[..<span class="number">8</span>].copy_from_slice(<span class="kw-2">&amp;</span>T::discriminant());
-
-    <span class="kw-2">*</span>get_mut_helper::&lt;T&gt;(<span class="kw-2">&amp;mut </span>buffer, <span class="number">8</span>) = e;
+    <span class="kw-2">*</span>bytemuck::from_bytes_mut::&lt;T&gt;(<span class="kw-2">&amp;mut </span>buffer[<span class="number">8</span>..<span class="number">8 </span>+ size_of::&lt;T&gt;()]) = e;
 
     solana_program::log::sol_log_data(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>buffer[..(size_of::&lt;T&gt;() + <span class="number">8</span>)]]);
     <span class="prelude-val">Ok</span>(())

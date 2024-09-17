@@ -647,6 +647,24 @@
 <a href="#645" id="645">645</a>
 <a href="#646" id="646">646</a>
 <a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -703,9 +721,27 @@
             }
 
             <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>saturating_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
+                <span class="kw">let </span>sum = <span class="self">self</span>.inner.saturating_add(other.inner);
+                <span class="macro-nonterminal">$type_name::new</span>(sum)
+            }
+
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>saturating_sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
+                <span class="kw">let </span>difference = <span class="self">self</span>.inner.saturating_sub(other.inner);
+                <span class="macro-nonterminal">$type_name::new</span>(difference)
+            }
+
+            <span class="attr">#[inline(always)]
             </span><span class="kw">pub fn </span>wrapping_add(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
                 <span class="kw">let </span>sum = <span class="self">self</span>.inner.wrapping_add(other.inner);
                 <span class="macro-nonterminal">$type_name::new</span>(sum)
+            }
+
+            <span class="attr">#[inline(always)]
+            </span><span class="kw">pub fn </span>wrapping_sub(<span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="macro-nonterminal">$type_name </span>{
+                <span class="kw">let </span>difference = <span class="self">self</span>.inner.wrapping_sub(other.inner);
+                <span class="macro-nonterminal">$type_name::new</span>(difference)
             }
         }
     };

@@ -1196,20 +1196,9 @@
 <a href="#1194" id="1194">1194</a>
 <a href="#1195" id="1195">1195</a>
 <a href="#1196" id="1196">1196</a>
-<a href="#1197" id="1197">1197</a>
-<a href="#1198" id="1198">1198</a>
-<a href="#1199" id="1199">1199</a>
-<a href="#1200" id="1200">1200</a>
-<a href="#1201" id="1201">1201</a>
-<a href="#1202" id="1202">1202</a>
-<a href="#1203" id="1203">1203</a>
-<a href="#1204" id="1204">1204</a>
-<a href="#1205" id="1205">1205</a>
-<a href="#1206" id="1206">1206</a>
-<a href="#1207" id="1207">1207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
     RedBlackTreeReadOnly, NIL,
 };
@@ -1359,6 +1348,7 @@
 </span>);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;MarketFixed&gt;(), MARKET_FIXED_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;MarketFixed&gt;() % <span class="number">8</span>, <span class="number">0</span>);
+<span class="kw">impl </span>Get <span class="kw">for </span>MarketFixed {}
 
 <span class="kw">impl </span>MarketFixed {
     <span class="kw">pub fn </span>new_empty(
@@ -1646,7 +1636,7 @@
         }
     }
 
-    <span class="kw">pub fn </span>expand_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ProgramResult {
+    <span class="kw">pub fn </span>market_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
         <span class="kw">let </span><span class="kw-2">mut </span>free_list: FreeList&lt;MarketUnusedFreeListPadding&gt; =
             FreeList::new(dynamic, fixed.free_list_head_index);
@@ -1654,18 +1644,6 @@
         free_list.add(fixed.num_bytes_allocated);
         fixed.num_bytes_allocated += MARKET_BLOCK_SIZE <span class="kw">as </span>u32;
         fixed.free_list_head_index = free_list.get_head();
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">pub fn </span>market_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ProgramResult {
-        <span class="kw">let </span>DynamicAccount { fixed, .. } = <span class="self">self</span>.borrow_mut();
-
-        <span class="macro">require!</span>(
-            fixed.free_list_head_index == NIL,
-            ManifestError::InvalidFreeList,
-            <span class="string">"Expected empty free list, but expand wasnt needed"</span>,
-        )<span class="question-mark">?</span>;
-        <span class="self">self</span>.expand_unchecked()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
