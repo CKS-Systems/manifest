@@ -47,7 +47,7 @@ pub(crate) fn process_global_clean(
         market_vault_opt: None,
         token_program_opt: None,
         system_program: Some(system_program),
-        trader: payer,
+        signer: payer,
         market: *market.key,
     };
 

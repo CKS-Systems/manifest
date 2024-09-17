@@ -723,7 +723,7 @@ mod test {
             ),
             token_program_opt: Some(TokenProgram::new(&token_program_account_info).unwrap()),
             system_program: None,
-            trader: Signer::new(&trader_account_info).unwrap(),
+            signer: Signer::new(&trader_account_info).unwrap(),
             market: market_key.clone(),
         };
 
