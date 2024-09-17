@@ -1,16 +1,23 @@
-import { bignum } from "@metaplex-foundation/beet";
-import { publicKey as beetPublicKey } from "@metaplex-foundation/beet-solana";
-import { Connection, PublicKey } from "@solana/web3.js";
-import { createPlaceOrderInstruction, OrderType } from "./ui_wrapper";
+import { bignum } from '@metaplex-foundation/beet';
+import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { createPlaceOrderInstruction, OrderType } from './ui_wrapper';
 import { marketInfoBeet, openOrderBeet } from './utils/beet';
-import { deserializeRedBlackTree } from "./utils/redBlackTree";
-import { FIXED_WRAPPER_HEADER_SIZE, NIL, NO_EXPIRATION_LAST_VALID_SLOT, PRICE_MAX_EXP, PRICE_MIN_EXP, U32_MAX } from "./constants";
-import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from "./manifest";
-import { Market } from "./market";
-import { getVaultAddress } from "./utils/market";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { convertU128 } from "./utils/numbers";
-import { BN } from "bn.js";
+import { deserializeRedBlackTree } from './utils/redBlackTree';
+import {
+  FIXED_WRAPPER_HEADER_SIZE,
+  NIL,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+  PRICE_MAX_EXP,
+  PRICE_MIN_EXP,
+  U32_MAX,
+} from './constants';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
+import { Market } from './market';
+import { getVaultAddress } from './utils/market';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { convertU128 } from './utils/numbers';
+import { BN } from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
@@ -85,8 +92,6 @@ export interface OpenOrderInternal {
   orderType: number;
   padding: bignum[]; // 30 bytes
 }
-
-
 
 /**
  * Wrapper object used for reading data from a wrapper for manifest markets.
@@ -246,10 +251,10 @@ export class UiWrapper {
     const marketInfos: MarketInfoRaw[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
-          data.subarray(FIXED_WRAPPER_HEADER_SIZE),
-          marketInfosRootIndex,
-          marketInfoBeet,
-        )
+            data.subarray(FIXED_WRAPPER_HEADER_SIZE),
+            marketInfosRootIndex,
+            marketInfoBeet,
+          )
         : [];
 
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
@@ -258,10 +263,10 @@ export class UiWrapper {
         const parsedOpenOrders: OpenOrderInternal[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
-              data.subarray(FIXED_WRAPPER_HEADER_SIZE),
-              rootIndex,
-              openOrderBeet,
-            )
+                data.subarray(FIXED_WRAPPER_HEADER_SIZE),
+                rootIndex,
+                openOrderBeet,
+              )
             : [];
 
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
@@ -292,56 +297,54 @@ export class UiWrapper {
   public placeOrderIx(
     market: Market,
     accounts: { payer?: PublicKey },
-    args: { isBid: boolean, amount: number, price: number, orderId?: number }
+    args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ) {
     const { owner } = this.data;
     const payer = accounts.payer ?? owner;
-    const { isBid } = args;;
+    const { isBid } = args;
     const mint = isBid ? market.quoteMint() : market.baseMint();
-    const traderTokenAccount = getAssociatedTokenAddressSync(
-      mint,
-      owner,
-    );
+    const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
     const vault = getVaultAddress(market.address, mint);
     const clientOrderId = args.orderId ?? Date.now();
-    const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals())
+    const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
     let priceExponent = market.baseDecimals() - market.quoteDecimals();
     while (
-      (priceMantissa < U32_MAX / 10) &&
-      (priceExponent > PRICE_MIN_EXP) &&
-      (Math.round(priceMantissa) != priceMantissa)) {
+      priceMantissa < U32_MAX / 10 &&
+      priceExponent > PRICE_MIN_EXP &&
+      Math.round(priceMantissa) != priceMantissa
+    ) {
       priceMantissa *= 10;
       priceExponent -= 1;
     }
-    while (
-      (priceMantissa > U32_MAX) &&
-      (priceExponent < PRICE_MAX_EXP)
-    ) {
-      priceMantissa = priceMantissa/10;
+    while (priceMantissa > U32_MAX && priceExponent < PRICE_MAX_EXP) {
+      priceMantissa = priceMantissa / 10;
       priceExponent += 1;
     }
     priceMantissa = Math.round(priceMantissa);
 
-    return createPlaceOrderInstruction({
-      wrapperState: this.address,
-      owner,
-      traderTokenAccount,
-      market: market.address,
-      vault,
-      mint,
-      manifestProgram: MANIFEST_PROGRAM_ID,
-      payer,
-    }, {
-      params: {
-        clientOrderId,
-        baseAtoms,
-        priceMantissa,
-        priceExponent,
-        isBid,
-        lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
-        orderType: OrderType.Limit
-      }
-    })
+    return createPlaceOrderInstruction(
+      {
+        wrapperState: this.address,
+        owner,
+        traderTokenAccount,
+        market: market.address,
+        vault,
+        mint,
+        manifestProgram: MANIFEST_PROGRAM_ID,
+        payer,
+      },
+      {
+        params: {
+          clientOrderId,
+          baseAtoms,
+          priceMantissa,
+          priceExponent,
+          isBid,
+          lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
+          orderType: OrderType.Limit,
+        },
+      },
+    );
   }
 }

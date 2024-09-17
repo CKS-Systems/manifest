@@ -16,8 +16,7 @@ export function toNum(n: bignum): number {
   return target;
 }
 
-
-const BN_NUMBER_MAX = new BN(2**53 - 1);
+const BN_NUMBER_MAX = new BN(2 ** 53 - 1);
 const BN_10 = new BN(10);
 
 /**
@@ -33,10 +32,10 @@ export function convertU128(n: bignum): number {
   let mantissa = n.clone();
   for (let exponent = -18; exponent < 20; exponent += 1) {
     if (mantissa.lte(BN_NUMBER_MAX)) {
-      return mantissa.toNumber() * (10 ** exponent);
+      return mantissa.toNumber() * 10 ** exponent;
     }
     mantissa = mantissa.div(BN_10);
   }
 
-  throw("unreachable")
+  throw 'unreachable';
 }

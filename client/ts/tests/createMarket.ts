@@ -71,11 +71,10 @@ export async function createMarket(
   const tx: Transaction = new Transaction();
   tx.add(createAccountIx);
   tx.add(createMarketIx);
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    tx,
-    [payerKeypair, marketKeypair],
-  );
+  const signature = await sendAndConfirmTransaction(connection, tx, [
+    payerKeypair,
+    marketKeypair,
+  ]);
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
   return marketKeypair.publicKey;
 }
