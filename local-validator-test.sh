@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Start a local validator
 solana-test-validator > /dev/null 2>&1 &
 echo "Started test validator, sleeping for 15 seconds before starting"
