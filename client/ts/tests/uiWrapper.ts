@@ -78,6 +78,7 @@ async function setupWrapper(connection: Connection, market: PublicKey, payer: Pu
 }
 
 async function testWrapper(): Promise<void> {
+  const startTs = Date.now();
   const connection: Connection = new Connection('http://127.0.0.1:8899', 'confirmed');
   const payerKeypair: Keypair = Keypair.generate();
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
@@ -101,9 +102,6 @@ async function testWrapper(): Promise<void> {
       connection,
       tx,
       [payerKeypair, ...setup.signers],
-      {
-        commitment: 'confirmed',
-      },
     );
     console.log(`created ui-wrapper at ${setup.signers[0].publicKey} in ${signature}`);
   }
@@ -113,6 +111,7 @@ async function testWrapper(): Promise<void> {
   const wrapper = UiWrapper.loadFromBuffer({ address: wrapperAcc.pubkey, buffer: wrapperAcc.account.data });
   assert(wrapper.marketInfoForMarket(marketAddress)?.orders.length == 0, 'no orders yet in market');
 
+  
   {
     const tx = new Transaction();
     tx.add(
@@ -137,10 +136,6 @@ async function testWrapper(): Promise<void> {
       connection,
       tx,
       [payerKeypair],
-      {
-        commitment: 'confirmed',
-        skipPreflight: true,
-      },
     );
     console.log(`placed order in ${signature}`);
   }
@@ -153,6 +148,8 @@ async function testWrapper(): Promise<void> {
   const price = oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
   console.log('Amount:', amount);
   console.log('Price:', price);
+  assert(Date.now() > (oo.clientOrderId as number))
+  assert((oo.clientOrderId as number) > startTs)
   assert(10 === amount, 'correct amount');
   assert(0.02 === price, 'correct price');
 }
