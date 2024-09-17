@@ -437,6 +437,49 @@ createErrorFromCodeLookup.set(0x12, () => new InvalidMintError());
 createErrorFromNameLookup.set('InvalidMint', () => new InvalidMintError());
 
 /**
+ * TooManyGlobalSeats: 'Cannot claim a new global seat, use evict'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class TooManyGlobalSeatsError extends Error {
+  readonly code: number = 0x13;
+  readonly name: string = 'TooManyGlobalSeats';
+  constructor() {
+    super('Cannot claim a new global seat, use evict');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, TooManyGlobalSeatsError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x13, () => new TooManyGlobalSeatsError());
+createErrorFromNameLookup.set(
+  'TooManyGlobalSeats',
+  () => new TooManyGlobalSeatsError(),
+);
+
+/**
+ * InvalidEvict: 'Can only evict the lowest depositor'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidEvictError extends Error {
+  readonly code: number = 0x14;
+  readonly name: string = 'InvalidEvict';
+  constructor() {
+    super('Can only evict the lowest depositor');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidEvictError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x14, () => new InvalidEvictError());
+createErrorFromNameLookup.set('InvalidEvict', () => new InvalidEvictError());
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

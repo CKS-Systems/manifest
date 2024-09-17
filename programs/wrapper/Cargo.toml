@@ -14,8 +14,8 @@ name = "wrapper"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
-no-log-ix-name = []
 default = []
+trace = []
 test = []
 
 [dependencies]

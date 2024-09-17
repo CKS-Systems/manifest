@@ -79,14 +79,6 @@ export class FillFeed {
     }
 
     const messages: string[] = tx?.meta?.logMessages!;
-    if (
-      !messages.includes('Program log: Instruction: PlaceOrder') &&
-      !messages.includes('Program log: Instruction: BatchUpdate')
-    ) {
-      console.log('No possible matches');
-      return;
-    }
-
     const programDatas: string[] = messages.filter((message) => {
       return message.includes('Program data:');
     });

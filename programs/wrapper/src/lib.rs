@@ -8,6 +8,7 @@ pub mod open_order;
 pub mod processors;
 pub mod wrapper_state;
 
+use hypertree::trace;
 use instruction::ManifestWrapperInstruction;
 use processors::{
     batch_upate::process_batch_update, claim_seat::process_claim_seat,
@@ -49,8 +50,7 @@ pub fn process_instruction(
     let instruction: ManifestWrapperInstruction =
         ManifestWrapperInstruction::try_from(*tag).or(Err(ProgramError::InvalidInstructionData))?;
 
-    #[cfg(not(feature = "no-log-ix-name"))]
-    solana_program::msg!("Instruction: {:?}", instruction);
+    trace!("Instruction: {:?}", instruction);
 
     match instruction {
         ManifestWrapperInstruction::CreateWrapper => {
