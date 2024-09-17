@@ -49,6 +49,7 @@ type WrapperResponse = Readonly<{
   pubkey: PublicKey;
 }>;
 
+// TODO: compute this rather than hardcode
 export const marketDiscriminator: string = 'hFwv1prLTHL';
 
 export class ManifestClient {
