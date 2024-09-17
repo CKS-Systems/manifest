@@ -15,6 +15,7 @@ echo "Setting solana config to localnet"
 solana config set --url l
 
 solana program deploy target/deploy/manifest.so
+solana program deploy target/deploy/ui_wrapper.so
 solana program deploy target/deploy/wrapper.so
 echo "Deployed manifest and wrapper"
 

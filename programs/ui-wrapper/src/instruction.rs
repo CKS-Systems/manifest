@@ -73,13 +73,12 @@ pub enum ManifestWrapperInstruction {
     #[account(6, writable, name = "vault_quote", desc = "Quote currency vault PDA, seeds are [b'vault', market_address, mint_address]")]
     #[account(7, writable, name = "mint_base", desc = "Mint of trader base token account")]
     #[account(8, writable, name = "mint_quote", desc = "Mint of trader quote token account")]
-    #[account(9, name = "executor_program", desc = "Executor program")]
-    #[account(10, name = "token_program_base", desc = "Token program for base token")]
-    #[account(11, name = "token_program_quote", desc = "Token program for quote token")]
-    #[account(12, name = "manifest_program", desc = "Manifest program")]
-    #[account(13, writable, name = "platform_token_account", desc = "Platform fee token account")]
+    #[account(9, name = "token_program_base", desc = "Token program for base token")]
+    #[account(10, name = "token_program_quote", desc = "Token program for quote token")]
+    #[account(11, name = "manifest_program", desc = "Manifest program")]
+    #[account(12, writable, name = "platform_token_account", desc = "Platform fee token account")]
     // optional
-    #[account(14, writable, name = "referrer_token_account", desc = "Referrer fee token account")]
+    #[account(13, writable, name = "referrer_token_account", desc = "Referrer fee token account")]
     SettleFunds = 5,
 }
 
