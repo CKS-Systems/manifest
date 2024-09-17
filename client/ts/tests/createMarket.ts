@@ -75,9 +75,6 @@ export async function createMarket(
     connection,
     tx,
     [payerKeypair, marketKeypair],
-    {
-      commitment: 'finalized',
-    },
   );
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
   return marketKeypair.publicKey;

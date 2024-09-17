@@ -25,7 +25,6 @@ export async function airdropSol(connection: Connection, recipient: PublicKey) {
       blockhash,
       lastValidBlockHeight,
       signature,
-    },
-    'finalized',
+    }
   );
 }
