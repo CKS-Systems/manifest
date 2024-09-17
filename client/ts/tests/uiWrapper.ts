@@ -1,7 +1,9 @@
 import {
+  AccountInfo,
   Connection,
   Keypair,
   PublicKey,
+  Signer,
   SystemProgram,
   Transaction,
   TransactionInstruction,
@@ -9,21 +11,74 @@ import {
 } from '@solana/web3.js';
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
-import { ManifestClient } from '../src';
 import { assert } from 'chai';
-import { placeOrder } from './placeOrder';
-import { OrderType } from '../src/manifest';
-import { deposit } from './deposit';
-import {
-  createCreateWrapperInstruction,
-  PROGRAM_ID as WRAPPER_PROGRAM_ID,
-} from '../src/wrapper';
-import { Wrapper } from '../src/wrapperObj';
+import { OpenOrder, Wrapper } from '../src/wrapperObj';
 import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
-import { airdropSol } from '../src/utils/solana';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
+import { PROGRAM_ID, OrderType, createCreateWrapperInstruction, createClaimSeatInstruction, createPlaceOrderInstruction } from '../src/ui_wrapper';
+import { UiWrapper } from '../src/uiWrapperObj';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, createMintToInstruction, getAssociatedTokenAddressSync, mintTo } from '@solana/spl-token';
+
+
+type WrapperResponse = Readonly<{
+  account: AccountInfo<Buffer>;
+  pubkey: PublicKey;
+}>;
+
+async function fetchFirstUserWrapper(
+  connection: Connection,
+  payerPub: PublicKey,
+): Promise<WrapperResponse | null> {
+  const existingWrappers = await connection.getProgramAccounts(
+    PROGRAM_ID,
+    {
+      filters: [
+        // Dont check discriminant since there is only one type of account.
+        {
+          memcmp: {
+            offset: 8,
+            encoding: 'base58',
+            bytes: payerPub.toBase58(),
+          },
+        },
+      ],
+    },
+  );
+
+  return existingWrappers.length > 0 ? existingWrappers[0] : null;
+}
+
+async function setupWrapper(connection: Connection, market: PublicKey, payer: PublicKey, owner?: PublicKey): Promise<{ ixs: TransactionInstruction[], signers: Signer[] }> {
+  owner ??= payer;
+  const wrapperKeypair: Keypair = Keypair.generate();
+  const createAccountIx: TransactionInstruction =
+    SystemProgram.createAccount({
+      fromPubkey: payer,
+      newAccountPubkey: wrapperKeypair.publicKey,
+      space: FIXED_WRAPPER_HEADER_SIZE,
+      lamports: await connection.getMinimumBalanceForRentExemption(
+        FIXED_WRAPPER_HEADER_SIZE,
+      ),
+      programId: PROGRAM_ID,
+    });
+  const createWrapperIx: TransactionInstruction =
+    createCreateWrapperInstruction({
+      payer,
+      owner,
+      wrapperState: wrapperKeypair.publicKey,
+    });
+  const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
+    manifestProgram: MANIFEST_PROGRAM_ID,
+    payer,
+    owner,
+    market,
+    wrapperState: wrapperKeypair.publicKey,
+  });
+  return { ixs: [createAccountIx, createWrapperIx, claimSeatIx], signers: [wrapperKeypair] };
+}
 
 async function testWrapper(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection('http://127.0.0.1:8899', 'confirmed');
   const payerKeypair: Keypair = Keypair.generate();
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
 
@@ -33,113 +88,73 @@ async function testWrapper(): Promise<void> {
   });
   market.prettyPrint();
 
-  const client: ManifestClient = await ManifestClient.getClientForMarket(
-    connection,
-    marketAddress,
-    payerKeypair,
-  );
-  await client.reload();
+  assert(
+    null == await fetchFirstUserWrapper(connection, payerKeypair.publicKey),
+    "doesnt find a wrapper yet");
 
-  /*
-  // Test loading successfully.
-  const wrapper: Wrapper = await Wrapper.loadFromAddress({
-    connection,
-    address: client.wrapper.address,
-  });
 
-  // Test loading fails on bad address
-  try {
-    await Wrapper.loadFromAddress({
+  {
+    const setup = await setupWrapper(connection, marketAddress, payerKeypair.publicKey, payerKeypair.publicKey);
+    const tx = new Transaction();
+    tx.add(...setup.ixs);
+    const signature = await sendAndConfirmTransaction(
       connection,
-      address: Keypair.generate().publicKey,
-    });
-    assert(false, 'expected load from address fail');
-  } catch (err) {
-    assert(true, 'expected load from address fail');
+      tx,
+      [payerKeypair, ...setup.signers],
+      {
+        commitment: 'confirmed',
+      },
+    );
+    console.log(`created ui-wrapper at ${setup.signers[0].publicKey} in ${signature}`);
   }
 
-  // Test reloading successful.
-  await wrapper.reload(connection);
+  const wrapperAcc = await fetchFirstUserWrapper(connection, payerKeypair.publicKey);
+  assert(wrapperAcc != null, "should find wrapper");
+  const wrapper = UiWrapper.loadFromBuffer({ address: wrapperAcc.pubkey, buffer: wrapperAcc.account.data });
+  assert(wrapper.marketInfoForMarket(marketAddress)?.orders.length == 0, 'no orders yet in market');
 
-  // Test reloading fail.
-  try {
-    await wrapper.reload(new Connection('https://api.devnet.solana.com'));
-    assert(false, 'expected reload fail');
-  } catch (err) {
-    assert(true, 'expected reload fail');
+  {
+    const tx = new Transaction();
+    tx.add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        payerKeypair.publicKey,
+        getAssociatedTokenAddressSync(market.baseMint(), payerKeypair.publicKey),
+        payerKeypair.publicKey,
+        market.baseMint(),
+      ), createMintToInstruction(
+        market.baseMint(),
+        getAssociatedTokenAddressSync(market.baseMint(), payerKeypair.publicKey),
+        payerKeypair.publicKey,
+        10_000_000_000
+      ), wrapper.placeOrderIx(
+        market,
+        {}, {
+        isBid: false,
+        amount: 10,
+        price: 0.02
+      }));
+    const signature = await sendAndConfirmTransaction(
+      connection,
+      tx,
+      [payerKeypair],
+      {
+        commitment: 'confirmed',
+        skipPreflight: true,
+      },
+    );
+    console.log(`placed order in ${signature}`);
   }
 
-  // Wrapper successfully find market info
-  assert(
-    wrapper.marketInfoForMarket(marketAddress) != null,
-    'expected non null market info for market',
-  );
-  // Wrapper fail find market info
-  assert(
-    wrapper.marketInfoForMarket(Keypair.generate().publicKey) == null,
-    'expected null market info for market',
-  );
-
-  // Place an order to get more coverage on the pretty print.
-  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
-  await placeOrder(
-    connection,
-    payerKeypair,
-    marketAddress,
-    5,
-    5,
-    false,
-    OrderType.Limit,
-    0,
-  );
-
   await wrapper.reload(connection);
-  // Wrapper successfully find open orders
-  assert(
-    wrapper.openOrdersForMarket(marketAddress) != null,
-    'expected non null open orders for market',
-  );
-  // Wrapper fail find open orders
-  assert(
-    wrapper.openOrdersForMarket(Keypair.generate().publicKey) == null,
-    'expected null open orders for market',
-  );
+  // wrapper.prettyPrint();
 
-  wrapper.prettyPrint();
-
-  // Wrapper without a market for coverage.
-  const payerKeypair2: Keypair = Keypair.generate();
-  await airdropSol(connection, payerKeypair2.publicKey);
-  const wrapperKeypair2: Keypair = Keypair.generate();
-  const createAccountIx: TransactionInstruction = SystemProgram.createAccount({
-    fromPubkey: payerKeypair2.publicKey,
-    newAccountPubkey: wrapperKeypair2.publicKey,
-    space: FIXED_WRAPPER_HEADER_SIZE,
-    lamports: await connection.getMinimumBalanceForRentExemption(
-      FIXED_WRAPPER_HEADER_SIZE,
-    ),
-    programId: WRAPPER_PROGRAM_ID,
-  });
-  const createWrapperIx: TransactionInstruction =
-    createCreateWrapperInstruction({
-      owner: payerKeypair2.publicKey,
-      wrapperState: wrapperKeypair2.publicKey,
-    });
-
-  await sendAndConfirmTransaction(
-    connection,
-    new Transaction().add(createAccountIx).add(createWrapperIx),
-    [payerKeypair2, wrapperKeypair2],
-    {
-      commitment: 'finalized',
-    },
-  );
-  const wrapper2 = await Wrapper.loadFromAddress({
-    connection,
-    address: wrapperKeypair2.publicKey,
-  });
-  wrapper2.prettyPrint();
-  */
+  const [oo] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
+  const amount = oo.numBaseAtoms.toString() as any / (10 ** market.baseDecimals());
+  const price = oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
+  console.log('Amount:', amount);
+  console.log('Price:', price);
+  assert(10 === amount, 'correct amount');
+  assert(0.02 === price, 'correct price');
 }
 
 describe('UI-wrapper test', () => {
