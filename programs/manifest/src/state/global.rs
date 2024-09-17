@@ -534,8 +534,8 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
         // Might not exist because of eviction.
         if let Ok(global_trader) = get_mut_global_trader(fixed, dynamic, global_trade_owner) {
-            let GlobalTradeAccounts { signer: trader, .. } = global_trade_accounts;
-            if trader.info.key != global_trade_owner
+            let GlobalTradeAccounts { gas_receiver_opt: trader, .. } = global_trade_accounts;
+            if trader.as_ref().unwrap().info.key != global_trade_owner
                 || global_trade_accounts.system_program.is_none()
             {
                 global_trader.unclaimed_gas_deposits += 1;

@@ -47,8 +47,9 @@ pub(crate) fn process_global_clean(
         market_vault_opt: None,
         token_program_opt: None,
         system_program: Some(system_program),
-        signer: payer,
         market: *market.key,
+        gas_payer_opt: None,
+        gas_receiver_opt: Some(payer),
     };
 
     let GlobalCleanParams { order_index } = GlobalCleanParams::try_from_slice(data)?;

@@ -51,7 +51,7 @@ pub(crate) fn remove_from_global(
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,
-        signer: trader,
+        gas_receiver_opt,
         ..
     } = global_trade_accounts;
 
@@ -65,7 +65,7 @@ pub(crate) fn remove_from_global(
 
     // The simple implementation gets
     //
-    //     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+    //     **receiver.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
     //     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
     //
     // failed: sum of account balances before and after instruction do not match
@@ -97,7 +97,7 @@ pub(crate) fn remove_from_global(
     //
     if global_trade_accounts.system_program.is_some() {
         **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
-        **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+        **gas_receiver_opt.as_ref().unwrap().lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
     }
 
     Ok(())
@@ -109,14 +109,14 @@ pub(crate) fn try_to_add_to_global(
 ) -> ProgramResult {
     let GlobalTradeAccounts {
         global,
-        signer: trader,
+        gas_payer_opt,
         ..
     } = global_trade_accounts;
 
     {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.add_order(resting_order, trader.key)?;
+        global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key)?;
     }
 
     // Need to CPI because otherwise we get:
@@ -128,11 +128,11 @@ pub(crate) fn try_to_add_to_global(
     // reference.
     solana_program::program::invoke(
         &solana_program::system_instruction::transfer(
-            &trader.info.key,
+            &gas_payer_opt.as_ref().unwrap().info.key,
             &global.key,
             GAS_DEPOSIT_LAMPORTS,
         ),
-        &[trader.info.clone(), global.info.clone()],
+        &[gas_payer_opt.as_ref().unwrap().info.clone(), global.info.clone()],
     )?;
 
     Ok(())

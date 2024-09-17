@@ -387,7 +387,9 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                 } else {
                     Some(token_program_quote.clone())
                 },
-                signer: payer.clone(),
+                // System program not included.
+                gas_payer_opt: None,
+                gas_receiver_opt: None,
                 market: *market.info.key,
                 system_program: None,
             });
@@ -426,7 +428,8 @@ pub struct GlobalTradeAccounts<'a, 'info> {
 
     // Trader is sending or cancelling the order. They are the one who will pay
     // or receive gas prepayments.
-    pub signer: Signer<'a, 'info>,
+    pub gas_payer_opt: Option<Signer<'a, 'info>>,
+    pub gas_receiver_opt: Option<Signer<'a, 'info>>,
     pub market: Pubkey,
 }
 
@@ -506,7 +509,8 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     market_vault_opt: Some(market_vault),
                     token_program_opt: Some(token_program),
                     system_program: Some(system_program.clone()),
-                    signer: payer.clone(),
+                    gas_payer_opt: Some(payer.clone()),
+                    gas_receiver_opt: Some(payer.clone()),
                     market: *market.info.key,
                 })
             };
