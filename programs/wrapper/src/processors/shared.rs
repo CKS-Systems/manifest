@@ -164,10 +164,15 @@ pub(crate) fn sync_fast(
             .get_mut_value();
     let mut orders_root_index: DataIndex = market_info.orders_root_index;
 
+    // Sync open orders
     if orders_root_index != NIL {
         let orders_tree: OpenOrdersTreeReadOnly =
             OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
 
+        // pass 1: iterates over all open orders in the target market stored on this wrapper
+        // - find all wrapper orders to remove bc. the core order has been cancelled or fully matched
+        // - save all remaining wrapper orders with their core counter-part to sync in pass 2
+        //
         // Cannot do this in one pass because we need the data borrowed for the
         // iterator so cannot also borrow it for updating the nodes.
         let mut to_remove_indices: Vec<DataIndex> = Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
@@ -188,24 +193,24 @@ pub(crate) fn sync_fast(
                 to_update_and_core_indices.push((order_index, core_data_index));
             }
         }
-        // Update the amounts if there was partial fills.
+        // pass 2: update all amounts & prices
         for (to_update_index, core_data_index) in to_update_and_core_indices.iter() {
-            let node: &mut RBNode<WrapperOpenOrder> =
-                get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index);
+            let node: &mut WrapperOpenOrder =
+                get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index)
+                    .get_mut_value();
             let core_resting_order: &RestingOrder =
                 get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index)
                     .get_value();
-            node.get_mut_value()
-                .update_remaining(core_resting_order.get_num_base_atoms());
 
-            // Needed because the way things are added could be off by 1 when
-            // one of the orders fully matches as it is being placed. We only
-            // know that the indices are right, not the actual orders there.
-            node.get_mut_value()
-                .set_price(core_resting_order.get_price());
-            node.get_mut_value()
-                .set_is_bid(core_resting_order.get_is_bid());
+            // Needed for partial fills
+            node.update_remaining(core_resting_order.get_num_base_atoms());
+
+            // Needed for performance, because we dont want to recalculate the
+            // price in batch update twice
+            node.set_price(core_resting_order.get_price());
         }
+
+        // pass 3: delete removed nodes from tree
         let mut orders_tree: RedBlackTree<WrapperOpenOrder> =
             RedBlackTree::<WrapperOpenOrder>::new(wrapper_dynamic_data, orders_root_index, NIL);
         for to_remove_index in to_remove_indices.iter() {
@@ -213,11 +218,11 @@ pub(crate) fn sync_fast(
         }
         orders_root_index = orders_tree.get_root_index();
 
+        // pass 4: add removed nodes into freelist
         let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
         let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
             FreeList::new(wrapper_dynamic_data, wrapper_fixed.free_list_head_index);
         for open_order_index in to_remove_indices.iter() {
-            // Free the node in wrapper.
             free_list.add(*open_order_index);
         }
         wrapper_fixed.free_list_head_index = free_list.get_head();

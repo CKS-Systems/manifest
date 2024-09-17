@@ -1,3 +1,5 @@
+use std::cell::RefMut;
+
 use manifest::program::create_market_instructions;
 use solana_program_test::{tokio, ProgramTestContext};
 use solana_sdk::{
@@ -34,7 +36,7 @@ async fn create_market_fail_same_base_and_quote() -> anyhow::Result<()> {
 async fn create_market_fail_already_initialized() -> anyhow::Result<()> {
     let test_fixture: TestFixture = TestFixture::new().await;
 
-    let mut context_cell: std::cell::RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
+    let mut context_cell: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
     let market_keypair: Keypair = Keypair::new();
     let payer: &Pubkey = &context_cell.payer.pubkey();
     let create_market_ixs: Vec<Instruction> = create_market_instructions(
