@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { PublicKey, Connection } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
@@ -25,6 +24,7 @@ export interface GlobalData {
 export class Global {
   address: PublicKey;
   private data: GlobalData;
+  private _mintDecimals: number | null = null;
 
   private constructor({
     address,
@@ -73,6 +73,14 @@ export class Global {
     this.data = Global.deserializeGlobalBuffer(accountInfo.data);
   }
 
+  async getMintDecimals(connection: Connection): Promise<number> {
+    if (this._mintDecimals === null) {
+      const mintInfo = await getMint(connection, this.data.mint);
+      this._mintDecimals = mintInfo.decimals;
+    }
+    return this._mintDecimals;
+  }
+
   async getGlobalBalanceTokens(
     connection: Connection,
     trader: PublicKey,
@@ -83,27 +91,12 @@ export class Global {
     if (!seat) {
       return 0;
     }
-    return (
-      toNum(seat.tokenBalance) / 10 ** (await this.tokenDecimals(connection))
-    );
-  }
-
-  getUnclaimedGasTokens(trader: PublicKey): number {
-    const seat = this.data.globalSeats.find((seat) =>
-      seat.trader.equals(trader),
-    );
-    if (!seat) {
-      return 0;
-    }
-    return toNum(seat.unclaimedGasBalance) / 10 ** 9;
+    const decimals = await this.getMintDecimals(connection);
+    return toNum(seat.tokenBalance) / 10 ** decimals;
   }
 
   tokenMint(): PublicKey {
     return this.data.mint;
-  }
-
-  async tokenDecimals(connection: Connection): Promise<number> {
-    return (await getMint(connection, this.tokenMint())).decimals;
   }
 
   hasSeat(trader: PublicKey): boolean {
@@ -115,7 +108,7 @@ export class Global {
     console.log(`Global: ${this.address}`);
     console.log(`========================`);
     console.log(`Mint: ${this.data.mint.toBase58()}`);
-    console.log(`Vault: ${this.data.mint.toBase58()}`);
+    console.log(`Vault: ${this.data.vault.toBase58()}`);
     console.log(`NumBytesAllocated: ${this.data.numBytesAllocated}`);
     console.log(`NumSeatsClaimed: ${this.data.numSeatsClaimed}`);
     console.log(`ClaimedSeats: ${this.data.globalSeats.length}`);
@@ -129,6 +122,14 @@ export class Global {
     console.log(`========================`);
   }
 
+  /**
+   * Deserializes global data from a given mint and returns a `Global` object
+   *
+   * This includes both the fixed and dynamic parts of the market.
+   * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/global.rs
+   *
+   * @param data The data buffer to deserialize
+   */
   private static deserializeGlobalBuffer(data: Buffer): GlobalData {
     let offset = 0;
     offset += 8; // Skip discriminant
@@ -140,11 +141,11 @@ export class Global {
 
     const globalSeatsRootIndex = data.readUInt32LE(offset);
     offset += 4;
-    const globalAmountsRootIndex = data.readUInt32LE(offset);
+    const _globalAmountsRootIndex = data.readUInt32LE(offset);
     offset += 4;
-    const globalAmountsMaxIndex = data.readUInt32LE(offset);
+    const _globalAmountsMaxIndex = data.readUInt32LE(offset);
     offset += 4;
-    const freeListHeadIndex = data.readUInt32LE(offset);
+    const _freeListHeadIndex = data.readUInt32LE(offset);
     offset += 4;
 
     const numBytesAllocated = data.readUInt32LE(offset);
@@ -153,7 +154,7 @@ export class Global {
     offset += 1; // Skip vault_bump
     offset += 1; // Skip global_bump
 
-    const numSeatsClaimed = data.readInt16LE(offset);
+    const numSeatsClaimed = data.readUInt16LE(offset);
     offset += 2;
 
     const globalSeats =

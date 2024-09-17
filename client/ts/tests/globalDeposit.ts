@@ -29,7 +29,8 @@ async function testGlobalDeposit(): Promise<void> {
 
   await global.reload(connection);
   assert(
-    await global.getGlobalBalanceTokens(connection, payerKeypair.publicKey) == 10,
+    (await global.getGlobalBalanceTokens(connection, payerKeypair.publicKey)) ==
+      10,
     'deposit global balance check',
   );
   global.prettyPrint();
@@ -41,7 +42,6 @@ export async function depositGlobal(
   mint: PublicKey,
   amountTokens: number,
 ): Promise<void> {
-
   const globalAddTraderIx = ManifestClient.createGlobalAddTraderIx(
     payerKeypair.publicKey,
     mint,
@@ -83,7 +83,9 @@ export async function depositGlobal(
       commitment: 'confirmed',
     },
   );
-  console.log(`Global Add Trader & Deposited ${amountTokens} tokens in ${signature}`);
+  console.log(
+    `Global Add Trader & Deposited ${amountTokens} tokens in ${signature}`,
+  );
 }
 
 describe('Global Deposit test', () => {

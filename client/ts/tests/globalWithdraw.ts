@@ -26,7 +26,8 @@ async function testGlobalWithdraw(): Promise<void> {
 
   await global.reload(connection);
   assert(
-    await (global.getGlobalBalanceTokens(connection, payerKeypair.publicKey)) == 5,
+    (await global.getGlobalBalanceTokens(connection, payerKeypair.publicKey)) ==
+      5,
     'global withdraw balance check base',
   );
   global.prettyPrint();

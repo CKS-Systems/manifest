@@ -55,6 +55,7 @@ export class ManifestClient {
     private baseMint: Mint,
     private quoteMint: Mint,
   ) {
+    // If no extension data then the mint is not Token2022
     this.isBase22 = baseMint.tlvData.length > 0;
     this.isQuote22 = quoteMint.tlvData.length > 0;
   }
@@ -644,7 +645,7 @@ export class ManifestClient {
   }
 
   /**
-   * CreateGlobalAddTrader instruction.
+   * CreateGlobalAddTrader instruction. Adds a new trader to the global account
    *
    * @param payer PublicKey of the trader
    * @param globalMint PublicKey of the globalMint
