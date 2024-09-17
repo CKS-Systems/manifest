@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726485630228,
+  "lastUpdate": 1726580732149,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2783,6 +2783,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7427,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cody Lamson",
+            "username": "TovarishFin",
+            "email": "tovarishfin@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "46f7a39500d8e1544ef4cdadfa33b5c823bfda85",
+          "message": "debugger-ui (#64)\n\n* initial commit\r\n\r\n* setup txs fixed along with fill formatting\r\n\r\n* make rando bot env vars optional\r\n\r\n* PR changes\r\n\r\n* run build in parent directory after install and when building locally\r\n\r\n* rename debugger ui to debug ui where necessary\r\n\r\n* add tests and remove unused property 'initialized' from client\r\n\r\n* test on CI...\r\n\r\n* increase timeout in test to allow for state to catch up\r\n\r\n* use explicit async await in tests\r\n\r\n* remove 'only' from createClient describe block\r\n\r\n* different routes, additional info on fills and orderbook\r\n\r\n* add static method for listing market public keys\r\n\r\n* fix offset\r\n\r\n* list markets on homepage\r\n\r\n* create-market route and route restriction based on env vars\r\n\r\n* add mint functionality to ui\r\n\r\n* add mint to section and cleanup\r\n\r\n* correct data layouts\r\n\r\n* clearly state that .env and .env.local are different\r\n\r\n* add TODO\r\n\r\n* remove debug logs\r\n\r\n* deduplicate some code via wrapper account fetcher function\r\n\r\n* linting fixes\r\n\r\n* add TODO\r\n\r\n---------\r\n\r\nCo-authored-by: DonDuala <107803907+DonDuala@users.noreply.github.com>",
+          "timestamp": "2024-09-17T13:20:01Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/46f7a39500d8e1544ef4cdadfa33b5c823bfda85"
+        },
+        "date": 1726580731105,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4058,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7103,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7366,
             "unit": "CU",
             "range": "",
             "extra": ""
