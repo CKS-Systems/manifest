@@ -1,5 +1,7 @@
 import 'dotenv/config';
 
+// TODO: merge rando-bots into single instance
+
 import {
   PublicKey,
   Connection,
