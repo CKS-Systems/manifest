@@ -243,7 +243,6 @@ export class Wrapper {
     offset += 8;
 
     const trader = beetPublicKey.read(data, offset);
-    console.log('trader', trader.toBase58());
 
     offset += beetPublicKey.byteSize;
 
@@ -268,15 +267,9 @@ export class Wrapper {
           )
         : [];
 
-    console.log('marketInfos:', marketInfos);
-
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfoRaw, i: number) => {
-        console.log('index:', i);
-
         const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
-        console.log('rootIndex:', rootIndex);
-
         const parsedOpenOrders: OpenOrderInternal[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
@@ -286,8 +279,6 @@ export class Wrapper {
               )
             : [];
 
-        console.log('parsedOpenOrders:', parsedOpenOrders);
-
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
           (openOrder: OpenOrderInternal) => {
             return {
@@ -296,8 +287,6 @@ export class Wrapper {
             };
           },
         );
-
-        console.log('parsedOpenOrdersWithPrice:', parsedOpenOrdersWithPrice);
 
         return {
           market: marketInfoRaw.market,
