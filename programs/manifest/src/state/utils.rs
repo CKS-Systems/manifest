@@ -132,7 +132,10 @@ pub(crate) fn try_to_add_to_global(
             &global.key,
             GAS_DEPOSIT_LAMPORTS,
         ),
-        &[gas_payer_opt.as_ref().unwrap().info.clone(), global.info.clone()],
+        &[
+            gas_payer_opt.as_ref().unwrap().info.clone(),
+            global.info.clone(),
+        ],
     )?;
 
     Ok(())
