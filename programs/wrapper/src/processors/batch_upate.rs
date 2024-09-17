@@ -122,7 +122,7 @@ fn prepare_cancels(
     let open_orders_tree: OpenOrdersTreeReadOnly =
         OpenOrdersTreeReadOnly::new(wrapper.dynamic, orders_root_index, NIL);
 
-    let client_ids_to_cancel = {
+    let client_ids_to_cancel: HashSet<u64> = {
         let mut set = HashSet::<u64>::with_capacity(cancels.len());
         set.extend(cancels.iter().map(|c| c.client_order_id));
         set
@@ -155,7 +155,7 @@ fn prepare_orders(
     remaining_base_atoms: &mut BaseAtoms,
     remaining_quote_atoms: &mut QuoteAtoms,
 ) -> Vec<PlaceOrderParams> {
-    let mut result = Vec::with_capacity(orders.len());
+    let mut result: Vec<PlaceOrderParams> = Vec::with_capacity(orders.len());
     result.extend(
         orders
             .iter()
@@ -210,7 +210,7 @@ fn execute_cpi(
     core_cancels: Vec<CancelOrderParams>,
     core_orders: Vec<PlaceOrderParams>,
 ) -> ProgramResult {
-    let mut acc_metas = Vec::with_capacity(accounts.len());
+    let mut acc_metas: Vec<AccountMeta> = Vec::with_capacity(accounts.len());
     // fist two accounts are for wrapper and manifest program itself
     // the remainder is passed through directly to manifest
     acc_metas.extend(accounts[2..].iter().map(|ai| {
@@ -221,7 +221,7 @@ fn execute_cpi(
         }
     }));
 
-    let ix = Instruction {
+    let ix: Instruction = Instruction {
         program_id: manifest::id(),
         accounts: acc_metas,
         data: [
@@ -244,7 +244,7 @@ fn process_cancels(
         get_mut_dynamic_account(&mut wrapper_data);
 
     // fetch current root first to not borrow wrapper.dynamic twice
-    let orders_root_index = {
+    let orders_root_index: DataIndex = {
         let market_info: &mut MarketInfo =
             get_mut_helper::<RBNode<MarketInfo>>(wrapper.dynamic, market_info_index)
                 .get_mut_value();
@@ -252,7 +252,7 @@ fn process_cancels(
     };
 
     // remove nodes from order tree
-    let orders_root_index = {
+    let orders_root_index: DataIndex = {
         let mut open_orders_tree: OpenOrdersTree =
             OpenOrdersTree::new(wrapper.dynamic, orders_root_index, NIL);
 
@@ -298,7 +298,7 @@ fn process_orders<'a, 'info>(
             continue;
         }
 
-        // TODO expand as much as possible in one go
+        // Does not expand all at once because expand checks if there is no spots available.
         expand_wrapper_if_needed(wrapper_state, payer, system_program)?;
 
         let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
@@ -321,16 +321,12 @@ fn process_orders<'a, 'info>(
         };
 
         let original_order: &WrapperPlaceOrderParams = &orders[index];
-        let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-            original_order.price_mantissa,
-            original_order.price_exponent,
-        )?;
+        // Base atoms & price can be wrong, will be fixed in the sync.
         let order: WrapperOpenOrder = WrapperOpenOrder::new(
             original_order.client_order_id,
             order_sequence_number,
-            price,
-            // Base atoms can be wrong, will be fixed in the sync.
-            original_order.base_atoms,
+            QuoteAtomsPerBaseAtom::ZERO,
+            BaseAtoms::ZERO,
             original_order.last_valid_slot,
             order_index,
             original_order.is_bid,
@@ -402,7 +398,7 @@ pub(crate) fn process_batch_update(
         &mut remaining_base_atoms,
         &mut remaining_quote_atoms,
     )?;
-    let core_orders = prepare_orders(
+    let core_orders: Vec<PlaceOrderParams> = prepare_orders(
         &orders,
         &mut remaining_base_atoms,
         &mut remaining_quote_atoms,
@@ -420,7 +416,6 @@ pub(crate) fn process_batch_update(
         &orders,
         market_info_index,
     )?;
-    // TODO: Enforce min_out_atoms
 
     // Sync to get the balance correct and remove any expired orders.
     sync_fast(&wrapper_state, &market, market_info_index)?;

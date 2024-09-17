@@ -42,6 +42,10 @@ pub enum ManifestError {
     IncorrectAccount = 17,
     #[error("Mint not allowed for market")]
     InvalidMint = 18,
+    #[error("Cannot claim a new global seat, use evict")]
+    TooManyGlobalSeats = 19,
+    #[error("Can only evict the lowest depositor")]
+    InvalidEvict = 20,
 }
 
 impl From<ManifestError> for ProgramError {

@@ -139,7 +139,6 @@ async fn withdraw_fail_incorrect_vault_test() -> anyhow::Result<()> {
     let withdraw_ix: Instruction = Instruction {
         program_id: manifest::id(),
         accounts: vec![
-            AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*payer, true),
             AccountMeta::new(test_fixture.market_fixture.key, false),
             AccountMeta::new(user_token_account, false),
