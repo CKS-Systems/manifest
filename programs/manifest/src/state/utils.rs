@@ -49,7 +49,11 @@ pub(crate) fn remove_from_global(
         "Missing global accounts when cancelling a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts { global, signer: trader, .. } = global_trade_accounts;
+    let GlobalTradeAccounts {
+        global,
+        signer: trader,
+        ..
+    } = global_trade_accounts;
 
     // This check is a hack since the global data is borrowed in cleaning, so
     // avoid reborrowing.
@@ -103,7 +107,11 @@ pub(crate) fn try_to_add_to_global(
     global_trade_accounts: &GlobalTradeAccounts,
     resting_order: &RestingOrder,
 ) -> ProgramResult {
-    let GlobalTradeAccounts { global, signer: trader, .. } = global_trade_accounts;
+    let GlobalTradeAccounts {
+        global,
+        signer: trader,
+        ..
+    } = global_trade_accounts;
 
     {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
