@@ -45,6 +45,11 @@ export interface SetupData {
   wrapperKeypair: Keypair | null;
 }
 
+type WrapperResponse = Readonly<{
+  account: AccountInfo<Buffer>;
+  pubkey: PublicKey;
+}>;
+
 export const marketDiscriminator: string = 'hFwv1prLTHL';
 
 export class ManifestClient {
@@ -61,6 +66,37 @@ export class ManifestClient {
   ) {
     this.isBase22 = baseMint.tlvData.length > 0;
     this.isQuote22 = quoteMint.tlvData.length > 0;
+  }
+
+  /**
+   * fetches all user wrapper accounts and returns the first or null if none are found
+   *
+   * @param connection Connection
+   * @param payerPub PublicKey of the trader
+   *
+   * @returns Promise<GetProgramAccountsResponse>
+   */
+  private static async fetchFirstUserWrapper(
+    connection: Connection,
+    payerPub: PublicKey,
+  ): Promise<WrapperResponse | null> {
+    const existingWrappers = await connection.getProgramAccounts(
+      WRAPPER_PROGRAM_ID,
+      {
+        filters: [
+          // Dont check discriminant since there is only one type of account.
+          {
+            memcmp: {
+              offset: 8,
+              encoding: 'base58',
+              bytes: payerPub.toBase58(),
+            },
+          },
+        ],
+      },
+    );
+
+    return existingWrappers.length > 0 ? existingWrappers[0] : null;
   }
 
   /**
@@ -102,21 +138,12 @@ export class ManifestClient {
     const baseMint: Mint = await getMint(connection, baseMintPk);
     const quoteMint: Mint = await getMint(connection, quoteMintPk);
 
-    const existingWrappers: GetProgramAccountsResponse =
-      await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
-        filters: [
-          // Dont check discriminant since there is only one type of account.
-          {
-            memcmp: {
-              offset: 8,
-              encoding: 'base58',
-              bytes: payerKeypair.publicKey.toBase58(),
-            },
-          },
-        ],
-      });
+    const userWrapper = await ManifestClient.fetchFirstUserWrapper(
+      connection,
+      payerKeypair.publicKey,
+    );
     const transaction: Transaction = new Transaction();
-    if (existingWrappers.length == 0) {
+    if (!userWrapper) {
       const wrapperKeypair: Keypair = Keypair.generate();
       const createAccountIx: TransactionInstruction =
         SystemProgram.createAccount({
@@ -166,13 +193,9 @@ export class ManifestClient {
       );
     }
 
-    const wrapperResponse: Readonly<{
-      account: AccountInfo<Buffer>;
-      pubkey: PublicKey;
-    }> = existingWrappers[0];
     // Otherwise there is an existing wrapper
     const wrapperData: WrapperData = Wrapper.deserializeWrapperBuffer(
-      wrapperResponse.account.data,
+      userWrapper.account.data,
     );
     const existingMarketInfos: MarketInfoParsed[] =
       wrapperData.marketInfos.filter((marketInfo: MarketInfoParsed) => {
@@ -181,7 +204,7 @@ export class ManifestClient {
     if (existingMarketInfos.length > 0) {
       const wrapper = await Wrapper.loadFromAddress({
         connection,
-        address: wrapperResponse.pubkey,
+        address: userWrapper.pubkey,
       });
       return new ManifestClient(
         connection,
@@ -198,13 +221,13 @@ export class ManifestClient {
       manifestProgram: MANIFEST_PROGRAM_ID,
       owner: payerKeypair.publicKey,
       market: marketPk,
-      wrapperState: wrapperResponse.pubkey,
+      wrapperState: userWrapper.pubkey,
     });
     transaction.add(claimSeatIx);
     await sendAndConfirmTransaction(connection, transaction, [payerKeypair]);
     const wrapper = await Wrapper.loadFromAddress({
       connection,
-      address: wrapperResponse.pubkey,
+      address: userWrapper.pubkey,
     });
 
     return new ManifestClient(
@@ -237,21 +260,11 @@ export class ManifestClient {
       instructions: [],
       wrapperKeypair: null,
     };
-    const existingWrappers: GetProgramAccountsResponse =
-      await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
-        filters: [
-          // Dont check discriminant since there is only one type of account.
-          {
-            memcmp: {
-              offset: 8,
-              encoding: 'base58',
-              bytes: payerPub.toBase58(),
-            },
-          },
-        ],
-      });
-
-    if (existingWrappers.length == 0) {
+    const userWrapper = await ManifestClient.fetchFirstUserWrapper(
+      connection,
+      payerPub,
+    );
+    if (!userWrapper) {
       const wrapperKeypair: Keypair = Keypair.generate();
       setupData.wrapperKeypair = wrapperKeypair;
 
@@ -285,13 +298,8 @@ export class ManifestClient {
       return setupData;
     }
 
-    // Otherwise there is an existing wrapper
-    const wrapperResponse: Readonly<{
-      account: AccountInfo<Buffer>;
-      pubkey: PublicKey;
-    }> = existingWrappers[0];
     const wrapperData: WrapperData = Wrapper.deserializeWrapperBuffer(
-      wrapperResponse.account.data,
+      userWrapper.account.data,
     );
 
     const existingMarketInfos: MarketInfoParsed[] =
@@ -308,7 +316,7 @@ export class ManifestClient {
       manifestProgram: MANIFEST_PROGRAM_ID,
       owner: payerPub,
       market: marketPk,
-      wrapperState: wrapperResponse.pubkey,
+      wrapperState: userWrapper.pubkey,
     });
     setupData.instructions.push(claimSeatIx);
 
@@ -348,28 +356,20 @@ export class ManifestClient {
     const baseMint: Mint = await getMint(connection, baseMintPk);
     const quoteMint: Mint = await getMint(connection, quoteMintPk);
 
-    const existingWrappers: GetProgramAccountsResponse =
-      await connection.getProgramAccounts(WRAPPER_PROGRAM_ID, {
-        filters: [
-          // Dont check discriminant since there is only one type of account.
-          {
-            memcmp: {
-              offset: 8,
-              encoding: 'base58',
-              bytes: payerPub.toBase58(),
-            },
-          },
-        ],
-      });
+    const userWrapper = await ManifestClient.fetchFirstUserWrapper(
+      connection,
+      payerPub,
+    );
 
-    const wrapperResponse: Readonly<{
-      account: AccountInfo<Buffer>;
-      pubkey: PublicKey;
-    }> = existingWrappers[0];
+    if (!userWrapper) {
+      throw new Error(
+        'userWrapper is null even though setupNeeded is false. This should never happen.',
+      );
+    }
 
     const wrapper = await Wrapper.loadFromAddress({
       connection,
-      address: wrapperResponse.pubkey,
+      address: userWrapper.pubkey,
     });
 
     return new ManifestClient(
