@@ -387,10 +387,10 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                 } else {
                     Some(token_program_quote.clone())
                 },
-                // System program not included.
                 gas_payer_opt: None,
-                gas_receiver_opt: None,
+                gas_receiver_opt: Some(payer.clone()),
                 market: *market.info.key,
+                // System program not included because does not rest an order.
                 system_program: None,
             });
         }
