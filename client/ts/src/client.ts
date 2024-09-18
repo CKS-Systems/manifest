@@ -626,7 +626,7 @@ export class ManifestClient {
    *
    * @returns Promise<TransactionInstruction>
    */
-  private async createGlobalCreateIx(
+  private static async createGlobalCreateIx(
     connection: Connection,
     payer: PublicKey,
     globalMint: PublicKey,
