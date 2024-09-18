@@ -1,10 +1,15 @@
-import { PublicKey, Connection } from '@solana/web3.js';
+import {
+  PublicKey,
+  Connection,
+  GetProgramAccountsResponse,
+} from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
+import { PROGRAM_ID } from './manifest';
 
 /**
  * Internal use only. Needed because shank doesnt handle f64 and because the
@@ -154,6 +159,37 @@ export class Market {
       throw new Error(`Failed to load ${this.address}`);
     }
     this.data = Market.deserializeMarketBuffer(buffer);
+  }
+
+  public async findMarkets(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+  ): Promise<GetProgramAccountsResponse> {
+    // Based on the MarketFixed struct
+    const baseMintOffset = 16;
+    const quoteMintOffset = 48;
+
+    const filters = [
+      {
+        memcmp: {
+          offset: baseMintOffset,
+          bytes: baseMint.toBase58(),
+        },
+      },
+      {
+        memcmp: {
+          offset: quoteMintOffset,
+          bytes: quoteMint.toBase58(),
+        },
+      },
+    ];
+
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters,
+    });
+
+    return accounts;
   }
 
   /**
