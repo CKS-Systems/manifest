@@ -225,10 +225,6 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
             AccountMeta::new(quote_vault, false),
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
-            AccountMeta::new_readonly(
-                Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-                false,
-            ),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
@@ -488,10 +484,6 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
             AccountMeta::new(quote_vault, false),
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
-            AccountMeta::new_readonly(
-                Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-                false,
-            ),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
@@ -763,10 +755,6 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
             AccountMeta::new(quote_vault, false),
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
-            AccountMeta::new_readonly(
-                Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-                false,
-            ),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
@@ -803,105 +791,95 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
         spl_token::state::Account::unpack(&taker_token_account_base.data)?;
     assert_eq!(taker_token_account_base.amount, 0);
 
-    // verify fee payment only in SBF mode, not on local arch, bc. referral program is stubbed
-    if std::env::var("BPF_OUT_DIR").is_ok() || std::env::var("SBF_OUT_DIR").is_ok() {
-        // user has proceeds of trade in his wallet, but 50% fees were charged
-        let taker_token_account_quote: Account = test_fixture
-            .context
-            .borrow_mut()
-            .banks_client
-            .get_account(taker_token_account_quote)
-            .await
-            .unwrap()
-            .unwrap();
-
-        let taker_token_account_quote =
-            spl_token::state::Account::unpack(&taker_token_account_quote.data)?;
-        assert_eq!(taker_token_account_quote.amount, USDC_UNIT_SIZE * 3 / 2);
-
-        // verify the remaining 50% was split 50/50 between platform & referrer
-        let platform_token_account_quote: Account = test_fixture
-            .context
-            .borrow_mut()
-            .banks_client
-            .get_account(platform_token_account)
-            .await
-            .unwrap()
-            .unwrap();
-
-        let platform_token_account_quote =
-            spl_token::state::Account::unpack(&platform_token_account_quote.data)?;
-        assert_eq!(platform_token_account_quote.amount, USDC_UNIT_SIZE / 4);
-
-        let referred_token_account_quote: Account = test_fixture
-            .context
-            .borrow_mut()
-            .banks_client
-            .get_account(referred_token_account)
-            .await
-            .unwrap()
-            .unwrap();
-
-        let referred_token_account_quote =
-            spl_token::state::Account::unpack(&referred_token_account_quote.data)?;
-        assert_eq!(referred_token_account_quote.amount, USDC_UNIT_SIZE / 4);
-    }
-
-    // test fee payment only in SBF mode, not on local arch, bc. referral program is stubbed
-    if std::env::var("BPF_OUT_DIR").is_ok() || std::env::var("SBF_OUT_DIR").is_ok() {
-        let settle_maker_ix = Instruction {
-            program_id: ui_wrapper::id(),
-            accounts: vec![
-                AccountMeta::new(maker_wrapper_fixture.key, false),
-                AccountMeta::new(maker, true),
-                AccountMeta::new(maker_token_account_base, false),
-                AccountMeta::new(maker_token_account_quote, false),
-                AccountMeta::new(test_fixture.market.key, false),
-                AccountMeta::new(base_vault, false),
-                AccountMeta::new(quote_vault, false),
-                AccountMeta::new_readonly(base_mint, false),
-                AccountMeta::new_readonly(quote_mint, false),
-                AccountMeta::new_readonly(
-                    Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-                    false,
-                ),
-                AccountMeta::new_readonly(spl_token::id(), false),
-                AccountMeta::new_readonly(spl_token::id(), false),
-                AccountMeta::new_readonly(manifest::id(), false),
-                AccountMeta::new(platform_token_account, false),
-                AccountMeta::new(referred_token_account, false),
-            ],
-            data: [
-                ManifestWrapperInstruction::SettleFunds.to_vec(),
-                WrapperSettleFundsParams::new(500_000_000, 50)
-                    .try_to_vec()
-                    .unwrap(),
-            ]
-            .concat(),
-        };
-        send_tx_with_retry(
-            Rc::clone(&test_fixture.context),
-            &[settle_maker_ix],
-            Some(&maker),
-            &[&maker_keypair],
-        )
+    // user has proceeds of trade in his wallet, but 50% fees were charged
+    let taker_token_account_quote: Account = test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(taker_token_account_quote)
         .await
-        .expect_err("should fail due to lack of USDC balance to pay fees");
+        .unwrap()
+        .unwrap();
 
-        // maker has 1 SOL & bought 1 SOL, but couldn't settle
-        let maker_token_account_base: Account = test_fixture
-            .context
-            .borrow_mut()
-            .banks_client
-            .get_account(maker_token_account_base)
-            .await
-            .unwrap()
-            .unwrap();
+    let taker_token_account_quote =
+        spl_token::state::Account::unpack(&taker_token_account_quote.data)?;
+    assert_eq!(taker_token_account_quote.amount, USDC_UNIT_SIZE * 3 / 2);
 
-        let maker_token_account_base =
-            spl_token::state::Account::unpack(&maker_token_account_base.data)?;
-        assert_eq!(maker_token_account_base.amount, SOL_UNIT_SIZE);
-    }
+    // verify the remaining 50% was split 50/50 between platform & referrer
+    let platform_token_account_quote: Account = test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(platform_token_account)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let platform_token_account_quote =
+        spl_token::state::Account::unpack(&platform_token_account_quote.data)?;
+    assert_eq!(platform_token_account_quote.amount, USDC_UNIT_SIZE / 4);
+
+    let referred_token_account_quote: Account = test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(referred_token_account)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let referred_token_account_quote =
+        spl_token::state::Account::unpack(&referred_token_account_quote.data)?;
+    assert_eq!(referred_token_account_quote.amount, USDC_UNIT_SIZE / 4);
+
+    let settle_maker_ix = Instruction {
+        program_id: ui_wrapper::id(),
+        accounts: vec![
+            AccountMeta::new(maker_wrapper_fixture.key, false),
+            AccountMeta::new(maker, true),
+            AccountMeta::new(maker_token_account_base, false),
+            AccountMeta::new(maker_token_account_quote, false),
+            AccountMeta::new(test_fixture.market.key, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new(quote_vault, false),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(manifest::id(), false),
+            AccountMeta::new(platform_token_account, false),
+            AccountMeta::new(referred_token_account, false),
+        ],
+        data: [
+            ManifestWrapperInstruction::SettleFunds.to_vec(),
+            WrapperSettleFundsParams::new(500_000_000, 50)
+                .try_to_vec()
+                .unwrap(),
+        ]
+        .concat(),
+    };
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[settle_maker_ix],
+        Some(&maker),
+        &[&maker_keypair],
+    )
+    .await
+    .expect_err("should fail due to lack of USDC balance to pay fees");
+
+    // maker has 1 SOL & bought 1 SOL, but couldn't settle
+    let maker_token_account_base: Account = test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(maker_token_account_base)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let maker_token_account_base =
+        spl_token::state::Account::unpack(&maker_token_account_base.data)?;
+    assert_eq!(maker_token_account_base.amount, SOL_UNIT_SIZE);
 
     Ok(())
 }

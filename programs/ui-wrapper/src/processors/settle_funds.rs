@@ -1,4 +1,4 @@
-use std::{cell::RefMut, str::FromStr};
+use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_mut_helper, DataIndex, RBNode};
@@ -11,7 +11,6 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::{AccountMeta, Instruction},
     program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -56,10 +55,6 @@ pub(crate) fn process_settle_funds(
     let vault_quote: &AccountInfo = next_account_info(account_iter)?;
     let mint_base: &AccountInfo = next_account_info(account_iter)?;
     let mint_quote: &AccountInfo = next_account_info(account_iter)?;
-    let executor_program: Program = Program::new(
-        next_account_info(account_iter)?,
-        &Pubkey::from_str("EXECM4wjzdCnrtQjHx5hy1r5k31tdvWBPYbqsjSoPfAh").unwrap(),
-    )?;
     let token_program_base: &AccountInfo = next_account_info(account_iter)?;
     let token_program_quote: &AccountInfo = next_account_info(account_iter)?;
     let manifest_program: Program =
@@ -150,36 +145,50 @@ pub(crate) fn process_settle_funds(
         unimplemented!("token2022 not yet supported")
         // TODO: make sure to use least amount of transfers possible to avoid transfer fee
     } else {
-        let mut accounts = vec![
-            AccountMeta::new_readonly(*token_program_quote.key, false),
-            AccountMeta::new(*trader_token_account_quote.key, false),
-            AccountMeta::new(*platform_token_account.key, false),
-            AccountMeta::new_readonly(*owner.key, true),
-        ];
-        let mut account_infos = vec![
-            token_program_quote.clone(),
-            trader_token_account_quote.clone(),
-            platform_token_account.clone(),
-            owner.info.clone(),
-        ];
-        if let Ok(referrer_token_account) = referrer_token_account {
-            accounts.push(AccountMeta::new(*referrer_token_account.key, false));
-            account_infos.push(referrer_token_account.clone())
-        }
+        let platform_fee_amount = if referrer_token_account.is_ok() {
+            (fee_amount * platform_fee_percent as u128 / 100) as u64
+        } else {
+            fee_amount as u64
+        };
 
         invoke(
-            &Instruction {
-                program_id: *executor_program.info.key,
-                accounts,
-                data: [
-                    vec![4u8],
-                    (fee_amount as u64).to_le_bytes().to_vec(),
-                    vec![platform_fee_percent],
-                ]
-                .concat(),
-            },
-            account_infos.as_slice(),
-        )?
+            &spl_token::instruction::transfer(
+                token_program_quote.key,
+                trader_token_account_quote.key,
+                platform_token_account.key,
+                owner.key,
+                &[],
+                platform_fee_amount,
+            )?,
+            &[
+                token_program_quote.clone(),
+                trader_token_account_quote.clone(),
+                platform_token_account.clone(),
+                owner.info.clone(),
+            ],
+        )?;
+
+        if let Ok(referrer_token_account) = referrer_token_account {
+            let referrer_fee_amount =
+                (fee_amount as u64).saturating_sub(platform_fee_amount) as u64;
+
+            invoke(
+                &spl_token::instruction::transfer(
+                    token_program_quote.key,
+                    trader_token_account_quote.key,
+                    referrer_token_account.key,
+                    owner.key,
+                    &[],
+                    referrer_fee_amount,
+                )?,
+                &[
+                    token_program_quote.clone(),
+                    trader_token_account_quote.clone(),
+                    referrer_token_account.clone(),
+                    owner.info.clone(),
+                ],
+            )?;
+        }
     }
 
     // Sync to get the balance correct and remove any expired orders.

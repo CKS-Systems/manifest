@@ -23,7 +23,10 @@ import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
 import { airdropSol } from '../src/utils/solana';
 
 async function testWrapper(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
 
@@ -129,9 +132,6 @@ async function testWrapper(): Promise<void> {
     connection,
     new Transaction().add(createAccountIx).add(createWrapperIx),
     [payerKeypair2, wrapperKeypair2],
-    {
-      commitment: 'finalized',
-    },
   );
   const wrapper2 = await Wrapper.loadFromAddress({
     connection,

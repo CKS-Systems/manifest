@@ -170,14 +170,10 @@ export class ManifestClient {
       transaction.add(createWrapperIx);
       transaction.add(claimSeatIx);
 
-      await sendAndConfirmTransaction(
-        connection,
-        transaction,
-        [payerKeypair, wrapperKeypair],
-        {
-          commitment: 'finalized',
-        },
-      );
+      await sendAndConfirmTransaction(connection, transaction, [
+        payerKeypair,
+        wrapperKeypair,
+      ]);
       const wrapper = await Wrapper.loadFromAddress({
         connection,
         address: wrapperKeypair.publicKey,
@@ -784,6 +780,7 @@ export class ManifestClient {
       cancelAllTx.add(cancelAllIx),
       [payerKeypair],
       {
+        skipPreflight: true,
         commitment: 'confirmed',
       },
     );
@@ -796,6 +793,7 @@ export class ManifestClient {
       withdrawAllTx.add(...withdrawAllIx),
       [payerKeypair],
       {
+        skipPreflight: true,
         commitment: 'confirmed',
       },
     );

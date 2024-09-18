@@ -9,7 +9,10 @@ import { placeOrder } from './placeOrder';
 import WebSocket from 'ws';
 
 async function testFillFeed(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
