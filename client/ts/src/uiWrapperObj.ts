@@ -67,10 +67,10 @@ export interface OpenOrder {
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
   orderSequenceNumber: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
+  /** Price as float in tokens of quote per tokens of base. */
   price: number;
-  /** Number of base atoms in the order. */
-  numBaseAtoms: bignum;
+  /** Number of base tokens in the order. */
+  amount: number;
   /** Hint for the location of the order in the manifest dynamic data. */
   dataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
@@ -98,9 +98,11 @@ export interface OpenOrderInternal {
  */
 export class UiWrapper {
   /** Public key for the market account. */
-  address: PublicKey;
+  private address: PublicKey;
   /** Deserialized data. */
   private data: WrapperData;
+  /** Market reference for looking up decimals */
+  private market: Market;
 
   /**
    * Constructs a Wrapper object.
@@ -108,15 +110,10 @@ export class UiWrapper {
    * @param address The `PublicKey` of the wrapper account
    * @param data Deserialized wrapper data
    */
-  private constructor({
-    address,
-    data,
-  }: {
-    address: PublicKey;
-    data: WrapperData;
-  }) {
+  private constructor(address: PublicKey, data: WrapperData, market: Market) {
     this.address = address;
     this.data = data;
+    this.market = market;
   }
 
   /**
@@ -125,15 +122,13 @@ export class UiWrapper {
    * @param marketAddress The `PublicKey` of the wrapper account
    * @param buffer The buffer holding the wrapper account data
    */
-  static loadFromBuffer({
-    address,
-    buffer,
-  }: {
-    address: PublicKey;
-    buffer: Buffer;
-  }): UiWrapper {
-    const wrapperData = UiWrapper.deserializeWrapperBuffer(buffer);
-    return new UiWrapper({ address, data: wrapperData });
+  static loadFromBuffer(
+    address: PublicKey,
+    buffer: Buffer,
+    market: Market,
+  ): UiWrapper {
+    const wrapperData = UiWrapper.deserializeWrapperBuffer(market, buffer);
+    return new UiWrapper(address, wrapperData, market);
   }
 
   /**
@@ -148,7 +143,8 @@ export class UiWrapper {
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
     }
-    this.data = UiWrapper.deserializeWrapperBuffer(buffer);
+    await this.market.reload(connection);
+    this.data = UiWrapper.deserializeWrapperBuffer(this.market, buffer);
   }
 
   /**
@@ -209,7 +205,7 @@ export class UiWrapper {
       );
       marketInfo.orders.forEach((order: OpenOrder) => {
         console.log(
-          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
+          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.amount}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
       });
     });
@@ -226,7 +222,10 @@ export class UiWrapper {
    *
    * @returns WrapperData
    */
-  public static deserializeWrapperBuffer(data: Buffer): WrapperData {
+  public static deserializeWrapperBuffer(
+    market: Market,
+    data: Buffer,
+  ): WrapperData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -273,7 +272,12 @@ export class UiWrapper {
           (openOrder: OpenOrderInternal) => {
             return {
               ...openOrder,
-              price: convertU128(new BN(openOrder.price, 10, 'le')),
+              amount:
+                (openOrder.numBaseAtoms.toString() as any) /
+                10 ** market.baseDecimals(),
+              price:
+                convertU128(new BN(openOrder.price, 10, 'le')) *
+                10 ** (market.quoteDecimals() - market.baseDecimals()),
             };
           },
         );
