@@ -54,7 +54,7 @@ export async function createGlobal(
     programId: PROGRAM_ID,
   });
 
-  const createGlobalIx = ManifestClient['createGlobalIx'](
+  const createGlobalIx = ManifestClient['createGlobalCreateIx'](
     connection,
     payerKeypair.publicKey,
     tokenMint,
