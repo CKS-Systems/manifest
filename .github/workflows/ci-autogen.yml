@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ts-client:
+  autogen-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
