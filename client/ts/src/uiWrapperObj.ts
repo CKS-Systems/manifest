@@ -16,8 +16,6 @@ import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
 import { Market } from './market';
 import { getVaultAddress } from './utils/market';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import { convertU128 } from './utils/numbers';
-import { BN } from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
@@ -68,9 +66,9 @@ export interface OpenOrder {
   /** Exchange defined id for an order. */
   orderSequenceNumber: bignum;
   /** Price as float in tokens of quote per tokens of base. */
-  price: number;
-  /** Number of base tokens in the order. */
-  amount: number;
+  tokenPrice: number;
+  /** Number of base tokens remaining in the order. */
+  numBaseTokens: number;
   /** Hint for the location of the order in the manifest dynamic data. */
   dataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
@@ -205,7 +203,7 @@ export class UiWrapper {
       );
       marketInfo.orders.forEach((order: OpenOrder) => {
         console.log(
-          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.amount}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
+          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseTokens}@${order.tokenPrice} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
       });
     });
@@ -268,19 +266,24 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: OpenOrderInternal) => {
-            return {
-              ...openOrder,
-              amount:
-                (openOrder.numBaseAtoms.toString() as any) /
-                10 ** market.baseDecimals(),
-              price:
-                convertU128(new BN(openOrder.price, 10, 'le')) *
-                10 ** (market.quoteDecimals() - market.baseDecimals()),
-            };
-          },
-        );
+        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders
+          .map((orderOnWrapper: OpenOrderInternal) => {
+            const orderOnBook = market.openOrders().find(
+              (oo) =>
+                // this is the easiery way to work around the absurd type union bignum
+                oo.sequenceNumber.toString() ==
+                orderOnWrapper.orderSequenceNumber.toString(),
+            );
+            if (!orderOnBook) {
+              return null;
+            } else {
+              return {
+                ...orderOnWrapper,
+                ...orderOnBook,
+              };
+            }
+          })
+          .filter((o) => o != null);
 
         return {
           market: marketInfoRaw.market,

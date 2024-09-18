@@ -28,9 +28,9 @@ export type RestingOrder = {
   /** Trader public key. */
   trader: PublicKey;
   /** Number of base tokens remaining in the order. */
-  numBaseTokens: bignum;
+  numBaseTokens: number;
   /** Last slot before this order is invalid and will be removed. */
-  lastValidSlot: bignum;
+  lastValidSlot: number;
   /** Exchange defined sequenceNumber for this order, guaranteed to be unique. */
   sequenceNumber: bignum;
   /** Price as float in tokens of quote per tokens of base. */
@@ -391,6 +391,7 @@ export class Market {
             restingOrderBeet,
           ).map((restingOrderInternal: RestingOrderInternal) => {
             return {
+              ...restingOrderInternal,
               trader: publicKeyBeet.deserialize(
                 data.subarray(
                   Number(restingOrderInternal.traderIndex) +
@@ -406,8 +407,8 @@ export class Market {
                 10 ** baseMintDecimals,
               tokenPrice:
                 convertU128(restingOrderInternal.price) *
-                10 ** (baseMintDecimals - quoteMintDecimals),
-              ...restingOrderInternal,
+                10 ** (quoteMintDecimals - baseMintDecimals),
+              lastValidSlot: restingOrderInternal.lastValidSlot as number,
             };
           })
         : [];

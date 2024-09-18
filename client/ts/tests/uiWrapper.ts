@@ -178,15 +178,12 @@ async function testWrapper(): Promise<void> {
   }
 
   await wrapper.reload(connection);
-  // wrapper.prettyPrint();
 
   const [oo] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
-  console.log('Amount:', oo.amount);
-  console.log('Price:', oo.price);
   assert(Date.now() > (oo.clientOrderId as number));
   assert((oo.clientOrderId as number) > startTs);
-  assert(10 === oo.amount, 'correct amount');
-  assert(0.02 === oo.price, 'correct price');
+  assert(10 === oo.numBaseTokens, 'correct amount');
+  assert(0.02 === oo.tokenPrice, 'correct price');
   assert(!oo.isBid, 'correct side');
 }
 
