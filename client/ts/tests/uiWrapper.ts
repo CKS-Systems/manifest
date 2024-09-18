@@ -193,8 +193,8 @@ async function testWrapper(): Promise<void> {
   assert(!oo.isBid, 'correct side');
 }
 
-describe('UI-wrapper test', () => {
-  it('can place, cancel & settle', async () => {
+describe('ui_wrapper test', () => {
+  it('can place and read open opers', async () => {
     await testWrapper();
   });
 });
