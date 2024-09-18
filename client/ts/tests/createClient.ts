@@ -77,9 +77,6 @@ async function testGetSetupIxs(
     connection,
     new Transaction().add(...instructions),
     signers,
-    {
-      commitment: 'confirmed',
-    },
   );
 
   console.log(`executed setupIxs: ${signature}`);
@@ -91,7 +88,7 @@ describe('when creating a client using getClientForMarketNoPrivateKey', () => {
   let marketAddress: PublicKey;
 
   before(async () => {
-    connection = new Connection('http://127.0.0.1:8899');
+    connection = new Connection('http://127.0.0.1:8899', 'confirmed');
     payerKeypair = Keypair.generate();
     marketAddress = await createMarket(connection, payerKeypair);
   });

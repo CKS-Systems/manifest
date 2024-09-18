@@ -373,14 +373,6 @@
           ]
         },
         {
-          "name": "executorProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Executor program"
-          ]
-        },
-        {
           "name": "tokenProgramBase",
           "isMut": false,
           "isSigner": false,

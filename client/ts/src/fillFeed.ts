@@ -126,6 +126,7 @@ export class FillFeed {
 export async function runFillFeed() {
   const connection: Connection = new Connection(
     process.env.RPC_URL || 'http://127.0.0.1:8899',
+    'confirmed',
   );
   const fillFeed: FillFeed = new FillFeed(connection);
   await fillFeed.parseLogs();
