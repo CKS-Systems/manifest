@@ -155,7 +155,7 @@ export class UiWrapper {
   public marketInfoForMarket(marketPk: PublicKey): MarketInfoParsed | null {
     const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
       (marketInfo: MarketInfoParsed) => {
-        return marketInfo.market.toBase58() == marketPk.toBase58();
+        return marketInfo.market.equals(marketPk);
       },
     );
     if (filtered.length == 0) {
@@ -174,7 +174,7 @@ export class UiWrapper {
   public openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null {
     const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
       (marketInfo: MarketInfoParsed) => {
-        return marketInfo.market.toBase58() == marketPk.toBase58();
+        return marketInfo.market.equals(marketPk);
       },
     );
     if (filtered.length == 0) {

@@ -77,7 +77,7 @@ pub enum ManifestWrapperInstruction {
     #[account(10, name = "token_program_quote", desc = "Token program for quote token")]
     #[account(11, name = "manifest_program", desc = "Manifest program")]
     #[account(12, writable, name = "platform_token_account", desc = "Platform fee token account")]
-    // optional
+    // TODO mark as optional
     #[account(13, writable, name = "referrer_token_account", desc = "Referrer fee token account")]
     SettleFunds = 5,
 }
