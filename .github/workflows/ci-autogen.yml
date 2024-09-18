@@ -12,6 +12,9 @@ on:
       ]
   workflow_dispatch:
 
+env:
+  RUST_TOOLCHAIN: '1.78.0'
+
 jobs:
   autogen-check:
     runs-on: ubuntu-latest
@@ -24,6 +27,12 @@ jobs:
         with:
           node-version: '18'
           cache: 'yarn'
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set Rust version
+        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
