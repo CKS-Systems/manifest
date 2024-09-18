@@ -66,12 +66,12 @@ The market account holds all relevant information. It begins with a header that 
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,
 ClaimedSeats and 1 LinkedList for FreeListNodes, overlapping across each other. All are graphs where each vertex along with adjacency list fits in 80 bytes, allowing them to use the same blocks.
 
-## <pre>
-
-## | Header | Dynamic |
-
-## | BaseMint, QuoteMint, BidsRootIndex, ... | Bid | Ask | FreeListNode | Seat | Seat | Bid | Bid | Ask|
-
+<pre>
+--------------------------------------------------------------------------------------------------------
+|                   Header                    |                               Dynamic                   |
+--------------------------------------------------------------------------------------------------------
+| BaseMint, QuoteMint, BidsRootIndex, ...     | Bid | Ask | FreeListNode | Seat | Seat | Bid | Bid | Ask|
+--------------------------------------------------------------------------------------------------------
 </pre>
 
 ### Core vs Wrapper
