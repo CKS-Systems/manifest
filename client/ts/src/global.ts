@@ -37,6 +37,12 @@ export class Global {
     this.data = data;
   }
 
+    /**
+   * Returns a `Global` for a given address, a data buffer
+   *
+   * @param connection The Solana `Connection` object
+   * @param address The `PublicKey` of the global account
+   */
   static async loadFromAddress({
     connection,
     address,
@@ -48,9 +54,16 @@ export class Global {
     if (!accountInfo?.data) {
       throw new Error(`Failed to load ${address}`);
     }
+    console.log('DEBUG1');
     return Global.loadFromBuffer({ address, buffer: accountInfo.data });
   }
 
+    /**
+   * Returns a `Global` for a given address, a data buffer
+   *
+   * @param globalAddress The `PublicKey` of the global account
+   * @param buffer The buffer holding the market account data
+   */
   static loadFromBuffer({
     address,
     buffer,
@@ -58,7 +71,9 @@ export class Global {
     address: PublicKey;
     buffer: Buffer;
   }): Global {
+    console.log('DEBUG2');
     const globalData = Global.deserializeGlobalBuffer(buffer);
+    console.log('DEBUG3', globalData);
     return new Global({ address, data: globalData });
   }
 
