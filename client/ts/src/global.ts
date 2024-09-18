@@ -154,7 +154,7 @@ export class Global {
     const vault = beetPublicKey.read(data, offset);
     offset += beetPublicKey.byteSize;
 
-    const globalSeatsRootIndex = data.readUInt32LE(offset);
+    const _globalSeatsRootIndex = data.readUInt32LE(offset);
     offset += 4;
     const _globalAmountsRootIndex = data.readUInt32LE(offset);
     offset += 4;
@@ -172,14 +172,14 @@ export class Global {
     const numSeatsClaimed = data.readUInt16LE(offset);
     offset += 2;
 
-    const globalSeats =
-      globalSeatsRootIndex != NIL
-        ? deserializeRedBlackTree(
-            data.subarray(FIXED_GLOBAL_HEADER_SIZE),
-            globalSeatsRootIndex,
-            globalSeatBeet,
-          )
-        : [];
+    const globalSeats = [];
+      // globalSeatsRootIndex != NIL
+      //   ? deserializeRedBlackTree(
+      //       data.subarray(FIXED_GLOBAL_HEADER_SIZE),
+      //       globalSeatsRootIndex,
+      //       globalSeatBeet,
+      //     )
+      //   : [];
 
     return {
       mint,
