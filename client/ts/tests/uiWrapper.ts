@@ -12,20 +12,22 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import { OpenOrder } from '../src/wrapperObj';
-import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
+import { FIXED_WRAPPER_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT, PRICE_MAX_EXP, PRICE_MIN_EXP, U32_MAX } from '../src/constants';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
 import {
   PROGRAM_ID,
   createCreateWrapperInstruction,
   createClaimSeatInstruction,
+  createPlaceOrderInstruction,
+  OrderType,
 } from '../src/ui_wrapper';
-import { UiWrapper } from '../src/uiWrapperObj';
+import { UiWrapper , OpenOrder } from '../src/uiWrapperObj';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createMintToInstruction,
   getAssociatedTokenAddressSync,
 } from '@solana/spl-token';
+import { getVaultAddress } from '../src/utils/market';
 
 type WrapperResponse = Readonly<{
   account: AccountInfo<Buffer>;
@@ -86,6 +88,76 @@ async function setupWrapper(
     ixs: [createAccountIx, createWrapperIx, claimSeatIx],
     signers: [wrapperKeypair],
   };
+}
+
+async function placeOrderCreateWrapperIfNotExists(
+  connection: Connection,
+  market: Market,
+  owner: PublicKey,
+  args: { isBid: boolean; amount: number; price: number; orderId?: number }
+): Promise<{ixs: TransactionInstruction[]; signers: Signer[]}> {
+
+  const wrapper = await fetchFirstUserWrapper(connection, owner);
+  if (wrapper) {
+    const placeIx = UiWrapper.loadFromBuffer({
+      address: wrapper.pubkey,
+      buffer: wrapper.account.data,
+    }).placeOrderIx(market, { }, args);
+    return { ixs: [placeIx], signers: []};
+  } else {
+    const result = await setupWrapper(connection, market.address, owner);
+
+    const payer = owner;
+    const { isBid } = args;
+    const mint = isBid ? market.quoteMint() : market.baseMint();
+    const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
+    const vault = getVaultAddress(market.address, mint);
+    const clientOrderId = args.orderId ?? Date.now();
+    const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
+    let priceMantissa = args.price;
+    let priceExponent = market.baseDecimals() - market.quoteDecimals();
+    while (
+      priceMantissa < U32_MAX / 10 &&
+      priceExponent > PRICE_MIN_EXP &&
+      Math.round(priceMantissa) != priceMantissa
+    ) {
+      priceMantissa *= 10;
+      priceExponent -= 1;
+    }
+    while (priceMantissa > U32_MAX && priceExponent < PRICE_MAX_EXP) {
+      priceMantissa = priceMantissa / 10;
+      priceExponent += 1;
+    }
+    priceMantissa = Math.round(priceMantissa);
+
+    const placeIx = createPlaceOrderInstruction(
+      {
+        wrapperState: result.signers[0].publicKey,
+        owner,
+        traderTokenAccount,
+        market: market.address,
+        vault,
+        mint,
+        manifestProgram: MANIFEST_PROGRAM_ID,
+        payer,
+      },
+      {
+        params: {
+          clientOrderId,
+          baseAtoms,
+          priceMantissa,
+          priceExponent,
+          isBid,
+          lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
+          orderType: OrderType.Limit,
+        },
+      },
+    );
+
+    result.ixs.push(placeIx);
+    return result;
+  }
+
 }
 
 async function testWrapper(): Promise<void> {
