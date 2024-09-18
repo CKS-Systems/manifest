@@ -659,7 +659,7 @@ async fn swap_fail_insufficient_funds_buy() -> anyhow::Result<()> {
     test_fixture
         .place_order_for_keypair(
             Side::Ask,
-            2_000 * USDC_UNIT_SIZE,
+            2 * SOL_UNIT_SIZE,
             1,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,

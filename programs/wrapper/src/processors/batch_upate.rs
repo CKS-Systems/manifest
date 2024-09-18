@@ -48,7 +48,7 @@ pub struct WrapperPlaceOrderParams {
     is_bid: bool,
     last_valid_slot: u32,
     order_type: OrderType,
-    min_out_atoms: u64,
+    min_out_atoms: u64, // TODO: is this still needed?
 }
 impl WrapperPlaceOrderParams {
     pub fn new(
@@ -89,6 +89,7 @@ pub struct WrapperBatchUpdateParams {
     pub cancels: Vec<WrapperCancelOrderParams>,
     pub cancel_all: bool,
     pub orders: Vec<WrapperPlaceOrderParams>,
+    // deprecated & ignored
     pub trader_index_hint: Option<DataIndex>,
 }
 impl WrapperBatchUpdateParams {
@@ -377,7 +378,7 @@ pub(crate) fn process_batch_update(
         orders,
         cancel_all,
         cancels,
-        trader_index_hint,
+        ..
     } = WrapperBatchUpdateParams::try_from_slice(data)?;
 
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
@@ -386,6 +387,8 @@ pub(crate) fn process_batch_update(
 
     let market_info: MarketInfo =
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
+
+    let trader_index_hint = Some(market_info.trader_index);
     let mut remaining_base_atoms: BaseAtoms = market_info.base_balance;
     let mut remaining_quote_atoms: QuoteAtoms = market_info.quote_balance;
     drop(wrapper_data);

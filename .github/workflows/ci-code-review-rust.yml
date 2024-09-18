@@ -75,7 +75,7 @@ jobs:
           cargo build-sbf
 
       - name: Run sbf tests
-        run: cargo test-sbf
+        run: cargo test-sbf -- --test-threads 1
 
   coverage:
     name: Coverage
@@ -102,12 +102,9 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Build all deps
-        run: |
-          cargo build-sbf --verbose
 
       - name: Generate code coverage
-        run: cargo llvm-cov --lcov --output-path lcov.info --workspace -- --nocapture
+        run: cargo llvm-cov --lcov --output-path lcov.info --workspace -- --nocapture --test-threads 1
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

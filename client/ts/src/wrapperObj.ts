@@ -41,8 +41,9 @@ export interface MarketInfoRaw {
   traderIndex: number;
   baseBalanceAtoms: bignum;
   quoteBalanceAtoms: bignum;
+  quoteVolumeAtoms: bignum;
   lastUpdatedSlot: number;
-  padding: number; // 4 bytes
+  padding: number; // 3 bytes
 }
 
 /**
@@ -68,15 +69,15 @@ export interface OpenOrder {
 }
 
 export interface OpenOrderInternal {
+  price: Uint8Array;
   clientOrderId: bignum;
   orderSequenceNumber: bignum;
-  price: Uint8Array;
   numBaseAtoms: bignum;
   dataIndex: number;
   lastValidSlot: number;
   isBid: boolean;
   orderType: number;
-  padding: bignum[]; // 22 bytes
+  padding: bignum[]; // 30 bytes
 }
 
 /**
@@ -242,6 +243,7 @@ export class Wrapper {
     offset += 8;
 
     const trader = beetPublicKey.read(data, offset);
+
     offset += beetPublicKey.byteSize;
 
     const _numBytesAllocated = data.readUInt32LE(offset);
@@ -254,7 +256,7 @@ export class Wrapper {
     offset += 4;
 
     const _padding = data.readUInt32LE(offset);
-    offset += 4;
+    offset += 12;
 
     const marketInfos: MarketInfoRaw[] =
       marketInfosRootIndex != NIL
@@ -264,6 +266,7 @@ export class Wrapper {
             marketInfoBeet,
           )
         : [];
+
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfoRaw) => {
         const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
@@ -275,14 +278,16 @@ export class Wrapper {
                 openOrderBeet,
               )
             : [];
+
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
           (openOrder: OpenOrderInternal) => {
             return {
               ...openOrder,
-              price: Buffer.from(openOrder.price).readDoubleLE(0),
+              price: 0,
             };
           },
         );
+
         return {
           market: marketInfoRaw.market,
           baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
