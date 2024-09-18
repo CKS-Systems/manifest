@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726580732149,
+  "lastUpdate": 1726623683921,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2847,6 +2847,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7366,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1e1b858a8769b55c58bfa12e3644b4724f0653e",
+          "message": "typescript client for ui wrapper (#98)\n\n* local test is executable\r\n* copy wrapper test for ui-wrapper\r\n* parallelize js tests\r\n* remove dependency on executor to simplify ts testing\r\n* basic test for placing an order through ui wrapper\r\n* simplify commitment management\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <max@mango.markets>",
+          "timestamp": "2024-09-18T02:16:49+01:00",
+          "tree_id": "290119949cba23b87492ff7a54e1ef48bc4a3abc",
+          "url": "https://github.com/CKS-Systems/manifest/commit/c1e1b858a8769b55c58bfa12e3644b4724f0653e"
+        },
+        "date": 1726623683139,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4044,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7109,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7351,
             "unit": "CU",
             "range": "",
             "extra": ""
