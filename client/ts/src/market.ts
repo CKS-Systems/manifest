@@ -161,7 +161,7 @@ export class Market {
     this.data = Market.deserializeMarketBuffer(buffer);
   }
 
-  public async findMarkets(
+  static async findMarkets(
     connection: Connection,
     baseMint: PublicKey,
     quoteMint: PublicKey,
