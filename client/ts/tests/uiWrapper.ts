@@ -12,6 +12,7 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
+import { OpenOrder } from '../src/wrapperObj';
 import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
 import {
@@ -19,7 +20,7 @@ import {
   createCreateWrapperInstruction,
   createClaimSeatInstruction,
 } from '../src/ui_wrapper';
-import { UiWrapper, OpenOrder } from '../src/uiWrapperObj';
+import { UiWrapper } from '../src/uiWrapperObj';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createMintToInstruction,
@@ -130,11 +131,10 @@ async function testWrapper(): Promise<void> {
     payerKeypair.publicKey,
   );
   assert(wrapperAcc != null, 'should find wrapper');
-  const wrapper = UiWrapper.loadFromBuffer(
-    wrapperAcc.pubkey,
-    wrapperAcc.account.data,
-    market,
-  );
+  const wrapper = UiWrapper.loadFromBuffer({
+    address: wrapperAcc.pubkey,
+    buffer: wrapperAcc.account.data,
+  });
   assert(
     wrapper.marketInfoForMarket(marketAddress)?.orders.length == 0,
     'no orders yet in market',
@@ -180,15 +180,21 @@ async function testWrapper(): Promise<void> {
   await wrapper.reload(connection);
 
   const [oo] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
+  const amount =
+    (oo.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
+  const price =
+    oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
+  console.log('Amount:', amount);
+  console.log('Price:', price);
   assert(Date.now() > (oo.clientOrderId as number));
   assert((oo.clientOrderId as number) > startTs);
-  assert(10 === oo.numBaseTokens, 'correct amount');
-  assert(0.02 === oo.tokenPrice, 'correct price');
+  assert(10 === amount, 'correct amount');
+  assert(0.02 === price, 'correct price');
   assert(!oo.isBid, 'correct side');
 }
 
-describe('ui_wrapper', () => {
-  it('can place', async () => {
+describe('UI-wrapper test', () => {
+  it('can place, cancel & settle', async () => {
     await testWrapper();
   });
 });

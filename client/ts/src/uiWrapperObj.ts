@@ -16,6 +16,8 @@ import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
 import { Market } from './market';
 import { getVaultAddress } from './utils/market';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { convertU128 } from './utils/numbers';
+import BN from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
@@ -65,10 +67,10 @@ export interface OpenOrder {
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
   orderSequenceNumber: bignum;
-  /** Price as float in tokens of quote per tokens of base. */
-  tokenPrice: number;
-  /** Number of base tokens remaining in the order. */
-  numBaseTokens: number;
+  /** Price as float in atoms of quote per atoms of base. */
+  price: number;
+  /** Number of base atoms in the order. */
+  numBaseAtoms: bignum;
   /** Hint for the location of the order in the manifest dynamic data. */
   dataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
@@ -96,11 +98,9 @@ export interface OpenOrderInternal {
  */
 export class UiWrapper {
   /** Public key for the market account. */
-  private address: PublicKey;
+  address: PublicKey;
   /** Deserialized data. */
   private data: WrapperData;
-  /** Market reference for looking up decimals */
-  private market: Market;
 
   /**
    * Constructs a Wrapper object.
@@ -108,10 +108,15 @@ export class UiWrapper {
    * @param address The `PublicKey` of the wrapper account
    * @param data Deserialized wrapper data
    */
-  private constructor(address: PublicKey, data: WrapperData, market: Market) {
+  private constructor({
+    address,
+    data,
+  }: {
+    address: PublicKey;
+    data: WrapperData;
+  }) {
     this.address = address;
     this.data = data;
-    this.market = market;
   }
 
   /**
@@ -120,13 +125,15 @@ export class UiWrapper {
    * @param marketAddress The `PublicKey` of the wrapper account
    * @param buffer The buffer holding the wrapper account data
    */
-  static loadFromBuffer(
-    address: PublicKey,
-    buffer: Buffer,
-    market: Market,
-  ): UiWrapper {
-    const wrapperData = UiWrapper.deserializeWrapperBuffer(market, buffer);
-    return new UiWrapper(address, wrapperData, market);
+  static loadFromBuffer({
+    address,
+    buffer,
+  }: {
+    address: PublicKey;
+    buffer: Buffer;
+  }): UiWrapper {
+    const wrapperData = UiWrapper.deserializeWrapperBuffer(buffer);
+    return new UiWrapper({ address, data: wrapperData });
   }
 
   /**
@@ -141,8 +148,7 @@ export class UiWrapper {
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
     }
-    await this.market.reload(connection);
-    this.data = UiWrapper.deserializeWrapperBuffer(this.market, buffer);
+    this.data = UiWrapper.deserializeWrapperBuffer(buffer);
   }
 
   /**
@@ -203,7 +209,7 @@ export class UiWrapper {
       );
       marketInfo.orders.forEach((order: OpenOrder) => {
         console.log(
-          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseTokens}@${order.tokenPrice} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
+          `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
       });
     });
@@ -220,10 +226,7 @@ export class UiWrapper {
    *
    * @returns WrapperData
    */
-  public static deserializeWrapperBuffer(
-    market: Market,
-    data: Buffer,
-  ): WrapperData {
+  public static deserializeWrapperBuffer(data: Buffer): WrapperData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -266,25 +269,14 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders
-          .map((orderOnWrapper: OpenOrderInternal) => {
-            const orderOnBook = market.openOrders().find(
-              (oo) =>
-                // this is the easiery way to work around the absurd type union bignum
-                oo.sequenceNumber.toString() ==
-                orderOnWrapper.orderSequenceNumber.toString(),
-            );
-            if (!orderOnBook) {
-              return null;
-            } else {
-              return {
-                ...orderOnWrapper,
-                ...orderOnBook,
-              };
-            }
-          })
-          .filter((o) => o != null);
-
+        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
+          (openOrder: OpenOrderInternal) => {
+            return {
+              ...openOrder,
+              price: convertU128(new BN(openOrder.price, 10, 'le')),
+            };
+          },
+        );
 
         // TODO: fetch balance in tokens from market
         return {
