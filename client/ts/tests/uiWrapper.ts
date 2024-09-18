@@ -184,8 +184,7 @@ async function testWrapper(): Promise<void> {
     (oo.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =
     oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
-  console.log('Amount:', amount);
-  console.log('Price:', price);
+
   assert(Date.now() > (oo.clientOrderId as number));
   assert((oo.clientOrderId as number) > startTs);
   assert(10 === amount, 'correct amount');
