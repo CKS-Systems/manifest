@@ -13,7 +13,7 @@ import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
 export type RestingOrderInternal = {
   traderIndex: bignum;
   numBaseAtoms: bignum;
-  lastValidSlot: bignum;
+  lastValidSlot: number;
   sequenceNumber: bignum;
   // Deserializes to UInt8Array, but we then convert it to number.
   price: bignum;
@@ -408,7 +408,6 @@ export class Market {
               tokenPrice:
                 convertU128(restingOrderInternal.price) *
                 10 ** (quoteMintDecimals - baseMintDecimals),
-              lastValidSlot: restingOrderInternal.lastValidSlot as number,
             };
           })
         : [];

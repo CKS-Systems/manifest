@@ -285,6 +285,8 @@ export class UiWrapper {
           })
           .filter((o) => o != null);
 
+
+        // TODO: fetch balance in tokens from market
         return {
           market: marketInfoRaw.market,
           baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
