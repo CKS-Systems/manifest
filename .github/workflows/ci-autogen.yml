@@ -1,0 +1,36 @@
+name: Check autogen files
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      [
+        'client/**',
+        'docs/**',
+        'lib/**',
+        'programs/**',
+      ]
+  workflow_dispatch:
+
+jobs:
+  ts-client:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PAT }}
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - uses: nickcharlton/diff-check@main
+        with:
+          command: cd client/idl && yarn && node generateIdl.js && node generateClient.js && PROGRAM_NAME=manifest node generateIdl.js &&  PROGRAM_NAME=manifest node generateClient.js && cd - ; npm install -g prettier; prettier client/ts --write ; prettier client/ts/src/manifest --write; prettier client/ts/src/wrapper --write; git diff;
