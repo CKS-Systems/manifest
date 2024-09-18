@@ -3,7 +3,7 @@ import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { toNum } from './utils/numbers';
-import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
+import { FIXED_GLOBAL_HEADER_SIZE, NIL } from './constants';
 import { getMint } from '@solana/spl-token';
 import { globalSeatBeet } from './utils/beet';
 
@@ -160,7 +160,7 @@ export class Global {
     const globalSeats =
       globalSeatsRootIndex != NIL
         ? deserializeRedBlackTree(
-            data.subarray(FIXED_MANIFEST_HEADER_SIZE),
+            data.subarray(FIXED_GLOBAL_HEADER_SIZE),
             globalSeatsRootIndex,
             globalSeatBeet,
           )
