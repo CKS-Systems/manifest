@@ -688,7 +688,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 )?;
             }
 
-
             // Increase maker from the matched amount in the trade.
             update_balance(
                 dynamic,

@@ -3,7 +3,7 @@ import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
-import { convertU128, toNum } from './utils/numbers';
+import { convertU128 } from './utils/numbers';
 import bs58 from 'bs58';
 import keccak256 from 'keccak256';
 
@@ -166,9 +166,9 @@ export type FillLogResult = {
   /** Boolean to indicate which side the trade was. */
   takerIsBuy: boolean;
   /** Sequential number for every order placed / matched wraps around at u64::MAX */
-  makerSequenceNumber: string,
+  makerSequenceNumber: string;
   /** Sequential number for every order placed / matched wraps around at u64::MAX */
-  takerSequenceNumber: string,
+  takerSequenceNumber: string;
   /** Slot number of the fill. */
   slot: number;
 };
