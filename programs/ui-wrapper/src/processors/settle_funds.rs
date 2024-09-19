@@ -87,12 +87,24 @@ pub(crate) fn process_settle_funds(
         fee_mantissa,
         platform_fee_percent,
     } = WrapperSettleFundsParams::try_from_slice(data)?;
+    let fee_mantissa = fee_mantissa.min(FEE_DENOMINATOR) as u128;
 
+    // limits:
+    // quote_volume_unpaid = [0..u64::MAX]
+    // fee_mantissa = [0..FEE_DENOMINATOR]
+    // fee_atoms = [0..u64::MAX]
+    // intermediate results can extend above u64
     let fee_atoms =
-        (market_info.quote_volume_unpaid.as_u64() as u128 * fee_mantissa as u128) / FEE_DENOMINATOR;
-    let effective_quote_volume =
-        QuoteAtoms::new((fee_atoms * FEE_DENOMINATOR / fee_mantissa as u128) as u64);
-    market_info.quote_volume_unpaid -= effective_quote_volume;
+        market_info.quote_volume_unpaid.as_u64() as u128 * fee_mantissa / FEE_DENOMINATOR;
+    // limits:
+    // quote_volume_paid = [0..quote_volume_unpaid] safe to cast to u64
+    // intermediate results can extend above u64
+    let quote_volume_paid = QuoteAtoms::new((fee_atoms * FEE_DENOMINATOR / fee_mantissa) as u64);
+    // limits:
+    // saturating_sub not needed, but doesn't hurt a lot
+    market_info.quote_volume_unpaid = market_info
+        .quote_volume_unpaid
+        .saturating_sub(quote_volume_paid);
 
     let MarketInfo {
         base_balance,
