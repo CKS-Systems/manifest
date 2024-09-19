@@ -1,11 +1,18 @@
-use std::{cell::RefMut, mem::size_of};
+use std::{
+    cell::{Ref, RefMut},
+    mem::size_of,
+};
 
 use hypertree::{
-    get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations, HyperTreeWriteOperations, NIL,
+    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeWriteOperations, RBNode, NIL,
 };
 use manifest::{
-    program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account},
-    state::{MarketFixed, MarketRefMut},
+    program::{
+        claim_seat_instruction, expand_market_instruction, get_dynamic_account,
+        get_mut_dynamic_account,
+    },
+    state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, MarketRefMut},
     validation::ManifestAccountInfo,
 };
 
@@ -42,45 +49,68 @@ pub(crate) fn process_claim_seat(
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
 
-    // Call expand so claim seat has enough free space
-    // and owner doesn't get charged rent
-    // TODO: could check if needed before
-    invoke(
-        &expand_market_instruction(market.key, payer.key),
-        &[
-            manifest_program.info.clone(),
-            payer.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
-    )?;
+    // TODO: check if seat already exists if no create it:
+    let trader_index: DataIndex = {
+        let trader_index: DataIndex = {
+            let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+            dynamic_account.get_trader_index(owner.key)
+        };
 
-    // Call the ClaimSeat CPI
-    invoke(
-        &claim_seat_instruction(market.key, owner.key),
-        &[
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
-    )?;
+        if trader_index != NIL {
+            // if core seat was already initialized, nothing to do here
+            trader_index
+        } else {
+            // Need to intialize a new seat on core
+            // Call expand so claim seat has enough free space
+            // and owner doesn't get charged rent
+            invoke(
+                &expand_market_instruction(market.key, payer.key),
+                &[
+                    manifest_program.info.clone(),
+                    payer.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
+
+            // Call the ClaimSeat CPI
+            invoke(
+                &claim_seat_instruction(market.key, owner.key),
+                &[
+                    manifest_program.info.clone(),
+                    owner.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
+
+            // fetch newly assigned trader index after claiming core seat
+            let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+            dynamic_account.get_trader_index(owner.key)
+        }
+    };
 
     // Insert the seat into the wrapper state
     expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
 
     // Load the market_infos tree and insert a new one
     let wrapper_state_info: &AccountInfo = wrapper_state.info;
-    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state_info.try_borrow_mut_data().unwrap();
+    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state_info.try_borrow_mut_data()?;
     let (fixed_data, wrapper_dynamic_data) =
         wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
     let wrapper_fixed: &mut ManifestWrapperUserFixed = get_mut_helper(fixed_data, 0);
-
-    // Get the free block and setup the new MarketInfo there
-    let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-    let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-    let trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
-    let market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
+    let mut market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
+    market_info.quote_volume = {
+        // sync volume from core seat to prevent double billing if seat
+        // existed before wrapper invocation
+        let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(market_data);
+        let claimed_seat: &ClaimedSeat =
+            get_helper::<RBNode<ClaimedSeat>>(dynamic_account.dynamic, trader_index).get_value();
+        claimed_seat.quote_volume
+    };
 
     // Put that market_info at the free list head
     let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
