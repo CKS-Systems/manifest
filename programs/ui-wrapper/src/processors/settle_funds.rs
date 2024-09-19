@@ -87,7 +87,7 @@ pub(crate) fn process_settle_funds(
         fee_mantissa,
         platform_fee_percent,
     } = WrapperSettleFundsParams::try_from_slice(data)?;
-    let fee_mantissa = fee_mantissa.min(FEE_DENOMINATOR) as u128;
+    let fee_mantissa = (fee_mantissa as u128).min(FEE_DENOMINATOR);
 
     // limits:
     // quote_volume_unpaid = [0..u64::MAX]
