@@ -1,0 +1,1 @@
+{"version":3,"file":"solana.d.ts","sourceRoot":"","sources":["../../../../client/ts/src/utils/solana.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,SAAS,EAAE,MAAM,iBAAiB,CAAC;AAExD,MAAM,MAAM,OAAO,GAAG,cAAc,GAAG,QAAQ,GAAG,UAAU,CAAC;AAE7D,wBAAsB,wBAAwB,CAC5C,UAAU,EAAE,UAAU,GACrB,OAAO,CAAC,OAAO,CAAC,CASlB;AAED,wBAAsB,UAAU,CAAC,UAAU,EAAE,UAAU,EAAE,SAAS,EAAE,SAAS,iBAU5E"}

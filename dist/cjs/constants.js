@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PRICE_MAX_EXP = exports.PRICE_MIN_EXP = exports.U32_MAX = exports.NO_EXPIRATION_LAST_VALID_SLOT = exports.NIL = exports.FIXED_WRAPPER_HEADER_SIZE = exports.FIXED_MANIFEST_HEADER_SIZE = void 0;
+exports.FIXED_MANIFEST_HEADER_SIZE = 256;
+exports.FIXED_WRAPPER_HEADER_SIZE = 64;
+exports.NIL = 4_294_967_295;
+exports.NO_EXPIRATION_LAST_VALID_SLOT = 0;
+exports.U32_MAX = 4_294_967_295;
+exports.PRICE_MIN_EXP = -18;
+exports.PRICE_MAX_EXP = 8;

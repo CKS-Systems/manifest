@@ -6,7 +6,6 @@ target
 **/.crates
 **/node_modules
 **/cargo
-dist
 **/nyc_output/*
 test-ledger
 idl/yarn.lock

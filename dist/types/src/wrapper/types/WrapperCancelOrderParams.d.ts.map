@@ -1,0 +1,1 @@
+{"version":3,"file":"WrapperCancelOrderParams.d.ts","sourceRoot":"","sources":["../../../../../client/ts/src/wrapper/types/WrapperCancelOrderParams.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,KAAK,IAAI,MAAM,2BAA2B,CAAC;AAClD,MAAM,MAAM,wBAAwB,GAAG;IACrC,aAAa,EAAE,IAAI,CAAC,MAAM,CAAC;CAC5B,CAAC;AAEF;;;GAGG;AACH,eAAO,MAAM,4BAA4B,+CAItC,CAAC"}

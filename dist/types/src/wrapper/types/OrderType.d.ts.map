@@ -1,0 +1,1 @@
+{"version":3,"file":"OrderType.d.ts","sourceRoot":"","sources":["../../../../../client/ts/src/wrapper/types/OrderType.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,KAAK,IAAI,MAAM,2BAA2B,CAAC;AAClD;;;GAGG;AACH,oBAAY,SAAS;IACnB,KAAK,IAAA;IACL,iBAAiB,IAAA;IACjB,QAAQ,IAAA;IACR,MAAM,IAAA;CACP;AAED;;;GAGG;AACH,eAAO,MAAM,aAAa,EAErB,IAAI,CAAC,aAAa,CAAC,SAAS,EAAE,SAAS,CAAC,CAAC"}
