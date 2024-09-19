@@ -1196,6 +1196,9 @@
 <a href="#1194" id="1194">1194</a>
 <a href="#1195" id="1195">1195</a>
 <a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1785,6 +1788,7 @@
             // because post only orders should fail, not produce a crossed book.
             </span>assert_can_take(order_type)<span class="question-mark">?</span>;
 
+            <span class="kw">let </span>maker_sequence_number = other_order.get_sequence_number();
             <span class="kw">let </span>other_trader_index: DataIndex = other_order.get_trader_index();
             <span class="kw">let </span>did_fully_match_resting_order: bool =
                 remaining_base_atoms &gt;= other_order.get_num_base_atoms();
@@ -1933,6 +1937,8 @@
                 base_atoms: base_atoms_traded,
                 quote_atoms: quote_atoms_traded,
                 price: matched_price,
+                maker_sequence_number,
+                taker_sequence_number: fixed.order_sequence_number,
                 taker_is_buy: PodBool::from(is_bid),
                 _padding: [<span class="number">0</span>; <span class="number">15</span>],
             })<span class="question-mark">?</span>;
