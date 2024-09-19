@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726623683921,
+  "lastUpdate": 1726744811621,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -2913,6 +2913,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7351,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1291364d06b33f2f66cdf1b0fc93f9507a7d30fe",
+          "message": "Max/fill city (#104)\n\n* add helper method for placing limit orders\r\n* add logs to ui wrapper\r\n* delete unused fixture\r\n* use wrapper to find all active markets but read open orders from there to have more up to date data\r\n* correct decimal encoding in client",
+          "timestamp": "2024-09-19T18:55:00+08:00",
+          "tree_id": "121bceee04dcb7bfb2195c9ebe40ec9067253a31",
+          "url": "https://github.com/CKS-Systems/manifest/commit/1291364d06b33f2f66cdf1b0fc93f9507a7d30fe"
+        },
+        "date": 1726744810655,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4056,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7108,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7359,
             "unit": "CU",
             "range": "",
             "extra": ""
