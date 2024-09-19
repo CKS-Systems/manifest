@@ -313,7 +313,7 @@ export class UiWrapper {
     const clientOrderId = args.orderId ?? Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
-    let priceExponent = market.baseDecimals() - market.quoteDecimals();
+    let priceExponent = market.quoteDecimals() - market.baseDecimals();
     while (
       priceMantissa < U32_MAX / 10 &&
       priceExponent > PRICE_MIN_EXP &&

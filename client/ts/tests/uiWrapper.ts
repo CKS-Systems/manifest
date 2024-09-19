@@ -115,7 +115,7 @@ async function placeOrderCreateWrapperIfNotExists(
     const clientOrderId = args.orderId ?? Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
-    let priceExponent = market.baseDecimals() - market.quoteDecimals();
+    let priceExponent = market.quoteDecimals() - market.baseDecimals();
     while (
       priceMantissa < U32_MAX / 10 &&
       priceExponent > PRICE_MIN_EXP &&
@@ -256,7 +256,7 @@ async function testWrapper(): Promise<void> {
   const amount =
     (wrapperOrder.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =
-    wrapperOrder.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
+    wrapperOrder.price * 10 ** (market.baseDecimals() - market.quoteDecimals());
   console.log('Amount:', amount);
   console.log('Price:', price);
   assert(Date.now() > (wrapperOrder.clientOrderId as number));

@@ -377,7 +377,7 @@ export class Market {
                 10 ** baseMintDecimals,
               tokenPrice:
                 convertU128(restingOrderInternal.price) *
-                10 ** (quoteMintDecimals - baseMintDecimals),
+                10 ** (baseMintDecimals - quoteMintDecimals),
               ...restingOrderInternal,
             };
           })
@@ -406,7 +406,7 @@ export class Market {
                 10 ** baseMintDecimals,
               tokenPrice:
                 convertU128(restingOrderInternal.price) *
-                10 ** (quoteMintDecimals - baseMintDecimals),
+                10 ** (baseMintDecimals -  quoteMintDecimals),
               ...restingOrderInternal,
             };
           })
