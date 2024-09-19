@@ -21,7 +21,7 @@ import {
   createPlaceOrderInstruction,
   OrderType,
 } from '../src/ui_wrapper';
-import { UiWrapper , OpenOrder } from '../src/uiWrapperObj';
+import { UiWrapper, OpenOrder } from '../src/uiWrapperObj';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createMintToInstruction,
@@ -95,15 +95,15 @@ async function placeOrderCreateWrapperIfNotExists(
   market: Market,
   owner: PublicKey,
   args: { isBid: boolean; amount: number; price: number; orderId?: number }
-): Promise<{ixs: TransactionInstruction[]; signers: Signer[]}> {
+): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
 
   const wrapper = await fetchFirstUserWrapper(connection, owner);
   if (wrapper) {
     const placeIx = UiWrapper.loadFromBuffer({
       address: wrapper.pubkey,
       buffer: wrapper.account.data,
-    }).placeOrderIx(market, { }, args);
-    return { ixs: [placeIx], signers: []};
+    }).placeOrderIx(market, {}, args);
+    return { ixs: [placeIx], signers: [] };
   } else {
     const result = await setupWrapper(connection, market.address, owner);
 
@@ -252,21 +252,30 @@ async function testWrapper(): Promise<void> {
   await wrapper.reload(connection);
   // wrapper.prettyPrint();
 
-  const [oo] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
+  const [wrapperOrder] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
   const amount =
-    (oo.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
+    (wrapperOrder.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =
-    oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
+    wrapperOrder.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
   console.log('Amount:', amount);
   console.log('Price:', price);
-  assert(Date.now() > (oo.clientOrderId as number));
-  assert((oo.clientOrderId as number) > startTs);
+  assert(Date.now() > (wrapperOrder.clientOrderId as number));
+  assert((wrapperOrder.clientOrderId as number) > startTs);
   assert(10 === amount, 'correct amount');
   assert(0.02 === price, 'correct price');
+
+
+  const allMarketPks = wrapper.activeMarkets();
+  const allMarketInfos = await connection.getMultipleAccountsInfo(allMarketPks);
+  const allMarkets = allMarketPks.map((address, i) => Market.loadFromBuffer({ address, buffer: allMarketInfos[i]!.data }));
+  const [marketOrder] = allMarkets.flatMap(m => m.openOrders());
+  console.log("marketOrder", marketOrder);
+  assert(marketOrder.numBaseTokens === amount, 'correct amount');
+  assert(marketOrder.tokenPrice === price, 'correct price');
 }
 
-describe('UI-wrapper test', () => {
-  it('can place, cancel & settle', async () => {
+describe('ui_wrapper test', () => {
+  it('can place orders and read them back', async () => {
     await testWrapper();
   });
 });
