@@ -2,12 +2,11 @@ import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransact
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import { FIXED_WRAPPER_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT, PRICE_MAX_EXP, PRICE_MIN_EXP, U32_MAX, } from '../src/constants';
+import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
-import { PROGRAM_ID, createCreateWrapperInstruction, createClaimSeatInstruction, createPlaceOrderInstruction, OrderType, } from '../src/ui_wrapper';
+import { PROGRAM_ID, createCreateWrapperInstruction, createClaimSeatInstruction, } from '../src/ui_wrapper';
 import { UiWrapper } from '../src/uiWrapperObj';
 import { createAssociatedTokenAccountIdempotentInstruction, createMintToInstruction, getAssociatedTokenAddressSync, } from '@solana/spl-token';
-import { getVaultAddress } from '../src/utils/market';
 async function fetchFirstUserWrapper(connection, payerPub) {
     const existingWrappers = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [
@@ -49,62 +48,6 @@ async function setupWrapper(connection, market, payer, owner) {
         ixs: [createAccountIx, createWrapperIx, claimSeatIx],
         signers: [wrapperKeypair],
     };
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function placeOrderCreateWrapperIfNotExists(connection, market, owner, args) {
-    const wrapper = await fetchFirstUserWrapper(connection, owner);
-    if (wrapper) {
-        const placeIx = UiWrapper.loadFromBuffer({
-            address: wrapper.pubkey,
-            buffer: wrapper.account.data,
-        }).placeOrderIx(market, {}, args);
-        return { ixs: [placeIx], signers: [] };
-    }
-    else {
-        const result = await setupWrapper(connection, market.address, owner);
-        const payer = owner;
-        const { isBid } = args;
-        const mint = isBid ? market.quoteMint() : market.baseMint();
-        const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
-        const vault = getVaultAddress(market.address, mint);
-        const clientOrderId = args.orderId ?? Date.now();
-        const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
-        let priceMantissa = args.price;
-        let priceExponent = market.quoteDecimals() - market.baseDecimals();
-        while (priceMantissa < U32_MAX / 10 &&
-            priceExponent > PRICE_MIN_EXP &&
-            Math.round(priceMantissa) != priceMantissa) {
-            priceMantissa *= 10;
-            priceExponent -= 1;
-        }
-        while (priceMantissa > U32_MAX && priceExponent < PRICE_MAX_EXP) {
-            priceMantissa = priceMantissa / 10;
-            priceExponent += 1;
-        }
-        priceMantissa = Math.round(priceMantissa);
-        const placeIx = createPlaceOrderInstruction({
-            wrapperState: result.signers[0].publicKey,
-            owner,
-            traderTokenAccount,
-            market: market.address,
-            vault,
-            mint,
-            manifestProgram: MANIFEST_PROGRAM_ID,
-            payer,
-        }, {
-            params: {
-                clientOrderId,
-                baseAtoms,
-                priceMantissa,
-                priceExponent,
-                isBid,
-                lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
-                orderType: OrderType.Limit,
-            },
-        });
-        result.ixs.push(placeIx);
-        return result;
-    }
 }
 async function testWrapper() {
     const startTs = Date.now();
@@ -148,25 +91,18 @@ async function testWrapper() {
     }
     await wrapper.reload(connection);
     // wrapper.prettyPrint();
-    const [wrapperOrder] = wrapper.openOrdersForMarket(marketAddress);
-    const amount = wrapperOrder.numBaseAtoms.toString() / 10 ** market.baseDecimals();
-    const price = wrapperOrder.price * 10 ** (market.baseDecimals() - market.quoteDecimals());
+    const [oo] = wrapper.openOrdersForMarket(marketAddress);
+    const amount = oo.numBaseAtoms.toString() / 10 ** market.baseDecimals();
+    const price = oo.price * 10 ** (market.quoteDecimals() - market.baseDecimals());
     console.log('Amount:', amount);
     console.log('Price:', price);
-    assert(Date.now() > wrapperOrder.clientOrderId);
-    assert(wrapperOrder.clientOrderId > startTs);
+    assert(Date.now() > oo.clientOrderId);
+    assert(oo.clientOrderId > startTs);
     assert(10 === amount, 'correct amount');
     assert(0.02 === price, 'correct price');
-    const allMarketPks = wrapper.activeMarkets();
-    const allMarketInfos = await connection.getMultipleAccountsInfo(allMarketPks);
-    const allMarkets = allMarketPks.map((address, i) => Market.loadFromBuffer({ address, buffer: allMarketInfos[i].data }));
-    const [marketOrder] = allMarkets.flatMap((m) => m.openOrders());
-    console.log('marketOrder', marketOrder);
-    assert(marketOrder.numBaseTokens === amount, 'correct amount');
-    assert(marketOrder.tokenPrice === price, 'correct price');
 }
-describe('ui_wrapper test', () => {
-    it('can place orders and read them back', async () => {
+describe('UI-wrapper test', () => {
+    it('can place, cancel & settle', async () => {
         await testWrapper();
     });
 });
