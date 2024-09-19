@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726758103691,
+  "lastUpdate": 1726758107003,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3045,6 +3045,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7353,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ef223ae0691c416543f1c4eee7b1625ef0fc4eb8",
+          "message": "more logs (#106)\n\n* add order seq nums to rust & regen client\r\n\r\n* update fill feed with new event fields\r\n\r\n* fmt & lint",
+          "timestamp": "2024-09-19T22:36:45+08:00",
+          "tree_id": "0813a2c67abbc7f2cfa7fa4ea8d216932e960c6b",
+          "url": "https://github.com/CKS-Systems/manifest/commit/ef223ae0691c416543f1c4eee7b1625ef0fc4eb8"
+        },
+        "date": 1726758105437,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4053,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7103,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7349,
             "unit": "CU",
             "range": "",
             "extra": ""
