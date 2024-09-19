@@ -3,6 +3,7 @@ use std::cell::RefMut;
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_mut_helper, DataIndex, RBNode};
 use manifest::{
+    logs::emit_stack,
     program::{get_mut_dynamic_account, withdraw_instruction},
     quantities::{QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed},
@@ -16,7 +17,11 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use crate::{market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed};
+use crate::{
+    logs::{PlatformFeeLog, ReferrerFeeLog},
+    market_info::MarketInfo,
+    wrapper_user::ManifestWrapperUserFixed,
+};
 
 use super::shared::{
     check_signer, get_market_info_index_for_market, sync_fast, WrapperStateAccountInfo,
@@ -83,10 +88,10 @@ pub(crate) fn process_settle_funds(
         platform_fee_percent,
     } = WrapperSettleFundsParams::try_from_slice(data)?;
 
-    let fee_amount =
+    let fee_atoms =
         (market_info.quote_volume_unpaid.as_u64() as u128 * fee_mantissa as u128) / FEE_DENOMINATOR;
     let effective_quote_volume =
-        QuoteAtoms::new((fee_amount * FEE_DENOMINATOR / fee_mantissa as u128) as u64);
+        QuoteAtoms::new((fee_atoms * FEE_DENOMINATOR / fee_mantissa as u128) as u64);
     market_info.quote_volume_unpaid -= effective_quote_volume;
 
     let MarketInfo {
@@ -145,10 +150,10 @@ pub(crate) fn process_settle_funds(
         unimplemented!("token2022 not yet supported")
         // TODO: make sure to use least amount of transfers possible to avoid transfer fee
     } else {
-        let platform_fee_amount = if referrer_token_account.is_ok() {
-            (fee_amount * platform_fee_percent as u128 / 100) as u64
+        let platform_fee_atoms = if referrer_token_account.is_ok() {
+            (fee_atoms * platform_fee_percent as u128 / 100) as u64
         } else {
-            fee_amount as u64
+            fee_atoms as u64
         };
 
         invoke(
@@ -158,7 +163,7 @@ pub(crate) fn process_settle_funds(
                 platform_token_account.key,
                 owner.key,
                 &[],
-                platform_fee_amount,
+                platform_fee_atoms,
             )?,
             &[
                 token_program_quote.clone(),
@@ -168,9 +173,15 @@ pub(crate) fn process_settle_funds(
             ],
         )?;
 
+        emit_stack(PlatformFeeLog {
+            market: *market.key,
+            user: *owner.key,
+            platform_token_account: *platform_token_account.key,
+            platform_fee: platform_fee_atoms,
+        })?;
+
         if let Ok(referrer_token_account) = referrer_token_account {
-            let referrer_fee_amount =
-                (fee_amount as u64).saturating_sub(platform_fee_amount) as u64;
+            let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms) as u64;
 
             invoke(
                 &spl_token::instruction::transfer(
@@ -179,7 +190,7 @@ pub(crate) fn process_settle_funds(
                     referrer_token_account.key,
                     owner.key,
                     &[],
-                    referrer_fee_amount,
+                    referrer_fee_atoms,
                 )?,
                 &[
                     token_program_quote.clone(),
@@ -188,6 +199,13 @@ pub(crate) fn process_settle_funds(
                     owner.info.clone(),
                 ],
             )?;
+
+            emit_stack(ReferrerFeeLog {
+                market: *market.key,
+                user: *owner.key,
+                referrer_token_account: *referrer_token_account.key,
+                referrer_fee: referrer_fee_atoms,
+            })?;
         }
     }
 

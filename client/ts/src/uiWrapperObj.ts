@@ -189,6 +189,10 @@ export class UiWrapper {
     return filtered[0].orders;
   }
 
+  public activeMarkets(): PublicKey[] {
+    return this.data.marketInfos.map((mi) => mi.market);
+  }
+
   // Do not include getters for the balances because those can be retrieved from
   // the market and that will be fresher data or the same always.
 
@@ -308,7 +312,7 @@ export class UiWrapper {
     const clientOrderId = args.orderId ?? Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
-    let priceExponent = market.baseDecimals() - market.quoteDecimals();
+    let priceExponent = market.quoteDecimals() - market.baseDecimals();
     while (
       priceMantissa < U32_MAX / 10 &&
       priceExponent > PRICE_MIN_EXP &&

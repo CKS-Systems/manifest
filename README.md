@@ -10,6 +10,7 @@
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
 [![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
+[![Autogen](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
 No more permissioned markets.

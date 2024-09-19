@@ -5,6 +5,15 @@ on:
     branches: ['main']
     paths:
       [
+        'programs/**',
+        'lib/**',
+        'Cargo.toml',
+        'Cargo.lock',
+      ]
+  pull_request:
+    branches: ['main']
+    paths:
+      [
         'client/**',
         'docs/**',
         'lib/**',
@@ -12,25 +21,31 @@ on:
       ]
   workflow_dispatch:
 
+env:
+  RUST_TOOLCHAIN: '1.78.0'
+
 jobs:
   autogen-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.MANIFEST_PAT }}
-          submodules: recursive
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '18'
           cache: 'yarn'
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set Rust version
+        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - uses: nickcharlton/diff-check@main
         with:
-          command: cd client/idl && yarn && node generateIdl.js && node generateClient.js && PROGRAM_NAME=manifest node generateIdl.js &&  PROGRAM_NAME=manifest node generateClient.js && cd - ; npm install -g prettier; prettier client/ts --write ; prettier client/ts/src/manifest --write; prettier client/ts/src/wrapper --write; git diff;
+          command: cd client/idl && yarn && node generateIdl.js && node generateClient.js && node generateIdl.js && cd - ; npm install -g prettier; prettier client/ts --write ; prettier client/ts/src/manifest --write; prettier client/ts/src/wrapper --write; git diff;

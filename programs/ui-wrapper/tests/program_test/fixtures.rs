@@ -1,7 +1,6 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
     io::Error,
-    str::FromStr,
 };
 
 use manifest::{
