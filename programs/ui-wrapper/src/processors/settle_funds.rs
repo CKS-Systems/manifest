@@ -18,7 +18,7 @@ use solana_program::{
 };
 
 use crate::{
-    logs::PlatformFeeLog, market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed,
+    logs::{PlatformFeeLog, ReferrerFeeLog}, market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
@@ -172,9 +172,9 @@ pub(crate) fn process_settle_funds(
         )?;
 
         emit_stack(PlatformFeeLog {
-            market: market.key,
-            user: owner.key,
-            platform_token_account: platform_token_account.key,
+            market: market.key.clone(),
+            user: owner.key.clone(),
+            platform_token_account: platform_token_account.key.clone(),
             platform_fee: platform_fee_atoms,
         })?;
 
@@ -200,9 +200,9 @@ pub(crate) fn process_settle_funds(
             )?;
 
             emit_stack(ReferrerFeeLog {
-                market: market.key,
-                user: owner.key,
-                referrer_token_account: referrer_token_account.key,
+                market: market.key.clone(),
+                user: owner.key.clone(),
+                referrer_token_account: referrer_token_account.key.clone(),
                 referrer_fee: referrer_fee_atoms,
             })?;
         }
