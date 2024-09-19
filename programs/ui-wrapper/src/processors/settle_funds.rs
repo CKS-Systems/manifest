@@ -18,7 +18,9 @@ use solana_program::{
 };
 
 use crate::{
-    logs::{PlatformFeeLog, ReferrerFeeLog}, market_info::MarketInfo, wrapper_user::ManifestWrapperUserFixed,
+    logs::{PlatformFeeLog, ReferrerFeeLog},
+    market_info::MarketInfo,
+    wrapper_user::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
@@ -172,15 +174,14 @@ pub(crate) fn process_settle_funds(
         )?;
 
         emit_stack(PlatformFeeLog {
-            market: market.key.clone(),
-            user: owner.key.clone(),
-            platform_token_account: platform_token_account.key.clone(),
+            market: *market.key,
+            user: *owner.key,
+            platform_token_account: *platform_token_account.key,
             platform_fee: platform_fee_atoms,
         })?;
 
         if let Ok(referrer_token_account) = referrer_token_account {
-            let referrer_fee_atoms =
-                (fee_atoms as u64).saturating_sub(platform_fee_atoms) as u64;
+            let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms) as u64;
 
             invoke(
                 &spl_token::instruction::transfer(
@@ -200,9 +201,9 @@ pub(crate) fn process_settle_funds(
             )?;
 
             emit_stack(ReferrerFeeLog {
-                market: market.key.clone(),
-                user: owner.key.clone(),
-                referrer_token_account: referrer_token_account.key.clone(),
+                market: *market.key,
+                user: *owner.key,
+                referrer_token_account: *referrer_token_account.key,
                 referrer_fee: referrer_fee_atoms,
             })?;
         }

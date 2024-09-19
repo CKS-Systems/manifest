@@ -189,9 +189,8 @@ export class UiWrapper {
     return filtered[0].orders;
   }
 
-
   public activeMarkets(): PublicKey[] {
-    return this.data.marketInfos.map(mi => mi.market);
+    return this.data.marketInfos.map((mi) => mi.market);
   }
 
   // Do not include getters for the balances because those can be retrieved from

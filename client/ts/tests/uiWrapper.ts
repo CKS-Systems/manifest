@@ -12,7 +12,13 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import { FIXED_WRAPPER_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT, PRICE_MAX_EXP, PRICE_MIN_EXP, U32_MAX } from '../src/constants';
+import {
+  FIXED_WRAPPER_HEADER_SIZE,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+  PRICE_MAX_EXP,
+  PRICE_MIN_EXP,
+  U32_MAX,
+} from '../src/constants';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
 import {
   PROGRAM_ID,
@@ -94,9 +100,8 @@ async function placeOrderCreateWrapperIfNotExists(
   connection: Connection,
   market: Market,
   owner: PublicKey,
-  args: { isBid: boolean; amount: number; price: number; orderId?: number }
+  args: { isBid: boolean; amount: number; price: number; orderId?: number },
 ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
-
   const wrapper = await fetchFirstUserWrapper(connection, owner);
   if (wrapper) {
     const placeIx = UiWrapper.loadFromBuffer({
@@ -157,7 +162,6 @@ async function placeOrderCreateWrapperIfNotExists(
     result.ixs.push(placeIx);
     return result;
   }
-
 }
 
 async function testWrapper(): Promise<void> {
@@ -252,7 +256,9 @@ async function testWrapper(): Promise<void> {
   await wrapper.reload(connection);
   // wrapper.prettyPrint();
 
-  const [wrapperOrder] = wrapper.openOrdersForMarket(marketAddress) as OpenOrder[];
+  const [wrapperOrder] = wrapper.openOrdersForMarket(
+    marketAddress,
+  ) as OpenOrder[];
   const amount =
     (wrapperOrder.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =
@@ -264,12 +270,13 @@ async function testWrapper(): Promise<void> {
   assert(10 === amount, 'correct amount');
   assert(0.02 === price, 'correct price');
 
-
   const allMarketPks = wrapper.activeMarkets();
   const allMarketInfos = await connection.getMultipleAccountsInfo(allMarketPks);
-  const allMarkets = allMarketPks.map((address, i) => Market.loadFromBuffer({ address, buffer: allMarketInfos[i]!.data }));
-  const [marketOrder] = allMarkets.flatMap(m => m.openOrders());
-  console.log("marketOrder", marketOrder);
+  const allMarkets = allMarketPks.map((address, i) =>
+    Market.loadFromBuffer({ address, buffer: allMarketInfos[i]!.data }),
+  );
+  const [marketOrder] = allMarkets.flatMap((m) => m.openOrders());
+  console.log('marketOrder', marketOrder);
   assert(marketOrder.numBaseTokens === amount, 'correct amount');
   assert(marketOrder.tokenPrice === price, 'correct price');
 }

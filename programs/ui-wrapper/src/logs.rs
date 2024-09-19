@@ -21,7 +21,6 @@ pub struct ReferrerFeeLog {
     pub referrer_fee: u64,
 }
 
-
 macro_rules! discriminant {
     ($type_name:ident, $value:ident, $test_name:ident) => {
         impl Discriminant for $type_name {
