@@ -587,6 +587,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // because post only orders should fail, not produce a crossed book.
             assert_can_take(order_type)?;
 
+            let maker_sequence_number = other_order.get_sequence_number();
             let other_trader_index: DataIndex = other_order.get_trader_index();
             let did_fully_match_resting_order: bool =
                 remaining_base_atoms >= other_order.get_num_base_atoms();
@@ -687,6 +688,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 )?;
             }
 
+
             // Increase maker from the matched amount in the trade.
             update_balance(
                 dynamic,
@@ -735,6 +737,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 base_atoms: base_atoms_traded,
                 quote_atoms: quote_atoms_traded,
                 price: matched_price,
+                maker_sequence_number,
+                taker_sequence_number: fixed.order_sequence_number,
                 taker_is_buy: PodBool::from(is_bid),
                 _padding: [0; 15],
             })?;

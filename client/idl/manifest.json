@@ -924,6 +924,14 @@
             }
           },
           {
+            "name": "makerSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "takerSequenceNumber",
+            "type": "u64"
+          },
+          {
             "name": "takerIsBuy",
             "type": "bool"
           },
@@ -1660,6 +1668,14 @@
           "type": {
             "defined": "QuoteAtoms"
           }
+        },
+        {
+          "name": "makerSequenceNumber",
+          "type": "u64"
+        },
+        {
+          "name": "takerSequenceNumber",
+          "type": "u64"
         },
         {
           "name": "takerIsBuy",
