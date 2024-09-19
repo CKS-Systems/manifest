@@ -1,17 +1,30 @@
-import { Connection, PublicKey } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { createPlaceOrderInstruction, OrderType } from './ui_wrapper';
 import { marketInfoBeet, openOrderBeet } from './utils/beet';
-import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
-import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
+import {
+  FIXED_WRAPPER_HEADER_SIZE,
+  NIL,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+  PRICE_MAX_EXP,
+  PRICE_MIN_EXP,
+  U32_MAX,
+} from './constants';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
+import { Market } from './market';
+import { getVaultAddress } from './utils/market';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { convertU128 } from './utils/numbers';
+import { BN } from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
  */
 export interface WrapperData {
-  /** Public key for the trader that owns this wrapper. */
-  trader: PublicKey;
+  /** Public key for the owner of this wrapper. */
+  owner: PublicKey;
   /** Array of market infos that have been parsed. */
   marketInfos: MarketInfoParsed[];
 }
@@ -83,7 +96,7 @@ export interface OpenOrderInternal {
 /**
  * Wrapper object used for reading data from a wrapper for manifest markets.
  */
-export class Wrapper {
+export class UiWrapper {
   /** Public key for the market account. */
   address: PublicKey;
   /** Deserialized data. */
@@ -118,32 +131,9 @@ export class Wrapper {
   }: {
     address: PublicKey;
     buffer: Buffer;
-  }): Wrapper {
-    const wrapperData = Wrapper.deserializeWrapperBuffer(buffer);
-    return new Wrapper({ address, data: wrapperData });
-  }
-
-  /**
-   * Returns a `Wrapper` for a given address, a data buffer
-   *
-   * @param connection The Solana `Connection` object
-   * @param address The `PublicKey` of the wrapper account
-   */
-  static async loadFromAddress({
-    connection,
-    address,
-  }: {
-    connection: Connection;
-    address: PublicKey;
-  }): Promise<Wrapper> {
-    const buffer = await connection
-      .getAccountInfo(address)
-      .then((accountInfo) => accountInfo?.data);
-
-    if (buffer === undefined) {
-      throw new Error(`Failed to load ${address}`);
-    }
-    return Wrapper.loadFromBuffer({ address, buffer });
+  }): UiWrapper {
+    const wrapperData = UiWrapper.deserializeWrapperBuffer(buffer);
+    return new UiWrapper({ address, data: wrapperData });
   }
 
   /**
@@ -158,7 +148,7 @@ export class Wrapper {
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
     }
-    this.data = Wrapper.deserializeWrapperBuffer(buffer);
+    this.data = UiWrapper.deserializeWrapperBuffer(buffer);
   }
 
   /**
@@ -199,6 +189,10 @@ export class Wrapper {
     return filtered[0].orders;
   }
 
+  public activeMarkets(): PublicKey[] {
+    return this.data.marketInfos.map((mi) => mi.market);
+  }
+
   // Do not include getters for the balances because those can be retrieved from
   // the market and that will be fresher data or the same always.
 
@@ -209,7 +203,7 @@ export class Wrapper {
     console.log('');
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
-    console.log(`Trader: ${this.data.trader.toBase58()}`);
+    console.log(`Owner: ${this.data.owner.toBase58()}`);
     this.data.marketInfos.forEach((marketInfo: MarketInfoParsed) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
@@ -242,7 +236,7 @@ export class Wrapper {
     const _discriminant = data.readBigUInt64LE(0);
     offset += 8;
 
-    const trader = beetPublicKey.read(data, offset);
+    const owner = beetPublicKey.read(data, offset);
 
     offset += beetPublicKey.byteSize;
 
@@ -283,7 +277,7 @@ export class Wrapper {
           (openOrder: OpenOrderInternal) => {
             return {
               ...openOrder,
-              price: 0,
+              price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
           },
         );
@@ -299,8 +293,62 @@ export class Wrapper {
     );
 
     return {
-      trader,
+      owner,
       marketInfos: parsedMarketInfos,
     };
+  }
+
+  public placeOrderIx(
+    market: Market,
+    accounts: { payer?: PublicKey },
+    args: { isBid: boolean; amount: number; price: number; orderId?: number },
+  ) {
+    const { owner } = this.data;
+    const payer = accounts.payer ?? owner;
+    const { isBid } = args;
+    const mint = isBid ? market.quoteMint() : market.baseMint();
+    const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
+    const vault = getVaultAddress(market.address, mint);
+    const clientOrderId = args.orderId ?? Date.now();
+    const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
+    let priceMantissa = args.price;
+    let priceExponent = market.quoteDecimals() - market.baseDecimals();
+    while (
+      priceMantissa < U32_MAX / 10 &&
+      priceExponent > PRICE_MIN_EXP &&
+      Math.round(priceMantissa) != priceMantissa
+    ) {
+      priceMantissa *= 10;
+      priceExponent -= 1;
+    }
+    while (priceMantissa > U32_MAX && priceExponent < PRICE_MAX_EXP) {
+      priceMantissa = priceMantissa / 10;
+      priceExponent += 1;
+    }
+    priceMantissa = Math.round(priceMantissa);
+
+    return createPlaceOrderInstruction(
+      {
+        wrapperState: this.address,
+        owner,
+        traderTokenAccount,
+        market: market.address,
+        vault,
+        mint,
+        manifestProgram: MANIFEST_PROGRAM_ID,
+        payer,
+      },
+      {
+        params: {
+          clientOrderId,
+          baseAtoms,
+          priceMantissa,
+          priceExponent,
+          isBid,
+          lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
+          orderType: OrderType.Limit,
+        },
+      },
+    );
   }
 }

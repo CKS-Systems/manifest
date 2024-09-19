@@ -10,6 +10,7 @@
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
 [![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
+[![Autogen](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
 No more permissioned markets.
@@ -66,12 +67,12 @@ The market account holds all relevant information. It begins with a header that 
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,
 ClaimedSeats and 1 LinkedList for FreeListNodes, overlapping across each other. All are graphs where each vertex along with adjacency list fits in 80 bytes, allowing them to use the same blocks.
 
-## <pre>
-
-## | Header | Dynamic |
-
-## | BaseMint, QuoteMint, BidsRootIndex, ... | Bid | Ask | FreeListNode | Seat | Seat | Bid | Bid | Ask|
-
+<pre>
+--------------------------------------------------------------------------------------------------------
+|                   Header                    |                               Dynamic                   |
+--------------------------------------------------------------------------------------------------------
+| BaseMint, QuoteMint, BidsRootIndex, ...     | Bid | Ask | FreeListNode | Seat | Seat | Bid | Bid | Ask|
+--------------------------------------------------------------------------------------------------------
 </pre>
 
 ### Core vs Wrapper
