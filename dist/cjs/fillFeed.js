@@ -129,7 +129,6 @@ function toFillLogResult(fillLog, slot) {
         taker: fillLog.taker.toBase58(),
         baseAtoms: (0, numbers_1.toNum)(fillLog.baseAtoms.inner),
         quoteAtoms: (0, numbers_1.toNum)(fillLog.quoteAtoms.inner),
-        // TODO: Fix this for the new price format
         price: (0, numbers_1.convertU128)(fillLog.price.inner),
         takerIsBuy: fillLog.takerIsBuy,
         slot,

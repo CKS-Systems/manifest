@@ -35,7 +35,6 @@ export declare const SettleFundsStruct: beet.BeetArgsStruct<SettleFundsInstructi
  * @property [_writable_] vaultQuote
  * @property [_writable_] mintBase
  * @property [_writable_] mintQuote
- * @property [] executorProgram
  * @property [] tokenProgramBase
  * @property [] tokenProgramQuote
  * @property [] manifestProgram
@@ -55,7 +54,6 @@ export type SettleFundsInstructionAccounts = {
     vaultQuote: web3.PublicKey;
     mintBase: web3.PublicKey;
     mintQuote: web3.PublicKey;
-    executorProgram: web3.PublicKey;
     tokenProgramBase: web3.PublicKey;
     tokenProgramQuote: web3.PublicKey;
     manifestProgram: web3.PublicKey;

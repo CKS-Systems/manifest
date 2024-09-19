@@ -118,6 +118,7 @@ export declare class UiWrapper {
      * @return OpenOrder[]
      */
     openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null;
+    activeMarkets(): PublicKey[];
     /**
      * Print all information loaded about the wrapper in a human readable format.
      */

@@ -106,11 +106,6 @@ function createSettleFundsInstruction(accounts, args, programId = new web3.Publi
             isSigner: false,
         },
         {
-            pubkey: accounts.executorProgram,
-            isWritable: false,
-            isSigner: false,
-        },
-        {
             pubkey: accounts.tokenProgramBase,
             isWritable: false,
             isSigner: false,

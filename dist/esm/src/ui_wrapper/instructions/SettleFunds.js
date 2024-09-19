@@ -79,11 +79,6 @@ export function createSettleFundsInstruction(accounts, args, programId = new web
             isSigner: false,
         },
         {
-            pubkey: accounts.executorProgram,
-            isWritable: false,
-            isSigner: false,
-        },
-        {
             pubkey: accounts.tokenProgramBase,
             isWritable: false,
             isSigner: false,
