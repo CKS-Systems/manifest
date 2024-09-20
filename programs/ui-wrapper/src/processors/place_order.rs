@@ -15,10 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        DynamicAccount, MarketFixed, MarketRef, OrderType,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
