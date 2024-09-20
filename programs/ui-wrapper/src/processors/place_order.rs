@@ -12,10 +12,13 @@ use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, PlaceOrderParams},
         batch_update_instruction, deposit_instruction, expand_market_instruction,
-        get_mut_dynamic_account,
+        get_dynamic_account, get_mut_dynamic_account,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{
+        DynamicAccount, GlobalFixed, MarketFixed, MarketRef, OrderType,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -88,12 +91,31 @@ pub(crate) fn process_place_order(
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
 
+    let base_mint: &AccountInfo = next_account_info(account_iter)?;
+    let base_global: ManifestAccountInfo<GlobalFixed> =
+        ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+    let base_global_vault: &AccountInfo = next_account_info(account_iter)?;
+    let base_market_vault: &AccountInfo = next_account_info(account_iter)?;
+    let quote_mint: &AccountInfo = next_account_info(account_iter)?;
+    let quote_global: ManifestAccountInfo<GlobalFixed> =
+        ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+    let quote_global_vault: &AccountInfo = next_account_info(account_iter)?;
+    let quote_market_vault: &AccountInfo = next_account_info(account_iter)?;
+
     if spl_token_2022::id() == *token_program.key {
         unimplemented!("token2022 not yet supported")
     }
 
     check_signer(&wrapper_state, owner.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
+
+    let (base_mint_key, quote_mint_key) = {
+        let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(market_data);
+        let base_mint_key: Pubkey = *dynamic_account.get_base_mint();
+        let quote_mint_key: Pubkey = *dynamic_account.get_quote_mint();
+        (base_mint_key, quote_mint_key)
+    };
 
     // Do an initial sync to get all existing orders and balances fresh. This is
     // needed for modifying user orders for insufficient funds.
@@ -174,7 +196,6 @@ pub(crate) fn process_place_order(
 
     trace!("cpi place {core_place:?}");
 
-    // TODO: optionally pass global orders accounts to cpi
     invoke(
         &batch_update_instruction(
             market.key,
@@ -182,9 +203,9 @@ pub(crate) fn process_place_order(
             Some(trader_index),
             vec![],
             vec![core_place],
+            Some(base_mint_key),
             None,
-            None,
-            None,
+            Some(quote_mint_key),
             None,
         ),
         &[
@@ -196,6 +217,14 @@ pub(crate) fn process_place_order(
             vault.clone(),
             token_program.clone(),
             mint.clone(),
+            base_mint.clone(),
+            base_global.info.clone(),
+            base_global_vault.clone(),
+            base_market_vault.clone(),
+            quote_mint.clone(),
+            quote_global.info.clone(),
+            quote_global_vault.clone(),
+            quote_market_vault.clone(),
         ],
     )?;
 

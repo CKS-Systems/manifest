@@ -4,10 +4,10 @@ use std::{
 };
 
 use manifest::{
-    program::{create_market_instructions, get_dynamic_value},
+    program::{create_global_instruction, create_market_instructions, get_dynamic_value},
     quantities::WrapperU64,
-    state::{MarketFixed, MarketValue},
-    validation::MintAccountInfo,
+    state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue},
+    validation::{get_global_address, MintAccountInfo},
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
@@ -54,6 +54,8 @@ pub struct TestFixture {
     pub payer_usdc: TokenAccountFixture,
     pub market: MarketFixture,
     pub wrapper: WrapperFixture,
+    pub global_fixture: GlobalFixture,
+    pub sol_global_fixture: GlobalFixture,
     pub second_keypair: Keypair,
 }
 
@@ -133,6 +135,11 @@ impl TestFixture {
         let payer_usdc_fixture =
             TokenAccountFixture::new(Rc::clone(&context), &usdc_mint_f.key, &payer_pubkey).await;
 
+        let global_fixture: GlobalFixture =
+            GlobalFixture::new(Rc::clone(&context), &usdc_mint_f.key).await;
+        let sol_global_fixture: GlobalFixture =
+            GlobalFixture::new(Rc::clone(&context), &sol_mint_f.key).await;
+
         TestFixture {
             context: Rc::clone(&context),
             usdc_mint: usdc_mint_f,
@@ -141,6 +148,8 @@ impl TestFixture {
             wrapper: wrapper_fixture,
             payer_sol: payer_sol_fixture,
             payer_usdc: payer_usdc_fixture,
+            global_fixture,
+            sol_global_fixture,
             second_keypair,
         }
     }
@@ -370,6 +379,69 @@ impl WrapperFixture {
 
         let wrapper: WrapperUserValue = get_dynamic_value(wrapper_account.data.as_slice());
         self.wrapper = wrapper;
+    }
+}
+
+#[derive(Clone)]
+pub struct GlobalFixture {
+    pub context: Rc<RefCell<ProgramTestContext>>,
+    pub key: Pubkey,
+    pub mint_key: Pubkey,
+    pub global: GlobalValue,
+}
+
+impl GlobalFixture {
+    pub async fn new_with_token_program(
+        context: Rc<RefCell<ProgramTestContext>>,
+        mint: &Pubkey,
+        token_program: &Pubkey,
+    ) -> Self {
+        let (global_key, _global_bump) = get_global_address(mint);
+        let payer: Pubkey = context.borrow().payer.pubkey();
+        let payer_keypair: Keypair = context.borrow().payer.insecure_clone();
+
+        let context_ref: Rc<RefCell<ProgramTestContext>> = Rc::clone(&context);
+
+        let create_global_ix: Instruction =
+            create_global_instruction(&mint, &payer, &token_program);
+
+        send_tx_with_retry(
+            Rc::clone(&context),
+            &[create_global_ix],
+            Some(&payer),
+            &[&payer_keypair, &payer_keypair],
+        )
+        .await
+        .unwrap();
+
+        // Dummy default value. Not valid until reload.
+        GlobalFixture {
+            context: context_ref,
+            key: global_key,
+            mint_key: *mint,
+            global: GlobalValue {
+                fixed: GlobalFixed::new_empty(mint),
+                dynamic: Vec::new(),
+            },
+        }
+    }
+
+    pub async fn new(context: Rc<RefCell<ProgramTestContext>>, mint: &Pubkey) -> Self {
+        GlobalFixture::new_with_token_program(context, mint, &spl_token::id()).await
+    }
+
+    pub async fn reload(&mut self) {
+        let global_account: Account = self
+            .context
+            .borrow_mut()
+            .banks_client
+            .get_account(self.key)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let global: GlobalValue = get_dynamic_value(global_account.data.as_slice());
+        self.global = global;
     }
 }
 
