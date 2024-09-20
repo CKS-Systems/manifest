@@ -201,7 +201,21 @@ function modifyIdlCore(programName) {
           });
           break;
         }
-        case 'GlobalEvict': // ignored
+        case 'GlobalEvict':
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalEvictParams',
+            },
+          });
+          break;
+        case 'GlobalClean':
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalCleanParams',
+            },
+          });
           break;
         default: {
           console.log(instruction);
