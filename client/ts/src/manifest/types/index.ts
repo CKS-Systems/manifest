@@ -2,6 +2,7 @@ export * from './BatchUpdateParams';
 export * from './BatchUpdateReturn';
 export * from './CancelOrderParams';
 export * from './DepositParams';
+export * from './GlobalCleanParams';
 export * from './GlobalDepositParams';
 export * from './GlobalEvictParams';
 export * from './GlobalWithdrawParams';

@@ -27,8 +27,8 @@ pub(crate) fn process_global_add_trader(
     // Needs a spot for this trader on the global account.
     expand_global(&payer, &global, &system_program)?;
 
-    let market_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
-    let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(market_data);
+    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     global_dynamic_account.add_trader(payer.key)?;
 

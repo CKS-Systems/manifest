@@ -1,14 +1,15 @@
 use std::rc::Rc;
 
+use hypertree::DataIndex;
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
-        batch_update_instruction, global_add_trader_instruction, global_deposit_instruction,
-        global_evict_instruction, swap_instruction,
+        batch_update_instruction, global_add_trader_instruction, global_clean_instruction,
+        global_deposit_instruction, global_evict_instruction, swap_instruction,
     },
     quantities::{GlobalAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        DynamicAccount, GlobalFixed, OrderType, RestingOrder, MAX_GLOBAL_SEATS,
+        DynamicAccount, GlobalFixed, OrderType, RestingOrder, MARKET_BLOCK_SIZE, MAX_GLOBAL_SEATS,
         NO_EXPIRATION_LAST_VALID_SLOT,
     },
 };
@@ -764,6 +765,63 @@ async fn global_evict() -> anyhow::Result<()> {
             .await,
         1_000_000
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_clean() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    // Funds still there to back it.
+    assert!(send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_clean_instruction(
+            &test_fixture.global_fixture.key,
+            &test_fixture.payer(),
+            &test_fixture.market_fixture.key,
+            MARKET_BLOCK_SIZE as DataIndex
+        ),],
+        Some(&test_fixture.payer()),
+        &[&test_fixture.payer_keypair().insecure_clone()],
+    )
+    .await
+    .is_err());
+
+    // Clean should succeed.
+    test_fixture.global_withdraw(1_000_000).await?;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_clean_instruction(
+            &test_fixture.global_fixture.key,
+            &test_fixture.payer(),
+            &test_fixture.market_fixture.key,
+            MARKET_BLOCK_SIZE as DataIndex,
+        )],
+        Some(&test_fixture.payer()),
+        &[&test_fixture.payer_keypair().insecure_clone()],
+    )
+    .await?;
 
     Ok(())
 }

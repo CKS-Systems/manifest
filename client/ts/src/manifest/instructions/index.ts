@@ -4,6 +4,7 @@ export * from './CreateMarket';
 export * from './Deposit';
 export * from './Expand';
 export * from './GlobalAddTrader';
+export * from './GlobalClean';
 export * from './GlobalCreate';
 export * from './GlobalDeposit';
 export * from './GlobalEvict';
