@@ -7,7 +7,7 @@ use crate::{
     require,
     state::{
         claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
-        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -45,6 +45,8 @@ impl CancelOrderParams {
         self.order_index_hint
     }
 }
+
+const NEXT_PLANNED_MAINTENANCE_SLOT: u32 = 293522000; // ~Fri Oct 04 2024 midnight GMT
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct PlaceOrderParams {
@@ -256,7 +258,12 @@ pub(crate) fn process_batch_update(
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
             let price: QuoteAtomsPerBaseAtom = place_order.try_price()?;
             let order_type: OrderType = place_order.order_type();
-            let last_valid_slot: u32 = place_order.last_valid_slot();
+
+            // force last valid slot to next planned maintenance to allow for an empty book
+            let mut last_valid_slot: u32 = place_order.last_valid_slot().min(NEXT_PLANNED_MAINTENANCE_SLOT);
+            if last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT {
+                last_valid_slot = NEXT_PLANNED_MAINTENANCE_SLOT
+            }
 
             // Need to reborrow every iteration so we can borrow later for expanding.
             let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
