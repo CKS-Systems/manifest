@@ -17,6 +17,7 @@ cpi = ["no-entrypoint"]
 default = []
 trace = [ "hypertree/fuzz", "hypertree/trace", "manifest/trace" ]
 test = []
+benchmark = []
 
 [dependencies]
 manifest = { path = "../manifest", features = ["no-entrypoint"]  }
