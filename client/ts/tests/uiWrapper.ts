@@ -19,7 +19,7 @@ import {
   PRICE_MIN_EXP,
   U32_MAX,
 } from '../src/constants';
-import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID, createGlobalCreateInstruction } from '../src/manifest';
 import {
   PROGRAM_ID,
   createCreateWrapperInstruction,
@@ -29,6 +29,7 @@ import {
 } from '../src/ui_wrapper';
 import { UiWrapper, OpenOrder } from '../src/uiWrapperObj';
 import {
+  TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
   createMintToInstruction,
   getAssociatedTokenAddressSync,
@@ -235,6 +236,29 @@ async function testWrapper(): Promise<void> {
 
   {
     const tx = new Transaction();
+
+    const baseGlobal: PublicKey = getGlobalAddress(market.baseMint());
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(market.baseMint());
+    const baseGlobalIx = createGlobalCreateInstruction({
+      payer: payerKeypair.publicKey,
+      global: baseGlobal,
+      mint: market.baseMint(),
+      globalVault: baseGlobalVault,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    });
+    tx.add(baseGlobalIx);
+
+    const quoteGlobal: PublicKey = getGlobalAddress(market.quoteMint());
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(market.quoteMint());
+    const quoteGlobalIx = createGlobalCreateInstruction({
+      payer: payerKeypair.publicKey,
+      global: quoteGlobal,
+      mint: market.quoteMint(),
+      globalVault: quoteGlobalVault,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    });
+    tx.add(quoteGlobalIx);
+
     tx.add(
       createAssociatedTokenAccountIdempotentInstruction(
         payerKeypair.publicKey,
