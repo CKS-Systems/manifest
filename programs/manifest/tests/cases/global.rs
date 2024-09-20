@@ -826,7 +826,6 @@ async fn global_clean() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn maintenance_clean() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
@@ -850,8 +849,8 @@ async fn maintenance_clean() -> anyhow::Result<()> {
         )
         .await?;
 
-    test_fixture.advance_time_seconds(14*24*60*60).await;
-    
+    test_fixture.advance_time_seconds(14 * 24 * 60 * 60).await;
+
     // Clean should succeed.
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),

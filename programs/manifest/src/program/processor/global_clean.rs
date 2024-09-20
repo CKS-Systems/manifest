@@ -8,9 +8,7 @@ use crate::{
     program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
-    state::{
-        utils::get_now_slot, GlobalRefMut, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
-    },
+    state::{utils::get_now_slot, GlobalRefMut, MarketRefMut, RestingOrder, MARKET_BLOCK_SIZE},
     validation::loaders::{GlobalCleanContext, GlobalTradeAccounts},
 };
 
@@ -94,12 +92,8 @@ pub(crate) fn process_global_clean(
             "Wrong global provided",
         )?;
 
-        // Verify that the resting order is a global order
-        require!(
-            resting_order.get_order_type() == OrderType::Global,
-            ManifestError::InvalidClean,
-            "Tried to cancel non global",
-        )?;
+        // Do not need to require that the order is global. This ix is useful
+        // for cleaning up markets with all expired orders.
 
         resting_order
     };
