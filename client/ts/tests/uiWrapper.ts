@@ -19,7 +19,10 @@ import {
   PRICE_MIN_EXP,
   U32_MAX,
 } from '../src/constants';
-import { PROGRAM_ID as MANIFEST_PROGRAM_ID, createGlobalCreateInstruction } from '../src/manifest';
+import {
+  PROGRAM_ID as MANIFEST_PROGRAM_ID,
+  createGlobalCreateInstruction,
+} from '../src/manifest';
 import {
   PROGRAM_ID,
   createCreateWrapperInstruction,
@@ -249,7 +252,9 @@ async function testWrapper(): Promise<void> {
     tx.add(baseGlobalIx);
 
     const quoteGlobal: PublicKey = getGlobalAddress(market.quoteMint());
-    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(market.quoteMint());
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      market.quoteMint(),
+    );
     const quoteGlobalIx = createGlobalCreateInstruction({
       payer: payerKeypair.publicKey,
       global: quoteGlobal,
