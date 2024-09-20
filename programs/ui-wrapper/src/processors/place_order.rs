@@ -15,10 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        DynamicAccount, GlobalFixed, MarketFixed, MarketRef, OrderType,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -92,14 +89,12 @@ pub(crate) fn process_place_order(
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
 
     let base_mint: &AccountInfo = next_account_info(account_iter)?;
-    let base_global: ManifestAccountInfo<GlobalFixed> =
-        ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+    let base_global: &AccountInfo = next_account_info(account_iter)?;
     let base_global_vault: &AccountInfo = next_account_info(account_iter)?;
     let base_market_vault: &AccountInfo = next_account_info(account_iter)?;
     let base_token_program: &AccountInfo = next_account_info(account_iter)?;
     let quote_mint: &AccountInfo = next_account_info(account_iter)?;
-    let quote_global: ManifestAccountInfo<GlobalFixed> =
-        ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+    let quote_global: &AccountInfo = next_account_info(account_iter)?;
     let quote_global_vault: &AccountInfo = next_account_info(account_iter)?;
     let quote_market_vault: &AccountInfo = next_account_info(account_iter)?;
     let quote_token_program: &AccountInfo = next_account_info(account_iter)?;
@@ -220,12 +215,12 @@ pub(crate) fn process_place_order(
             token_program.clone(),
             mint.clone(),
             base_mint.clone(),
-            base_global.info.clone(),
+            base_global.clone(),
             base_global_vault.clone(),
             base_market_vault.clone(),
             base_token_program.clone(),
             quote_mint.clone(),
-            quote_global.info.clone(),
+            quote_global.clone(),
             quote_global_vault.clone(),
             quote_market_vault.clone(),
             quote_token_program.clone(),
