@@ -46,7 +46,6 @@ impl CancelOrderParams {
     }
 }
 
-
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct PlaceOrderParams {
     base_atoms: u64,
