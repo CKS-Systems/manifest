@@ -25,7 +25,7 @@ pub(crate) fn get_now_slot() -> u32 {
     // maliciously manipulated to clear all orders with expirations on the
     // orderbook.
     #[cfg(feature = "no-clock")]
-    let now_slot: u64 = NEXT_PLANNED_MAINTENANCE_SLOT - 1;
+    let now_slot: u64 = super::NEXT_PLANNED_MAINTENANCE_SLOT - 1;
     #[cfg(not(feature = "no-clock"))]
     let now_slot: u64 = solana_program::clock::Clock::get()
         .unwrap_or(solana_program::clock::Clock {
