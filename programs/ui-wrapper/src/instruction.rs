@@ -39,6 +39,10 @@ pub enum ManifestWrapperInstruction {
     #[account(7, name = "token_program", desc = "Token program owning trader token account")]
     #[account(8, name = "manifest_program", desc = "Manifest program")]
     #[account(9, writable, signer, name = "payer", desc = "Payer of rent and gas")]
+    #[account(10, writable, name = "base_global", desc = "Base global account")]
+    #[account(11, name = "base_global_vault", desc = "Base global vault")]
+    #[account(12, writable, name = "quote_global", desc = "Quote global account")]
+    #[account(13, name = "quote_global_vault", desc = "Quote global vault")]
     PlaceOrder = 2,
 
     /// Edit order, deposits additional funds needed. TODO: Not implemented yet
