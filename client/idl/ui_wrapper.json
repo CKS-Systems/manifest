@@ -427,6 +427,56 @@
       }
     }
   ],
+  "accounts": [
+    {
+      "name": "PlatformFeeLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "user",
+            "type": "publicKey"
+          },
+          {
+            "name": "platformTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "platformFee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferrerFeeLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "user",
+            "type": "publicKey"
+          },
+          {
+            "name": "referrerTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "referrerFee",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
   "types": [
     {
       "name": "WrapperCancelOrderParams",

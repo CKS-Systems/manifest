@@ -70,6 +70,8 @@ pub struct FillLog {
     pub price: QuoteAtomsPerBaseAtom,
     pub base_atoms: BaseAtoms,
     pub quote_atoms: QuoteAtoms,
+    pub maker_sequence_number: u64,
+    pub taker_sequence_number: u64,
     pub taker_is_buy: PodBool,
     pub _padding: [u8; 15],
 }
