@@ -682,6 +682,9 @@
 <a href="#680" id="680">680</a>
 <a href="#681" id="681">681</a>
 <a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -1219,8 +1222,11 @@
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut_global();
         <span class="comment">// Might not exist because of eviction.
         </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(global_trader) = get_mut_global_trader(fixed, dynamic, global_trade_owner) {
-            <span class="kw">let </span>GlobalTradeAccounts { trader, .. } = global_trade_accounts;
-            <span class="kw">if </span>trader.info.key != global_trade_owner
+            <span class="kw">let </span>GlobalTradeAccounts {
+                gas_receiver_opt: trader,
+                ..
+            } = global_trade_accounts;
+            <span class="kw">if </span>trader.as_ref().unwrap().info.key != global_trade_owner
                 || global_trade_accounts.system_program.is_none()
             {
                 global_trader.unclaimed_gas_deposits += <span class="number">1</span>;

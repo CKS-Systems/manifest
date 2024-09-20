@@ -460,7 +460,7 @@
         orders,
     } = BatchUpdateParams::try_from_slice(data)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>current_slot = <span class="prelude-val">Some</span>(get_now_slot());
+    <span class="kw">let </span>current_slot: <span class="prelude-ty">Option</span>&lt;u32&gt; = <span class="prelude-val">Some</span>(get_now_slot());
 
     <span class="macro">trace!</span>(<span class="string">"batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}"</span>);
 

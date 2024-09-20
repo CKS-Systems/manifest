@@ -98,6 +98,10 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Manifest is a limit order book exchange on the Solana blockchain.
 //!
 
@@ -113,9 +117,10 @@
     batch_update::process_batch_update, claim_seat::process_claim_seat,
     create_market::process_create_market, deposit::process_deposit,
     expand_market::process_expand_market, global_add_trader::process_global_add_trader,
-    global_create::process_global_create, global_deposit::process_global_deposit,
-    global_evict::process_global_evict, global_withdraw::process_global_withdraw, process_swap,
-    withdraw::process_withdraw, ManifestInstruction,
+    global_clean::process_global_clean, global_create::process_global_create,
+    global_deposit::process_global_deposit, global_evict::process_global_evict,
+    global_withdraw::process_global_withdraw, process_swap, withdraw::process_withdraw,
+    ManifestInstruction,
 };
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
@@ -191,6 +196,9 @@
         }
         ManifestInstruction::GlobalEvict =&gt; {
             process_global_evict(program_id, accounts, data)<span class="question-mark">?</span>;
+        }
+        ManifestInstruction::GlobalClean =&gt; {
+            process_global_clean(program_id, accounts, data)<span class="question-mark">?</span>;
         }
     }
 

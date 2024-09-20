@@ -721,6 +721,44 @@
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
 <a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -1093,26 +1131,28 @@
 
             drop(global_data);
             global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
-                mint: <span class="kw">if </span>index == <span class="number">0 </span>{
+                mint_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
                     base_mint.clone()
                 } <span class="kw">else </span>{
                     quote_mint.clone()
                 },
                 global,
-                global_vault,
-                market_vault: <span class="kw">if </span>index == <span class="number">0 </span>{
-                    base_vault.clone()
+                global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
+                market_vault_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
+                    <span class="prelude-val">Some</span>(base_vault.clone())
                 } <span class="kw">else </span>{
-                    quote_vault.clone()
+                    <span class="prelude-val">Some</span>(quote_vault.clone())
                 },
-                token_program: <span class="kw">if </span>index == <span class="number">0 </span>{
-                    token_program_base.clone()
+                token_program_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
+                    <span class="prelude-val">Some</span>(token_program_base.clone())
                 } <span class="kw">else </span>{
-                    token_program_quote.clone()
+                    <span class="prelude-val">Some</span>(token_program_quote.clone())
                 },
-                trader: payer.clone(),
+                gas_payer_opt: <span class="prelude-val">None</span>,
+                gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
                 market: <span class="kw-2">*</span>market.info.key,
-                system_program: <span class="prelude-val">None</span>,
+                <span class="comment">// System program not included because does not rest an order.
+                </span>system_program: <span class="prelude-val">None</span>,
             });
         }
 
@@ -1136,15 +1176,21 @@
 /// clients can place orders on markets in testing.
 </span><span class="kw">pub struct </span>GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="doccomment">/// Required if this is a token22 token.
-    </span><span class="kw">pub </span>mint: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    </span><span class="kw">pub </span>mint_opt: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
     <span class="kw">pub </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
-    <span class="kw">pub </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    <span class="kw">pub </span>market_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    <span class="kw">pub </span>token_program: TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+
+    <span class="comment">// These are required when matching a global order, not necessarily when
+    // cancelling since tokens dont move in that case.
+    </span><span class="kw">pub </span>global_vault_opt: <span class="prelude-ty">Option</span>&lt;TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    <span class="kw">pub </span>market_vault_opt: <span class="prelude-ty">Option</span>&lt;TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    <span class="kw">pub </span>token_program_opt: <span class="prelude-ty">Option</span>&lt;TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+
     <span class="kw">pub </span>system_program: <span class="prelude-ty">Option</span>&lt;Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+
     <span class="comment">// Trader is sending or cancelling the order. They are the one who will pay
     // or receive gas prepayments.
-    </span><span class="kw">pub </span>trader: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    </span><span class="kw">pub </span>gas_payer_opt: <span class="prelude-ty">Option</span>&lt;Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    <span class="kw">pub </span>gas_receiver_opt: <span class="prelude-ty">Option</span>&lt;Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
     <span class="kw">pub </span>market: Pubkey,
 }
 
@@ -1218,13 +1264,14 @@
                     TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
 
                 global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
-                    mint: <span class="prelude-val">Some</span>(mint),
+                    mint_opt: <span class="prelude-val">Some</span>(mint),
                     global,
-                    global_vault,
-                    market_vault,
-                    token_program,
+                    global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
+                    market_vault_opt: <span class="prelude-val">Some</span>(market_vault),
+                    token_program_opt: <span class="prelude-val">Some</span>(token_program),
                     system_program: <span class="prelude-val">Some</span>(system_program.clone()),
-                    trader: payer.clone(),
+                    gas_payer_opt: <span class="prelude-val">Some</span>(payer.clone()),
+                    gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
                     market: <span class="kw-2">*</span>market.info.key,
                 })
             };
@@ -1439,6 +1486,35 @@
             trader_token,
             evictee_token,
             token_program,
+        })
+    }
+}
+
+<span class="doccomment">/// Global clean
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GlobalCleanContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+    <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
+    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; GlobalCleanContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+        <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
+
+        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
+            ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>system_program: Program =
+            Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
+        <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
+            ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            payer,
+            market,
+            system_program,
+            global,
         })
     }
 }

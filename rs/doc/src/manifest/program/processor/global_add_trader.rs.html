@@ -70,8 +70,8 @@
     <span class="comment">// Needs a spot for this trader on the global account.
     </span>expand_global(<span class="kw-2">&amp;</span>payer, <span class="kw-2">&amp;</span>global, <span class="kw-2">&amp;</span>system_program)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>global.try_borrow_mut_data()<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(market_data);
+    <span class="kw">let </span>global_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>global.try_borrow_mut_data()<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     global_dynamic_account.add_trader(payer.key)<span class="question-mark">?</span>;
 
