@@ -8,10 +8,7 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import {
-  PROGRAM_ID as MANIFEST_PROGRAM_ID,
-  createGlobalCreateInstruction,
-} from '../src/manifest';
+import { createGlobalCreateInstruction } from '../src/manifest';
 import { UiWrapper, OpenOrder } from '../src/uiWrapperObj';
 import {
   TOKEN_PROGRAM_ID,
