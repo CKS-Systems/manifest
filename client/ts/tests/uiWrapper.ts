@@ -37,7 +37,11 @@ async function testWrapper(): Promise<void> {
   market.prettyPrint();
 
   assert(
-    null == (await UiWrapper.fetchFirstUserWrapper(connection, payerKeypair.publicKey)),
+    null ==
+      (await UiWrapper.fetchFirstUserWrapper(
+        connection,
+        payerKeypair.publicKey,
+      )),
     'doesnt find a wrapper yet',
   );
 

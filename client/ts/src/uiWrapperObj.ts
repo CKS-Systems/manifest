@@ -1,7 +1,21 @@
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { AccountInfo, Connection, Keypair, PublicKey, Signer, SystemProgram, TransactionInstruction } from '@solana/web3.js';
-import { createClaimSeatInstruction, createCreateWrapperInstruction, createPlaceOrderInstruction, OrderType, PROGRAM_ID } from './ui_wrapper';
+import {
+  AccountInfo,
+  Connection,
+  Keypair,
+  PublicKey,
+  Signer,
+  SystemProgram,
+  TransactionInstruction,
+} from '@solana/web3.js';
+import {
+  createClaimSeatInstruction,
+  createCreateWrapperInstruction,
+  createPlaceOrderInstruction,
+  OrderType,
+  PROGRAM_ID,
+} from './ui_wrapper';
 import { marketInfoBeet, openOrderBeet } from './utils/beet';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
@@ -256,10 +270,10 @@ export class UiWrapper {
     const marketInfos: MarketInfoRaw[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
-          data.subarray(FIXED_WRAPPER_HEADER_SIZE),
-          marketInfosRootIndex,
-          marketInfoBeet,
-        )
+            data.subarray(FIXED_WRAPPER_HEADER_SIZE),
+            marketInfosRootIndex,
+            marketInfoBeet,
+          )
         : [];
 
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
@@ -268,10 +282,10 @@ export class UiWrapper {
         const parsedOpenOrders: OpenOrderInternal[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
-              data.subarray(FIXED_WRAPPER_HEADER_SIZE),
-              rootIndex,
-              openOrderBeet,
-            )
+                data.subarray(FIXED_WRAPPER_HEADER_SIZE),
+                rootIndex,
+                openOrderBeet,
+              )
             : [];
 
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
@@ -396,7 +410,7 @@ export class UiWrapper {
     market: Market,
     owner: PublicKey,
     payer: PublicKey,
-    args: { isBid: boolean; amount: number; price: number; orderId?: number }
+    args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
     const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
     if (wrapper) {
@@ -406,10 +420,18 @@ export class UiWrapper {
       }).placeOrderIx(market, { payer }, args);
       return { ixs: [placeIx], signers: [] };
     } else {
-      const setup = await this.setupIxs(connection, market.address, owner, payer);
+      const setup = await this.setupIxs(
+        connection,
+        market.address,
+        owner,
+        payer,
+      );
       const wrapper = setup.signers[0].publicKey;
       const place = await this.placeIx_(market, wrapper, owner, payer, args);
-      return { ixs: [...setup.ixs, ...place.ixs], signers: [...setup.signers, ...place.signers]};
+      return {
+        ixs: [...setup.ixs, ...place.ixs],
+        signers: [...setup.signers, ...place.signers],
+      };
     }
   }
 
@@ -420,15 +442,17 @@ export class UiWrapper {
     payer: PublicKey,
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
     const wrapperKeypair: Keypair = Keypair.generate();
-    const createAccountIx: TransactionInstruction = SystemProgram.createAccount({
-      fromPubkey: payer,
-      newAccountPubkey: wrapperKeypair.publicKey,
-      space: FIXED_WRAPPER_HEADER_SIZE,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        FIXED_WRAPPER_HEADER_SIZE,
-      ),
-      programId: PROGRAM_ID,
-    });
+    const createAccountIx: TransactionInstruction = SystemProgram.createAccount(
+      {
+        fromPubkey: payer,
+        newAccountPubkey: wrapperKeypair.publicKey,
+        space: FIXED_WRAPPER_HEADER_SIZE,
+        lamports: await connection.getMinimumBalanceForRentExemption(
+          FIXED_WRAPPER_HEADER_SIZE,
+        ),
+        programId: PROGRAM_ID,
+      },
+    );
     const createWrapperIx: TransactionInstruction =
       createCreateWrapperInstruction({
         payer,
@@ -477,8 +501,14 @@ export class UiWrapper {
     }
     priceMantissa = Math.round(priceMantissa);
 
-    const baseMarketVault: PublicKey = getVaultAddress(market.address, market.baseMint());
-    const quoteMarketVault: PublicKey = getVaultAddress(market.address, market.quoteMint());
+    const baseMarketVault: PublicKey = getVaultAddress(
+      market.address,
+      market.baseMint(),
+    );
+    const quoteMarketVault: PublicKey = getVaultAddress(
+      market.address,
+      market.quoteMint(),
+    );
     const baseGlobal: PublicKey = getGlobalAddress(market.baseMint());
     const quoteGlobal: PublicKey = getGlobalAddress(market.quoteMint());
     const baseGlobalVault: PublicKey = getGlobalVaultAddress(market.baseMint());
@@ -518,6 +548,6 @@ export class UiWrapper {
       },
     );
 
-    return { ixs: [placeIx], signers: []};
+    return { ixs: [placeIx], signers: [] };
   }
 }
