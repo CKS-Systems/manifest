@@ -578,10 +578,12 @@ export class UiWrapper {
         baseGlobal,
         baseGlobalVault,
         baseMarketVault,
+        baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
         quoteGlobalVault,
         quoteMarketVault,
+        quoteTokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         params: {
