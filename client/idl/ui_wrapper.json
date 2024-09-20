@@ -218,6 +218,14 @@
           ]
         },
         {
+          "name": "baseTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base token program"
+          ]
+        },
+        {
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
@@ -247,6 +255,14 @@
           "isSigner": false,
           "docs": [
             "Quote market vault"
+          ]
+        },
+        {
+          "name": "quoteTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote token program"
           ]
         }
       ],
