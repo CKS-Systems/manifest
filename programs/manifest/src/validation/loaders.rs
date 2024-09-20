@@ -460,8 +460,18 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                 next_account_info(account_iter);
             if next_account_info_or.is_ok() {
                 let mint: MintAccountInfo<'a, 'info> = MintAccountInfo::new(next_account_info_or?)?;
-                let global: ManifestAccountInfo<'a, 'info, GlobalFixed> =
-                    ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+                let global_or: Result<ManifestAccountInfo<'a, 'info, GlobalFixed>, ProgramError> =
+                    ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?);
+
+                // If a client blindly fills in the global account and vault,
+                // then handle that case and allow them to try to work without
+                // the global accounts.
+                if global_or.is_err() {
+                    let _  = next_account_info(account_iter);
+                    let _ = next_account_info(account_iter);
+                    continue;
+                }
+                let global: ManifestAccountInfo<'a, 'info, GlobalFixed> = global_or.unwrap();
                 let global_data: Ref<&mut [u8]> = global.data.borrow();
                 let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                 let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
