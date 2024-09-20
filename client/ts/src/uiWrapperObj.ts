@@ -405,32 +405,69 @@ export class UiWrapper {
     return existingWrappers.length > 0 ? existingWrappers[0] : null;
   }
 
-  public static async placeOrderCreateWrapperIfNotExistsIxs(
+  public static async placeOrderCreateIfNotExistsIxs(
     connection: Connection,
-    market: Market,
+    baseMint: PublicKey,
+    baseDecimals: number,
+    quoteMint: PublicKey,
+    quoteDecimals: number,
     owner: PublicKey,
     payer: PublicKey,
     args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
-    const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
-    if (wrapper) {
-      const placeIx = UiWrapper.loadFromBuffer({
-        address: wrapper.pubkey,
-        buffer: wrapper.account.data,
-      }).placeOrderIx(market, { payer }, args);
-      return { ixs: [placeIx], signers: [] };
+    const markets = await Market.findByMints(connection, baseMint, quoteMint);
+    const market = markets.length > 0 ? markets[0] : null;
+    if (market != null) {
+      const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
+      if (wrapper) {
+        const placeIx = UiWrapper.loadFromBuffer({
+          address: wrapper.pubkey,
+          buffer: wrapper.account.data,
+        }).placeOrderIx(market, { payer }, args);
+        return { ixs: [placeIx], signers: [] };
+      } else {
+        const setup = await this.setupIxs(
+          connection,
+          market.address,
+          owner,
+          payer,
+        );
+        const wrapper = setup.signers[0].publicKey;
+        const place = await this.placeIx_(market, wrapper, owner, payer, args);
+        return {
+          ixs: [...setup.ixs, ...place.ixs],
+          signers: [...setup.signers, ...place.signers],
+        };
+      }
     } else {
-      const setup = await this.setupIxs(
+      const marketIxs = await Market.setupIxs(
+        connection,
+        baseMint,
+        quoteMint,
+        payer,
+      );
+      const market = {
+        address: marketIxs.signers[0].publicKey,
+        baseMint: () => baseMint,
+        quoteMint: () => quoteMint,
+        baseDecimals: () => baseDecimals,
+        quoteDecimals: () => quoteDecimals,
+      };
+      const wrapperIxs = await this.setupIxs(
         connection,
         market.address,
         owner,
         payer,
       );
-      const wrapper = setup.signers[0].publicKey;
-      const place = await this.placeIx_(market, wrapper, owner, payer, args);
+      const wrapper = wrapperIxs.signers[0].publicKey;
+      const placeIx = await this.placeIx_(market, wrapper, owner, payer, args);
       return {
-        ixs: [...setup.ixs, ...place.ixs],
-        signers: [...setup.signers, ...place.signers],
+        ixs: [...marketIxs.ixs, ...wrapperIxs.ixs, ...placeIx.ixs],
+        signers: [
+          ...marketIxs.signers,
+          ...wrapperIxs.signers,
+          ...placeIx.signers,
+        ],
       };
     }
   }
@@ -473,7 +510,13 @@ export class UiWrapper {
   }
 
   private static placeIx_(
-    market: Market,
+    market: {
+      address: PublicKey;
+      baseMint: () => PublicKey;
+      quoteMint: () => PublicKey;
+      baseDecimals: () => number;
+      quoteDecimals: () => number;
+    },
     wrapper: PublicKey,
     owner: PublicKey,
     payer: PublicKey,
