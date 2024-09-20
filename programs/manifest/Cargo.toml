@@ -18,6 +18,7 @@ default = []
 test = []
 fuzz = []
 trace = ["hypertree/trace"]
+benchmark = []
 no-clock = []
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html
