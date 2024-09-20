@@ -184,6 +184,70 @@
           "docs": [
             "Payer of rent and gas"
           ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Base mint"
+          ]
+        },
+        {
+          "name": "baseGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global account"
+          ]
+        },
+        {
+          "name": "baseGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global vault"
+          ]
+        },
+        {
+          "name": "baseMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base market vault"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Quote mint"
+          ]
+        },
+        {
+          "name": "quoteGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global vault"
+          ]
+        },
+        {
+          "name": "quoteMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote market vault"
+          ]
         }
       ],
       "args": [
@@ -424,6 +488,56 @@
       "discriminant": {
         "type": "u8",
         "value": 5
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "PlatformFeeLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "user",
+            "type": "publicKey"
+          },
+          {
+            "name": "platformTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "platformFee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferrerFeeLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "user",
+            "type": "publicKey"
+          },
+          {
+            "name": "referrerTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "referrerFee",
+            "type": "u64"
+          }
+        ]
       }
     }
   ],

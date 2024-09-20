@@ -30,7 +30,7 @@ use super::{
         assert_already_has_seat, assert_not_already_expired, get_now_slot, try_to_add_to_global,
     },
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
-    MARKET_FREE_LIST_BLOCK_SIZE,
+    MARKET_FREE_LIST_BLOCK_SIZE, NEXT_PLANNED_MAINTENANCE_SLOT,
 };
 
 pub struct AddOrderToMarketArgs<'a, 'info> {
@@ -542,6 +542,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         } = args;
         assert_already_has_seat(trader_index)?;
         let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
+
+        require!(
+            now_slot < NEXT_PLANNED_MAINTENANCE_SLOT,
+            ManifestError::AlreadyExpired,
+            "manifest is under planned maintenance"
+        )?;
         assert_not_already_expired(last_valid_slot, now_slot)?;
 
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
@@ -587,6 +593,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // because post only orders should fail, not produce a crossed book.
             assert_can_take(order_type)?;
 
+            let maker_sequence_number = other_order.get_sequence_number();
             let other_trader_index: DataIndex = other_order.get_trader_index();
             let did_fully_match_resting_order: bool =
                 remaining_base_atoms >= other_order.get_num_base_atoms();
@@ -735,6 +742,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 base_atoms: base_atoms_traded,
                 quote_atoms: quote_atoms_traded,
                 price: matched_price,
+                maker_sequence_number,
+                taker_sequence_number: fixed.order_sequence_number,
                 taker_is_buy: PodBool::from(is_bid),
                 _padding: [0; 15],
             })?;

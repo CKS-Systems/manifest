@@ -7,7 +7,7 @@ use hypertree::{
 use manifest::{
     quantities::QuoteAtomsPerBaseAtom,
     state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType, RestingOrder},
-    validation::get_vault_address,
+    validation::{get_global_address, get_global_vault_address, get_vault_address},
 };
 use solana_program::{instruction::AccountMeta, system_program};
 use solana_program_test::tokio;
@@ -50,9 +50,13 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
 
     let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
     let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
-    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
 
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
+    let (global_base, _) = get_global_address(&base_mint);
+    let (global_quote, _) = get_global_address(&quote_mint);
+    let (global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // place order
     let place_order_ix = Instruction {
@@ -68,6 +72,14 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(payer, true),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new(global_base, false),
+            AccountMeta::new(global_base_vault, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new(global_quote, false),
+            AccountMeta::new(global_quote_vault, false),
+            AccountMeta::new(quote_vault, false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -319,6 +331,10 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
 
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (global_base, _) = get_global_address(&base_mint);
+    let (global_quote, _) = get_global_address(&quote_mint);
+    let (global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // place order
     let place_order_ix = Instruction {
@@ -334,6 +350,14 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(payer, true),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new(global_base, false),
+            AccountMeta::new(global_base_vault, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new(global_quote, false),
+            AccountMeta::new(global_quote_vault, false),
+            AccountMeta::new(quote_vault, false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -586,6 +610,10 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
 
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (global_base, _) = get_global_address(&base_mint);
+    let (global_quote, _) = get_global_address(&quote_mint);
+    let (global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // maker buys 1 sol @ 1000 USDC
     let maker_order_ix = Instruction {
@@ -601,6 +629,14 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(maker, true),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new(global_base, false),
+            AccountMeta::new(global_base_vault, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new(global_quote, false),
+            AccountMeta::new(global_quote_vault, false),
+            AccountMeta::new(quote_vault, false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -689,6 +725,14 @@ async fn wrapper_fill_order_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(taker, true),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new(global_base, false),
+            AccountMeta::new(global_base_vault, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new(global_quote, false),
+            AccountMeta::new(global_quote_vault, false),
+            AccountMeta::new(quote_vault, false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),

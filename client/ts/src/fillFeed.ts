@@ -3,7 +3,7 @@ import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
-import { convertU128, toNum } from './utils/numbers';
+import { convertU128 } from './utils/numbers';
 import bs58 from 'bs58';
 import keccak256 from 'keccak256';
 
@@ -158,13 +158,17 @@ export type FillLogResult = {
   /** Public key for the taker as base58. */
   taker: string;
   /** Number of base atoms traded. */
-  baseAtoms: number;
+  baseAtoms: string;
   /** Number of quote atoms traded. */
-  quoteAtoms: number;
+  quoteAtoms: string;
   /** Price as float. Quote atoms per base atom. */
   price: number;
   /** Boolean to indicate which side the trade was. */
   takerIsBuy: boolean;
+  /** Sequential number for every order placed / matched wraps around at u64::MAX */
+  makerSequenceNumber: string;
+  /** Sequential number for every order placed / matched wraps around at u64::MAX */
+  takerSequenceNumber: string;
   /** Slot number of the fill. */
   slot: number;
 };
@@ -173,10 +177,12 @@ function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
     market: fillLog.market.toBase58(),
     maker: fillLog.maker.toBase58(),
     taker: fillLog.taker.toBase58(),
-    baseAtoms: toNum(fillLog.baseAtoms.inner),
-    quoteAtoms: toNum(fillLog.quoteAtoms.inner),
+    baseAtoms: fillLog.baseAtoms.inner.toString(),
+    quoteAtoms: fillLog.quoteAtoms.inner.toString(),
     price: convertU128(fillLog.price.inner),
     takerIsBuy: fillLog.takerIsBuy,
+    makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
+    takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
     slot,
   };
 }
