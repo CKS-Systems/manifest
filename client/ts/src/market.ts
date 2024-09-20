@@ -1,10 +1,20 @@
-import { PublicKey, Connection } from '@solana/web3.js';
+import {
+  PublicKey,
+  Connection,
+  TransactionInstruction,
+  Keypair,
+  Signer,
+  SystemProgram,
+} from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
+import { createCreateMarketInstruction, PROGRAM_ID } from './manifest';
+import { getVaultAddress } from './utils/market';
+import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 /**
  * Internal use only. Needed because shank doesnt handle f64 and because the
@@ -433,5 +443,72 @@ export class Market {
       asks,
       claimedSeats,
     };
+  }
+
+  static async findByMints(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+  ): Promise<Market[]> {
+    // Based on the MarketFixed struct
+    const baseMintOffset = 16;
+    const quoteMintOffset = 48;
+
+    const filters = [
+      {
+        memcmp: {
+          offset: baseMintOffset,
+          bytes: baseMint.toBase58(),
+        },
+      },
+      {
+        memcmp: {
+          offset: quoteMintOffset,
+          bytes: quoteMint.toBase58(),
+        },
+      },
+    ];
+
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters,
+    });
+
+    return accounts.map(({ account, pubkey }) =>
+      Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
+    );
+  }
+
+  static async setupIxs(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    payer: PublicKey,
+  ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
+    const marketKeypair: Keypair = Keypair.generate();
+    const createAccountIx: TransactionInstruction = SystemProgram.createAccount(
+      {
+        fromPubkey: payer,
+        newAccountPubkey: marketKeypair.publicKey,
+        space: FIXED_MANIFEST_HEADER_SIZE,
+        lamports: await connection.getMinimumBalanceForRentExemption(
+          FIXED_MANIFEST_HEADER_SIZE,
+        ),
+        programId: PROGRAM_ID,
+      },
+    );
+
+    const market = marketKeypair.publicKey;
+    const baseVault = getVaultAddress(market, baseMint);
+    const quoteVault = getVaultAddress(market, quoteMint);
+    const createMarketIx = createCreateMarketInstruction({
+      payer,
+      baseMint,
+      quoteMint,
+      market,
+      baseVault,
+      quoteVault,
+      tokenProgram22: TOKEN_2022_PROGRAM_ID,
+    });
+    return { ixs: [createAccountIx, createMarketIx], signers: [marketKeypair] };
   }
 }

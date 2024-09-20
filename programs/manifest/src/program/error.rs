@@ -46,6 +46,8 @@ pub enum ManifestError {
     TooManyGlobalSeats = 19,
     #[error("Can only evict the lowest depositor")]
     InvalidEvict = 20,
+    #[error("Tried to clean order that was not eligible to be cleaned")]
+    InvalidClean = 21,
 }
 
 impl From<ManifestError> for ProgramError {
