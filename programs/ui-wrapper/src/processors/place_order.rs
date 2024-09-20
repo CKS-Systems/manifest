@@ -109,11 +109,13 @@ pub(crate) fn process_place_order(
     check_signer(&wrapper_state, owner.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
 
-    let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
-    let dynamic_account: MarketRef = get_dynamic_account(market_data);
-    let base_mint_key: Pubkey = *dynamic_account.get_base_mint();
-    let quote_mint_key: Pubkey = *dynamic_account.get_quote_mint();
-    drop(dynamic_account);
+    let (base_mint_key, quote_mint_key) = {
+        let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(market_data);
+        let base_mint_key: Pubkey = *dynamic_account.get_base_mint();
+        let quote_mint_key: Pubkey = *dynamic_account.get_quote_mint();
+        (base_mint_key, quote_mint_key)
+    };
 
     // Do an initial sync to get all existing orders and balances fresh. This is
     // needed for modifying user orders for insufficient funds.
