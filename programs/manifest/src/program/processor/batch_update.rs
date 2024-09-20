@@ -257,8 +257,6 @@ pub(crate) fn process_batch_update(
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
             let price: QuoteAtomsPerBaseAtom = place_order.try_price()?;
             let order_type: OrderType = place_order.order_type();
-
-            // force last valid slot to next planned maintenance to allow for an empty book
             let last_valid_slot: u32 = place_order.last_valid_slot();
 
             // Need to reborrow every iteration so we can borrow later for expanding.
