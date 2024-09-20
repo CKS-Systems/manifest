@@ -48,6 +48,14 @@ export const PlaceOrderStruct = new beet.BeetArgsStruct<
  * @property [_writable_] mint
  * @property [] manifestProgram
  * @property [_writable_, **signer**] payer
+ * @property [] baseMint
+ * @property [_writable_] baseGlobal
+ * @property [_writable_] baseGlobalVault
+ * @property [_writable_] baseMarketVault
+ * @property [] quoteMint
+ * @property [_writable_] quoteGlobal
+ * @property [_writable_] quoteGlobalVault
+ * @property [_writable_] quoteMarketVault
  * @category Instructions
  * @category PlaceOrder
  * @category generated
@@ -63,6 +71,14 @@ export type PlaceOrderInstructionAccounts = {
   tokenProgram?: web3.PublicKey;
   manifestProgram: web3.PublicKey;
   payer: web3.PublicKey;
+  baseMint: web3.PublicKey;
+  baseGlobal: web3.PublicKey;
+  baseGlobalVault: web3.PublicKey;
+  baseMarketVault: web3.PublicKey;
+  quoteMint: web3.PublicKey;
+  quoteGlobal: web3.PublicKey;
+  quoteGlobalVault: web3.PublicKey;
+  quoteMarketVault: web3.PublicKey;
 };
 
 export const placeOrderInstructionDiscriminator = 2;
@@ -136,6 +152,46 @@ export function createPlaceOrderInstruction(
       pubkey: accounts.payer,
       isWritable: true,
       isSigner: true,
+    },
+    {
+      pubkey: accounts.baseMint,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.baseGlobal,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.baseGlobalVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.baseMarketVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteMint,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteGlobal,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteGlobalVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteMarketVault,
+      isWritable: true,
+      isSigner: false,
     },
   ];
 

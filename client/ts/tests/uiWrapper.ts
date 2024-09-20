@@ -34,6 +34,7 @@ import {
   getAssociatedTokenAddressSync,
 } from '@solana/spl-token';
 import { getVaultAddress } from '../src/utils/market';
+import { getGlobalAddress, getGlobalVaultAddress } from '../src/utils/global';
 
 type WrapperResponse = Readonly<{
   account: AccountInfo<Buffer>;
@@ -136,6 +137,13 @@ async function placeOrderCreateWrapperIfNotExists(
     }
     priceMantissa = Math.round(priceMantissa);
 
+    const baseGlobal: PublicKey = getGlobalAddress(market.baseMint());
+    const quoteGlobal: PublicKey = getGlobalAddress(market.quoteMint());
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(market.baseMint());
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      market.quoteMint(),
+    );
+
     const placeIx = createPlaceOrderInstruction(
       {
         wrapperState: result.signers[0].publicKey,
@@ -146,6 +154,14 @@ async function placeOrderCreateWrapperIfNotExists(
         mint,
         manifestProgram: MANIFEST_PROGRAM_ID,
         payer,
+        baseMint: market.baseMint(),
+        baseGlobal,
+        baseGlobalVault,
+        baseMarketVault: getVaultAddress(market.address, market.baseMint()),
+        quoteMint: market.quoteMint(),
+        quoteGlobal,
+        quoteGlobalVault,
+        quoteMarketVault: getVaultAddress(market.address, market.quoteMint()),
       },
       {
         params: {

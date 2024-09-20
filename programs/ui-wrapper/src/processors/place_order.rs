@@ -90,12 +90,17 @@ pub(crate) fn process_place_order(
     let manifest_program: Program =
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
+
+    let base_mint: &AccountInfo = next_account_info(account_iter)?;
     let base_global: ManifestAccountInfo<GlobalFixed> =
         ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
     let base_global_vault: &AccountInfo = next_account_info(account_iter)?;
+    let base_market_vault: &AccountInfo = next_account_info(account_iter)?;
+    let quote_mint: &AccountInfo = next_account_info(account_iter)?;
     let quote_global: ManifestAccountInfo<GlobalFixed> =
         ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
     let quote_global_vault: &AccountInfo = next_account_info(account_iter)?;
+    let quote_market_vault: &AccountInfo = next_account_info(account_iter)?;
 
     if spl_token_2022::id() == *token_program.key {
         unimplemented!("token2022 not yet supported")
@@ -103,6 +108,12 @@ pub(crate) fn process_place_order(
 
     check_signer(&wrapper_state, owner.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
+
+    let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+    let dynamic_account: MarketRef = get_dynamic_account(market_data);
+    let base_mint_key: Pubkey = *dynamic_account.get_base_mint();
+    let quote_mint_key: Pubkey = *dynamic_account.get_quote_mint();
+    drop(dynamic_account);
 
     // Do an initial sync to get all existing orders and balances fresh. This is
     // needed for modifying user orders for insufficient funds.
@@ -183,9 +194,6 @@ pub(crate) fn process_place_order(
 
     trace!("cpi place {core_place:?}");
 
-    let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
-    let dynamic_account: MarketRef = get_dynamic_account(market_data);
-
     invoke(
         &batch_update_instruction(
             market.key,
@@ -193,9 +201,9 @@ pub(crate) fn process_place_order(
             Some(trader_index),
             vec![],
             vec![core_place],
-            Some(*dynamic_account.get_base_mint()),
+            Some(base_mint_key),
             None,
-            Some(*dynamic_account.get_base_mint()),
+            Some(quote_mint_key),
             None,
         ),
         &[
@@ -207,10 +215,14 @@ pub(crate) fn process_place_order(
             vault.clone(),
             token_program.clone(),
             mint.clone(),
+            base_mint.clone(),
             base_global.info.clone(),
             base_global_vault.clone(),
+            base_market_vault.clone(),
+            quote_mint.clone(),
             quote_global.info.clone(),
             quote_global_vault.clone(),
+            quote_market_vault.clone(),
         ],
     )?;
 

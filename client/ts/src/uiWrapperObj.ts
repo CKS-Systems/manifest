@@ -18,6 +18,7 @@ import { getVaultAddress } from './utils/market';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
+import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
 
 /**
  * All data stored on a wrapper account.
@@ -327,6 +328,13 @@ export class UiWrapper {
     }
     priceMantissa = Math.round(priceMantissa);
 
+    const baseGlobal: PublicKey = getGlobalAddress(market.baseMint());
+    const quoteGlobal: PublicKey = getGlobalAddress(market.quoteMint());
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(market.baseMint());
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      market.quoteMint(),
+    );
+
     return createPlaceOrderInstruction(
       {
         wrapperState: this.address,
@@ -337,6 +345,14 @@ export class UiWrapper {
         mint,
         manifestProgram: MANIFEST_PROGRAM_ID,
         payer,
+        baseMint: market.baseMint(),
+        baseGlobal,
+        baseGlobalVault,
+        baseMarketVault: getVaultAddress(market.address, market.baseMint()),
+        quoteMint: market.quoteMint(),
+        quoteGlobal,
+        quoteGlobalVault,
+        quoteMarketVault: getVaultAddress(market.address, market.quoteMint()),
       },
       {
         params: {
