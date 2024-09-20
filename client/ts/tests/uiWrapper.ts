@@ -162,10 +162,12 @@ async function placeOrderCreateWrapperIfNotExists(
         baseGlobal,
         baseGlobalVault,
         baseMarketVault: getVaultAddress(market.address, market.baseMint()),
+        baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
         quoteGlobalVault,
         quoteMarketVault: getVaultAddress(market.address, market.quoteMint()),
+        quoteTokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         params: {

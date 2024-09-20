@@ -52,10 +52,12 @@ export const PlaceOrderStruct = new beet.BeetArgsStruct<
  * @property [_writable_] baseGlobal
  * @property [_writable_] baseGlobalVault
  * @property [_writable_] baseMarketVault
+ * @property [_writable_] baseTokenProgram
  * @property [] quoteMint
  * @property [_writable_] quoteGlobal
  * @property [_writable_] quoteGlobalVault
  * @property [_writable_] quoteMarketVault
+ * @property [_writable_] quoteTokenProgram
  * @category Instructions
  * @category PlaceOrder
  * @category generated
@@ -75,10 +77,12 @@ export type PlaceOrderInstructionAccounts = {
   baseGlobal: web3.PublicKey;
   baseGlobalVault: web3.PublicKey;
   baseMarketVault: web3.PublicKey;
+  baseTokenProgram: web3.PublicKey;
   quoteMint: web3.PublicKey;
   quoteGlobal: web3.PublicKey;
   quoteGlobalVault: web3.PublicKey;
   quoteMarketVault: web3.PublicKey;
+  quoteTokenProgram: web3.PublicKey;
 };
 
 export const placeOrderInstructionDiscriminator = 2;
@@ -174,6 +178,11 @@ export function createPlaceOrderInstruction(
       isSigner: false,
     },
     {
+      pubkey: accounts.baseTokenProgram,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
       pubkey: accounts.quoteMint,
       isWritable: false,
       isSigner: false,
@@ -190,6 +199,11 @@ export function createPlaceOrderInstruction(
     },
     {
       pubkey: accounts.quoteMarketVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteTokenProgram,
       isWritable: true,
       isSigner: false,
     },

@@ -467,8 +467,9 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                 // then handle that case and allow them to try to work without
                 // the global accounts.
                 if global_or.is_err() {
-                    let _  = next_account_info(account_iter);
-                    let _ = next_account_info(account_iter);
+                    let _global_vault: Result<&AccountInfo<'info>, ProgramError>  = next_account_info(account_iter);
+                    let _market_vault: Result<&AccountInfo<'info>, ProgramError> = next_account_info(account_iter);
+                    let _token_program: Result<&AccountInfo<'info>, ProgramError> = next_account_info(account_iter);
                     continue;
                 }
                 let global: ManifestAccountInfo<'a, 'info, GlobalFixed> = global_or.unwrap();

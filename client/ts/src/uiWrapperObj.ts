@@ -15,7 +15,7 @@ import {
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from './manifest';
 import { Market } from './market';
 import { getVaultAddress } from './utils/market';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
@@ -349,10 +349,12 @@ export class UiWrapper {
         baseGlobal,
         baseGlobalVault,
         baseMarketVault: getVaultAddress(market.address, market.baseMint()),
+        baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
         quoteGlobalVault,
         quoteMarketVault: getVaultAddress(market.address, market.quoteMint()),
+        quoteTokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         params: {
