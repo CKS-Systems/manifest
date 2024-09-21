@@ -180,7 +180,7 @@ export class Market {
     isBase: boolean,
   ): number {
     const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
-      return claimedSeat.publicKey.toBase58() == trader.toBase58();
+      return claimedSeat.publicKey.equals(trader);
     });
     // No seat claimed.
     if (filteredSeats.length == 0) {
@@ -238,7 +238,7 @@ export class Market {
    */
   public hasSeat(trader: PublicKey): boolean {
     const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
-      return claimedSeat.publicKey.toBase58() == trader.toBase58();
+      return claimedSeat.publicKey.equals(trader);
     });
     return filteredSeats.length > 0;
   }
