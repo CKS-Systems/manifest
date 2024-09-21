@@ -48,7 +48,7 @@ pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 /// to fit in 4 pages. This is sufficiently big such that it is not possible to
 /// fully evict all seats in one flash loan transaction due to the withdraw
 /// accounts limit.
-#[cfg(test)]
+#[cfg(feature = "test")]
 pub const MAX_GLOBAL_SEATS: u16 = 4;
-#[cfg(not(test))]
+#[cfg(not(feature = "test"))]
 pub const MAX_GLOBAL_SEATS: u16 = 999;
