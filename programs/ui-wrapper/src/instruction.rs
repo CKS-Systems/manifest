@@ -29,6 +29,7 @@ pub enum ManifestWrapperInstruction {
     /// Place order, deposits additional funds needed.
     /// Syncs both balances and open orders on the wrapper.
     /// TODO: document return data
+    /// TODO: Remove the unneeded global accounts on the bookside that I am placing on.
     #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
     #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
     #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
@@ -43,10 +44,12 @@ pub enum ManifestWrapperInstruction {
     #[account(11, writable, name = "base_global", desc = "Base global account")]
     #[account(12, writable, name = "base_global_vault", desc = "Base global vault")]
     #[account(13, writable, name = "base_market_vault", desc = "Base market vault")]
-    #[account(14, name = "quote_mint", desc = "Quote mint")]
-    #[account(15, writable, name = "quote_global", desc = "Quote global account")]
-    #[account(16, writable, name = "quote_global_vault", desc = "Quote global vault")]
-    #[account(17, writable, name = "quote_market_vault", desc = "Quote market vault")]
+    #[account(14, writable, name = "base_token_program", desc = "Base token program")]
+    #[account(15, name = "quote_mint", desc = "Quote mint")]
+    #[account(16, writable, name = "quote_global", desc = "Quote global account")]
+    #[account(17, writable, name = "quote_global_vault", desc = "Quote global vault")]
+    #[account(18, writable, name = "quote_market_vault", desc = "Quote market vault")]
+    #[account(19, writable, name = "quote_token_program", desc = "Quote token program")]
     PlaceOrder = 2,
 
     /// Edit order, deposits additional funds needed. TODO: Not implemented yet
