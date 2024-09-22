@@ -546,7 +546,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         require!(
             now_slot < NEXT_PLANNED_MAINTENANCE_SLOT,
             ManifestError::AlreadyExpired,
-            "manifest is under planned maintenance"
+            "manifest is under planned maintenance now: {} maintenance_slot: {}",
+            now_slot,
+            NEXT_PLANNED_MAINTENANCE_SLOT,
         )?;
         assert_not_already_expired(last_valid_slot, now_slot)?;
 
