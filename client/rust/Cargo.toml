@@ -7,6 +7,9 @@ authors = ["Britt Cyr <britt@cks.systems>"]
 description = "Jupiter AMM interface for Manifest exchange"
 license-file = "LICENSE"
 
+[features]
+test = []
+
 [dependencies]
 anyhow = { workspace = true }
 manifest = { path = "../../programs/manifest", features=['no-clock'] }
