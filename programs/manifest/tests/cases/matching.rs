@@ -198,3 +198,20 @@ async fn test_match_partial_exact_place_round_match() -> anyhow::Result<()> {
     )
     .await
 }
+
+
+#[tokio::test]
+async fn test_match_partial_round_place_exact_match() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
+
+    let _ = scenario(&mut test_fixture, false, 1, -3, 1111, 1000).await;
+
+    verify_balances(
+        &mut test_fixture,
+        1000 * SOL_UNIT_SIZE - 1000,
+        10000 * USDC_UNIT_SIZE + 1,
+        1000 * SOL_UNIT_SIZE + 1000,
+        10000 * USDC_UNIT_SIZE - 1,
+    )
+    .await
+}
