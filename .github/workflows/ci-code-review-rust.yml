@@ -106,7 +106,7 @@ jobs:
       - name: Generate code coverage
         run: |
           cargo llvm-cov --no-report --workspace --exclude manifest-jupiter --features test  -- --nocapture --test-threads 1
-          cargo llvm-cov --no-report --workspace --package manifest-jupiter --features test  -- --nocapture --test-threads 1
+          cargo llvm-cov --no-report --package manifest-jupiter --features test  -- --nocapture --test-threads 1
           cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
