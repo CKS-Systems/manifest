@@ -145,12 +145,6 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
@@ -161,9 +155,7 @@
     program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
-    state::{
-        utils::get_now_slot, GlobalRefMut, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
-    },
+    state::{utils::get_now_slot, GlobalRefMut, MarketRefMut, RestingOrder, MARKET_BLOCK_SIZE},
     validation::loaders::{GlobalCleanContext, GlobalTradeAccounts},
 };
 
@@ -247,14 +239,10 @@
             <span class="string">"Wrong global provided"</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify that the resting order is a global order
-        </span><span class="macro">require!</span>(
-            resting_order.get_order_type() == OrderType::Global,
-            ManifestError::InvalidClean,
-            <span class="string">"Tried to cancel non global"</span>,
-        )<span class="question-mark">?</span>;
+        <span class="comment">// Do not need to require that the order is global. This ix is useful
+        // for cleaning up markets with all expired orders.
 
-        resting_order
+        </span>resting_order
     };
     <span class="kw">let </span>maker_index: DataIndex = resting_order.get_trader_index();
     <span class="kw">let </span>maker: <span class="kw-2">&amp;</span>Pubkey = market_dynamic_account.get_trader_key_by_index(maker_index);

@@ -1205,6 +1205,8 @@
 <a href="#1203" id="1203">1203</a>
 <a href="#1204" id="1204">1204</a>
 <a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1753,8 +1755,10 @@
         <span class="macro">require!</span>(
             now_slot &lt; NEXT_PLANNED_MAINTENANCE_SLOT,
             ManifestError::AlreadyExpired,
-            <span class="string">"manifest is under planned maintenance"
-        </span>)<span class="question-mark">?</span>;
+            <span class="string">"manifest is under planned maintenance now: {} maintenance_slot: {}"</span>,
+            now_slot,
+            NEXT_PLANNED_MAINTENANCE_SLOT,
+        )<span class="question-mark">?</span>;
         assert_not_already_expired(last_valid_slot, now_slot)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();

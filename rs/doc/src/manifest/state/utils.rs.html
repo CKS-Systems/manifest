@@ -288,7 +288,7 @@
     // maliciously manipulated to clear all orders with expirations on the
     // orderbook.
     </span><span class="attr">#[cfg(feature = <span class="string">"no-clock"</span>)]
-    </span><span class="kw">let </span>now_slot: u64 = u64::MAX;
+    </span><span class="kw">let </span>now_slot: u64 = (<span class="kw">super</span>::NEXT_PLANNED_MAINTENANCE_SLOT <span class="kw">as </span>u32 - <span class="number">1_u32</span>).into();
     <span class="attr">#[cfg(not(feature = <span class="string">"no-clock"</span>))]
     </span><span class="kw">let </span>now_slot: u64 = solana_program::clock::Clock::get()
         .unwrap_or(solana_program::clock::Clock {

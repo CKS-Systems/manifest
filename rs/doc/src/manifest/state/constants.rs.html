@@ -70,7 +70,7 @@
 <span class="kw">pub const </span>GLOBAL_FREE_LIST_BLOCK_SIZE: usize = GLOBAL_BLOCK_SIZE - FREE_LIST_OVERHEAD;
 
 <span class="kw">pub const </span>NO_EXPIRATION_LAST_VALID_SLOT: u32 = <span class="number">0</span>;
-<span class="kw">pub const </span>NEXT_PLANNED_MAINTENANCE_SLOT: u32 = <span class="number">293522000</span>; <span class="comment">// ~Fri Oct 04 2024 midnight GMT
+<span class="kw">pub const </span>NEXT_PLANNED_MAINTENANCE_SLOT: u32 = <span class="number">293522000</span>; <span class="comment">// ~Fri Oct 04 2024
 
 </span><span class="kw">pub const </span>MARKET_FIXED_DISCRIMINANT: u64 = <span class="number">4859840929024028656</span>;
 <span class="kw">pub const </span>GLOBAL_FIXED_DISCRIMINANT: u64 = <span class="number">10787423733276977665</span>;
@@ -96,8 +96,8 @@
 /// to fit in 4 pages. This is sufficiently big such that it is not possible to
 /// fully evict all seats in one flash loan transaction due to the withdraw
 /// accounts limit.
-</span><span class="attr">#[cfg(test)]
+</span><span class="attr">#[cfg(feature = <span class="string">"test"</span>)]
 </span><span class="kw">pub const </span>MAX_GLOBAL_SEATS: u16 = <span class="number">4</span>;
-<span class="attr">#[cfg(not(test))]
+<span class="attr">#[cfg(not(feature = <span class="string">"test"</span>))]
 </span><span class="kw">pub const </span>MAX_GLOBAL_SEATS: u16 = <span class="number">999</span>;
 </code></pre></div></section></main></body></html>
