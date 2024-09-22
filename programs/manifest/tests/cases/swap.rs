@@ -56,6 +56,18 @@ async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
     test_fixture
         .place_order_for_keypair(
             Side::Bid,
+            1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            10,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+
+    test_fixture
+        .place_order_for_keypair(
+            Side::Bid,
             2 * SOL_UNIT_SIZE,
             5,
             -1,
@@ -69,6 +81,8 @@ async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
         .sol_mint_fixture
         .mint_to(&test_fixture.payer_sol_fixture.key, 3 * SOL_UNIT_SIZE)
         .await;
+
+    test_fixture.advance_time_seconds(20).await;
 
     assert_eq!(
         test_fixture.payer_sol_fixture.balance_atoms().await,
@@ -120,6 +134,18 @@ async fn swap_full_match_test_sell_exact_out() -> anyhow::Result<()> {
     test_fixture
         .place_order_for_keypair(
             Side::Bid,
+            1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            10,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+
+    test_fixture
+        .place_order_for_keypair(
+            Side::Bid,
             2 * SOL_UNIT_SIZE,
             5,
             -1,
@@ -133,6 +159,8 @@ async fn swap_full_match_test_sell_exact_out() -> anyhow::Result<()> {
         .sol_mint_fixture
         .mint_to(&test_fixture.payer_sol_fixture.key, 3 * SOL_UNIT_SIZE)
         .await;
+
+    test_fixture.advance_time_seconds(20).await;
 
     assert_eq!(
         test_fixture.payer_sol_fixture.balance_atoms().await,
@@ -185,6 +213,18 @@ async fn swap_full_match_test_buy_exact_in() -> anyhow::Result<()> {
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            10,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+
+    test_fixture
+        .place_order_for_keypair(
+            Side::Ask,
+            1 * SOL_UNIT_SIZE,
             2,
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
@@ -197,6 +237,8 @@ async fn swap_full_match_test_buy_exact_in() -> anyhow::Result<()> {
         .usdc_mint_fixture
         .mint_to(&test_fixture.payer_usdc_fixture.key, 3_000 * USDC_UNIT_SIZE)
         .await;
+
+    test_fixture.advance_time_seconds(20).await;
 
     assert_eq!(test_fixture.payer_sol_fixture.balance_atoms().await, 0);
     assert_eq!(
