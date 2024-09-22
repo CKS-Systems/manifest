@@ -18,6 +18,7 @@ pub const MARKET_FREE_LIST_BLOCK_SIZE: usize = MARKET_BLOCK_SIZE - FREE_LIST_OVE
 pub const GLOBAL_FREE_LIST_BLOCK_SIZE: usize = GLOBAL_BLOCK_SIZE - FREE_LIST_OVERHEAD;
 
 pub const NO_EXPIRATION_LAST_VALID_SLOT: u32 = 0;
+pub const NEXT_PLANNED_MAINTENANCE_SLOT: u32 = 293522000; // ~Fri Oct 04 2024
 
 pub const MARKET_FIXED_DISCRIMINANT: u64 = 4859840929024028656;
 pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
@@ -43,7 +44,7 @@ pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 /// to fit in 4 pages. This is sufficiently big such that it is not possible to
 /// fully evict all seats in one flash loan transaction due to the withdraw
 /// accounts limit.
-#[cfg(test)]
+#[cfg(feature = "test")]
 pub const MAX_GLOBAL_SEATS: u16 = 4;
-#[cfg(not(test))]
+#[cfg(not(feature = "test"))]
 pub const MAX_GLOBAL_SEATS: u16 = 999;

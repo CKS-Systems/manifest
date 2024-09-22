@@ -11,6 +11,7 @@ license-file = "LICENSE"
 colored = ["dep:colored"]
 fuzz = []
 trace = []
+test = []
 
 [dependencies]
 bytemuck = { workspace = true }

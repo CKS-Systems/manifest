@@ -184,6 +184,86 @@
           "docs": [
             "Payer of rent and gas"
           ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Base mint"
+          ]
+        },
+        {
+          "name": "baseGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global account"
+          ]
+        },
+        {
+          "name": "baseGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global vault"
+          ]
+        },
+        {
+          "name": "baseMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base market vault"
+          ]
+        },
+        {
+          "name": "baseTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base token program"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Quote mint"
+          ]
+        },
+        {
+          "name": "quoteGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global vault"
+          ]
+        },
+        {
+          "name": "quoteMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote market vault"
+          ]
+        },
+        {
+          "name": "quoteTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote token program"
+          ]
         }
       ],
       "args": [

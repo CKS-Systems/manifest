@@ -87,12 +87,24 @@ pub(crate) fn process_settle_funds(
         fee_mantissa,
         platform_fee_percent,
     } = WrapperSettleFundsParams::try_from_slice(data)?;
+    let fee_mantissa = (fee_mantissa as u128).min(FEE_DENOMINATOR);
 
+    // limits:
+    // quote_volume_unpaid = [0..u64::MAX]
+    // fee_mantissa = [0..FEE_DENOMINATOR]
+    // fee_atoms = [0..u64::MAX]
+    // intermediate results can extend above u64
     let fee_atoms =
-        (market_info.quote_volume_unpaid.as_u64() as u128 * fee_mantissa as u128) / FEE_DENOMINATOR;
-    let effective_quote_volume =
-        QuoteAtoms::new((fee_atoms * FEE_DENOMINATOR / fee_mantissa as u128) as u64);
-    market_info.quote_volume_unpaid -= effective_quote_volume;
+        market_info.quote_volume_unpaid.as_u64() as u128 * fee_mantissa / FEE_DENOMINATOR;
+    // limits:
+    // quote_volume_paid = [0..quote_volume_unpaid] safe to cast to u64
+    // intermediate results can extend above u64
+    let quote_volume_paid = QuoteAtoms::new((fee_atoms * FEE_DENOMINATOR / fee_mantissa) as u64);
+    // limits:
+    // saturating_sub not needed, but doesn't hurt
+    market_info.quote_volume_unpaid = market_info
+        .quote_volume_unpaid
+        .saturating_sub(quote_volume_paid);
 
     let MarketInfo {
         base_balance,
@@ -150,8 +162,12 @@ pub(crate) fn process_settle_funds(
         unimplemented!("token2022 not yet supported")
         // TODO: make sure to use least amount of transfers possible to avoid transfer fee
     } else {
+        // limits:
+        // fee_atoms = [0..u64::MAX]
+        // platform_fee_atoms = [0..fee_atoms]
+        // intermediate results can extend above u64
         let platform_fee_atoms = if referrer_token_account.is_ok() {
-            (fee_atoms * platform_fee_percent as u128 / 100) as u64
+            (fee_atoms * platform_fee_percent.min(100) as u128 / 100) as u64
         } else {
             fee_atoms as u64
         };
@@ -181,7 +197,8 @@ pub(crate) fn process_settle_funds(
         })?;
 
         if let Ok(referrer_token_account) = referrer_token_account {
-            let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms) as u64;
+            // saturating_sub not needed, but doesn't hurt
+            let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms);
 
             invoke(
                 &spl_token::instruction::transfer(
