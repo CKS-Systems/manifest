@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726886343784,
+  "lastUpdate": 1726972990964,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3369,6 +3369,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7631,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "061647d6413908f2a9eaf23e8864e33e0931cf89",
+          "message": "maintenance test (#114)\n\n* maintenance test\r\n* disable maintenance slot during benchmark\r\n* declare test feature for all targets\r\n* fix clock related tests\r\n\r\n---------\r\n\r\nCo-authored-by: Britt Cyr <cyrbritt@gmail.com>",
+          "timestamp": "2024-09-22T10:18:03+08:00",
+          "tree_id": "e9960835419675fa44aed7b3157956395826621b",
+          "url": "https://github.com/CKS-Systems/manifest/commit/061647d6413908f2a9eaf23e8864e33e0931cf89"
+        },
+        "date": 1726972990256,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4232,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7384,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7643,
             "unit": "CU",
             "range": "",
             "extra": ""
