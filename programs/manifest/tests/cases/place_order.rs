@@ -343,7 +343,6 @@ async fn match_limit_orders_more_than_resting_test() -> anyhow::Result<()> {
     Ok(())
 }
 
-/*
 #[tokio::test]
 async fn match_limit_orders_fail_expired_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
@@ -427,7 +426,6 @@ async fn match_limit_orders_fail_expired_test() -> anyhow::Result<()> {
     );
     Ok(())
 }
-*/
 
 #[tokio::test]
 async fn match_limit_orders_partial_match_price_test() -> anyhow::Result<()> {

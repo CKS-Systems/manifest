@@ -146,7 +146,7 @@ pub(crate) fn process_place_order(
         base_atoms.saturating_sub(remaining_base_atoms).as_u64()
     };
 
-    trace!("deposit amount:{deposit_amount} mint:{:?}", mint.key);
+    trace!("deposit amount:{deposit_amount_atoms} mint:{:?}", mint.key);
     if deposit_amount_atoms > 0 {
         invoke(
             &deposit_instruction(
