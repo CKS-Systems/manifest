@@ -348,6 +348,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             if other_order.is_expired(now_slot) {
                 continue;
             }
+            // TODO: Clean this up into a separate function.
             if other_order.get_order_type() == OrderType::Global {
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
                     &global_trade_accounts_opts[0]
