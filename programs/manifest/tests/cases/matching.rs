@@ -100,6 +100,24 @@ async fn verify_balances(
     Ok(())
 }
 
+/*
+Scenarios:
+F - Taker fully matches maker order
+P - Taker partially matches maker order (remainder is cancelled)
+E - Order is exact quote = price * base_atoms
+R - Order is rounded quote = round(price * base)
+
+Maker | Taker | Case / Comment
+E     | EF    | test_match_full_no_rounding
+E     | EP    | test_match_partial_no_rounding
+E     | RF    | impossible - not tested
+E     | RP    | test_match_partial_exact_place_round_match
+R     | EF    | impossible - not tested
+R     | EP    | test_match_partial_round_place_exact_match
+R     | RF    | test_match_full_round_place_round_match
+R     | RP    | test_match_partial_round_place_round_match
+*/
+
 #[tokio::test]
 async fn test_match_full_no_rounding() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
@@ -149,38 +167,6 @@ async fn test_match_partial_no_rounding() -> anyhow::Result<()> {
     .await
 }
 
-#[tokio::test]
-async fn test_match_full_round_place_round_match() -> anyhow::Result<()> {
-    let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
-
-    let err = scenario(&mut test_fixture, false, 1, -3, 1, 1).await;
-    assert!(err.is_err(), "expect cancel to fail due to full match");
-
-    verify_balances(
-        &mut test_fixture,
-        1000 * SOL_UNIT_SIZE - 1,
-        10000 * USDC_UNIT_SIZE,
-        1000 * SOL_UNIT_SIZE + 1,
-        10000 * USDC_UNIT_SIZE,
-    )
-    .await
-}
-
-#[tokio::test]
-async fn test_match_partial_round_place_round_match() -> anyhow::Result<()> {
-    let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
-
-    let _ = scenario(&mut test_fixture, false, 1, -3, 2, 1).await;
-
-    verify_balances(
-        &mut test_fixture,
-        1000 * SOL_UNIT_SIZE - 1,
-        10000 * USDC_UNIT_SIZE + 1,
-        1000 * SOL_UNIT_SIZE + 1,
-        10000 * USDC_UNIT_SIZE - 1,
-    )
-    .await
-}
 
 #[tokio::test]
 async fn test_match_partial_exact_place_round_match() -> anyhow::Result<()> {
@@ -209,6 +195,40 @@ async fn test_match_partial_round_place_exact_match() -> anyhow::Result<()> {
         1000 * SOL_UNIT_SIZE - 1000,
         10000 * USDC_UNIT_SIZE + 1,
         1000 * SOL_UNIT_SIZE + 1000,
+        10000 * USDC_UNIT_SIZE - 1,
+    )
+    .await
+}
+
+
+#[tokio::test]
+async fn test_match_full_round_place_round_match() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
+
+    let err = scenario(&mut test_fixture, false, 1, -3, 1, 1).await;
+    assert!(err.is_err(), "expect cancel to fail due to full match");
+
+    verify_balances(
+        &mut test_fixture,
+        1000 * SOL_UNIT_SIZE - 1,
+        10000 * USDC_UNIT_SIZE,
+        1000 * SOL_UNIT_SIZE + 1,
+        10000 * USDC_UNIT_SIZE,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn test_match_partial_round_place_round_match() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
+
+    let _ = scenario(&mut test_fixture, false, 1, -3, 2, 1).await;
+
+    verify_balances(
+        &mut test_fixture,
+        1000 * SOL_UNIT_SIZE - 1,
+        10000 * USDC_UNIT_SIZE + 1,
+        1000 * SOL_UNIT_SIZE + 1,
         10000 * USDC_UNIT_SIZE - 1,
     )
     .await
