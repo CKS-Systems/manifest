@@ -350,6 +350,11 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
             // TODO: Clean this up into a separate function.
             if other_order.get_order_type() == OrderType::Global {
+                // If global accounts are needed but not present, then this will
+                // crash. This is an intentional product decision. Would be
+                // valid to walk past, but we have chosen to give no fill rather
+                // than worse price if the taker takes the shortcut of not
+                // including global account.
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
                     &global_trade_accounts_opts[0]
                 } else {
