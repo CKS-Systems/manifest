@@ -286,7 +286,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         &self,
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
-        _global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
+        _global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<QuoteAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
 
