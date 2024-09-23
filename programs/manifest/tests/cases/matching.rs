@@ -167,7 +167,6 @@ async fn test_match_partial_no_rounding() -> anyhow::Result<()> {
     .await
 }
 
-
 #[tokio::test]
 async fn test_match_partial_exact_place_round_match() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::try_new_for_matching_test().await?;
@@ -199,7 +198,6 @@ async fn test_match_partial_round_place_exact_match() -> anyhow::Result<()> {
     )
     .await
 }
-
 
 #[tokio::test]
 async fn test_match_full_round_place_round_match() -> anyhow::Result<()> {
