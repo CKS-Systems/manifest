@@ -3,7 +3,9 @@ use std::{cell::RefMut, rc::Rc};
 use borsh::BorshSerialize;
 use manifest::{
     program::{
-        batch_update::PlaceOrderParams, batch_update_instruction, global_add_trader_instruction, global_deposit_instruction, global_withdraw_instruction, swap_instruction, ManifestInstruction, SwapParams
+        batch_update::PlaceOrderParams, batch_update_instruction, global_add_trader_instruction,
+        global_deposit_instruction, global_withdraw_instruction, swap_instruction,
+        ManifestInstruction, SwapParams,
     },
     state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType},
     validation::get_vault_address,
@@ -853,22 +855,24 @@ async fn swap_global_not_backed() -> anyhow::Result<()> {
         &second_keypair.pubkey(),
         None,
         vec![],
-        vec![PlaceOrderParams::new(
-            1 * SOL_UNIT_SIZE,
-            2,
-            0,
-            true,
-            OrderType::Global,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-        ),
-        PlaceOrderParams::new(
-            1 * SOL_UNIT_SIZE,
-            1,
-            0,
-            true,
-            OrderType::Limit,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-        )],
+        vec![
+            PlaceOrderParams::new(
+                1 * SOL_UNIT_SIZE,
+                2,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            ),
+            PlaceOrderParams::new(
+                1 * SOL_UNIT_SIZE,
+                1,
+                0,
+                true,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            ),
+        ],
         None,
         None,
         Some(*test_fixture.market_fixture.market.get_quote_mint()),
