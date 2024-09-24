@@ -824,7 +824,7 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
                     1,
                     0,
                     true,
-                    OrderType::Global,
+                    OrderType::Limit,
                     NO_EXPIRATION_LAST_VALID_SLOT,
                 ),
                 PlaceOrderParams::new(
@@ -832,7 +832,7 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
                     5,
                     -1,
                     true,
-                    OrderType::Global,
+                    OrderType::Limit,
                     NO_EXPIRATION_LAST_VALID_SLOT,
                 ),
             ],
