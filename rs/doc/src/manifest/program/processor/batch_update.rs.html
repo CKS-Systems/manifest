@@ -308,6 +308,12 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::RefMut, mem::size_of};
 
 <span class="kw">use crate</span>::{
@@ -540,6 +546,12 @@
                         trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint index {}"</span>,
+                        hinted_cancel_index,
+                    )<span class="question-mark">?</span>;
+                    <span class="macro">require!</span>(
+                        cancel.order_sequence_number() == order.get_sequence_number(),
+                        ManifestError::WrongIndexHintParams,
+                        <span class="string">"Invalid cancel hint sequence number index {}"</span>,
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
                     dynamic_account.cancel_order_by_index(
