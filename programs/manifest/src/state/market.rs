@@ -348,6 +348,17 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             if other_order.is_expired(now_slot) {
                 continue;
             }
+
+            let matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
+            // caller signal can ensure quote is a lower or upper bound by rounding of base amount
+            let base_atoms_limit =
+                matched_price.checked_base_for_quote(remaining_quote_atoms, round_up)?;
+            let matched_base_atoms = other_order.get_num_base_atoms().min(base_atoms_limit);
+            let matched_quote_atoms =
+                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
+
+            total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
+
             // TODO: Clean this up into a separate function.
             if other_order.get_order_type() == OrderType::Global {
                 // If global accounts are needed but not present, then this will
@@ -364,28 +375,15 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                     global_trade_accounts_opt,
                     self.get_trader_key_by_index(other_order.get_trader_index()),
                     GlobalAtoms::new(if is_bid {
-                        other_order.get_num_base_atoms().as_u64()
+                        matched_base_atoms.as_u64()
                     } else {
-                        (other_order
-                            .get_num_base_atoms()
-                            .checked_mul(other_order.get_price(), true))?
-                        .as_u64()
+                        matched_quote_atoms.as_u64()
                     }),
                 );
                 if !has_enough_tokens {
                     continue;
                 }
             }
-
-            let matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
-            // caller signal can ensure quote is a lower or upper bound by rounding of base amount
-            let base_atoms_limit =
-                matched_price.checked_base_for_quote(remaining_quote_atoms, round_up)?;
-            let matched_base_atoms = other_order.get_num_base_atoms().min(base_atoms_limit);
-            let matched_quote_atoms =
-                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
-
-            total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
 
             if matched_base_atoms == base_atoms_limit {
                 break;
