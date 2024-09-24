@@ -322,15 +322,15 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         return Ok(total_quote_atoms_matched);
     }
 
+    /// How many base atoms you get when you trade in limit_quote_atoms.
     pub fn impact_base_atoms(
         &self,
         is_bid: bool,
-        round_up: bool,
         limit_quote_atoms: QuoteAtoms,
     ) -> Result<BaseAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
 
-        let book = if is_bid {
+        let book: RedBlackTreeReadOnly<'_, RestingOrder> = if is_bid {
             self.get_asks()
         } else {
             self.get_bids()
@@ -338,30 +338,48 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
 
         let mut total_base_atoms_matched: BaseAtoms = BaseAtoms::ZERO;
         let mut remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
+
         for (_, other_order) in book.iter::<RestingOrder>() {
             if other_order.is_expired(now_slot) {
                 continue;
             }
 
             let matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
-            // caller signal can ensure quote is a lower or upper bound by rounding of base amount
-            let base_atoms_limit =
-                matched_price.checked_base_for_quote(remaining_quote_atoms, round_up)?;
-            let matched_base_atoms = other_order.get_num_base_atoms().min(base_atoms_limit);
-            let matched_quote_atoms =
-                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
+            
+            // base_atoms_limit is the number of base atoms that you get if you
+            // were to trade all of the remaining quote atoms at the current
+            // price. Rounding is done in the taker favor because at the limit,
+            // it is a full match. So if you are checking against asks with 100
+            // quote remaining against price 1.001, then the answer should be
+            // 100, because the rounding is in favor of the taker. It takes 100
+            // base atoms to exhaust 100 quote atoms at that price.
+            let base_atoms_limit: BaseAtoms =
+                matched_price.checked_base_for_quote(remaining_quote_atoms, is_bid)?;
+            // Either we fill the entire resting order, or only the
+            // base_atoms_limit, in which case, this is the last iteration.
+            let matched_base_atoms: BaseAtoms = other_order.get_num_base_atoms().min(base_atoms_limit);
 
             total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
 
             if matched_base_atoms == base_atoms_limit {
                 break;
             }
-
+            
+            // Number of quote atoms matched exactly. Always round in our favor
+            // here because we already know that we did not finish on the last
+            // order, so we fully exhausted it and thus are rounding in taker
+            // favor.
+            let matched_quote_atoms: QuoteAtoms =
+                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)?;
             if remaining_quote_atoms == QuoteAtoms::ZERO {
                 break;
             }
         }
+        
+        // Note that when there are not enough orders on the market to use up or
+        // to receive the desired number of quote atoms, this returns just the
+        // full amount on the bookside without differentiating that return.
 
         return Ok(total_base_atoms_matched);
     }
