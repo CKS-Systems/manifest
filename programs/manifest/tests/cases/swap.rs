@@ -818,22 +818,24 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
             &second_keypair.pubkey(),
             None,
             vec![],
-            vec![PlaceOrderParams::new(
-                1 * SOL_UNIT_SIZE,
-                1,
-                0,
-                true,
-                OrderType::Global,
-                NO_EXPIRATION_LAST_VALID_SLOT,
-            ),
-            PlaceOrderParams::new(
-                2 * SOL_UNIT_SIZE,
-                5,
-                -1,
-                true,
-                OrderType::Global,
-                NO_EXPIRATION_LAST_VALID_SLOT,
-            )],
+            vec![
+                PlaceOrderParams::new(
+                    1 * SOL_UNIT_SIZE,
+                    1,
+                    0,
+                    true,
+                    OrderType::Global,
+                    NO_EXPIRATION_LAST_VALID_SLOT,
+                ),
+                PlaceOrderParams::new(
+                    2 * SOL_UNIT_SIZE,
+                    5,
+                    -1,
+                    true,
+                    OrderType::Global,
+                    NO_EXPIRATION_LAST_VALID_SLOT,
+                ),
+            ],
             None,
             None,
             Some(*test_fixture.market_fixture.market.get_quote_mint()),
@@ -843,7 +845,7 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
         &[&second_keypair],
     )
     .await?;
-    
+
     // Swapper will exact_in of 4, min quote out of 2. Result should be that it
     // succeeds. It will not be able to fully fill all the exact in of 4 and
     // there will be 1 leftover and it gets out 1*1 + 2*.5 = 2 quote.
@@ -856,7 +858,10 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
         .swap(4 * SOL_UNIT_SIZE, 2_000 * USDC_UNIT_SIZE, true, true)
         .await?;
 
-    assert_eq!(test_fixture.payer_sol_fixture.balance_atoms().await, 1 * SOL_UNIT_SIZE);
+    assert_eq!(
+        test_fixture.payer_sol_fixture.balance_atoms().await,
+        1 * SOL_UNIT_SIZE
+    );
     assert_eq!(
         test_fixture.payer_usdc_fixture.balance_atoms().await,
         2_000 * USDC_UNIT_SIZE

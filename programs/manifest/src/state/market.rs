@@ -345,7 +345,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             }
 
             let matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
-            
+
             // base_atoms_limit is the number of base atoms that you get if you
             // were to trade all of the remaining quote atoms at the current
             // price. Rounding is done in the taker favor because at the limit,
@@ -357,14 +357,15 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 matched_price.checked_base_for_quote(remaining_quote_atoms, is_bid)?;
             // Either we fill the entire resting order, or only the
             // base_atoms_limit, in which case, this is the last iteration.
-            let matched_base_atoms: BaseAtoms = other_order.get_num_base_atoms().min(base_atoms_limit);
+            let matched_base_atoms: BaseAtoms =
+                other_order.get_num_base_atoms().min(base_atoms_limit);
 
             total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
 
             if matched_base_atoms == base_atoms_limit {
                 break;
             }
-            
+
             // Number of quote atoms matched exactly. Always round in our favor
             // here because we already know that we did not finish on the last
             // order, so we fully exhausted it and thus are rounding in taker
@@ -376,7 +377,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 break;
             }
         }
-        
+
         // Note that when there are not enough orders on the market to use up or
         // to receive the desired number of quote atoms, this returns just the
         // full amount on the bookside without differentiating that return.
