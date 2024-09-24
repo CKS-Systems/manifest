@@ -302,10 +302,6 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             if other_order.is_expired(now_slot) {
                 continue;
             }
-            if other_order.get_order_type() == OrderType::Global {
-                // TODO: Check if the order is backed
-            }
-
             let matched_price = other_order.get_price();
             let matched_base_atoms = other_order.get_num_base_atoms().min(remaining_base_atoms);
             let matched_quote_atoms =
@@ -313,6 +309,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
 
             total_quote_atoms_matched =
                 total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
+            if other_order.get_order_type() == OrderType::Global {
+                // TODO: Check if the order is backed
+            }
             if matched_base_atoms == remaining_base_atoms {
                 break;
             }
