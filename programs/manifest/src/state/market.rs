@@ -357,8 +357,6 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             let matched_quote_atoms =
                 matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
 
-            total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
-
             // TODO: Clean this up into a separate function.
             if other_order.get_order_type() == OrderType::Global {
                 // If global accounts are needed but not present, then this will
@@ -384,6 +382,8 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                     continue;
                 }
             }
+
+            total_base_atoms_matched = total_base_atoms_matched.checked_add(matched_base_atoms)?;
 
             if matched_base_atoms == base_atoms_limit {
                 break;
