@@ -28,6 +28,9 @@ pub struct SwapParams {
     in_atoms: u64,
     out_atoms: u64,
     is_base_in: bool,
+    // Exact in is a technical term that doesnt actually mean exact. It is
+    // desired. If not that much can be fulfilled, less will be allowed assuming
+    // the min_out/max_in is satisfied.
     is_exact_in: bool,
 }
 
