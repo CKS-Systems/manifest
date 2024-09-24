@@ -307,11 +307,11 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             let matched_quote_atoms =
                 matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
 
-            total_quote_atoms_matched =
-                total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
             if other_order.get_order_type() == OrderType::Global {
                 // TODO: Check if the order is backed
             }
+            total_quote_atoms_matched =
+                total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
             if matched_base_atoms == remaining_base_atoms {
                 break;
             }
