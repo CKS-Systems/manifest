@@ -232,6 +232,12 @@ pub(crate) fn process_batch_update(
                         "Invalid cancel hint index {}",
                         hinted_cancel_index,
                     )?;
+                    require!(
+                        cancel.order_sequence_number() == order.get_sequence_number(),
+                        ManifestError::WrongIndexHintParams,
+                        "Invalid cancel hint sequence number index {}",
+                        hinted_cancel_index,
+                    )?;
                     dynamic_account.cancel_order_by_index(
                         trader_index,
                         hinted_cancel_index,
