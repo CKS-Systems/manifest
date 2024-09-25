@@ -388,6 +388,16 @@
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
 <a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -485,13 +495,23 @@
         } <span class="kw">else </span>{
             <span class="comment">// input=desired max(quote) output=checked min(base)
             // round down base amount to not cross quote limit
-            </span>dynamic_account.impact_base_atoms(<span class="bool-val">true</span>, <span class="bool-val">false</span>, QuoteAtoms::new(in_atoms))<span class="question-mark">?
+            </span>dynamic_account.impact_base_atoms(
+                <span class="bool-val">true</span>,
+                <span class="bool-val">false</span>,
+                QuoteAtoms::new(in_atoms),
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+            )<span class="question-mark">?
         </span>}
     } <span class="kw">else </span>{
         <span class="kw">if </span>is_base_in {
             <span class="comment">// input=checked max(base) output=desired min(quote)
             // round up base amount to ensure not staying below quote limit
-            </span>dynamic_account.impact_base_atoms(<span class="bool-val">false</span>, <span class="bool-val">true</span>, QuoteAtoms::new(out_atoms))<span class="question-mark">?
+            </span>dynamic_account.impact_base_atoms(
+                <span class="bool-val">false</span>,
+                <span class="bool-val">true</span>,
+                QuoteAtoms::new(out_atoms),
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+            )<span class="question-mark">?
         </span>} <span class="kw">else </span>{
             <span class="comment">// input=checked max(quote) output=desired min(base)
             </span>BaseAtoms::new(out_atoms)

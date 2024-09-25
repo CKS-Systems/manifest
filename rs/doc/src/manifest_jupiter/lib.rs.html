@@ -826,6 +826,14 @@
 <a href="#824" id="824">824</a>
 <a href="#825" id="825">825</a>
 <a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
@@ -835,7 +843,10 @@
 <span class="kw">use </span>manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketValue},
-    validation::{get_global_address, get_global_vault_address, get_vault_address},
+    validation::{
+        get_global_address, get_global_vault_address, get_vault_address,
+        loaders::GlobalTradeAccounts,
+    },
 };
 <span class="kw">use </span>solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 <span class="kw">use </span>std::mem::size_of;
@@ -919,12 +930,17 @@
 
     <span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>, quote_params: <span class="kw-2">&amp;</span>QuoteParams) -&gt; <span class="prelude-ty">Result</span>&lt;Quote&gt; {
         <span class="kw">let </span>market: DynamicAccount&lt;MarketFixed, Vec&lt;u8&gt;&gt; = <span class="self">self</span>.market.clone();
+        <span class="kw">let </span>global_trade_accounts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>] = <span class="kw-2">&amp;</span>[<span class="prelude-val">None</span>, <span class="prelude-val">None</span>];
         <span class="kw">let </span>out_amount: u64 = <span class="kw">if </span>quote_params.input_mint == <span class="self">self</span>.get_base_mint() {
             <span class="kw">let </span>in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
-            market.impact_quote_atoms(<span class="bool-val">false</span>, in_atoms)<span class="question-mark">?</span>.as_u64()
+            market
+                .impact_quote_atoms(<span class="bool-val">false</span>, in_atoms, global_trade_accounts)<span class="question-mark">?
+                </span>.as_u64()
         } <span class="kw">else </span>{
             <span class="kw">let </span>in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
-            market.impact_base_atoms(<span class="bool-val">true</span>, <span class="bool-val">true</span>, in_atoms)<span class="question-mark">?</span>.as_u64()
+            market
+                .impact_base_atoms(<span class="bool-val">true</span>, <span class="bool-val">true</span>, in_atoms, global_trade_accounts)<span class="question-mark">?
+                </span>.as_u64()
         };
         <span class="prelude-val">Ok</span>(Quote {
             out_amount,

@@ -261,6 +261,22 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -431,6 +447,22 @@
         <span class="string">"Need to claim a seat first"</span>,
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>can_back_order&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+    global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    resting_order_trader: <span class="kw-2">&amp;</span>Pubkey,
+    desired_global_atoms: GlobalAtoms,
+) -&gt; bool {
+    <span class="kw">let </span>global_trade_accounts: <span class="kw-2">&amp;</span>GlobalTradeAccounts = <span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap();
+    <span class="kw">let </span>GlobalTradeAccounts { global, .. } = global_trade_accounts;
+
+    <span class="kw">let </span>global_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>global.try_borrow_mut_data().unwrap();
+    <span class="kw">let </span>global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
+
+    <span class="kw">let </span>num_deposited_atoms: GlobalAtoms =
+        global_dynamic_account.get_balance_atoms(resting_order_trader);
+    <span class="kw">return </span>desired_global_atoms &lt;= num_deposited_atoms;
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_to_move_global_tokens&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
