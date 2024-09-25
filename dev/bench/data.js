@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727236310107,
+  "lastUpdate": 1727249853536,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3761,6 +3761,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7671,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Maximilian Schneider",
+            "username": "mschneider",
+            "email": "mail@maximilianschneider.net"
+          },
+          "committer": {
+            "name": "Maximilian Schneider",
+            "username": "mschneider",
+            "email": "mail@maximilianschneider.net"
+          },
+          "id": "0145c573b4f2e45f222cc19493c86f40ee2bc740",
+          "message": "format",
+          "timestamp": "2024-09-23T03:24:29Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/0145c573b4f2e45f222cc19493c86f40ee2bc740"
+        },
+        "date": 1727249852016,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 7656,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 9158,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 9183,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 5115,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 6425,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7184,
             "unit": "CU",
             "range": "",
             "extra": ""
