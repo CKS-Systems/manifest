@@ -468,26 +468,42 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let mantissa = value * D18F;
-        if mantissa.is_infinite() {
+        if value.is_infinite() {
             msg!("infinite can not be expressed as fixed point decimal");
+            return Err(PriceConversionError(0xB));
+        }
+        if value.is_nan() {
+            msg!("nan can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xC));
         }
-        if mantissa.is_nan() {
-            msg!("nan can not be expressed as fixed point decimal");
+        if value.is_sign_negative() {
+            msg!("price can not be negative");
             return Err(PriceConversionError(0xD));
         }
-        if mantissa > u128::MAX as f64 {
+        if value > u32::MAX as f64 * 10f64.powi(Self::MAX_EXP as i32) {
             msg!("price is too large");
             return Err(PriceConversionError(0xE));
         }
-        if mantissa.is_sign_negative() {
-            msg!("price can not be negative");
+        if value < 10f64.powi(Self::MIN_EXP as i32) {
+            msg!("price is too small");
             return Err(PriceConversionError(0xF));
         }
-        Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(mantissa.round() as u128),
-        })
+
+        const MANTISSA_LIMIT: f64 = (u32::MAX / 10) as f64;
+        let mut exponent = 0;
+        let mut factor = 1.0f64;
+
+        while exponent < Self::MAX_EXP && (value * factor).round() > MANTISSA_LIMIT {
+            factor /= 10f64;
+            exponent += 1;
+        }
+
+        while exponent > Self::MIN_EXP && (value * factor).round() < MANTISSA_LIMIT {
+            factor *= 10f64;
+            exponent -= 1;
+        }
+
+        Self::try_from_mantissa_and_exponent((value * factor).round() as u32, exponent)
     }
 }
 
