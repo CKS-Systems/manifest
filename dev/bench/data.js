@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727236183087,
+  "lastUpdate": 1727236310107,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3695,6 +3695,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 7260,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a8da836bbabff2f325ba4394779fdc9ac87c89a",
+          "message": "Check global trades are backed before swap (#119)\n\n* Global account check in swap\r\n\r\n* Global account check in swap\r\n\r\n* test for unbacked global\r\n\r\n* client fix\r\n\r\n* fmt\r\n\r\n* switch global swap check to only the amount needed, not full\r\n\r\n* move total base atoms matched\r\n\r\n* move global\r\n\r\n* todo",
+          "timestamp": "2024-09-25T11:26:43+08:00",
+          "tree_id": "d1c05262b8c6721d6c5f21ae30559e56255ff9b1",
+          "url": "https://github.com/CKS-Systems/manifest/commit/3a8da836bbabff2f325ba4394779fdc9ac87c89a"
+        },
+        "date": 1727236308707,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 4214,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 7389,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 7671,
             "unit": "CU",
             "range": "",
             "extra": ""
