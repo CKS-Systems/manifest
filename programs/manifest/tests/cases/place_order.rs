@@ -734,9 +734,19 @@ async fn place_order_zero_price() -> anyhow::Result<()> {
     test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
 
     test_fixture
-        .place_order(Side::Ask, 1 * SOL_UNIT_SIZE, 0, 0, NO_EXPIRATION_LAST_VALID_SLOT, OrderType::Limit,)
+        .place_order(
+            Side::Ask,
+            1 * SOL_UNIT_SIZE,
+            0,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )
         .await?;
-    assert_eq!(test_fixture.market_fixture.get_resting_orders().await.len(), 0);
+    assert_eq!(
+        test_fixture.market_fixture.get_resting_orders().await.len(),
+        0
+    );
 
     Ok(())
 }
@@ -749,9 +759,19 @@ async fn place_order_zero_size() -> anyhow::Result<()> {
     test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
 
     test_fixture
-        .place_order(Side::Ask, 0, 1, 0, NO_EXPIRATION_LAST_VALID_SLOT, OrderType::Limit,)
+        .place_order(
+            Side::Ask,
+            0,
+            1,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )
         .await?;
-    assert_eq!(test_fixture.market_fixture.get_resting_orders().await.len(), 0);
+    assert_eq!(
+        test_fixture.market_fixture.get_resting_orders().await.len(),
+        0
+    );
 
     Ok(())
 }
