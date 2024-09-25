@@ -318,10 +318,6 @@ impl QuoteAtomsPerBaseAtom {
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
-        if mantissa == 0 {
-            msg!("price can not be zero");
-            return Err(PriceConversionError(0x0));
-        }
         if exponent > Self::MAX_EXP {
             msg!("invalid exponent {exponent} > 8 would truncate",);
             return Err(PriceConversionError(0x1));
