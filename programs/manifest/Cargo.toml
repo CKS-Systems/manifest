@@ -14,7 +14,7 @@ name = "manifest"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
-default = []
+default = [ "trace" ]
 test = []
 fuzz = []
 trace = ["hypertree/trace"]
