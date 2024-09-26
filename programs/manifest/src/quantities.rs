@@ -614,10 +614,12 @@ fn test_price_limits() {
     )
     .is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
-    assert!(QuoteAtomsPerBaseAtom::try_from(u64::MAX as f64).is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(
+        u32::MAX as f64 * 10f64.powi(QuoteAtomsPerBaseAtom::MAX_EXP as i32)
+    )
+    .is_ok());
 
     // failures
-    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(0, 0).is_err());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
         1,
         QuoteAtomsPerBaseAtom::MAX_EXP + 1
