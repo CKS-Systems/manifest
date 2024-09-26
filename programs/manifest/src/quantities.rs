@@ -1,8 +1,9 @@
 use crate::program::ManifestError;
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
+use hypertree::trace;
 use shank::ShankAccount;
-use solana_program::{msg, program_error::ProgramError};
+use solana_program::program_error::ProgramError;
 use static_assertions::{const_assert, const_assert_eq};
 use std::{
     cmp::Ordering,
@@ -318,16 +319,12 @@ impl QuoteAtomsPerBaseAtom {
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
-        if mantissa == 0 {
-            msg!("price can not be zero");
-            return Err(PriceConversionError(0x0));
-        }
         if exponent > Self::MAX_EXP {
-            msg!("invalid exponent {exponent} > 8 would truncate",);
+            trace!("invalid exponent {exponent} > 8 would truncate",);
             return Err(PriceConversionError(0x1));
         }
         if exponent < Self::MIN_EXP {
-            msg!("invalid exponent {exponent} < -18 would truncate",);
+            trace!("invalid exponent {exponent} < -18 would truncate",);
             return Err(PriceConversionError(0x2));
         }
         Ok(Self::from_mantissa_and_exponent_(mantissa, exponent))
@@ -464,46 +461,53 @@ impl From<PriceConversionError> for ProgramError {
     }
 }
 
+#[inline(always)]
+fn encode_mantissa_and_exponent(value: f64) -> (u32, i8) {
+    let mut exponent: i8 = 0;
+    // prevent overflow when casting to u32
+    while exponent < QuoteAtomsPerBaseAtom::MAX_EXP
+        && encode_mantissa(value, exponent) > u32::MAX as f64
+    {
+        exponent += 1;
+    }
+    // prevent underflow and maximize precision available
+    while exponent > QuoteAtomsPerBaseAtom::MIN_EXP
+        && encode_mantissa(value, exponent) < (u32::MAX / 10) as f64
+    {
+        exponent -= 1;
+    }
+    (encode_mantissa(value, exponent) as u32, exponent)
+}
+
+#[inline(always)]
+fn encode_mantissa(value: f64, exp: i8) -> f64 {
+    (value * 10f64.powi(-exp as i32)).round()
+}
+
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         if value.is_infinite() {
-            msg!("infinite can not be expressed as fixed point decimal");
-            return Err(PriceConversionError(0xB));
-        }
-        if value.is_nan() {
-            msg!("nan can not be expressed as fixed point decimal");
+            trace!("infinite can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xC));
         }
-        if value.is_sign_negative() {
-            msg!("price can not be negative");
+        if value.is_nan() {
+            trace!("nan can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xD));
         }
-        if value > u32::MAX as f64 * 10f64.powi(Self::MAX_EXP as i32) {
-            msg!("price is too large");
+        if value.is_sign_negative() {
+            trace!("price {value} can not be negative");
             return Err(PriceConversionError(0xE));
         }
-        if value < 10f64.powi(Self::MIN_EXP as i32) {
-            msg!("price is too small");
+        if encode_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
+            trace!("price {value} is too large");
             return Err(PriceConversionError(0xF));
         }
 
-        const MANTISSA_LIMIT: f64 = (u32::MAX / 10) as f64;
-        let mut exponent = 0;
-        let mut factor = 1.0f64;
+        let (mantissa, exponent) = encode_mantissa_and_exponent(value);
 
-        while exponent < Self::MAX_EXP && (value * factor).round() > MANTISSA_LIMIT {
-            factor /= 10f64;
-            exponent += 1;
-        }
-
-        while exponent > Self::MIN_EXP && (value * factor).round() < MANTISSA_LIMIT {
-            factor *= 10f64;
-            exponent -= 1;
-        }
-
-        Self::try_from_mantissa_and_exponent((value * factor).round() as u32, exponent)
+        Self::try_from_mantissa_and_exponent(mantissa, exponent)
     }
 }
 

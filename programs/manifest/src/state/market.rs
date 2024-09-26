@@ -595,6 +595,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // Got a match. First make sure we are allowed to match. We check
             // inside the matching rather than skipping the matching altogether
             // because post only orders should fail, not produce a crossed book.
+            trace!(
+                "match {} {order_type:?} {price:?} with {other_order:?}",
+                if is_bid { "bid" } else { "ask" }
+            );
             assert_can_take(order_type)?;
 
             let maker_sequence_number = other_order.get_sequence_number();
@@ -1097,7 +1101,7 @@ fn insert_order_into_tree(
     tree.insert(free_address, *resting_order);
     if is_bid {
         trace!(
-            "insert order bid root:{}->{} max:{}->{}->{}",
+            "insert order bid {resting_order:?} root:{}->{} max:{}->{}->{}",
             fixed.bids_root_index,
             tree.get_root_index(),
             fixed.bids_best_index,
@@ -1108,7 +1112,7 @@ fn insert_order_into_tree(
         fixed.bids_best_index = tree.get_max_index();
     } else {
         trace!(
-            "insert order ask root:{}->{} max:{}->{}->{}",
+            "insert order ask {resting_order:?} root:{}->{} max:{}->{}->{}",
             fixed.asks_root_index,
             tree.get_root_index(),
             fixed.asks_best_index,
