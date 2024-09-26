@@ -59,27 +59,23 @@ pub fn order_type_can_take(order_type: OrderType) -> bool {
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 pub struct RestingOrder {
     price: QuoteAtomsPerBaseAtom,
-    // Sort key is the worst effective price someone could get by
-    // trading with me due to the rounding being in my favor as a maker.
-    effective_price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,
     sequence_number: u64,
     trader_index: DataIndex,
     last_valid_slot: u32,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; 6],
+    _padding: [u8; 22],
 }
 
 // 16 +  // price
-// 16 +  // effective_price
 //  8 +  // num_base_atoms
 //  8 +  // sequence_number
 //  4 +  // trader_index
 //  4 +  // last_valid_slot
 //  1 +  // is_bid
 //  1 +  // order_type
-//  6    // padding
+// 22    // padding
 // = 64
 const_assert_eq!(size_of::<RestingOrder>(), RESTING_ORDER_SIZE);
 const_assert_eq!(size_of::<RestingOrder>() % 8, 0);
@@ -99,7 +95,6 @@ impl RestingOrder {
             num_base_atoms,
             last_valid_slot,
             price,
-            effective_price: price,
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
@@ -152,9 +147,6 @@ impl RestingOrder {
 
     pub fn reduce(&mut self, size: BaseAtoms) -> ProgramResult {
         self.num_base_atoms = self.num_base_atoms.checked_sub(size)?;
-        // self.effective_price = self
-        //     .price
-        //     .checked_effective_price(self.num_base_atoms, self.get_is_bid())?;
         Ok(())
     }
 }
@@ -189,11 +181,7 @@ impl Eq for RestingOrder {}
 
 impl std::fmt::Display for RestingOrder {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}@{}|E:{})",
-            self.num_base_atoms, self.price, self.effective_price
-        )
+        write!(f, "{}@{}", self.num_base_atoms, self.price)
     }
 }
 

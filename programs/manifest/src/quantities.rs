@@ -466,21 +466,21 @@ fn encode_mantissa_and_exponent(value: f64) -> (u32, i8) {
     let mut exponent: i8 = 0;
     // prevent overflow when casting to u32
     while exponent < QuoteAtomsPerBaseAtom::MAX_EXP
-        && encode_mantissa(value, exponent) > u32::MAX as f64
+        && calculate_mantissa(value, exponent) > u32::MAX as f64
     {
         exponent += 1;
     }
     // prevent underflow and maximize precision available
     while exponent > QuoteAtomsPerBaseAtom::MIN_EXP
-        && encode_mantissa(value, exponent) < (u32::MAX / 10) as f64
+        && calculate_mantissa(value, exponent) < (u32::MAX / 10) as f64
     {
         exponent -= 1;
     }
-    (encode_mantissa(value, exponent) as u32, exponent)
+    (calculate_mantissa(value, exponent) as u32, exponent)
 }
 
 #[inline(always)]
-fn encode_mantissa(value: f64, exp: i8) -> f64 {
+fn calculate_mantissa(value: f64, exp: i8) -> f64 {
     (value * 10f64.powi(-exp as i32)).round()
 }
 
@@ -500,7 +500,7 @@ impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
             trace!("price {value} can not be negative");
             return Err(PriceConversionError(0xE));
         }
-        if encode_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
+        if calculate_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
             trace!("price {value} is too large");
             return Err(PriceConversionError(0xF));
         }
