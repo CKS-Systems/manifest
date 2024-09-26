@@ -98,7 +98,7 @@ impl RestingOrder {
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
-            _padding: [0; 6],
+            _padding: Default::default(),
         })
     }
 
