@@ -41,7 +41,7 @@ security_txt! {
 // multiple ways to spam and cause hassle for honest traders. The strategy to
 // combat the different ways largely relies on economic assumptions that by
 // making it prohibitively expensive to grief honest traders.
-// 
+//
 // Denial of service through many small orders.
 // Because each regular order requires funds to be placed on the market as well
 // as possibly rent to expand an account, an attacker would have some associated
