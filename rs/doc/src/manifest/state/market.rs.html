@@ -1231,13 +1231,6 @@
 <a href="#1229" id="1229">1229</a>
 <a href="#1230" id="1230">1230</a>
 <a href="#1231" id="1231">1231</a>
-<a href="#1232" id="1232">1232</a>
-<a href="#1233" id="1233">1233</a>
-<a href="#1234" id="1234">1234</a>
-<a href="#1235" id="1235">1235</a>
-<a href="#1236" id="1236">1236</a>
-<a href="#1237" id="1237">1237</a>
-<a href="#1238" id="1238">1238</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1271,7 +1264,7 @@
         try_to_add_to_global,
     },
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
-    MARKET_FREE_LIST_BLOCK_SIZE, NEXT_PLANNED_MAINTENANCE_SLOT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 <span class="kw">pub struct </span>AddOrderToMarketArgs&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -1814,13 +1807,6 @@
         assert_already_has_seat(trader_index)<span class="question-mark">?</span>;
         <span class="kw">let </span>now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
-        <span class="macro">require!</span>(
-            now_slot &lt; NEXT_PLANNED_MAINTENANCE_SLOT,
-            ManifestError::AlreadyExpired,
-            <span class="string">"manifest is under planned maintenance now: {} maintenance_slot: {}"</span>,
-            now_slot,
-            NEXT_PLANNED_MAINTENANCE_SLOT,
-        )<span class="question-mark">?</span>;
         assert_not_already_expired(last_valid_slot, now_slot)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
