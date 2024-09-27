@@ -181,7 +181,7 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.price) == (other.price)
+        (self.sequence_number) == (other.sequence_number)
     }
 }
 
