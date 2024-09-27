@@ -10,9 +10,7 @@ use solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
 use static_assertions::const_assert_eq;
 use std::cmp::Ordering;
 
-use super::{
-    constants::NO_EXPIRATION_LAST_VALID_SLOT, NEXT_PLANNED_MAINTENANCE_SLOT, RESTING_ORDER_SIZE,
-};
+use super::{constants::NO_EXPIRATION_LAST_VALID_SLOT, RESTING_ORDER_SIZE};
 
 #[derive(
     Debug,
@@ -141,9 +139,7 @@ impl RestingOrder {
     }
 
     pub fn is_expired(&self, current_slot: u32) -> bool {
-        current_slot >= NEXT_PLANNED_MAINTENANCE_SLOT
-            || (self.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
-                && self.last_valid_slot < current_slot)
+        self.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT && self.last_valid_slot < current_slot
     }
 
     pub fn get_is_bid(&self) -> bool {
