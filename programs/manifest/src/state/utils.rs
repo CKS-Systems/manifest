@@ -1,11 +1,7 @@
 use std::cell::RefMut;
 
 use crate::{
-    global_vault_seeds_with_bump,
-    program::{get_mut_dynamic_account, ManifestError},
-    quantities::{GlobalAtoms, WrapperU64},
-    require,
-    validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
+    global_vault_seeds_with_bump, logs::{emit_stack, GlobalCleanupLog}, program::{get_mut_dynamic_account, ManifestError}, quantities::{GlobalAtoms, WrapperU64}, require, validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram}
 };
 use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
@@ -201,6 +197,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         global,
         mint_opt,
         global_vault_opt,
+        gas_receiver_opt,
         market_vault_opt,
         token_program_opt,
         ..
@@ -212,7 +209,12 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader);
     if desired_global_atoms > num_deposited_atoms {
-        // TODO: Emit a log for global order that could not be matched against being cleaned.
+        emit_stack(GlobalCleanupLog {
+            cleaner: *gas_receiver_opt.as_ref().unwrap().key,
+            maker: *resting_order_trader,
+            amount_desired: desired_global_atoms,
+            amount_deposited: num_deposited_atoms,
+        })?;
         return Ok(false);
     }
     // TODO: Allow matching against a global that can only partially fill the order.
