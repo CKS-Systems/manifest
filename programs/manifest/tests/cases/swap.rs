@@ -362,40 +362,46 @@ async fn swap_full_match_test_buy_exact_out() -> anyhow::Result<()> {
 
     let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+
+    // need 1 + 1 + 3 = 5 SOL
     test_fixture
-        .deposit_for_keypair(Token::SOL, 3 * SOL_UNIT_SIZE, &second_keypair)
+        .deposit_for_keypair(Token::SOL, 5 * SOL_UNIT_SIZE, &second_keypair)
         .await?;
 
+    // price is sub-atomic: ~10 SOL/USDC
+    // will round towards taker
     test_fixture
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1,
-            0,
+            1_000_000_001,
+            -11,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
         )
         .await?;
 
+    // this order expires
     test_fixture
         .place_order_for_keypair(
             Side::Ask,
             1 * SOL_UNIT_SIZE,
-            1,
-            0,
+            1_000_000_001,
+            -11,
             10,
             OrderType::Limit,
             &second_keypair,
         )
         .await?;
 
+    // will round towards maker
     test_fixture
         .place_order_for_keypair(
             Side::Ask,
-            1 * SOL_UNIT_SIZE,
-            2,
-            0,
+            3 * SOL_UNIT_SIZE,
+            1_500_000_001,
+            -11,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
             &second_keypair,
@@ -404,33 +410,51 @@ async fn swap_full_match_test_buy_exact_out() -> anyhow::Result<()> {
 
     test_fixture
         .usdc_mint_fixture
-        .mint_to(&test_fixture.payer_usdc_fixture.key, 3_000 * USDC_UNIT_SIZE)
+        .mint_to(
+            &test_fixture.payer_usdc_fixture.key,
+            40 * USDC_UNIT_SIZE + 1,
+        )
         .await;
 
     test_fixture.advance_time_seconds(20).await;
 
-    assert_eq!(test_fixture.payer_sol_fixture.balance_atoms().await, 0);
-    assert_eq!(
-        test_fixture.payer_usdc_fixture.balance_atoms().await,
-        3_000 * USDC_UNIT_SIZE
-    );
     test_fixture
-        .swap(3000 * USDC_UNIT_SIZE, 2 * SOL_UNIT_SIZE, false, false)
+        .swap(40 * USDC_UNIT_SIZE + 1, 3 * SOL_UNIT_SIZE, false, false)
         .await?;
 
+    // matched:
+    // 1 SOL x 10+a SOL/USDC = 10 USDC
+    // 2 SOL x 15+a SOL/USDC = 30+a USDC
+    // taker has:
+    // 1 + 2 = 3 SOL
+    // 40+a - 10 - (30+a) = 0 USDC
     assert_eq!(
         test_fixture.payer_sol_fixture.balance_atoms().await,
-        2 * SOL_UNIT_SIZE
+        3 * SOL_UNIT_SIZE
     );
     assert_eq!(test_fixture.payer_usdc_fixture.balance_atoms().await, 0);
 
+    // maker has unlocked:
+    // 5 - 1 - 3 = 1 SOL
+    // 10 + 30+a = 40+a USDC
     test_fixture
         .withdraw_for_keypair(Token::SOL, 1 * SOL_UNIT_SIZE, &second_keypair)
         .await?;
     test_fixture
-        .withdraw_for_keypair(Token::USDC, 2_000 * USDC_UNIT_SIZE, &second_keypair)
+        .withdraw_for_keypair(Token::USDC, 40 * USDC_UNIT_SIZE + 1, &second_keypair)
         .await?;
 
+    // maker has resting 1 SOL @ 15+a SOL/USDC
+    let orders = test_fixture.market_fixture.get_resting_orders().await;
+    let resting = orders.first().unwrap();
+    assert_eq!(resting.get_num_base_atoms(), 1 * SOL_UNIT_SIZE);
+    assert_eq!(
+        resting
+            .get_price()
+            .checked_quote_for_base(BaseAtoms::new(10u64.pow(11)), false)
+            .unwrap(),
+        1_500_000_001
+    );
     Ok(())
 }
 
