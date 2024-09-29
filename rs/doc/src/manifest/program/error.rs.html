@@ -69,6 +69,9 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>solana_program::program_error::ProgramError;
 <span class="kw">use </span>thiserror::Error;
 
@@ -133,7 +136,10 @@
     <span class="kw">if </span><span class="macro-nonterminal">$test </span>{
         <span class="prelude-val">Ok</span>(())
     } <span class="kw">else </span>{
-        <span class="macro">solana_program::msg!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+        <span class="attr">#[cfg(target_os = <span class="string">"solana"</span>)]
+        </span><span class="macro">solana_program::msg!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
+        <span class="attr">#[cfg(not(target_os = <span class="string">"solana"</span>))]
+        </span><span class="macro">std::println!</span>(<span class="string">"[{}:{}] {}"</span>, <span class="macro">std::file!</span>(), <span class="macro">std::line!</span>(), <span class="macro">std::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
         <span class="prelude-val">Err</span>((<span class="macro-nonterminal">$err</span>))
     }
   };

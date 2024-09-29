@@ -665,11 +665,39 @@
 <a href="#663" id="663">663</a>
 <a href="#664" id="664">664</a>
 <a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
+<span class="kw">use </span>hypertree::trace;
 <span class="kw">use </span>shank::ShankAccount;
-<span class="kw">use </span>solana_program::{msg, program_error::ProgramError};
+<span class="kw">use </span>solana_program::program_error::ProgramError;
 <span class="kw">use </span>static_assertions::{const_assert, const_assert_eq};
 <span class="kw">use </span>std::{
     cmp::Ordering,
@@ -985,16 +1013,12 @@
         mantissa: u32,
         exponent: i8,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PriceConversionError&gt; {
-        <span class="kw">if </span>mantissa == <span class="number">0 </span>{
-            <span class="macro">msg!</span>(<span class="string">"price can not be zero"</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x0</span>));
-        }
         <span class="kw">if </span>exponent &gt; <span class="self">Self</span>::MAX_EXP {
-            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &gt; 8 would truncate"</span>,);
+            <span class="macro">trace!</span>(<span class="string">"invalid exponent {exponent} &gt; 8 would truncate"</span>,);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x1</span>));
         }
         <span class="kw">if </span>exponent &lt; <span class="self">Self</span>::MIN_EXP {
-            <span class="macro">msg!</span>(<span class="string">"invalid exponent {exponent} &lt; -18 would truncate"</span>,);
+            <span class="macro">trace!</span>(<span class="string">"invalid exponent {exponent} &lt; -18 would truncate"</span>,);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0x2</span>));
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from_mantissa_and_exponent_(mantissa, exponent))
@@ -1016,6 +1040,11 @@
         <span class="comment">// this doesn't need a check, will never overflow: u64::MAX * D18 &lt; u128::MAX
         </span><span class="kw">let </span>dividend = D18.wrapping_mul(quote_atoms.inner <span class="kw">as </span>u128);
         <span class="kw">let </span>inner: u128 = u64_slice_to_u128(<span class="self">self</span>.inner);
+        <span class="macro">trace!</span>(
+            <span class="string">"checked_base_for_quote {dividend}/{inner} {round_up} {}&gt;{}"</span>,
+            dividend.div_ceil(inner),
+            dividend.div(inner)
+        );
         <span class="kw">let </span>base_atoms = <span class="kw">if </span>round_up {
             dividend.div_ceil(inner)
         } <span class="kw">else </span>{
@@ -1131,30 +1160,53 @@
     }
 }
 
+<span class="attr">#[inline(always)]
+</span><span class="kw">fn </span>encode_mantissa_and_exponent(value: f64) -&gt; (u32, i8) {
+    <span class="kw">let </span><span class="kw-2">mut </span>exponent: i8 = <span class="number">0</span>;
+    <span class="comment">// prevent overflow when casting to u32
+    </span><span class="kw">while </span>exponent &lt; QuoteAtomsPerBaseAtom::MAX_EXP
+        &amp;&amp; calculate_mantissa(value, exponent) &gt; u32::MAX <span class="kw">as </span>f64
+    {
+        exponent += <span class="number">1</span>;
+    }
+    <span class="comment">// prevent underflow and maximize precision available
+    </span><span class="kw">while </span>exponent &gt; QuoteAtomsPerBaseAtom::MIN_EXP
+        &amp;&amp; calculate_mantissa(value, exponent) &lt; (u32::MAX / <span class="number">10</span>) <span class="kw">as </span>f64
+    {
+        exponent -= <span class="number">1</span>;
+    }
+    (calculate_mantissa(value, exponent) <span class="kw">as </span>u32, exponent)
+}
+
+<span class="attr">#[inline(always)]
+</span><span class="kw">fn </span>calculate_mantissa(value: f64, exp: i8) -&gt; f64 {
+    (value * <span class="number">10f64</span>.powi(-exp <span class="kw">as </span>i32)).round()
+}
+
 <span class="kw">impl </span>TryFrom&lt;f64&gt; <span class="kw">for </span>QuoteAtomsPerBaseAtom {
     <span class="kw">type </span>Error = PriceConversionError;
 
     <span class="kw">fn </span>try_from(value: f64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span>mantissa = value * D18F;
-        <span class="kw">if </span>mantissa.is_infinite() {
-            <span class="macro">msg!</span>(<span class="string">"infinite can not be expressed as fixed point decimal"</span>);
+        <span class="kw">if </span>value.is_infinite() {
+            <span class="macro">trace!</span>(<span class="string">"infinite can not be expressed as fixed point decimal"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xC</span>));
         }
-        <span class="kw">if </span>mantissa.is_nan() {
-            <span class="macro">msg!</span>(<span class="string">"nan can not be expressed as fixed point decimal"</span>);
+        <span class="kw">if </span>value.is_nan() {
+            <span class="macro">trace!</span>(<span class="string">"nan can not be expressed as fixed point decimal"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xD</span>));
         }
-        <span class="kw">if </span>mantissa &gt; u128::MAX <span class="kw">as </span>f64 {
-            <span class="macro">msg!</span>(<span class="string">"price is too large"</span>);
+        <span class="kw">if </span>value.is_sign_negative() {
+            <span class="macro">trace!</span>(<span class="string">"price {value} can not be negative"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xE</span>));
         }
-        <span class="kw">if </span>mantissa.is_sign_negative() {
-            <span class="macro">msg!</span>(<span class="string">"price can not be negative"</span>);
+        <span class="kw">if </span>calculate_mantissa(value, <span class="self">Self</span>::MAX_EXP) &gt; u32::MAX <span class="kw">as </span>f64 {
+            <span class="macro">trace!</span>(<span class="string">"price {value} is too large"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PriceConversionError(<span class="number">0xF</span>));
         }
-        <span class="prelude-val">Ok</span>(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(mantissa.round() <span class="kw">as </span>u128),
-        })
+
+        <span class="kw">let </span>(mantissa, exponent) = encode_mantissa_and_exponent(value);
+
+        <span class="self">Self</span>::try_from_mantissa_and_exponent(mantissa, exponent)
     }
 }
 
@@ -1261,11 +1313,13 @@
     )
     .is_ok());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(<span class="number">0f64</span>).is_ok());
-    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(u64::MAX <span class="kw">as </span>f64).is_ok());
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(
+        u32::MAX <span class="kw">as </span>f64 * <span class="number">10f64</span>.powi(QuoteAtomsPerBaseAtom::MAX_EXP <span class="kw">as </span>i32)
+    )
+    .is_ok());
 
     <span class="comment">// failures
-    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(<span class="number">0</span>, <span class="number">0</span>).is_err());
-    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+    </span><span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
         <span class="number">1</span>,
         QuoteAtomsPerBaseAtom::MAX_EXP + <span class="number">1
     </span>)

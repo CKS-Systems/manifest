@@ -273,20 +273,6 @@
 <a href="#271" id="271">271</a>
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span><span class="kw">crate</span>::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
@@ -346,27 +332,23 @@
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 </span><span class="kw">pub struct </span>RestingOrder {
     price: QuoteAtomsPerBaseAtom,
-    <span class="comment">// Sort key is the worst effective price someone could get by
-    // trading with me due to the rounding being in my favor as a maker.
-    </span>effective_price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,
     sequence_number: u64,
     trader_index: DataIndex,
     last_valid_slot: u32,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; <span class="number">6</span>],
+    _padding: [u8; <span class="number">22</span>],
 }
 
 <span class="comment">// 16 +  // price
-// 16 +  // effective_price
 //  8 +  // num_base_atoms
 //  8 +  // sequence_number
 //  4 +  // trader_index
 //  4 +  // last_valid_slot
 //  1 +  // is_bid
 //  1 +  // order_type
-//  6    // padding
+// 22    // padding
 // = 64
 </span><span class="macro">const_assert_eq!</span>(size_of::&lt;RestingOrder&gt;(), RESTING_ORDER_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;RestingOrder&gt;() % <span class="number">8</span>, <span class="number">0</span>);
@@ -386,11 +368,10 @@
             num_base_atoms,
             last_valid_slot,
             price,
-            effective_price: price.checked_effective_price(num_base_atoms, is_bid)<span class="question-mark">?</span>,
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
-            _padding: [<span class="number">0</span>; <span class="number">6</span>],
+            _padding: Default::default(),
         })
     }
 
@@ -437,9 +418,6 @@
 
     <span class="kw">pub fn </span>reduce(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: BaseAtoms) -&gt; ProgramResult {
         <span class="self">self</span>.num_base_atoms = <span class="self">self</span>.num_base_atoms.checked_sub(size)<span class="question-mark">?</span>;
-        <span class="self">self</span>.effective_price = <span class="self">self
-            </span>.price
-            .checked_effective_price(<span class="self">self</span>.num_base_atoms, <span class="self">self</span>.get_is_bid())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -451,9 +429,9 @@
         </span><span class="macro">debug_assert!</span>(<span class="self">self</span>.get_is_bid() == other.get_is_bid());
 
         <span class="kw">if </span><span class="self">self</span>.get_is_bid() {
-            (<span class="self">self</span>.effective_price).cmp(<span class="kw-2">&amp;</span>(other.effective_price))
+            (<span class="self">self</span>.price).cmp(<span class="kw-2">&amp;</span>other.price)
         } <span class="kw">else </span>{
-            (other.effective_price).cmp(<span class="kw-2">&amp;</span>(<span class="self">self</span>.effective_price))
+            (other.price).cmp(<span class="kw-2">&amp;</span>(<span class="self">self</span>.price))
         }
     }
 }
@@ -474,11 +452,7 @@
 
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>RestingOrder {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(
-            f,
-            <span class="string">"{}@{}|E:{})"</span>,
-            <span class="self">self</span>.num_base_atoms, <span class="self">self</span>.price, <span class="self">self</span>.effective_price
-        )
+        <span class="macro">write!</span>(f, <span class="string">"{}@{}"</span>, <span class="self">self</span>.num_base_atoms, <span class="self">self</span>.price)
     }
 }
 
@@ -512,25 +486,24 @@
         <span class="kw">let </span>resting_order_1: RestingOrder = RestingOrder::new(
             <span class="number">0</span>,
             BaseAtoms::new(<span class="number">1</span>),
-            QuoteAtomsPerBaseAtom::try_from(<span class="number">1.0</span>).unwrap(),
+            QuoteAtomsPerBaseAtom::try_from(<span class="number">1.00000000000001</span>).unwrap(),
             <span class="number">0</span>,
             NO_EXPIRATION_LAST_VALID_SLOT,
-            <span class="bool-val">false</span>,
+            <span class="bool-val">true</span>,
             OrderType::Limit,
         )
         .unwrap();
-        <span class="comment">// This is better because the effective price for the other is 2.
-        </span><span class="kw">let </span>resting_order_2: RestingOrder = RestingOrder::new(
+        <span class="kw">let </span>resting_order_2: RestingOrder = RestingOrder::new(
             <span class="number">0</span>,
             BaseAtoms::new(<span class="number">1_000_000_000</span>),
             QuoteAtomsPerBaseAtom::try_from(<span class="number">1.01</span>).unwrap(),
             <span class="number">0</span>,
             NO_EXPIRATION_LAST_VALID_SLOT,
-            <span class="bool-val">false</span>,
+            <span class="bool-val">true</span>,
             OrderType::Limit,
         )
         .unwrap();
-        <span class="macro">assert!</span>(resting_order_1 &gt; resting_order_2);
+        <span class="macro">assert!</span>(resting_order_1 &lt; resting_order_2);
         <span class="macro">assert!</span>(resting_order_1 != resting_order_2);
 
         <span class="kw">let </span>resting_order_1: RestingOrder = RestingOrder::new(
@@ -543,8 +516,7 @@
             OrderType::Limit,
         )
         .unwrap();
-        <span class="comment">// This is better because the effective price for the other is 2.
-        </span><span class="kw">let </span>resting_order_2: RestingOrder = RestingOrder::new(
+        <span class="kw">let </span>resting_order_2: RestingOrder = RestingOrder::new(
             <span class="number">0</span>,
             BaseAtoms::new(<span class="number">1_000_000_000</span>),
             QuoteAtomsPerBaseAtom::try_from(<span class="number">1.01</span>).unwrap(),
@@ -554,7 +526,7 @@
             OrderType::Limit,
         )
         .unwrap();
-        <span class="macro">assert!</span>(resting_order_1 &lt; resting_order_2);
+        <span class="macro">assert!</span>(resting_order_1 &gt; resting_order_2);
         <span class="macro">assert!</span>(resting_order_1 != resting_order_2);
     }
 
