@@ -7,7 +7,10 @@ use hypertree::get_helper;
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketValue},
-    validation::{get_global_address, get_global_vault_address, get_vault_address},
+    validation::{
+        get_global_address, get_global_vault_address, get_vault_address,
+        loaders::GlobalTradeAccounts,
+    },
 };
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::mem::size_of;
@@ -91,12 +94,17 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
+        let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[None, None];
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
-            market.impact_quote_atoms(false, in_atoms)?.as_u64()
+            market
+                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
-            market.impact_base_atoms(true, in_atoms)?.as_u64()
+            market
+                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .as_u64()
         };
         Ok(Quote {
             out_amount,

@@ -102,12 +102,22 @@ pub(crate) fn process_swap(
             BaseAtoms::new(in_atoms)
         } else {
             // input=desired max(quote) output=checked min(base)
-            dynamic_account.impact_base_atoms(true, QuoteAtoms::new(in_atoms))?
+            // round down base amount to not cross quote limit
+            dynamic_account.impact_base_atoms(
+                true,
+                QuoteAtoms::new(in_atoms),
+                &global_trade_accounts_opts,
+            )?
         }
     } else {
         if is_base_in {
             // input=checked max(base) output=desired min(quote)
-            dynamic_account.impact_base_atoms(false, QuoteAtoms::new(out_atoms))?
+            // round up base amount to ensure not staying below quote limit
+            dynamic_account.impact_base_atoms(
+                false,
+                QuoteAtoms::new(out_atoms),
+                &global_trade_accounts_opts,
+            )?
         } else {
             // input=checked max(quote) output=desired min(base)
             BaseAtoms::new(out_atoms)

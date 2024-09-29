@@ -492,7 +492,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             GlobalAtoms::new(
                 resting_order
                     .get_num_base_atoms()
-                    .checked_mul(resting_order.get_price(), false)
+                    .checked_mul(resting_order.get_price(), true)
                     .unwrap()
                     .as_u64(),
             )
@@ -519,7 +519,9 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             require!(
                 num_global_atoms <= global_atoms_deposited,
                 ManifestError::GlobalInsufficient,
-                "Insufficient funds for global order",
+                "Insufficient funds for global order needed {} has {}",
+                num_global_atoms,
+                global_atoms_deposited
             )?;
         }
 
