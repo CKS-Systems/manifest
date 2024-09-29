@@ -8,6 +8,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+// TODO: would be nice it it had a trader index hint as well
 pub fn deposit_instruction(
     market: &Pubkey,
     payer: &Pubkey,

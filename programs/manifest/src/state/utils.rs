@@ -5,7 +5,7 @@ use crate::{
     program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
-    validation::{loaders::GlobalTradeAccounts, MintAccountInfo},
+    validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
 };
 use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
@@ -25,7 +25,7 @@ pub(crate) fn get_now_slot() -> u32 {
     // maliciously manipulated to clear all orders with expirations on the
     // orderbook.
     #[cfg(feature = "no-clock")]
-    let now_slot: u64 = u64::MAX;
+    let now_slot: u64 = 0;
     #[cfg(not(feature = "no-clock"))]
     let now_slot: u64 = solana_program::clock::Clock::get()
         .unwrap_or(solana_program::clock::Clock {
@@ -49,16 +49,23 @@ pub(crate) fn remove_from_global(
         "Missing global accounts when cancelling a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
-    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
-    {
+    let GlobalTradeAccounts {
+        global,
+        gas_receiver_opt,
+        ..
+    } = global_trade_accounts;
+
+    // This check is a hack since the global data is borrowed in cleaning, so
+    // avoid reborrowing.
+    if global_trade_accounts.global_vault_opt.is_some() {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
         global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
-    };
+    }
 
     // The simple implementation gets
     //
-    //     **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+    //     **receiver.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
     //     **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
     //
     // failed: sum of account balances before and after instruction do not match
@@ -90,7 +97,7 @@ pub(crate) fn remove_from_global(
     //
     if global_trade_accounts.system_program.is_some() {
         **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
-        **trader.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+        **gas_receiver_opt.as_ref().unwrap().lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
     }
 
     Ok(())
@@ -100,12 +107,16 @@ pub(crate) fn try_to_add_to_global(
     global_trade_accounts: &GlobalTradeAccounts,
     resting_order: &RestingOrder,
 ) -> ProgramResult {
-    let GlobalTradeAccounts { global, trader, .. } = global_trade_accounts;
+    let GlobalTradeAccounts {
+        global,
+        gas_payer_opt,
+        ..
+    } = global_trade_accounts;
 
     {
         let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.add_order(resting_order, trader.key)?;
+        global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key)?;
     }
 
     // Need to CPI because otherwise we get:
@@ -117,11 +128,14 @@ pub(crate) fn try_to_add_to_global(
     // reference.
     solana_program::program::invoke(
         &solana_program::system_instruction::transfer(
-            &trader.info.key,
+            &gas_payer_opt.as_ref().unwrap().info.key,
             &global.key,
             GAS_DEPOSIT_LAMPORTS,
         ),
-        &[trader.info.clone(), global.info.clone()],
+        &[
+            gas_payer_opt.as_ref().unwrap().info.clone(),
+            global.info.clone(),
+        ],
     )?;
 
     Ok(())
@@ -156,6 +170,22 @@ pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult 
     Ok(())
 }
 
+pub(crate) fn can_back_order<'a, 'info>(
+    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
+    resting_order_trader: &Pubkey,
+    desired_global_atoms: GlobalAtoms,
+) -> bool {
+    let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
+    let GlobalTradeAccounts { global, .. } = global_trade_accounts;
+
+    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data().unwrap();
+    let global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
+
+    let num_deposited_atoms: GlobalAtoms =
+        global_dynamic_account.get_balance_atoms(resting_order_trader);
+    return desired_global_atoms <= num_deposited_atoms;
+}
+
 pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
     resting_order_trader: &Pubkey,
@@ -169,10 +199,10 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,
-        mint,
-        global_vault,
-        market_vault,
-        token_program,
+        mint_opt,
+        global_vault_opt,
+        market_vault_opt,
+        token_program_opt,
         ..
     } = global_trade_accounts;
 
@@ -193,13 +223,18 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     let mint_key: &Pubkey = global_dynamic_account.fixed.get_mint();
 
     let global_vault_bump: u8 = global_dynamic_account.fixed.get_vault_bump();
+
+    let global_vault: &TokenAccountInfo<'a, 'info> = global_vault_opt.as_ref().unwrap();
+    let market_vault: &TokenAccountInfo<'a, 'info> = market_vault_opt.as_ref().unwrap();
+    let token_program: &TokenProgram<'a, 'info> = token_program_opt.as_ref().unwrap();
+
     if *token_program.key == spl_token_2022::id() {
         require!(
-            mint.is_some(),
+            mint_opt.is_some(),
             ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
-        let mint_account_info: &MintAccountInfo = mint.as_ref().unwrap();
+        let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,

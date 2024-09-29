@@ -9,8 +9,9 @@ license-file = "LICENSE"
 
 [features]
 colored = ["dep:colored"]
-fuzz = ["colored"]
+fuzz = []
 trace = []
+test = []
 
 [dependencies]
 bytemuck = { workspace = true }

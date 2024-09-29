@@ -115,12 +115,8 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const walletTokens: number = Number(
-      (
-        await this.connection.getTokenAccountBalance(
-          traderTokenAccount,
-          'finalized',
-        )
-      ).value.uiAmount,
+      (await this.connection.getTokenAccountBalance(traderTokenAccount)).value
+        .uiAmount,
     );
     // Deposit at most half
     const depositAmountTokens: number = Math.floor(
@@ -137,7 +133,6 @@ class DummyTrader {
         new Transaction().add(depositIx),
         [this.keypair],
         {
-          commitment: 'finalized',
           skipPreflight: true,
         },
       );
@@ -185,7 +180,6 @@ class DummyTrader {
         new Transaction().add(withdrawIx),
         [this.keypair],
         {
-          commitment: 'finalized',
           skipPreflight: true,
         },
       );
@@ -222,7 +216,6 @@ class DummyTrader {
       new Transaction().add(cancelOrderIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -284,7 +277,6 @@ class DummyTrader {
       new Transaction().add(placeOrderIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -310,12 +302,8 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const balanceTokens: number = Number(
-      (
-        await this.connection.getTokenAccountBalance(
-          traderTokenAccount,
-          'finalized',
-        )
-      ).value.uiAmount,
+      (await this.connection.getTokenAccountBalance(traderTokenAccount)).value
+        .uiAmount,
     );
     if (balanceTokens == 0) {
       console.log('No balance for placing order from wallet');
@@ -347,7 +335,6 @@ class DummyTrader {
       new Transaction().add(swapIx),
       [this.keypair],
       {
-        commitment: 'finalized',
         skipPreflight: true,
       },
     );
@@ -427,7 +414,7 @@ async function createMarket(
     tx,
     [keypair, marketKeypair],
     {
-      commitment: 'finalized',
+      skipPreflight: true,
     },
   );
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
@@ -437,6 +424,7 @@ async function createMarket(
 async function main() {
   const connection: Connection = new Connection(
     process.env.RPC_URL || 'http://127.0.0.1:8899',
+    'confirmed',
   );
 
   const creatorKeypair: Keypair = process.env.MARKET_CREATOR_PRIVATE_KEY

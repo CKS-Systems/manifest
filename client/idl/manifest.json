@@ -812,6 +812,55 @@
         "type": "u8",
         "value": 11
       }
+    },
+    {
+      "name": "GlobalClean",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer for this tx, receiver of rent deposit"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Global account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalCleanParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
     }
   ],
   "accounts": [
@@ -929,6 +978,14 @@
             "type": {
               "defined": "QuoteAtoms"
             }
+          },
+          {
+            "name": "makerSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "takerSequenceNumber",
+            "type": "u64"
           },
           {
             "name": "takerIsBuy",
@@ -1313,6 +1370,18 @@
       }
     },
     {
+      "name": "GlobalCleanParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "orderIndex",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
       "name": "GlobalDepositParams",
       "type": {
         "kind": "struct",
@@ -1510,6 +1579,11 @@
       "code": 20,
       "name": "InvalidEvict",
       "msg": "Can only evict the lowest depositor"
+    },
+    {
+      "code": 21,
+      "name": "InvalidClean",
+      "msg": "Tried to clean order that was not eligible to be cleaned"
     }
   ],
   "metadata": {
@@ -1667,6 +1741,14 @@
           "type": {
             "defined": "QuoteAtoms"
           }
+        },
+        {
+          "name": "makerSequenceNumber",
+          "type": "u64"
+        },
+        {
+          "name": "takerSequenceNumber",
+          "type": "u64"
         },
         {
           "name": "takerIsBuy",

@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use hypertree::{get_mut_helper, PodBool};
+use hypertree::PodBool;
 use shank::ShankAccount;
 use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
@@ -23,8 +23,7 @@ pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramEr
     // stack buffer, stack frames are 4kb
     let mut buffer: [u8; 3000] = [0u8; 3000];
     buffer[..8].copy_from_slice(&T::discriminant());
-
-    *get_mut_helper::<T>(&mut buffer, 8) = e;
+    *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + size_of::<T>()]) = e;
 
     solana_program::log::sol_log_data(&[&buffer[..(size_of::<T>() + 8)]]);
     Ok(())
@@ -71,6 +70,8 @@ pub struct FillLog {
     pub price: QuoteAtomsPerBaseAtom,
     pub base_atoms: BaseAtoms,
     pub quote_atoms: QuoteAtoms,
+    pub maker_sequence_number: u64,
+    pub taker_sequence_number: u64,
     pub taker_is_buy: PodBool,
     pub _padding: [u8; 15],
 }

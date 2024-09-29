@@ -1,5 +1,5 @@
 use bytemuck::Pod;
-use hypertree::get_helper;
+use hypertree::{get_helper, Get};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
@@ -16,7 +16,7 @@ pub struct ManifestAccountInfo<'a, 'info, T: ManifestAccount + Pod + Clone> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<'a, 'info, T: ManifestAccount + Pod + Clone> ManifestAccountInfo<'a, 'info, T> {
+impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info, T> {
     pub fn new(
         info: &'a AccountInfo<'info>,
     ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {

@@ -2,7 +2,7 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubke
 
 use crate::validation::loaders::ExpandMarketContext;
 
-use super::shared::expand_market_if_needed;
+use super::expand_market;
 
 pub(crate) fn process_expand_market(
     _program_id: &Pubkey,
@@ -16,7 +16,5 @@ pub(crate) fn process_expand_market(
         system_program,
     } = expand_market_context;
 
-    expand_market_if_needed(&payer, &market, &system_program)?;
-
-    Ok(())
+    expand_market(&payer, &market, &system_program)
 }

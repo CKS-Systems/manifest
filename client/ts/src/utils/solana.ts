@@ -20,12 +20,9 @@ export async function airdropSol(connection: Connection, recipient: PublicKey) {
   const signature = await connection.requestAirdrop(recipient, 2_000_000_000);
   const { blockhash, lastValidBlockHeight } =
     await connection.getLatestBlockhash();
-  await connection.confirmTransaction(
-    {
-      blockhash,
-      lastValidBlockHeight,
-      signature,
-    },
-    'finalized',
-  );
+  await connection.confirmTransaction({
+    blockhash,
+    lastValidBlockHeight,
+    signature,
+  });
 }

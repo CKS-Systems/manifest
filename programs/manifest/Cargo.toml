@@ -14,12 +14,10 @@ name = "manifest"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
-no-log-ix-name = []
 default = []
 test = []
 fuzz = []
 trace = ["hypertree/trace"]
-trace-svm = []
 no-clock = []
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html

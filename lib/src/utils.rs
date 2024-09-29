@@ -2,14 +2,18 @@ use std::mem::size_of;
 
 pub type DataIndex = u32;
 
+/// Marker trait to emit warnings when using get_helper on the Value type
+/// rather than on Node<Value>
+pub trait Get: bytemuck::Pod {}
+
 /// Read a struct of type T in an array of data at a given index.
-pub fn get_helper<T: bytemuck::Pod>(data: &[u8], index: DataIndex) -> &T {
+pub fn get_helper<T: Get>(data: &[u8], index: DataIndex) -> &T {
     let index_usize: usize = index as usize;
     bytemuck::from_bytes(&data[index_usize..index_usize + size_of::<T>()])
 }
 
 /// Read a struct of type T in an array of data at a given index.
-pub fn get_mut_helper<T: bytemuck::Pod>(data: &mut [u8], index: DataIndex) -> &mut T {
+pub fn get_mut_helper<T: Get>(data: &mut [u8], index: DataIndex) -> &mut T {
     let index_usize: usize = index as usize;
     bytemuck::from_bytes_mut(&mut data[index_usize..index_usize + size_of::<T>()])
 }
@@ -39,14 +43,17 @@ fn test_pod_bool() {
 
 #[macro_export]
 macro_rules! trace {
-  ($($arg:tt)*) => {
-      #[cfg(feature = "trace")]
-      {
-        std::println!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
-      }
-      #[cfg(feature = "trace-svm")]
-      {
-        solana_program::msg!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
-      }
-  };
+    ($($arg:tt)*) => {
+        #[cfg(feature = "trace")]
+        {
+            #[cfg(target_os = "solana")]
+            {
+            solana_program::msg!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
+            }
+            #[cfg(not(target_os = "solana"))]
+            {
+            std::println!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
+            }
+        }
+    };
 }

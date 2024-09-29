@@ -46,12 +46,26 @@ async fn batch_update_test() -> anyhow::Result<()> {
         )
         .await?;
 
+    // Hinted cancel wrong seq num
+    assert!(test_fixture
+        .batch_update_for_keypair(
+            Some(0),
+            vec![CancelOrderParams::new_with_hint(
+                0,
+                Some((MARKET_BLOCK_SIZE * 1).try_into().unwrap()),
+            )],
+            vec![],
+            &test_fixture.payer_keypair(),
+        )
+        .await
+        .is_err());
+
     // Hinted cancel
     test_fixture
         .batch_update_for_keypair(
             Some(0),
             vec![CancelOrderParams::new_with_hint(
-                0,
+                1,
                 Some((MARKET_BLOCK_SIZE * 1).try_into().unwrap()),
             )],
             vec![],

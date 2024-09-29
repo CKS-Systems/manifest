@@ -8,7 +8,7 @@ use std::{cmp::Ordering, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations,
+    get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
@@ -77,6 +77,7 @@ const_assert_eq!(
 );
 const_assert_eq!(size_of::<GlobalFixed>(), GLOBAL_FIXED_SIZE);
 const_assert_eq!(size_of::<GlobalFixed>() % 8, 0);
+impl Get for GlobalFixed {}
 
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
@@ -491,7 +492,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             GlobalAtoms::new(
                 resting_order
                     .get_num_base_atoms()
-                    .checked_mul(resting_order.get_price(), false)
+                    .checked_mul(resting_order.get_price(), true)
                     .unwrap()
                     .as_u64(),
             )
@@ -518,7 +519,9 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             require!(
                 num_global_atoms <= global_atoms_deposited,
                 ManifestError::GlobalInsufficient,
-                "Insufficient funds for global order",
+                "Insufficient funds for global order needed {} has {}",
+                num_global_atoms,
+                global_atoms_deposited
             )?;
         }
 
@@ -534,8 +537,11 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
         // Might not exist because of eviction.
         if let Ok(global_trader) = get_mut_global_trader(fixed, dynamic, global_trade_owner) {
-            let GlobalTradeAccounts { trader, .. } = global_trade_accounts;
-            if trader.info.key != global_trade_owner
+            let GlobalTradeAccounts {
+                gas_receiver_opt: trader,
+                ..
+            } = global_trade_accounts;
+            if trader.as_ref().unwrap().info.key != global_trade_owner
                 || global_trade_accounts.system_program.is_none()
             {
                 global_trader.unclaimed_gas_deposits += 1;
