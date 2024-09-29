@@ -346,6 +346,11 @@ impl QuoteAtomsPerBaseAtom {
         // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
         let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
+        trace!(
+            "checked_base_for_quote {dividend}/{inner} {round_up} {}>{}",
+            dividend.div_ceil(inner),
+            dividend.div(inner)
+        );
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
         } else {
