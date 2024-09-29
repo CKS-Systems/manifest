@@ -713,8 +713,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // is exact. The rounding is always on quote.
             if !is_bid {
                 // These are only used when is_bid, included up here for borrow checker reasons.
-                let other_order: &RestingOrder =
-                    get_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index).get_value();
                 let previous_maker_quote_atoms_allocated: QuoteAtoms =
                     matched_price.checked_quote_for_base(maker_order.get_num_base_atoms(), true)?;
                 let new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
@@ -1217,13 +1215,13 @@ fn remove_and_update_balances(
         // ask. If the resting order is bid, multiply by price and round
         // in favor of the taker which here means up. The maker places
         // the minimum number of atoms required.
-        let amount_atoms_to_return: u64 = if other_is_bid {
-            other_order
+        let amount_atoms_to_return: u64 = if order_to_remove_is_bid {
+            resting_order_to_remove
                 .get_price()
-                .checked_quote_for_base(other_order.get_num_base_atoms(), true)?
+                .checked_quote_for_base(resting_order_to_remove.get_num_base_atoms(), true)?
                 .as_u64()
         } else {
-            other_order.get_num_base_atoms().as_u64()
+            resting_order_to_remove.get_num_base_atoms().as_u64()
         };
         update_balance(
             dynamic,
