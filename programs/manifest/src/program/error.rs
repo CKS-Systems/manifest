@@ -62,7 +62,10 @@ macro_rules! require {
     if $test {
         Ok(())
     } else {
+        #[cfg(target_os = "solana")]
         solana_program::msg!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
+        #[cfg(not(target_os = "solana"))]
+        std::println!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
         Err(($err))
     }
   };
