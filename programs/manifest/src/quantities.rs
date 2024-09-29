@@ -1,8 +1,9 @@
 use crate::program::ManifestError;
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
+use hypertree::trace;
 use shank::ShankAccount;
-use solana_program::{msg, program_error::ProgramError};
+use solana_program::program_error::ProgramError;
 use static_assertions::{const_assert, const_assert_eq};
 use std::{
     cmp::Ordering,
@@ -319,11 +320,11 @@ impl QuoteAtomsPerBaseAtom {
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
         if exponent > Self::MAX_EXP {
-            msg!("invalid exponent {exponent} > 8 would truncate",);
+            trace!("invalid exponent {exponent} > 8 would truncate",);
             return Err(PriceConversionError(0x1));
         }
         if exponent < Self::MIN_EXP {
-            msg!("invalid exponent {exponent} < -18 would truncate",);
+            trace!("invalid exponent {exponent} < -18 would truncate",);
             return Err(PriceConversionError(0x2));
         }
         Ok(Self::from_mantissa_and_exponent_(mantissa, exponent))
@@ -345,6 +346,11 @@ impl QuoteAtomsPerBaseAtom {
         // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
         let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
+        trace!(
+            "checked_base_for_quote {dividend}/{inner} {round_up} {}>{}",
+            dividend.div_ceil(inner),
+            dividend.div(inner)
+        );
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
         } else {
@@ -460,30 +466,53 @@ impl From<PriceConversionError> for ProgramError {
     }
 }
 
+#[inline(always)]
+fn encode_mantissa_and_exponent(value: f64) -> (u32, i8) {
+    let mut exponent: i8 = 0;
+    // prevent overflow when casting to u32
+    while exponent < QuoteAtomsPerBaseAtom::MAX_EXP
+        && calculate_mantissa(value, exponent) > u32::MAX as f64
+    {
+        exponent += 1;
+    }
+    // prevent underflow and maximize precision available
+    while exponent > QuoteAtomsPerBaseAtom::MIN_EXP
+        && calculate_mantissa(value, exponent) < (u32::MAX / 10) as f64
+    {
+        exponent -= 1;
+    }
+    (calculate_mantissa(value, exponent) as u32, exponent)
+}
+
+#[inline(always)]
+fn calculate_mantissa(value: f64, exp: i8) -> f64 {
+    (value * 10f64.powi(-exp as i32)).round()
+}
+
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let mantissa = value * D18F;
-        if mantissa.is_infinite() {
-            msg!("infinite can not be expressed as fixed point decimal");
+        if value.is_infinite() {
+            trace!("infinite can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xC));
         }
-        if mantissa.is_nan() {
-            msg!("nan can not be expressed as fixed point decimal");
+        if value.is_nan() {
+            trace!("nan can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xD));
         }
-        if mantissa > u128::MAX as f64 {
-            msg!("price is too large");
+        if value.is_sign_negative() {
+            trace!("price {value} can not be negative");
             return Err(PriceConversionError(0xE));
         }
-        if mantissa.is_sign_negative() {
-            msg!("price can not be negative");
+        if calculate_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
+            trace!("price {value} is too large");
             return Err(PriceConversionError(0xF));
         }
-        Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(mantissa.round() as u128),
-        })
+
+        let (mantissa, exponent) = encode_mantissa_and_exponent(value);
+
+        Self::try_from_mantissa_and_exponent(mantissa, exponent)
     }
 }
 
@@ -592,6 +621,10 @@ fn test_price_limits() {
     assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(0, 0).is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from(u64::MAX as f64).is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(
+        u32::MAX as f64 * 10f64.powi(QuoteAtomsPerBaseAtom::MAX_EXP as i32)
+    )
+    .is_ok());
 
     // failures
     assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(

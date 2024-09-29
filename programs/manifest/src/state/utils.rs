@@ -170,6 +170,22 @@ pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult 
     Ok(())
 }
 
+pub(crate) fn can_back_order<'a, 'info>(
+    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
+    resting_order_trader: &Pubkey,
+    desired_global_atoms: GlobalAtoms,
+) -> bool {
+    let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
+    let GlobalTradeAccounts { global, .. } = global_trade_accounts;
+
+    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data().unwrap();
+    let global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
+
+    let num_deposited_atoms: GlobalAtoms =
+        global_dynamic_account.get_balance_atoms(resting_order_trader);
+    return desired_global_atoms <= num_deposited_atoms;
+}
+
 pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
     resting_order_trader: &Pubkey,

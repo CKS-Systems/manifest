@@ -15,7 +15,7 @@ name = "wrapper"
 no-entrypoint = []
 cpi = ["no-entrypoint"]
 default = []
-trace = []
+trace = [ "manifest/trace" ]
 test = []
 
 [dependencies]
