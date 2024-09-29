@@ -519,7 +519,9 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             require!(
                 num_global_atoms <= global_atoms_deposited,
                 ManifestError::GlobalInsufficient,
-                "Insufficient funds for global order",
+                "Insufficient funds for global order needed {} has {}",
+                num_global_atoms,
+                global_atoms_deposited
             )?;
         }
 

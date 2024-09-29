@@ -27,10 +27,11 @@ use super::{
     constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
     order_type_can_rest,
     utils::{
-        assert_already_has_seat, assert_not_already_expired, get_now_slot, try_to_add_to_global,
+        assert_already_has_seat, assert_not_already_expired, can_back_order, get_now_slot,
+        try_to_add_to_global,
     },
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
-    MARKET_FREE_LIST_BLOCK_SIZE, NEXT_PLANNED_MAINTENANCE_SLOT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 pub struct AddOrderToMarketArgs<'a, 'info> {
@@ -286,6 +287,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         &self,
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
+        _global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<QuoteAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
 
@@ -301,12 +303,14 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             if other_order.is_expired(now_slot) {
                 continue;
             }
-
             let matched_price = other_order.get_price();
             let matched_base_atoms = other_order.get_num_base_atoms().min(remaining_base_atoms);
             let matched_quote_atoms =
                 matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
 
+            if other_order.get_order_type() == OrderType::Global {
+                // TODO: Check if the order is backed
+            }
             total_quote_atoms_matched =
                 total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
             if matched_base_atoms == remaining_base_atoms {
@@ -329,6 +333,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         is_bid: bool,
         round_up: bool,
         limit_quote_atoms: QuoteAtoms,
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
 
@@ -360,6 +365,32 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 matched_base_atoms,
                 is_bid != did_fully_match_resting_order,
             )?;
+
+            // TODO: Clean this up into a separate function.
+            if other_order.get_order_type() == OrderType::Global {
+                // If global accounts are needed but not present, then this will
+                // crash. This is an intentional product decision. Would be
+                // valid to walk past, but we have chosen to give no fill rather
+                // than worse price if the taker takes the shortcut of not
+                // including global account.
+                let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                    &global_trade_accounts_opts[0]
+                } else {
+                    &global_trade_accounts_opts[1]
+                };
+                let has_enough_tokens: bool = can_back_order(
+                    global_trade_accounts_opt,
+                    self.get_trader_key_by_index(other_order.get_trader_index()),
+                    GlobalAtoms::new(if is_bid {
+                        matched_base_atoms.as_u64()
+                    } else {
+                        matched_quote_atoms.as_u64()
+                    }),
+                );
+                if !has_enough_tokens {
+                    continue;
+                }
+            }
 
             total_matched_base_atoms = total_matched_base_atoms.checked_add(matched_base_atoms)?;
 
@@ -553,13 +584,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         assert_already_has_seat(trader_index)?;
         let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
-        require!(
-            now_slot < NEXT_PLANNED_MAINTENANCE_SLOT,
-            ManifestError::AlreadyExpired,
-            "manifest is under planned maintenance now: {} maintenance_slot: {}",
-            now_slot,
-            NEXT_PLANNED_MAINTENANCE_SLOT,
-        )?;
         assert_not_already_expired(last_valid_slot, now_slot)?;
 
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();

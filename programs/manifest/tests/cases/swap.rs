@@ -4,7 +4,8 @@ use borsh::BorshSerialize;
 use manifest::{
     program::{
         batch_update::PlaceOrderParams, batch_update_instruction, global_add_trader_instruction,
-        global_deposit_instruction, swap_instruction, ManifestInstruction, SwapParams,
+        global_deposit_instruction, global_withdraw_instruction, swap_instruction,
+        ManifestInstruction, SwapParams,
     },
     quantities::{BaseAtoms, WrapperU64},
     state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType},
@@ -983,6 +984,127 @@ async fn swap_global() -> anyhow::Result<()> {
         .swap_with_global(SOL_UNIT_SIZE, 1_000 * USDC_UNIT_SIZE, true, true)
         .await?;
 
+    assert_eq!(test_fixture.payer_sol_fixture.balance_atoms().await, 0);
+    assert_eq!(
+        test_fixture.payer_usdc_fixture.balance_atoms().await,
+        1_000 * USDC_UNIT_SIZE
+    );
+
+    Ok(())
+}
+
+// Global is on the USDC, taker is sending in SOL. Global order is not backed,
+// so the order does not get the global price.
+#[tokio::test]
+async fn swap_global_not_backed() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
+    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_add_trader_instruction(
+            &test_fixture.global_fixture.key,
+            &second_keypair.pubkey(),
+        )],
+        Some(&second_keypair.pubkey()),
+        &[&second_keypair],
+    )
+    .await?;
+
+    // Make a throw away token account
+    let token_account_keypair: Keypair = Keypair::new();
+    let token_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.global_fixture.mint_key,
+        &second_keypair.pubkey(),
+        &token_account_keypair,
+    )
+    .await;
+    test_fixture
+        .usdc_mint_fixture
+        .mint_to(&token_account_fixture.key, 2_000 * USDC_UNIT_SIZE)
+        .await;
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_deposit_instruction(
+            &test_fixture.global_fixture.mint_key,
+            &second_keypair.pubkey(),
+            &token_account_fixture.key,
+            &spl_token::id(),
+            2_000 * USDC_UNIT_SIZE,
+        )],
+        Some(&second_keypair.pubkey()),
+        &[&second_keypair],
+    )
+    .await?;
+    test_fixture
+        .deposit_for_keypair(Token::USDC, 1_000 * USDC_UNIT_SIZE, &second_keypair)
+        .await?;
+
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market_fixture.key,
+        &second_keypair.pubkey(),
+        None,
+        vec![],
+        vec![
+            PlaceOrderParams::new(
+                1 * SOL_UNIT_SIZE,
+                2,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            ),
+            PlaceOrderParams::new(
+                1 * SOL_UNIT_SIZE,
+                1,
+                0,
+                true,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            ),
+        ],
+        None,
+        None,
+        Some(*test_fixture.market_fixture.market.get_quote_mint()),
+        None,
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&second_keypair.pubkey()),
+        &[&second_keypair],
+    )
+    .await?;
+
+    test_fixture
+        .sol_mint_fixture
+        .mint_to(&test_fixture.payer_sol_fixture.key, 1 * SOL_UNIT_SIZE)
+        .await;
+
+    assert_eq!(test_fixture.payer_usdc_fixture.balance_atoms().await, 0);
+
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[global_withdraw_instruction(
+            &test_fixture.global_fixture.mint_key,
+            &second_keypair.pubkey(),
+            &token_account_fixture.key,
+            &spl_token::id(),
+            2_000 * USDC_UNIT_SIZE,
+        )],
+        Some(&second_keypair.pubkey()),
+        &[&second_keypair],
+    )
+    .await?;
+
+    test_fixture
+        .swap_with_global(SOL_UNIT_SIZE, 1_000 * USDC_UNIT_SIZE, true, true)
+        .await?;
+
+    // Only get 1 out because the top of global is not backed.
     assert_eq!(test_fixture.payer_sol_fixture.balance_atoms().await, 0);
     assert_eq!(
         test_fixture.payer_usdc_fixture.balance_atoms().await,
