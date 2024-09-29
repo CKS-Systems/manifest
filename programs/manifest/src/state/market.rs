@@ -599,9 +599,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let mut remaining_base_atoms: BaseAtoms = num_base_atoms;
         while remaining_base_atoms > BaseAtoms::ZERO && current_order_index != NIL {
-            let next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
             let other_order: &RestingOrder =
                 get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
 
@@ -613,6 +610,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     current_order_index,
                     global_trade_accounts_opts,
                 )?;
+                let next_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+
                 current_order_index = next_order_index;
                 continue;
             }
@@ -684,6 +684,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                         current_order_index,
                         global_trade_accounts_opts,
                     )?;
+                    let next_order_index: DataIndex =
+                        get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+
                     current_order_index = next_order_index;
                     continue;
                 }
@@ -791,6 +794,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             })?;
 
             if did_fully_match_resting_order {
+                let next_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+
                 // Get paid for removing a global order.
                 if get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index)
                     .get_value()
