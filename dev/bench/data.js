@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727431345439,
+  "lastUpdate": 1727612643649,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3763,6 +3763,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6718,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7d675c30dce2376466c27c359c81db5389168b9e",
+          "message": "sort by regular price only (#108)\n\n* sort by regular price only\r\n* correctly handle reduce on partial fill\r\n* add unit tests for matching edge cases\r\n* document test scenarios\r\n* fix require to run on non-solana runtimes\r\n* new f64 conversion\r\n* remove msg prints to not crash benchmark\r\n* add test cases for new rounding in swap",
+          "timestamp": "2024-09-29T19:59:09+08:00",
+          "tree_id": "fd504dac47cf5e4fc437e8a0c2f9d479732a4566",
+          "url": "https://github.com/CKS-Systems/manifest/commit/7d675c30dce2376466c27c359c81db5389168b9e"
+        },
+        "date": 1727612642783,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3546,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5668,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6283,
             "unit": "CU",
             "range": "",
             "extra": ""
