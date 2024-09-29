@@ -996,6 +996,10 @@ async fn swap_global() -> anyhow::Result<()> {
 // This test case illustrates that the exact in is really just a desired in.
 #[tokio::test]
 async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
+    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
     test_fixture
         .deposit_for_keypair(Token::USDC, 3_000 * USDC_UNIT_SIZE, &second_keypair)
         .await?;
@@ -1030,7 +1034,7 @@ async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
             None,
             Some(*test_fixture.market_fixture.market.get_quote_mint()),
             None,
-            )],
+        )],
         Some(&second_keypair.pubkey()),
         &[&second_keypair],
     )
