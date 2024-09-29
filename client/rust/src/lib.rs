@@ -7,7 +7,10 @@ use hypertree::get_helper;
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketValue},
-    validation::{get_global_address, get_global_vault_address, get_vault_address},
+    validation::{
+        get_global_address, get_global_vault_address, get_vault_address,
+        loaders::GlobalTradeAccounts,
+    },
 };
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::mem::size_of;
@@ -91,12 +94,17 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
+        let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[None, None];
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
-            market.impact_quote_atoms(false, in_atoms)?.as_u64()
+            market
+                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
-            market.impact_base_atoms(true, true, in_atoms)?.as_u64()
+            market
+                .impact_base_atoms(true, true, in_atoms, global_trade_accounts)?
+                .as_u64()
         };
         Ok(Quote {
             out_amount,
@@ -630,7 +638,7 @@ mod test {
         let global_account_info: AccountInfo = {
             let mut global_value: DynamicAccount<GlobalFixed, Vec<u8>> = GlobalValue {
                 fixed: GlobalFixed::new_empty(&quote_mint_key),
-                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 1],
+                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 2],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(&trader_key).unwrap();
@@ -713,15 +721,18 @@ mod test {
         };
 
         let quote_global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
-            mint: Some(quote_mint_info.clone()),
+            mint_opt: Some(quote_mint_info.clone()),
             global: ManifestAccountInfo::new(&global_account_info).unwrap(),
-            global_vault: TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            market_vault: TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            token_program: TokenProgram::new(&token_program_account_info).unwrap(),
+            global_vault_opt: Some(
+                TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            market_vault_opt: Some(
+                TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            token_program_opt: Some(TokenProgram::new(&token_program_account_info).unwrap()),
             system_program: None,
-            trader: Signer::new(&trader_account_info).unwrap(),
+            gas_payer_opt: Some(Signer::new(&trader_account_info).unwrap()),
+            gas_receiver_opt: Some(Signer::new(&trader_account_info).unwrap()),
             market: market_key.clone(),
         };
 

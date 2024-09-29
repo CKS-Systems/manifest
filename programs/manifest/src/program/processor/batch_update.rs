@@ -150,7 +150,7 @@ pub(crate) fn process_batch_update(
         orders,
     } = BatchUpdateParams::try_from_slice(data)?;
 
-    let current_slot = Some(get_now_slot());
+    let current_slot: Option<u32> = Some(get_now_slot());
 
     trace!("batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}");
 
@@ -230,6 +230,12 @@ pub(crate) fn process_batch_update(
                         trader_index == order.get_trader_index(),
                         ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint index {}",
+                        hinted_cancel_index,
+                    )?;
+                    require!(
+                        cancel.order_sequence_number() == order.get_sequence_number(),
+                        ManifestError::WrongIndexHintParams,
+                        "Invalid cancel hint sequence number index {}",
                         hinted_cancel_index,
                     )?;
                     dynamic_account.cancel_order_by_index(

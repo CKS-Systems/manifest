@@ -17,7 +17,10 @@ import {
 } from '@solana/spl-token';
 
 async function testDepositPlaceOrder(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
@@ -128,9 +131,6 @@ export async function depositPlaceOrder(
     connection,
     new Transaction().add(...depositPlaceOrderIx),
     [payerKeypair],
-    {
-      commitment: 'confirmed',
-    },
   );
   console.log(`Required Deposit and Placed order in ${signature}`);
 }

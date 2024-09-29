@@ -32,7 +32,6 @@ pub(crate) fn process_deposit(
     let trader_token_account: &AccountInfo = next_account_info(account_iter)?;
     let vault: &AccountInfo = next_account_info(account_iter)?;
     let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
-    let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
@@ -55,7 +54,7 @@ pub(crate) fn process_deposit(
     invoke(
         &deposit_instruction(
             market.key,
-            payer.key,
+            owner.key,
             mint,
             amount_atoms,
             trader_token_account.key,

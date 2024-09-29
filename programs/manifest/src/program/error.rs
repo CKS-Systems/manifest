@@ -42,6 +42,12 @@ pub enum ManifestError {
     IncorrectAccount = 17,
     #[error("Mint not allowed for market")]
     InvalidMint = 18,
+    #[error("Cannot claim a new global seat, use evict")]
+    TooManyGlobalSeats = 19,
+    #[error("Can only evict the lowest depositor")]
+    InvalidEvict = 20,
+    #[error("Tried to clean order that was not eligible to be cleaned")]
+    InvalidClean = 21,
 }
 
 impl From<ManifestError> for ProgramError {
@@ -56,7 +62,10 @@ macro_rules! require {
     if $test {
         Ok(())
     } else {
+        #[cfg(target_os = "solana")]
         solana_program::msg!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
+        #[cfg(not(target_os = "solana"))]
+        std::println!("[{}:{}] {}", std::file!(), std::line!(), std::format_args!($($arg)*));
         Err(($err))
     }
   };

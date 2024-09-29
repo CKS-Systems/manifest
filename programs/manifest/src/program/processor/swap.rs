@@ -90,20 +90,30 @@ pub(crate) fn process_swap(
 
     let base_atoms: BaseAtoms = if is_exact_in {
         if is_base_in {
-            // input=max(base)* output=min(quote)
+            // input=desired max(base) output=checked min(quote)
             BaseAtoms::new(in_atoms)
         } else {
-            // input=max(quote)* output=min(base)
+            // input=desired max(quote) output=checked min(base)
             // round down base amount to not cross quote limit
-            dynamic_account.impact_base_atoms(true, false, QuoteAtoms::new(in_atoms))?
+            dynamic_account.impact_base_atoms(
+                true,
+                false,
+                QuoteAtoms::new(in_atoms),
+                &global_trade_accounts_opts,
+            )?
         }
     } else {
         if is_base_in {
-            // input=max(base) output=min(quote)*
+            // input=checked max(base) output=desired min(quote)
             // round up base amount to ensure not staying below quote limit
-            dynamic_account.impact_base_atoms(false, true, QuoteAtoms::new(out_atoms))?
+            dynamic_account.impact_base_atoms(
+                false,
+                true,
+                QuoteAtoms::new(out_atoms),
+                &global_trade_accounts_opts,
+            )?
         } else {
-            // input=max(quote) output=min(base)*
+            // input=checked max(quote) output=desired min(base)
             BaseAtoms::new(out_atoms)
         }
     };

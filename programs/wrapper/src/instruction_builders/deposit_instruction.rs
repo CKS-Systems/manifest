@@ -8,7 +8,7 @@ use solana_program::{
 
 pub fn deposit_instruction(
     market: &Pubkey,
-    payer: &Pubkey,
+    owner: &Pubkey,
     mint: &Pubkey,
     amount_atoms: u64,
     trader_token_account: &Pubkey,
@@ -20,12 +20,11 @@ pub fn deposit_instruction(
         program_id: crate::id(),
         accounts: vec![
             AccountMeta::new_readonly(manifest::id(), false),
-            AccountMeta::new(*payer, true),
+            AccountMeta::new(*owner, true),
             AccountMeta::new(*market, false),
             AccountMeta::new(*trader_token_account, false),
             AccountMeta::new(vault_address, false),
             AccountMeta::new(token_program, false),
-            AccountMeta::new(*payer, true),
             AccountMeta::new(*wrapper_state, false),
             AccountMeta::new(*mint, false),
         ],

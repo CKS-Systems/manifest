@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use hypertree::{get_mut_helper, PodBool};
+use hypertree::PodBool;
 use shank::ShankAccount;
 use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
@@ -23,8 +23,7 @@ pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramEr
     // stack buffer, stack frames are 4kb
     let mut buffer: [u8; 3000] = [0u8; 3000];
     buffer[..8].copy_from_slice(&T::discriminant());
-
-    *get_mut_helper::<T>(&mut buffer, 8) = e;
+    *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + size_of::<T>()]) = e;
 
     solana_program::log::sol_log_data(&[&buffer[..(size_of::<T>() + 8)]]);
     Ok(())
@@ -71,6 +70,8 @@ pub struct FillLog {
     pub price: QuoteAtomsPerBaseAtom,
     pub base_atoms: BaseAtoms,
     pub quote_atoms: QuoteAtoms,
+    pub maker_sequence_number: u64,
+    pub taker_sequence_number: u64,
     pub taker_is_buy: PodBool,
     pub _padding: [u8; 15],
 }
@@ -136,6 +137,15 @@ pub struct GlobalWithdrawLog {
     pub global_atoms: GlobalAtoms,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+pub struct GlobalEvictLog {
+    pub evictor: Pubkey,
+    pub evictee: Pubkey,
+    pub evictor_atoms: GlobalAtoms,
+    pub evictee_atoms: GlobalAtoms,
+}
+
 pub trait Discriminant {
     fn discriminant() -> [u8; 8];
 }
@@ -170,6 +180,7 @@ const GLOBAL_ADD_TRADER_LOG_DISCRIMINANT: [u8; 8] = [129, 246, 90, 94, 87, 186, 
 const GLOBAL_CLAIM_SEAT_LOG_DISCRIMINANT: [u8; 8] = [164, 46, 227, 175, 3, 143, 73, 86];
 const GLOBAL_DEPOSIT_LOG_DISCRIMINANT: [u8; 8] = [16, 26, 72, 1, 145, 232, 182, 71];
 const GLOBAL_WITHDRAW_LOG_DISCRIMINANT: [u8; 8] = [206, 118, 67, 64, 124, 109, 157, 201];
+const GLOBAL_EVICT_LOG_DISCRIMINANT: [u8; 8] = [250, 180, 155, 38, 98, 223, 82, 223];
 
 discriminant!(
     CreateMarketLog,
@@ -218,4 +229,9 @@ discriminant!(
     GlobalWithdrawLog,
     GLOBAL_WITHDRAW_LOG_DISCRIMINANT,
     test_global_withdraw_log
+);
+discriminant!(
+    GlobalEvictLog,
+    GLOBAL_EVICT_LOG_DISCRIMINANT,
+    test_global_evict_log
 );

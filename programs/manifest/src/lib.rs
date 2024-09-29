@@ -8,11 +8,13 @@ pub mod state;
 pub mod utils;
 pub mod validation;
 
+use hypertree::trace;
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
     create_market::process_create_market, deposit::process_deposit,
     expand_market::process_expand_market, global_add_trader::process_global_add_trader,
-    global_create::process_global_create, global_deposit::process_global_deposit,
+    global_clean::process_global_clean, global_create::process_global_create,
+    global_deposit::process_global_deposit, global_evict::process_global_evict,
     global_withdraw::process_global_withdraw, process_swap, withdraw::process_withdraw,
     ManifestInstruction,
 };
@@ -52,8 +54,7 @@ pub fn process_instruction(
     let instruction: ManifestInstruction =
         ManifestInstruction::try_from(*tag).or(Err(ProgramError::InvalidInstructionData))?;
 
-    #[cfg(not(feature = "no-log-ix-name"))]
-    solana_program::msg!("Instruction: {:?}", instruction);
+    trace!("Instruction: {:?}", instruction);
 
     match instruction {
         ManifestInstruction::CreateMarket => {
@@ -88,6 +89,12 @@ pub fn process_instruction(
         }
         ManifestInstruction::GlobalWithdraw => {
             process_global_withdraw(program_id, accounts, data)?;
+        }
+        ManifestInstruction::GlobalEvict => {
+            process_global_evict(program_id, accounts, data)?;
+        }
+        ManifestInstruction::GlobalClean => {
+            process_global_clean(program_id, accounts, data)?;
         }
     }
 

@@ -60,6 +60,7 @@ pub struct TestFixture {
     pub payer_usdc_fixture: TokenAccountFixture,
     pub market_fixture: MarketFixture,
     pub global_fixture: GlobalFixture,
+    pub sol_global_fixture: GlobalFixture,
     pub second_keypair: Keypair,
 }
 
@@ -92,8 +93,8 @@ impl TestFixture {
 
         let mut global_fixture: GlobalFixture =
             GlobalFixture::new(Rc::clone(&context), &usdc_mint_f.key).await;
-        // Make a sol global fixture for trading, but dont need to save it.
-        GlobalFixture::new(Rc::clone(&context), &sol_mint_f.key).await;
+        let mut sol_global_fixture: GlobalFixture =
+            GlobalFixture::new(Rc::clone(&context), &sol_mint_f.key).await;
 
         let payer: Pubkey = context.borrow().payer.pubkey();
         let payer_sol_fixture: TokenAccountFixture =
@@ -102,6 +103,7 @@ impl TestFixture {
             TokenAccountFixture::new(Rc::clone(&context), &usdc_mint_f.key, &payer).await;
         market_fixture.reload().await;
         global_fixture.reload().await;
+        sol_global_fixture.reload().await;
 
         TestFixture {
             context: Rc::clone(&context),
@@ -109,10 +111,33 @@ impl TestFixture {
             sol_mint_fixture: sol_mint_f,
             market_fixture,
             global_fixture,
+            sol_global_fixture,
             payer_sol_fixture,
             payer_usdc_fixture,
             second_keypair,
         }
+    }
+
+    pub async fn try_new_for_matching_test() -> anyhow::Result<TestFixture, BanksClientError> {
+        let mut test_fixture = TestFixture::new().await;
+        let second_keypair = test_fixture.second_keypair.insecure_clone();
+
+        test_fixture.claim_seat().await?;
+        test_fixture
+            .deposit(Token::SOL, 1_000 * SOL_UNIT_SIZE)
+            .await?;
+        test_fixture
+            .deposit(Token::USDC, 10_000 * USDC_UNIT_SIZE)
+            .await?;
+
+        test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+        test_fixture
+            .deposit_for_keypair(Token::SOL, 1_000 * SOL_UNIT_SIZE, &second_keypair)
+            .await?;
+        test_fixture
+            .deposit_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
+            .await?;
+        Ok(test_fixture)
     }
 
     pub async fn try_load(
@@ -1008,7 +1033,6 @@ impl MintFixture {
 pub struct TokenAccountFixture {
     context: Rc<RefCell<ProgramTestContext>>,
     pub key: Pubkey,
-    pub token: spl_token::state::Account,
 }
 
 impl TokenAccountFixture {
@@ -1063,31 +1087,6 @@ impl TokenAccountFixture {
         [init_account_ix, init_token_ix]
     }
 
-    pub async fn new_account(&self) -> Pubkey {
-        let token_account_keypair: Keypair = Keypair::new();
-        let mut context: RefMut<ProgramTestContext> = self.context.borrow_mut();
-
-        let ixs: [Instruction; 2] = Self::create_ixs(
-            context.banks_client.get_rent().await.unwrap(),
-            &self.token.mint,
-            &context.payer.pubkey(),
-            &context.payer.pubkey(),
-            &token_account_keypair,
-        )
-        .await;
-
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &ixs,
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &token_account_keypair],
-        )
-        .await
-        .unwrap();
-
-        token_account_keypair.pubkey()
-    }
-
     pub async fn new_with_keypair_2022(
         context: Rc<RefCell<ProgramTestContext>>,
         mint_pk: &Pubkey,
@@ -1113,7 +1112,6 @@ impl TokenAccountFixture {
         Self {
             context: context_ref.clone(),
             key: keypair.pubkey(),
-            token: get_and_deserialize(context_ref.clone(), keypair.pubkey()).await,
         }
     }
 
@@ -1129,20 +1127,18 @@ impl TokenAccountFixture {
         let instructions: [Instruction; 2] =
             Self::create_ixs(rent, mint_pk, &payer, owner_pk, keypair).await;
 
-        send_tx_with_retry(
+        let _ = send_tx_with_retry(
             Rc::clone(&context),
             &instructions[..],
             Some(&payer),
             &[&payer_keypair, keypair],
         )
-        .await
-        .unwrap();
+        .await;
 
         let context_ref: Rc<RefCell<ProgramTestContext>> = context.clone();
         Self {
             context: context_ref.clone(),
             key: keypair.pubkey(),
-            token: get_and_deserialize(context_ref.clone(), keypair.pubkey()).await,
         }
     }
 
@@ -1169,7 +1165,8 @@ pub async fn get_and_deserialize<T: Pack>(
 ) -> T {
     let mut context: RefMut<ProgramTestContext> = context.borrow_mut();
     loop {
-        let account_or = context.banks_client.get_account(pubkey).await;
+        let account_or: Result<Option<Account>, BanksClientError> =
+            context.banks_client.get_account(pubkey).await;
         if !account_or.is_ok() {
             continue;
         }

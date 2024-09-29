@@ -9,6 +9,8 @@ export * from './GlobalAtoms';
 export * from './GlobalClaimSeatLog';
 export * from './GlobalCreateLog';
 export * from './GlobalDepositLog';
+export * from './GlobalEvictLog';
+export * from './GlobalWithdrawLog';
 export * from './PlaceOrderLog';
 export * from './QuoteAtoms';
 export * from './QuoteAtomsPerBaseAtom';
@@ -25,6 +27,8 @@ import { GlobalCreateLog } from './GlobalCreateLog';
 import { GlobalAddTraderLog } from './GlobalAddTraderLog';
 import { GlobalClaimSeatLog } from './GlobalClaimSeatLog';
 import { GlobalDepositLog } from './GlobalDepositLog';
+import { GlobalWithdrawLog } from './GlobalWithdrawLog';
+import { GlobalEvictLog } from './GlobalEvictLog';
 import { QuoteAtoms } from './QuoteAtoms';
 import { BaseAtoms } from './BaseAtoms';
 import { GlobalAtoms } from './GlobalAtoms';
@@ -42,6 +46,8 @@ export const accountProviders = {
   GlobalAddTraderLog,
   GlobalClaimSeatLog,
   GlobalDepositLog,
+  GlobalWithdrawLog,
+  GlobalEvictLog,
   QuoteAtoms,
   BaseAtoms,
   GlobalAtoms,
