@@ -54,7 +54,6 @@ export class Global {
     if (!accountInfo?.data) {
       throw new Error(`Failed to load ${address}`);
     }
-    console.log('DEBUG1');
     return Global.loadFromBuffer({ address, buffer: accountInfo.data });
   }
 
@@ -71,9 +70,7 @@ export class Global {
     address: PublicKey;
     buffer: Buffer;
   }): Global {
-    console.log('DEBUG2');
     const globalData = Global.deserializeGlobalBuffer(buffer);
-    console.log('DEBUG3', globalData);
     return new Global({ address, data: globalData });
   }
 
