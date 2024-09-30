@@ -35,7 +35,6 @@ export const publicKeyBeet = new BeetArgsStruct<PubkeyWrapper>(
 export const restingOrderBeet = new BeetArgsStruct<RestingOrderInternal>(
   [
     ['price', u128],
-    ['effectivePrice', u128],
     ['numBaseAtoms', u64],
     ['sequenceNumber', u64],
     ['traderIndex', u32],
