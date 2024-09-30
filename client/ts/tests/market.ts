@@ -7,6 +7,61 @@ import { placeOrder } from './placeOrder';
 import { OrderType } from '../src/manifest';
 import { deposit } from './deposit';
 
+async function setupMarketState(): Promise<Market> {
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
+  const payerKeypair: Keypair = Keypair.generate();
+  const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
+
+  const market: Market = await Market.loadFromAddress({
+    connection,
+    address: marketAddress,
+  });
+
+  await ManifestClient.getClientForMarket(
+    connection,
+    marketAddress,
+    payerKeypair,
+  );
+
+  await Promise.all([
+    deposit(connection, payerKeypair, marketAddress, market.quoteMint(), 10),
+    deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10),
+  ]);
+
+  // setup an orderbook with 5 orders on bid and ask side
+  await Promise.all([
+    ...[1, 2, 3, 4, 5].map((i) => {
+      placeOrder(
+        connection,
+        payerKeypair,
+        marketAddress,
+        1,
+        1 - i * 0.01,
+        true,
+        OrderType.Limit,
+        0,
+      );
+    }),
+    ...[1, 2, 3, 4, 5].map((i) => {
+      placeOrder(
+        connection,
+        payerKeypair,
+        marketAddress,
+        1,
+        1 + i * 0.01,
+        false,
+        OrderType.Limit,
+        0,
+      );
+    }),
+  ]);
+
+  return Market.loadFromAddress({ connection, address: marketAddress });
+}
+
 async function testMarket(): Promise<void> {
   const connection: Connection = new Connection(
     'http://127.0.0.1:8899',
@@ -101,6 +156,85 @@ async function testMarket(): Promise<void> {
 }
 
 describe('Market test', () => {
+  let market: Market;
+  let connection: Connection;
+
+  before(async () => {
+    market = await setupMarketState();
+    connection = new Connection('http://127.0.0.1:8899', 'confirmed');
+    await market.reload(connection);
+  });
+
+  it('getBidsL2', () => {
+    const b = market.bidsL2();
+
+    assert(
+      b.length === 5,
+      `5 l2 bids should exist from setup function in before clause. got: ${b.length}`,
+    );
+
+    assert(
+      b[0].tokenPrice === 0.99,
+      `l2BidPrice: want: 0.99 got: ${b[0].tokenPrice}`,
+    );
+    assert(
+      b[1].tokenPrice === 0.98,
+      `l2BidPrice: want: 0.98 got: ${b[1].tokenPrice}`,
+    );
+    assert(
+      b[2].tokenPrice === 0.97,
+      `l2BidPrice: want: 0.97 got: ${b[2].tokenPrice}`,
+    );
+    assert(
+      b[3].tokenPrice === 0.96,
+      `l2BidPrice: want: 0.96 got: ${b[3].tokenPrice}`,
+    );
+    assert(
+      b[4].tokenPrice === 0.95,
+      `l2BidPrice: want: 0.95 got: ${b[4].tokenPrice}`,
+    );
+  });
+
+  it('getAsksL2', () => {
+    const a = market.asksL2();
+
+    assert(
+      a.length === 5,
+      `5 l2 asks should exist from setup function in before clause. got: ${a.length}`,
+    );
+
+    assert(
+      a[0].tokenPrice === 1.01,
+      `l2BidPrice: want: 1.01 got: ${a[0].tokenPrice}`,
+    );
+    assert(
+      a[1].tokenPrice === 1.02,
+      `l2BidPrice: want: 1.02 got: ${a[0].tokenPrice}`,
+    );
+    assert(
+      a[2].tokenPrice === 1.03,
+      `l2BidPrice: want: 1.03 got: ${a[0].tokenPrice}`,
+    );
+    assert(
+      a[3].tokenPrice === 1.04,
+      `l2BidPrice: want: 1.04 got: ${a[0].tokenPrice}`,
+    );
+    assert(
+      a[4].tokenPrice === 1.05,
+      `l2BidPrice: want: 1.05 got: ${a[0].tokenPrice}`,
+    );
+  });
+
+  it('bestBidPrice', async () => {
+    const price = market.bestBidPrice();
+    assert(price === 0.99, `bestBidPrice: want: 0.99 got: ${price}`);
+  });
+
+  it('bestAskPrice', async () => {
+    const price = market.bestAskPrice();
+    assert(price === 1.01, `bestAskPrice: want: 1.01 got: ${price}`);
+  });
+
   it('Market', async () => {
     await testMarket();
   });
