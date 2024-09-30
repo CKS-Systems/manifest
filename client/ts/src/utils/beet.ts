@@ -124,7 +124,7 @@ export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
 export const globalSeatBeet = new BeetArgsStruct<GlobalSeat>(
   [
     ['trader', beetPublicKey],
-    ['tokenBalance', u64],
+    ['balanceAtoms', u64],
     ['unclaimedGasBalance', u32],
   ],
   'globalSeat',

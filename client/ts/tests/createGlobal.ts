@@ -25,7 +25,7 @@ async function testCreateGlobal(): Promise<void> {
     9,
   );
   console.log(`Created tokenMint ${tokenMint}, global will be at ${getGlobalAddress(tokenMint)}`);
-  createGlobal(connection, payerKeypair, tokenMint);
+  await createGlobal(connection, payerKeypair, tokenMint);
 
   const global: Global = await Global.loadFromAddress({
     connection,

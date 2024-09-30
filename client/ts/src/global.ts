@@ -9,7 +9,7 @@ import { globalSeatBeet } from './utils/beet';
 
 export type GlobalSeat = {
   trader: PublicKey;
-  tokenBalance: bignum;
+  balanceAtoms: bignum;
   unclaimedGasBalance: bignum;
 };
 
@@ -104,7 +104,7 @@ export class Global {
       return 0;
     }
     const decimals = await this.getMintDecimals(connection);
-    return toNum(seat.tokenBalance) / 10 ** decimals;
+    return toNum(seat.balanceAtoms) / 10 ** decimals;
   }
 
   tokenMint(): PublicKey {
@@ -127,7 +127,7 @@ export class Global {
     this.data.globalSeats.forEach((seat) => {
       console.log(
         `publicKey: ${seat.trader.toBase58()} 
-        tokenBalance: ${seat.tokenBalance.toString()} 
+        balanceAtoms: ${seat.balanceAtoms.toString()} 
         unclaimedGas: ${seat.unclaimedGasBalance.toString()}`,
       );
     });
