@@ -37,7 +37,7 @@ export class Global {
     this.data = data;
   }
 
-    /**
+  /**
    * Returns a `Global` for a given address, a data buffer
    *
    * @param connection The Solana `Connection` object
@@ -58,7 +58,7 @@ export class Global {
     return Global.loadFromBuffer({ address, buffer: accountInfo.data });
   }
 
-    /**
+  /**
    * Returns a `Global` for a given address, a data buffer
    *
    * @param globalAddress The `PublicKey` of the global account
@@ -154,7 +154,7 @@ export class Global {
     const vault = beetPublicKey.read(data, offset);
     offset += beetPublicKey.byteSize;
 
-    const _globalSeatsRootIndex = data.readUInt32LE(offset);
+    const globalSeatsRootIndex = data.readUInt32LE(offset);
     offset += 4;
     const _globalAmountsRootIndex = data.readUInt32LE(offset);
     offset += 4;
@@ -172,14 +172,14 @@ export class Global {
     const numSeatsClaimed = data.readUInt16LE(offset);
     offset += 2;
 
-    const globalSeats = [];
-      // globalSeatsRootIndex != NIL
-      //   ? deserializeRedBlackTree(
-      //       data.subarray(FIXED_GLOBAL_HEADER_SIZE),
-      //       globalSeatsRootIndex,
-      //       globalSeatBeet,
-      //     )
-      //   : [];
+    const globalSeats =
+      globalSeatsRootIndex != NIL
+        ? deserializeRedBlackTree(
+            data.subarray(FIXED_GLOBAL_HEADER_SIZE),
+            globalSeatsRootIndex,
+            globalSeatBeet,
+          )
+        : [];
 
     return {
       mint,
