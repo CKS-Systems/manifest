@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 
-use crate::{get_mut_helper, DataIndex};
+use crate::{get_mut_helper, DataIndex, Get};
 
 // FreeList is a linked list that keeps track of all the available nodes that
 // can be filled with ClaimedSeats and RestingOrders.
@@ -24,6 +24,7 @@ pub struct FreeListNode<T> {
     node_inner: T,
 }
 unsafe impl<T: Pod> Pod for FreeListNode<T> {}
+impl<T: Pod> Get for FreeListNode<T> {}
 
 impl<'a, T: Pod> FreeList<'a, T> {
     /// Create a new free list. Assumes that the data within data is already a well

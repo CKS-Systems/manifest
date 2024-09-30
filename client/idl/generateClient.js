@@ -4,12 +4,14 @@ const path = require('path');
 const idlDir = __dirname;
 
 async function main() {
-  ['manifest', 'wrapper'].forEach((programName) => {
+  ['manifest', 'ui_wrapper', 'wrapper'].forEach((programName) => {
     const sdkDir = path.join(__dirname, '..', 'ts', 'src', programName);
     const accountsPath = path.join(sdkDir, 'accounts/*');
     const typesPath = path.join(sdkDir, 'types/*');
 
     console.log('Generating TypeScript SDK to %s', sdkDir);
+    console.log('... accounts in %s', accountsPath);
+    console.log('... types in %s', typesPath);
     // Use a previously generated idl instead of all at once in this script
     // https://github.com/metaplex-foundation/solita because we need to add args
     // to instructions after shank runs.
