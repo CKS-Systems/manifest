@@ -13,8 +13,8 @@ use solana_sdk::{
     signature::Keypair, signer::Signer, system_instruction::create_account,
 };
 use spl_token::state::Mint;
-use test_fixtures::sender::send_tx_with_retry;
 use std::rc::Rc;
+use test_fixtures::sender::send_tx_with_retry;
 use ui_wrapper::{
     instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
     wrapper_user::{ManifestWrapperUserFixed, WrapperUserValue},

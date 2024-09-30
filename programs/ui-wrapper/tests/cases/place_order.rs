@@ -31,9 +31,7 @@ use ui_wrapper::{
     },
 };
 
-use crate::{
-    TestFixture, Token, WrapperFixture, SOL_UNIT_SIZE, USDC_UNIT_SIZE,
-};
+use crate::{TestFixture, Token, WrapperFixture, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
 #[tokio::test]
 async fn wrapper_place_order_test() -> anyhow::Result<()> {
