@@ -118,6 +118,28 @@ impl TestFixture {
         }
     }
 
+    pub async fn try_new_for_matching_test() -> anyhow::Result<TestFixture, BanksClientError> {
+        let mut test_fixture = TestFixture::new().await;
+        let second_keypair = test_fixture.second_keypair.insecure_clone();
+
+        test_fixture.claim_seat().await?;
+        test_fixture
+            .deposit(Token::SOL, 1_000 * SOL_UNIT_SIZE)
+            .await?;
+        test_fixture
+            .deposit(Token::USDC, 10_000 * USDC_UNIT_SIZE)
+            .await?;
+
+        test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+        test_fixture
+            .deposit_for_keypair(Token::SOL, 1_000 * SOL_UNIT_SIZE, &second_keypair)
+            .await?;
+        test_fixture
+            .deposit_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
+            .await?;
+        Ok(test_fixture)
+    }
+
     pub async fn try_load(
         &self,
         address: &Pubkey,

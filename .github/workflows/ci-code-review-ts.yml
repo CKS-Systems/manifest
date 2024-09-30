@@ -106,57 +106,10 @@ jobs:
 
       - name: Start validator
         run: |
-          solana-test-validator > /dev/null 2>&1 &
+          cargo build-sbf
+          solana-test-validator --bpf-program MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms target/deploy/manifest.so --bpf-program UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh target/deploy/ui_wrapper.so --bpf-program wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL target/deploy/wrapper.so  >/dev/null 2>&1 &
           echo "Started test validator, sleeping for 15 seconds before starting"
           sleep 15
-          echo "Updating hardcoded discriminant constants for the hardcoded deploy key"
-          sed -i 's/MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms/bitpRsDktxXjwcQvx11p3JZ4A8ucwM1AYBgjNfhr3yf/' programs/manifest/src/lib.rs
-          sed -i 's/4859840929024028656/15533312255830019719/' programs/manifest/src/validation/manifest_checker.rs
-          sed -i 's/\[33, 31, 11, 6, 133, 143, 39, 71\]/[228, 66, 25, 184, 68, 250, 83, 68]/' programs/manifest/src/logs.rs
-          sed -i 's/\[129, 77, 152, 210, 218, 144, 163, 56\]/[83, 80, 13, 195, 157, 15, 144, 87]/' programs/manifest/src/logs.rs
-          sed -i 's/\[23, 214, 24, 34, 52, 104, 109, 188\]/[67, 61, 36, 241, 56, 245, 238, 146]/' programs/manifest/src/logs.rs
-          sed -i 's/\[112, 218, 111, 63, 18, 95, 136, 35\]/[216, 76, 133, 25, 77, 4, 208, 169]/' programs/manifest/src/logs.rs
-          sed -i 's/\[58, 230, 242, 3, 75, 113, 4, 169\]/[52, 81, 147, 82, 119, 191, 72, 172]/' programs/manifest/src/logs.rs
-          sed -i 's/\[157, 118, 247, 213, 47, 19, 164, 120\]/[192, 6, 190, 126, 253, 107, 243, 124]/' programs/manifest/src/logs.rs
-          sed -i 's/\[22, 65, 71, 33, 244, 235, 255, 215\]/[203, 247, 55, 164, 199, 233, 155, 33]/' programs/manifest/src/logs.rs
-          mkdir -p target/deploy
-          echo "[151,8,48,152,68,30,226,198,60,77,31,58,178,181,32,89,229,203,74,21,125,127,220,171,148,2,58,248,111,112,218,58,8,229,29,213,101,63,98,202,13,39,74,3,188,95,195,65,60,246,83,247,221,124,176,114,136,100,191,104,177,76,52,70]" > target/deploy/manifest-keypair.json
-          cargo build-sbf
-          echo "Rebuilt program"
-          rm target/deploy/manifest-keypair.json
-          touch target/deploy/manifest-keypair.json
-          echo "[151,8,48,152,68,30,226,198,60,77,31,58,178,181,32,89,229,203,74,21,125,127,220,171,148,2,58,248,111,112,218,58,8,229,29,213,101,63,98,202,13,39,74,3,188,95,195,65,60,246,83,247,221,124,176,114,136,100,191,104,177,76,52,70]" > target/deploy/manifest-keypair.json
-          solana config set --url l
-          solana program deploy target/deploy/manifest.so > deploy.log
-          cat deploy.log
-
-          solana program deploy target/deploy/wrapper.so > deploy.log
-          cat deploy.log
-          sed -i 's/'$(awk -F\" '/declare_id!/ {print$2}' programs/wrapper/src/lib.rs)'/'$(awk '/Program Id:/ {print$3}' deploy.log)'/' client/ts/src/wrapper/index.ts
-          for f in $(ls client/ts/src/wrapper/instructions); do
-            sed -i 's/'$(awk -F\" '/declare_id!/ {print$2}' programs/wrapper/src/lib.rs)'/'$(awk '/Program Id:/ {print$3}' deploy.log)'/' client/ts/src/wrapper/instructions/$f
-            echo "Updated -> $f"
-          done
-          sed -i 's/'$(awk -F\" '/declare_id!/ {print$2}' programs/wrapper/src/lib.rs)'/'$(awk '/Program Id:/ {print$3}' deploy.log)'/' client/ts/src/wrapper/instructions/*
-          sed -i 's/'$(awk -F\" '/declare_id!/ {print$2}' programs/wrapper/src/lib.rs)'/'$(awk '/Program Id:/ {print$3}' deploy.log)'/' programs/wrapper/src/lib.rs
-
-          for f in $(ls client/ts/src/manifest/instructions); do
-            sed -i 's/MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms/bitpRsDktxXjwcQvx11p3JZ4A8ucwM1AYBgjNfhr3yf/' client/ts/src/manifest/instructions/$f
-            echo "Updated -> $f"
-          done
-          sed -i 's/MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms/bitpRsDktxXjwcQvx11p3JZ4A8ucwM1AYBgjNfhr3yf/' client/ts/src/manifest/index.ts
-
-          echo "Built and deployed"
-
-          cargo build-sbf
-          echo "Rebuilt and redeploying because program id is hardcoded"
-
-          solana program deploy target/deploy/manifest.so
-          solana program deploy target/deploy/wrapper.so
-          echo "Done redeploy"
-
-          yarn clean
-          yarn build
 
       - name: Run test
         run: |
