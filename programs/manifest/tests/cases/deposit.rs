@@ -9,9 +9,10 @@ use solana_sdk::{
     signature::Keypair,
     signer::Signer,
 };
+use test_fixtures::sender::send_tx_with_retry;
 
 use crate::{
-    send_tx_with_retry, MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
+    MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
 };
 
 #[tokio::test]

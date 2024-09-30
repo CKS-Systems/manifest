@@ -17,9 +17,10 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+use test_fixtures::sender::send_tx_with_retry;
 
 use crate::{
-    send_tx_with_retry, Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
+    Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
     USDC_UNIT_SIZE,
 };
 

@@ -13,7 +13,8 @@ use solana_sdk::{
     signer::Signer, system_instruction::create_account,
 };
 
-use crate::{send_tx_with_retry, MintFixture, RUST_LOG_DEFAULT};
+use crate::{MintFixture, RUST_LOG_DEFAULT};
+use test_fixtures::sender::send_tx_with_retry;
 
 #[tokio::test]
 async fn token22_base() -> anyhow::Result<()> {

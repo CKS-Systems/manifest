@@ -1,7 +1,4 @@
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    io::Error,
-};
+use std::cell::{Ref, RefCell, RefMut};
 
 use hypertree::{DataIndex, HyperTreeValueIteratorTrait};
 use manifest::{
@@ -19,13 +16,13 @@ use manifest::{
     state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType, RestingOrder},
     validation::{get_global_address, MintAccountInfo},
 };
-use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
+use solana_program::{pubkey::Pubkey, rent::Rent};
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account, account_info::AccountInfo, clock::Clock, instruction::Instruction,
     program_pack::Pack, signature::Keypair, signer::Signer, system_instruction::create_account,
-    transaction::Transaction,
 };
+use test_fixtures::sender::send_tx_with_retry;
 use spl_token::state::Mint;
 use std::rc::Rc;
 
@@ -1176,43 +1173,4 @@ pub async fn get_and_deserialize<T: Pack>(
         }
         return T::unpack_unchecked(&mut account_opt.unwrap().data.as_slice()).unwrap();
     }
-}
-
-pub async fn send_tx_with_retry(
-    context: Rc<RefCell<ProgramTestContext>>,
-    instructions: &[Instruction],
-    payer: Option<&Pubkey>,
-    signers: &[&Keypair],
-) -> Result<(), BanksClientError> {
-    let mut context: RefMut<ProgramTestContext> = context.borrow_mut();
-
-    loop {
-        let blockhash_or: Result<Hash, Error> = context.get_new_latest_blockhash().await;
-        if blockhash_or.is_err() {
-            continue;
-        }
-        let tx: Transaction =
-            Transaction::new_signed_with_payer(instructions, payer, signers, blockhash_or.unwrap());
-        let result: Result<(), BanksClientError> =
-            context.banks_client.process_transaction(tx).await;
-        if result.is_ok() {
-            break;
-        }
-        let error: BanksClientError = result.err().unwrap();
-        match error {
-            BanksClientError::RpcError(_rpc_err) => {
-                // Retry on rpc errors.
-                continue;
-            }
-            BanksClientError::Io(_io_err) => {
-                // Retry on io errors.
-                continue;
-            }
-            _ => {
-                println!("Unexpected error: {:?}", error);
-                return Err(error);
-            }
-        }
-    }
-    Ok(())
 }

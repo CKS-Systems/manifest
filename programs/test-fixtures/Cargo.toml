@@ -1,0 +1,18 @@
+[package]
+name = "test_fixtures"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/CKS-systems/manifest"
+authors = ["Britt Cyr <britt@cks.systems>"]
+description = "Test fixtures for Manifest"
+license-file = "LICENSE"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "test_fixtures"
+
+[dependencies]
+solana-program = { workspace = true }
+solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }
+#spl-token = { workspace = true, features = ["no-entrypoint"] }

@@ -49,6 +49,7 @@ num_enum = { workspace = true }
 thiserror = { workspace = true }
 solana-security-txt = { workspace = true }
 static_assertions = { workspace = true }
+test_fixtures = { path = "../test-fixtures" }
 
 [dev-dependencies]
 anyhow = { workspace = true }
