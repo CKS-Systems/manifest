@@ -11,9 +11,7 @@ use solana_sdk::{
 };
 use test_fixtures::sender::send_tx_with_retry;
 
-use crate::{
-    MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
-};
+use crate::{MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE};
 
 #[tokio::test]
 async fn basic_deposit_test() -> anyhow::Result<()> {

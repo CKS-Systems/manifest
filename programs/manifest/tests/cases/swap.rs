@@ -19,10 +19,7 @@ use solana_sdk::{
 };
 use test_fixtures::sender::send_tx_with_retry;
 
-use crate::{
-    Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
-    USDC_UNIT_SIZE,
-};
+use crate::{Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
 #[tokio::test]
 async fn swap_test() -> anyhow::Result<()> {

@@ -22,9 +22,9 @@ use solana_sdk::{
     account::Account, account_info::AccountInfo, clock::Clock, instruction::Instruction,
     program_pack::Pack, signature::Keypair, signer::Signer, system_instruction::create_account,
 };
-use test_fixtures::sender::send_tx_with_retry;
 use spl_token::state::Mint;
 use std::rc::Rc;
+use test_fixtures::sender::send_tx_with_retry;
 
 #[derive(PartialEq)]
 pub enum Token {

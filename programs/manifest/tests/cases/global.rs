@@ -20,10 +20,7 @@ use solana_sdk::{
 };
 use test_fixtures::sender::send_tx_with_retry;
 
-use crate::{
-    GlobalFixture, MarketFixture, MintFixture, TestFixture, Token,
-    TokenAccountFixture,
-};
+use crate::{GlobalFixture, MarketFixture, MintFixture, TestFixture, Token, TokenAccountFixture};
 
 #[tokio::test]
 async fn create_global() -> anyhow::Result<()> {

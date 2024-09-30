@@ -21,8 +21,8 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 use test_fixtures::sender::send_tx_with_retry;
 
 use crate::{
-    GlobalFixture, MintFixture, Side, TestFixture, Token, TokenAccountFixture,
-    SOL_UNIT_SIZE, USDC_UNIT_SIZE,
+    GlobalFixture, MintFixture, Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,
+    USDC_UNIT_SIZE,
 };
 
 #[tokio::test]
