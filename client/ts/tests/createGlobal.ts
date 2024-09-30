@@ -3,38 +3,17 @@ import {
   Keypair,
   sendAndConfirmTransaction,
   PublicKey,
-  SystemProgram,
-  TransactionInstruction,
   Transaction,
 } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
-import { PROGRAM_ID } from '../src/manifest';
 import { Global } from '../src/global';
 import { airdropSol, getClusterFromConnection } from '../src/utils/solana';
 import { createMint } from '@solana/spl-token';
-import { FIXED_MANIFEST_HEADER_SIZE } from '../src/constants';
+import { getGlobalAddress } from '../src/utils/global';
 
 async function testCreateGlobal(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
-  const globalAddress: PublicKey = await createGlobal(connection, payerKeypair);
-
-  const global: Global = await Global.loadFromAddress({
-    connection,
-    address: globalAddress,
-  });
-  global.prettyPrint();
-}
-
-export async function createGlobal(
-  connection: Connection,
-  payerKeypair: Keypair,
-): Promise<PublicKey> {
-  const globalKeypair: Keypair = Keypair.generate();
-  console.log(`Cluster is ${await getClusterFromConnection(connection)}`);
-
-  // Get SOL for rent and make airdrop states.
-  await airdropSol(connection, payerKeypair.publicKey);
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,
@@ -44,15 +23,22 @@ export async function createGlobal(
   );
   console.log(`Created tokenMint ${tokenMint}`);
 
-  const createAccountIx: TransactionInstruction = SystemProgram.createAccount({
-    fromPubkey: payerKeypair.publicKey,
-    newAccountPubkey: globalKeypair.publicKey,
-    space: FIXED_MANIFEST_HEADER_SIZE,
-    lamports: await connection.getMinimumBalanceForRentExemption(
-      FIXED_MANIFEST_HEADER_SIZE,
-    ),
-    programId: PROGRAM_ID,
+  const global: Global = await Global.loadFromAddress({
+    connection,
+    address: getGlobalAddress(tokenMint),
   });
+  global.prettyPrint();
+}
+
+export async function createGlobal(
+  connection: Connection,
+  payerKeypair: Keypair,
+  tokenMint: PublicKey,
+): Promise<void> {
+  console.log(`Cluster is ${await getClusterFromConnection(connection)}`);
+
+  // Get SOL for rent and make airdrop states.
+  await airdropSol(connection, payerKeypair.publicKey);
 
   const createGlobalIx = await ManifestClient['createGlobalCreateIx'](
     connection,
@@ -61,18 +47,16 @@ export async function createGlobal(
   );
 
   const tx: Transaction = new Transaction();
-  tx.add(createAccountIx);
   tx.add(createGlobalIx);
   const signature = await sendAndConfirmTransaction(
     connection,
     tx,
-    [payerKeypair, globalKeypair],
+    [payerKeypair],
     {
       commitment: 'finalized',
     },
   );
-  console.log(`Created global at ${globalKeypair.publicKey} in ${signature}`);
-  return globalKeypair.publicKey;
+  console.log(`Created global for ${tokenMint} in ${signature}`);
 }
 
 describe('Create Global test', () => {

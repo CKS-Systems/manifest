@@ -10,19 +10,28 @@ import {
   mintTo,
   createAssociatedTokenAccountIdempotent,
   getMint,
+  createMint,
 } from '@solana/spl-token';
 import { createGlobal } from './createGlobal';
 import { Global } from '../src/global';
 import { assert } from 'chai';
+import { getGlobalAddress } from '../src/utils/global';
 
 async function testGlobalDeposit(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
+  const tokenMint: PublicKey = await createMint(
+    connection,
+    payerKeypair,
+    payerKeypair.publicKey,
+    payerKeypair.publicKey,
+    9,
+  );
+  await createGlobal(connection, payerKeypair, tokenMint);
 
-  const globalAddress: PublicKey = await createGlobal(connection, payerKeypair);
   const global: Global = await Global.loadFromAddress({
     connection,
-    address: globalAddress,
+    address: getGlobalAddress(tokenMint),
   });
 
   await depositGlobal(connection, payerKeypair, global.tokenMint(), 10);
