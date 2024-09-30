@@ -96,8 +96,8 @@ export class Global {
     connection: Connection,
     trader: PublicKey,
   ): Promise<number> {
-    const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find((seat) =>
-      seat.trader.equals(trader),
+    const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find(
+      (seat) => seat.trader.equals(trader),
     );
     if (!deposit) {
       return 0;
