@@ -23,7 +23,7 @@ export interface GlobalData {
 export class Global {
   address: PublicKey;
   private data: GlobalData;
-  private _mintDecimals: number | null = null;
+  private mintDecimals: number | null = null;
 
   private constructor({
     address,
@@ -85,11 +85,11 @@ export class Global {
   }
 
   async getMintDecimals(connection: Connection): Promise<number> {
-    if (this._mintDecimals === null) {
+    if (this.mintDecimals === null) {
       const mintInfo = await getMint(connection, this.data.mint);
-      this._mintDecimals = mintInfo.decimals;
+      this.mintDecimals = mintInfo.decimals;
     }
-    return this._mintDecimals;
+    return this.mintDecimals;
   }
 
   async getGlobalBalanceTokens(
