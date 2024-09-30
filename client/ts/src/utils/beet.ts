@@ -124,7 +124,7 @@ export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
 export const globalDepositBeet = new BeetArgsStruct<GlobalDeposit>(
   [
     ['trader', beetPublicKey],
-    ['balanceAtoms', u32],
+    ['balanceAtoms', u64],
   ],
   'globalDeposit',
 );
