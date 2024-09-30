@@ -5,18 +5,17 @@ import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { toNum } from './utils/numbers';
 import { FIXED_GLOBAL_HEADER_SIZE, NIL } from './constants';
 import { getMint } from '@solana/spl-token';
-import { globalSeatBeet } from './utils/beet';
+import { globalDepositBeet } from './utils/beet';
 
-export type GlobalSeat = {
+export type GlobalDeposit = {
   trader: PublicKey;
   balanceAtoms: bignum;
-  unclaimedGasBalance: bignum;
 };
 
 export interface GlobalData {
   mint: PublicKey;
   vault: PublicKey;
-  globalSeats: GlobalSeat[];
+  globalDeposits: GlobalDeposit[];
   numBytesAllocated: number;
   numSeatsClaimed: number;
 }
@@ -97,14 +96,14 @@ export class Global {
     connection: Connection,
     trader: PublicKey,
   ): Promise<number> {
-    const seat = this.data.globalSeats.find((seat) =>
+    const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find((seat) =>
       seat.trader.equals(trader),
     );
-    if (!seat) {
+    if (!deposit) {
       return 0;
     }
     const decimals = await this.getMintDecimals(connection);
-    return toNum(seat.balanceAtoms) / 10 ** decimals;
+    return toNum(deposit.balanceAtoms) / 10 ** decimals;
   }
 
   tokenMint(): PublicKey {
@@ -112,7 +111,7 @@ export class Global {
   }
 
   hasSeat(trader: PublicKey): boolean {
-    return this.data.globalSeats.some((seat) => seat.trader.equals(trader));
+    return this.data.globalDeposits.some((seat) => seat.trader.equals(trader));
   }
 
   prettyPrint(): void {
@@ -123,12 +122,11 @@ export class Global {
     console.log(`Vault: ${this.data.vault.toBase58()}`);
     console.log(`NumBytesAllocated: ${this.data.numBytesAllocated}`);
     console.log(`NumSeatsClaimed: ${this.data.numSeatsClaimed}`);
-    console.log(`ClaimedSeats: ${this.data.globalSeats.length}`);
-    this.data.globalSeats.forEach((seat) => {
+    console.log(`ClaimedSeats: ${this.data.globalDeposits.length}`);
+    this.data.globalDeposits.forEach((seat) => {
       console.log(
         `publicKey: ${seat.trader.toBase58()} 
-        balanceAtoms: ${seat.balanceAtoms.toString()} 
-        unclaimedGas: ${seat.unclaimedGasBalance.toString()}`,
+        balanceAtoms: ${seat.balanceAtoms.toString()} `,
       );
     });
     console.log(`========================`);
@@ -151,9 +149,9 @@ export class Global {
     const vault = beetPublicKey.read(data, offset);
     offset += beetPublicKey.byteSize;
 
-    const globalSeatsRootIndex = data.readUInt32LE(offset);
+    const _globalSeatsRootIndex = data.readUInt32LE(offset);
     offset += 4;
-    const _globalAmountsRootIndex = data.readUInt32LE(offset);
+    const globalAmountsRootIndex = data.readUInt32LE(offset);
     offset += 4;
     const _globalAmountsMaxIndex = data.readUInt32LE(offset);
     offset += 4;
@@ -169,19 +167,19 @@ export class Global {
     const numSeatsClaimed = data.readUInt16LE(offset);
     offset += 2;
 
-    const globalSeats =
-      globalSeatsRootIndex != NIL
+    const globalDeposits =
+      globalAmountsRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_GLOBAL_HEADER_SIZE),
-            globalSeatsRootIndex,
-            globalSeatBeet,
+            globalAmountsRootIndex,
+            globalDepositBeet,
           )
         : [];
 
     return {
       mint,
       vault,
-      globalSeats,
+      globalDeposits,
       numBytesAllocated,
       numSeatsClaimed,
     };
