@@ -14,6 +14,9 @@ import { getGlobalAddress } from '../src/utils/global';
 async function testCreateGlobal(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
+  // Get SOL for rent.
+  await airdropSol(connection, payerKeypair.publicKey);
+
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,
@@ -36,9 +39,6 @@ export async function createGlobal(
   tokenMint: PublicKey,
 ): Promise<void> {
   console.log(`Cluster is ${await getClusterFromConnection(connection)}`);
-
-  // Get SOL for rent and make airdrop states.
-  await airdropSol(connection, payerKeypair.publicKey);
 
   const createGlobalIx = await ManifestClient['createGlobalCreateIx'](
     connection,

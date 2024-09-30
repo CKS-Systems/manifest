@@ -12,10 +12,14 @@ import { Global } from '../src/global';
 import { assert } from 'chai';
 import { getGlobalAddress } from '../src/utils/global';
 import { createMint } from '@solana/spl-token';
+import { airdropSol } from '../src/utils/solana';
 
 async function testGlobalWithdraw(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
+  // Get SOL for rent.
+  await airdropSol(connection, payerKeypair.publicKey);
+
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,

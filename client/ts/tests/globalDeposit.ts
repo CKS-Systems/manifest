@@ -16,10 +16,14 @@ import { createGlobal } from './createGlobal';
 import { Global } from '../src/global';
 import { assert } from 'chai';
 import { getGlobalAddress } from '../src/utils/global';
+import { airdropSol } from '../src/utils/solana';
 
 async function testGlobalDeposit(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
+  // Get SOL for rent.
+  await airdropSol(connection, payerKeypair.publicKey);
+
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,
