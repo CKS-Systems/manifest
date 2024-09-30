@@ -5919,6 +5919,7 @@ dependencies = [
  "spl-token 3.5.0",
  "spl-token-2022 3.0.4",
  "static_assertions",
+ "test_fixtures",
  "thiserror",
  "tokio",
 ]
@@ -6392,6 +6393,7 @@ dependencies = [
  "solana-security-txt",
  "spl-token 3.5.0",
  "static_assertions",
+ "test_fixtures",
  "thiserror",
  "tokio",
 ]

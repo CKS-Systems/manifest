@@ -11,6 +11,10 @@ license-file = "LICENSE"
 crate-type = ["cdylib", "lib"]
 name = "test_fixtures"
 
+[features]
+default = []
+test = []
+
 [dependencies]
 solana-program = { workspace = true }
 solana-program-test = { workspace = true }

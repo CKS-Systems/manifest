@@ -33,10 +33,10 @@ thiserror = { workspace = true }
 solana-security-txt = { workspace = true }
 static_assertions = { workspace = true }
 
-
 [dev-dependencies]
 anyhow = { workspace = true }
 solana-program-test = { workspace = true }
 solana-logger = { workspace = true }
 solana-sdk = { workspace = true }
+test_fixtures = { path = "../test-fixtures" }
 tokio = { workspace = true }

@@ -6,6 +6,7 @@ use solana_program_test::tokio;
 use solana_sdk::{
     account::Account, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
 };
+use test_fixtures::sender::send_tx_with_retry;
 use wrapper::{
     instruction_builders::{batch_update_instruction, create_wrapper_instructions},
     market_info::MarketInfo,
@@ -16,7 +17,7 @@ use wrapper::{
     wrapper_state::ManifestWrapperStateFixed,
 };
 
-use crate::{send_tx_with_retry, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
+use crate::{TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
 #[tokio::test]
 async fn wrapper_batch_update_test() -> anyhow::Result<()> {
