@@ -6,6 +6,7 @@ import { PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
 import bs58 from 'bs58';
 import keccak256 from 'keccak256';
+import { genAccDiscriminator } from './utils/discriminator';
 
 /**
  * FillFeed example implementation.
@@ -132,20 +133,7 @@ export async function runFillFeed() {
   await fillFeed.parseLogs();
 }
 
-/**
- * Helper function for getting account discriminator that matches how anchor
- * generates discriminators.
- */
-function genAccDiscriminator(accName: string) {
-  return keccak256(
-    Buffer.concat([
-      Buffer.from(bs58.decode(PROGRAM_ID.toBase58())),
-      Buffer.from('manifest::logs::'),
-      Buffer.from(accName),
-    ]),
-  ).subarray(0, 8);
-}
-const fillDiscriminant = genAccDiscriminator('FillLog');
+const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
 /**
  * FillLogResult is the message sent to subscribers of the FillFeed
