@@ -56,4 +56,4 @@ solana-program-test = { workspace = true }
 solana-logger = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
-test_fixtures = { path = "../test-fixtures" }
+test_utils = { path = "../test-utils" }

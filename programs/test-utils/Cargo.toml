@@ -1,5 +1,5 @@
 [package]
-name = "test_fixtures"
+name = "test_utils"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
@@ -9,7 +9,7 @@ license-file = "LICENSE"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "test_fixtures"
+name = "test_utils"
 
 [features]
 default = []
@@ -20,3 +20,6 @@ solana-program = { workspace = true }
 solana-program-test = { workspace = true }
 solana-sdk = { workspace = true }
 #spl-token = { workspace = true, features = ["no-entrypoint"] }
+
+[dev-dependencies]
+#solana-program-test = { workspace = true }

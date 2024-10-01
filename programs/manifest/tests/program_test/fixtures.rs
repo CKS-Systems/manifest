@@ -24,7 +24,7 @@ use solana_sdk::{
 };
 use spl_token::state::Mint;
 use std::rc::Rc;
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 
 #[derive(PartialEq)]
 pub enum Token {

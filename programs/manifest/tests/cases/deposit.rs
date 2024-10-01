@@ -9,7 +9,7 @@ use solana_sdk::{
     signature::Keypair,
     signer::Signer,
 };
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 
 use crate::{MintFixture, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE};
 

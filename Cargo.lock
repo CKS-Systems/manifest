@@ -2178,7 +2178,7 @@ dependencies = [
  "spl-token 3.5.0",
  "spl-token-2022 3.0.4",
  "static_assertions",
- "test_fixtures",
+ "test_utils",
  "thiserror",
  "tokio",
 ]
@@ -5540,7 +5540,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_fixtures"
+name = "test_utils"
 version = "0.1.0"
 dependencies = [
  "solana-program",
@@ -5919,7 +5919,7 @@ dependencies = [
  "spl-token 3.5.0",
  "spl-token-2022 3.0.4",
  "static_assertions",
- "test_fixtures",
+ "test_utils",
  "thiserror",
  "tokio",
 ]
@@ -6393,7 +6393,7 @@ dependencies = [
  "solana-security-txt",
  "spl-token 3.5.0",
  "static_assertions",
- "test_fixtures",
+ "test_utils",
  "thiserror",
  "tokio",
 ]

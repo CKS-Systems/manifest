@@ -14,7 +14,7 @@ use solana_sdk::{
 };
 
 use crate::{MintFixture, RUST_LOG_DEFAULT};
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 
 #[tokio::test]
 async fn token22_base() -> anyhow::Result<()> {

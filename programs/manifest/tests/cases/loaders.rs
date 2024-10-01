@@ -18,7 +18,7 @@ use solana_program::{
 };
 use solana_program_test::tokio;
 use solana_sdk::{signature::Keypair, signer::Signer};
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 
 use crate::{
     GlobalFixture, MintFixture, Side, TestFixture, Token, TokenAccountFixture, SOL_UNIT_SIZE,

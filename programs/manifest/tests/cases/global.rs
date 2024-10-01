@@ -18,7 +18,7 @@ use solana_sdk::{
     instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
     system_instruction::transfer,
 };
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 
 use crate::{GlobalFixture, MarketFixture, MintFixture, TestFixture, Token, TokenAccountFixture};
 

@@ -16,7 +16,7 @@ use solana_sdk::{
     signature::Keypair, signer::Signer,
 };
 use spl_token;
-use test_fixtures::sender::send_tx_with_retry;
+use test_utils::sender::send_tx_with_retry;
 use ui_wrapper::{
     self,
     instruction::ManifestWrapperInstruction,

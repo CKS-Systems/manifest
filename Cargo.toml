@@ -6,7 +6,7 @@ members = [
   "programs/manifest",
   "programs/wrapper",
   "programs/ui-wrapper",
-  "programs/test-fixtures",
+  "programs/test-utils",
 ]
 
 [workspace.dependencies]
