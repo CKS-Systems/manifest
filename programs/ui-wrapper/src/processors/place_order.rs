@@ -169,18 +169,20 @@ pub(crate) fn process_place_order(
         )?;
     }
 
-    // Call expand so claim seat has enough free space
-    // and owner doesn't get charged rent
-    // TODO: could check if needed before
-    invoke(
-        &expand_market_instruction(market.key, payer.key),
-        &[
-            manifest_program.info.clone(),
-            payer.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
-    )?;
+    // Call expand so claim seat has enough free space and owner doesn't get
+    // charged rent. This is done here to keep payer and owner separate in the
+    // case of PDA owners.
+    if !market.get_fixed()?.has_free_block() {
+        invoke(
+            &expand_market_instruction(market.key, payer.key),
+            &[
+                manifest_program.info.clone(),
+                payer.info.clone(),
+                market.info.clone(),
+                system_program.info.clone(),
+            ],
+        )?;
+    }
 
     let core_place: PlaceOrderParams = PlaceOrderParams::new(
         order.base_atoms,
