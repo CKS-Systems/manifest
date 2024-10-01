@@ -4,8 +4,6 @@ import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
-import bs58 from 'bs58';
-import keccak256 from 'keccak256';
 import { genAccDiscriminator } from './utils/discriminator';
 
 /**
