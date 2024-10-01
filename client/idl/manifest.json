@@ -992,11 +992,15 @@
             "type": "bool"
           },
           {
+            "name": "isMakerGlobal",
+            "type": "bool"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                15
+                14
               ]
             }
           }
@@ -1755,11 +1759,15 @@
           "type": "bool"
         },
         {
+          "name": "isMakerGlobal",
+          "type": "bool"
+        },
+        {
           "name": "padding",
           "type": {
             "array": [
               "u8",
-              15
+              14
             ]
           }
         }

@@ -661,8 +661,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             let taker: Pubkey = get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
                 .get_value()
                 .trader;
+            let is_global: bool = other_order.is_global();
 
-            if other_order.is_global() {
+            if is_global {
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
                     &global_trade_accounts_opts[0]
                 } else {
@@ -787,7 +788,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 maker_sequence_number,
                 taker_sequence_number: fixed.order_sequence_number,
                 taker_is_buy: PodBool::from(is_bid),
-                _padding: [0; 15],
+                is_maker_global: PodBool::from(is_global),
+                _padding: [0; 14],
             })?;
 
             if did_fully_match_resting_order {
