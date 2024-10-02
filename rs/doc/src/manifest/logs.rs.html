@@ -237,6 +237,7 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -312,7 +313,8 @@
     <span class="kw">pub </span>maker_sequence_number: u64,
     <span class="kw">pub </span>taker_sequence_number: u64,
     <span class="kw">pub </span>taker_is_buy: PodBool,
-    <span class="kw">pub </span>_padding: [u8; <span class="number">15</span>],
+    <span class="kw">pub </span>is_maker_global: PodBool,
+    <span class="kw">pub </span>_padding: [u8; <span class="number">14</span>],
 }
 
 <span class="attr">#[repr(C)]

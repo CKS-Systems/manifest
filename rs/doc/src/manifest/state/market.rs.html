@@ -1233,6 +1233,8 @@
 <a href="#1231" id="1231">1231</a>
 <a href="#1232" id="1232">1232</a>
 <a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1896,8 +1898,9 @@
             <span class="kw">let </span>taker: Pubkey = get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index)
                 .get_value()
                 .trader;
+            <span class="kw">let </span>is_global: bool = other_order.is_global();
 
-            <span class="kw">if </span>other_order.is_global() {
+            <span class="kw">if </span>is_global {
                 <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
                     <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
                 } <span class="kw">else </span>{
@@ -2022,7 +2025,8 @@
                 maker_sequence_number,
                 taker_sequence_number: fixed.order_sequence_number,
                 taker_is_buy: PodBool::from(is_bid),
-                _padding: [<span class="number">0</span>; <span class="number">15</span>],
+                is_maker_global: PodBool::from(is_global),
+                _padding: [<span class="number">0</span>; <span class="number">14</span>],
             })<span class="question-mark">?</span>;
 
             <span class="kw">if </span>did_fully_match_resting_order {
