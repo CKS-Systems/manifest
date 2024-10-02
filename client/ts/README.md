@@ -56,10 +56,8 @@ export const run = async () => {
   // NOTE: this will automatically attempt to send a tx to claim a seat if needed.
   // use `ManifestClient.getClientForMarketNoPrivateKey` if you do not want this behavior
   const mfx = await ManifestClient.getClientForMarket(
-    // eslint-disable-next-line
     conn as any,
     marketPub,
-    // eslint-disable-next-line
     user as any,
   );
 
