@@ -1252,6 +1252,9 @@
 <a href="#1250" id="1250">1250</a>
 <a href="#1251" id="1251">1251</a>
 <a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1867,14 +1870,13 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = num_base_atoms;
         <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_order_index != NIL {
-            <span class="kw">let </span>next_order_index: DataIndex =
-                get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-
             <span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
                 get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index).get_value();
 
             <span class="comment">// Remove the resting order if expired.
             </span><span class="kw">if </span>other_order.is_expired(now_slot) {
+                <span class="kw">let </span>next_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
                 remove_and_update_balances(
                     fixed,
                     dynamic,
@@ -1947,6 +1949,8 @@
                     }),
                 )<span class="question-mark">?</span>;
                 <span class="kw">if </span>!has_enough_tokens {
+                    <span class="kw">let </span>next_order_index: DataIndex =
+                        get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
                     remove_and_update_balances(
                         fixed,
                         dynamic,
@@ -2075,6 +2079,8 @@
                     remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, <span class="kw-2">&amp;</span>maker)<span class="question-mark">?</span>;
                 }
 
+                <span class="kw">let </span>next_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
                 remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)<span class="question-mark">?</span>;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)<span class="question-mark">?</span>;
                 current_order_index = next_order_index;
