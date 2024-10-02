@@ -692,6 +692,7 @@
 <a href="#690" id="690">690</a>
 <a href="#691" id="691">691</a>
 <a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -1313,6 +1314,7 @@
     )
     .is_ok());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(<span class="number">0f64</span>).is_ok());
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(<span class="number">0</span>, <span class="number">0</span>).is_ok());
     <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(
         u32::MAX <span class="kw">as </span>f64 * <span class="number">10f64</span>.powi(QuoteAtomsPerBaseAtom::MAX_EXP <span class="kw">as </span>i32)
     )

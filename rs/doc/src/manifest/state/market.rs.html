@@ -1235,6 +1235,9 @@
 <a href="#1233" id="1233">1233</a>
 <a href="#1234" id="1234">1234</a>
 <a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
+<a href="#1237" id="1237">1237</a>
+<a href="#1238" id="1238">1238</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -2066,7 +2069,10 @@
         fixed.order_sequence_number = order_sequence_number.wrapping_add(<span class="number">1</span>);
 
         <span class="comment">// If there is nothing left to rest, then return before resting.
-        </span><span class="kw">if </span>!order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
+        </span><span class="kw">if </span>!order_type_can_rest(order_type)
+            || remaining_base_atoms == BaseAtoms::ZERO
+            || price == QuoteAtomsPerBaseAtom::ZERO
+        {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(AddOrderToMarketResult {
                 order_sequence_number,
                 order_index: NIL,
