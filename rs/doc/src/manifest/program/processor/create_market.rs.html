@@ -164,6 +164,18 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, mem::size_of};
 
 <span class="kw">use crate</span>::{
@@ -181,8 +193,8 @@
 };
 <span class="kw">use </span>spl_token_2022::{
     extension::{
-        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
-        BaseStateWithExtensions, StateWithExtensions,
+        mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
+        transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
     },
     state::Mint,
 };
@@ -221,12 +233,24 @@
             <span class="comment">// Closable mints can be replaced with different ones, breaking some saved info on the market.
             </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(extension) = pool_mint.get_extension::&lt;MintCloseAuthority&gt;() {
                 <span class="kw">let </span>close_authority: <span class="prelude-ty">Option</span>&lt;Pubkey&gt; = extension.close_authority.into();
-                <span class="macro">require!</span>(
-                    close_authority.is_none(),
-                    ManifestError::InvalidMint,
-                    <span class="string">"Closable mints are not allowed"</span>,
-                )<span class="question-mark">?</span>;
+                <span class="kw">if </span>close_authority.is_some() {
+                    <span class="macro">solana_program::msg!</span>(
+                        <span class="string">"Warning, you are creating a market with a close authority."
+                    </span>);
+                }
             }
+            <span class="comment">// Permanent delegates can steal your tokens. This will break all
+            // accounting in the market, so there is no assertion of security
+            // against loss of funds on these markets.
+            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(extension) = pool_mint.get_extension::&lt;PermanentDelegate&gt;() {
+                <span class="kw">let </span>permanent_delegate: <span class="prelude-ty">Option</span>&lt;Pubkey&gt; = extension.delegate.into();
+                <span class="kw">if </span>permanent_delegate.is_some() {
+                    <span class="macro">solana_program::msg!</span>(
+                        <span class="string">"Warning, you are creating a market with a permanent delegate. There is no loss of funds protection for funds on this market"
+                    </span>);
+                }
+            }
+
             <span class="comment">// Transfer fees make the amounts on withdraw and deposit not match what is expected.
             </span><span class="macro">require!</span>(
                 pool_mint.get_extension::&lt;TransferFeeConfig&gt;().is_err(),
