@@ -955,8 +955,6 @@ export type WrapperPlaceOrderParamsExternal = {
   lastValidSlot: number;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
-  /** Used in fill or kill orders. Set to zero otherwise. */
-  minOutTokens?: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
 };
@@ -979,18 +977,11 @@ function toWrapperPlaceOrderParams(
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken,
   );
 
-  const minOutTokens = wrapperPlaceOrderParamsExternal.minOutTokens ?? 0;
-
-  const minOutAtoms = wrapperPlaceOrderParamsExternal.isBid
-    ? Math.floor(minOutTokens * baseAtomsPerToken)
-    : Math.floor(minOutTokens * quoteAtomsPerToken);
-
   return {
     ...wrapperPlaceOrderParamsExternal,
     baseAtoms: numBaseAtoms,
     priceMantissa,
     priceExponent,
-    minOutAtoms,
   };
 }
 
