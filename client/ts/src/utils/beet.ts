@@ -14,6 +14,7 @@ import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { MarketInfoRaw, OpenOrderInternal } from '../wrapperObj';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
 import { GlobalDeposit } from '../global';
+import { UIOpenOrderInternal } from '../uiWrapperObj';
 
 type PubkeyWrapper = {
   publicKey: PublicKey;
@@ -35,7 +36,6 @@ export const publicKeyBeet = new BeetArgsStruct<PubkeyWrapper>(
 export const restingOrderBeet = new BeetArgsStruct<RestingOrderInternal>(
   [
     ['price', u128],
-    ['effectivePrice', u128],
     ['numBaseAtoms', u64],
     ['sequenceNumber', u64],
     ['traderIndex', u32],
@@ -107,7 +107,27 @@ export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
     ['clientOrderId', u64],
     ['orderSequenceNumber', u64],
     ['numBaseAtoms', u64],
-    ['dataIndex', u32],
+    ['marketDataIndex', u32],
+    ['lastValidSlot', u32],
+    ['isBid', u8],
+    ['orderType', u8],
+    ['padding', uniformFixedSizeArray(u8, 30)],
+  ],
+  'OpenOrder',
+);
+
+/**
+ * OpenOrder (ui wrapper) deserializer.
+ *
+ * https://github.com/CKS-Systems/manifest/blob/main/programs/ui-wrapper/src/open_order.rs
+ */
+export const uiOpenOrderBeet = new BeetArgsStruct<UIOpenOrderInternal>(
+  [
+    ['price', fixedSizeUint8Array(16)],
+    ['clientOrderId', u64],
+    ['orderSequenceNumber', u64],
+    ['numBaseAtoms', u64],
+    ['marketDataIndex', u32],
     ['lastValidSlot', u32],
     ['isBid', u8],
     ['orderType', u8],
