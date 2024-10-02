@@ -7,6 +7,7 @@ use std::{cmp::Ordering, mem::size_of};
 
 use crate::processors::shared::WRAPPER_BLOCK_PAYLOAD_SIZE;
 
+// TODO: Use shank type https://docs.rs/shank/latest/shank/derive.ShankType.html
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 pub struct MarketInfo {
