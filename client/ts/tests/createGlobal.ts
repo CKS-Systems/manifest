@@ -27,7 +27,9 @@ async function testCreateGlobal(): Promise<void> {
   console.log(
     `Created tokenMint ${tokenMint}, global will be at ${getGlobalAddress(tokenMint)}`,
   );
+  await new Promise(f => setTimeout(f, 1_000));
   await createGlobal(connection, payerKeypair, tokenMint);
+  await new Promise(f => setTimeout(f, 1_000));
 
   const global: Global = await Global.loadFromAddress({
     connection,
