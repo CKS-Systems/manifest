@@ -829,7 +829,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         fixed.order_sequence_number = order_sequence_number.wrapping_add(1);
 
         // If there is nothing left to rest, then return before resting.
-        if !order_type_can_rest(order_type) || remaining_base_atoms == BaseAtoms::ZERO {
+        if !order_type_can_rest(order_type)
+            || remaining_base_atoms == BaseAtoms::ZERO
+            || price == QuoteAtomsPerBaseAtom::ZERO
+        {
             return Ok(AddOrderToMarketResult {
                 order_sequence_number,
                 order_index: NIL,
