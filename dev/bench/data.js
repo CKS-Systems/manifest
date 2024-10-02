@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727867839581,
+  "lastUpdate": 1727884304150,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4025,6 +4025,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6280,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "107803907+DonDuala@users.noreply.github.com",
+            "name": "DonDuala",
+            "username": "DonDuala"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f964db648cdffccc288d3eddda1986bfa8a9e67c",
+          "message": "Add basic global functions to SDK (#97)\n\n* Add basic global functions to SDK\r\n\r\n* remove debug ui files\r\n\r\n* fix comments\r\n\r\n* fix ix naming\r\n\r\n* await global create\r\n\r\n* add static to global create\r\n\r\n* Use global header size\r\n\r\n* add comments and debug\r\n\r\n* test without deserialize\r\n\r\n* global tests\r\n\r\n* fmt\r\n\r\n* airdrop\r\n\r\n* update idl\r\n\r\n* more logging\r\n\r\n* update local validator test\r\n\r\n* fix create global\r\n\r\n* use deposit\r\n\r\n* fmt\r\n\r\n* rename:\r\n\r\n* fix bignum\r\n\r\n* add sleeps\r\n\r\n* skip preflight\r\n\r\n* fmt\r\n\r\n* skip preflight\r\n\r\n---------\r\n\r\nCo-authored-by: DonDuala <john@dual.finance>\r\nCo-authored-by: Britt Cyr <cyrbritt@gmail.com>",
+          "timestamp": "2024-10-02T11:26:53-04:00",
+          "tree_id": "9182959b5b613516bbf8bb78d35e8973e5dfaca6",
+          "url": "https://github.com/CKS-Systems/manifest/commit/f964db648cdffccc288d3eddda1986bfa8a9e67c"
+        },
+        "date": 1727884302999,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3550,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5665,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6284,
             "unit": "CU",
             "range": "",
             "extra": ""
