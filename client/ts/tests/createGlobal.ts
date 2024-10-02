@@ -17,6 +17,7 @@ async function testCreateGlobal(): Promise<void> {
   // Get SOL for rent.
   await airdropSol(connection, payerKeypair.publicKey);
 
+  await new Promise((f) => setTimeout(f, 1_000));
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,
