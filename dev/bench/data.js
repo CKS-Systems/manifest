@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727884304150,
+  "lastUpdate": 1727884329906,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4091,6 +4091,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6284,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac8f03d31312d345fd7935d884891e0c349bdda6",
+          "message": "Add basic prometheus monitoring to fill feed (#137)",
+          "timestamp": "2024-10-02T11:27:20-04:00",
+          "tree_id": "0dd9c7818b0c9341d73f5ff6115a46453b83e9e6",
+          "url": "https://github.com/CKS-Systems/manifest/commit/ac8f03d31312d345fd7935d884891e0c349bdda6"
+        },
+        "date": 1727884329088,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3531,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5662,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6286,
             "unit": "CU",
             "range": "",
             "extra": ""
