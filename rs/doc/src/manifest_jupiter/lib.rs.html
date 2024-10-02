@@ -939,7 +939,7 @@
         } <span class="kw">else </span>{
             <span class="kw">let </span>in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
             market
-                .impact_base_atoms(<span class="bool-val">true</span>, <span class="bool-val">true</span>, in_atoms, global_trade_accounts)<span class="question-mark">?
+                .impact_base_atoms(<span class="bool-val">true</span>, in_atoms, global_trade_accounts)<span class="question-mark">?
                 </span>.as_u64()
         };
         <span class="prelude-val">Ok</span>(Quote {

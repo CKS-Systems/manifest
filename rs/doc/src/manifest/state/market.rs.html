@@ -1238,6 +1238,20 @@
 <a href="#1236" id="1236">1236</a>
 <a href="#1237" id="1237">1237</a>
 <a href="#1238" id="1238">1238</a>
+<a href="#1239" id="1239">1239</a>
+<a href="#1240" id="1240">1240</a>
+<a href="#1241" id="1241">1241</a>
+<a href="#1242" id="1242">1242</a>
+<a href="#1243" id="1243">1243</a>
+<a href="#1244" id="1244">1244</a>
+<a href="#1245" id="1245">1245</a>
+<a href="#1246" id="1246">1246</a>
+<a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1567,17 +1581,16 @@
         <span class="kw">return </span><span class="prelude-val">Ok</span>(total_quote_atoms_matched);
     }
 
-    <span class="comment">// TODO: adapt to new rounding
+    <span class="doccomment">/// How many base atoms you get when you trade in limit_quote_atoms.
     </span><span class="kw">pub fn </span>impact_base_atoms(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         is_bid: bool,
-        round_up: bool,
         limit_quote_atoms: QuoteAtoms,
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
 
-        <span class="kw">let </span>book = <span class="kw">if </span>is_bid {
+        <span class="kw">let </span>book: RedBlackTreeReadOnly&lt;<span class="lifetime">'_</span>, RestingOrder&gt; = <span class="kw">if </span>is_bid {
             <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
             <span class="self">self</span>.get_bids()
@@ -1585,23 +1598,34 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>total_matched_base_atoms: BaseAtoms = BaseAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
+
         <span class="kw">for </span>(<span class="kw">_</span>, other_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
             <span class="kw">if </span>other_order.is_expired(now_slot) {
                 <span class="kw">continue</span>;
             }
 
             <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
-            <span class="comment">// caller signal can ensure quote is a lower or upper bound by rounding of base amount
-            </span><span class="kw">let </span>price_limited_base_atoms =
-                matched_price.checked_base_for_quote(remaining_quote_atoms, round_up)<span class="question-mark">?</span>;
-            <span class="kw">let </span>did_fully_match_resting_order =
-                price_limited_base_atoms &gt;= other_order.get_num_base_atoms();
-            <span class="kw">let </span>matched_base_atoms = <span class="kw">if </span>did_fully_match_resting_order {
-                other_order.get_num_base_atoms()
-            } <span class="kw">else </span>{
-                price_limited_base_atoms
-            };
-            <span class="kw">let </span>matched_quote_atoms = matched_price.checked_quote_for_base(
+            <span class="comment">// base_atoms_limit is the number of base atoms that you get if you
+            // were to trade all of the remaining quote atoms at the current
+            // price. Rounding is done in the taker favor because at the limit,
+            // it is a full match. So if you are checking against asks with 100
+            // quote remaining against price 1.001, then the answer should be
+            // 100, because the rounding is in favor of the taker. It takes 100
+            // base atoms to exhaust 100 quote atoms at that price.
+            </span><span class="kw">let </span>base_atoms_limit: BaseAtoms =
+                matched_price.checked_base_for_quote(remaining_quote_atoms, !is_bid)<span class="question-mark">?</span>;
+            <span class="comment">// Either fill the entire resting order, or only the
+            // base_atoms_limit, in which case, this is the last iteration.
+            </span><span class="kw">let </span>matched_base_atoms: BaseAtoms =
+                other_order.get_num_base_atoms().min(base_atoms_limit);
+            <span class="kw">let </span>did_fully_match_resting_order: bool =
+                base_atoms_limit &gt;= other_order.get_num_base_atoms();
+
+            <span class="comment">// Number of quote atoms matched exactly. Always round in taker favor
+            // here because we already know that taker did not finish on the last
+            // order, so fully exhausted it and thus are rounding in taker
+            // favor.
+            </span><span class="kw">let </span>matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
                 matched_base_atoms,
                 is_bid != did_fully_match_resting_order,
             )<span class="question-mark">?</span>;
@@ -1634,7 +1658,7 @@
 
             total_matched_base_atoms = total_matched_base_atoms.checked_add(matched_base_atoms)<span class="question-mark">?</span>;
 
-            <span class="kw">if </span>matched_base_atoms == price_limited_base_atoms {
+            <span class="kw">if </span>matched_base_atoms == base_atoms_limit {
                 <span class="kw">break</span>;
             }
 
@@ -1644,7 +1668,11 @@
             }
         }
 
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(total_matched_base_atoms);
+        <span class="comment">// Note that when there are not enough orders on the market to use up or
+        // to receive the desired number of quote atoms, this returns just the
+        // full amount on the bookside without differentiating that return.
+
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(total_matched_base_atoms);
     }
 
     <span class="kw">pub fn </span>get_order_by_index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RestingOrder {

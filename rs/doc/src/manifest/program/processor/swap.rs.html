@@ -398,6 +398,26 @@
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -428,7 +448,10 @@
     in_atoms: u64,
     out_atoms: u64,
     is_base_in: bool,
-    is_exact_in: bool,
+    <span class="comment">// Exact in is a technical term that doesnt actually mean exact. It is
+    // desired. If not that much can be fulfilled, less will be allowed assuming
+    // the min_out/max_in is satisfied.
+    </span>is_exact_in: bool,
 }
 
 <span class="kw">impl </span>SwapParams {
@@ -488,7 +511,12 @@
     // net token transfers will be handled later
     </span>dynamic_account.deposit(payer.key, in_atoms, is_base_in)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>base_atoms: BaseAtoms = <span class="kw">if </span>is_exact_in {
+    <span class="comment">// 4 cases:
+    // 1. Exact in base. Simplest case, just use the base atoms given.
+    // 2. Exact in quote. Search the asks for the number of base atoms in bids to match.
+    // 3. Exact out quote. Search the bids for the number of base atoms needed to match to get the right quote out.
+    // 4. Exact out base. Use the number of out atoms as the number of atoms to place_order against.
+    </span><span class="kw">let </span>base_atoms: BaseAtoms = <span class="kw">if </span>is_exact_in {
         <span class="kw">if </span>is_base_in {
             <span class="comment">// input=desired max(base) output=checked min(quote)
             </span>BaseAtoms::new(in_atoms)
@@ -497,7 +525,6 @@
             // round down base amount to not cross quote limit
             </span>dynamic_account.impact_base_atoms(
                 <span class="bool-val">true</span>,
-                <span class="bool-val">false</span>,
                 QuoteAtoms::new(in_atoms),
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts,
             )<span class="question-mark">?
@@ -508,7 +535,6 @@
             // round up base amount to ensure not staying below quote limit
             </span>dynamic_account.impact_base_atoms(
                 <span class="bool-val">false</span>,
-                <span class="bool-val">true</span>,
                 QuoteAtoms::new(out_atoms),
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts,
             )<span class="question-mark">?
@@ -518,7 +544,21 @@
         }
     };
 
-    <span class="kw">let </span>price: QuoteAtomsPerBaseAtom = <span class="kw">if </span>is_base_in {
+    <span class="comment">// Note that in the case of fully exhausting the book, exact in/out will not
+    // be respected. It should be treated as a desired in/out. This pushes the
+    // burden of checking the results onto the caller program.
+
+    // Example case is exact quote in. User wants exact quote in of 1_000_000
+    // and min base out of 1_000. Suppose they fully exhaust the book and get
+    // out 2_000 but that is not enough to fully use the entire 1_000_000. In
+    // this case the ix will succeed.
+
+    // Another interesting case is exact quote out. Suppose the user is doing
+    // exact quote out 1_000_000 with max_base_in of 1_000. If it fully exhausts
+    // the book without using the entire max_base_in and that is still not
+    // enough for the exact quote amount, the transaction will still succeed.
+
+    </span><span class="kw">let </span>price: QuoteAtomsPerBaseAtom = <span class="kw">if </span>is_base_in {
         QuoteAtomsPerBaseAtom::MIN
     } <span class="kw">else </span>{
         QuoteAtomsPerBaseAtom::MAX
@@ -546,7 +586,7 @@
     })<span class="question-mark">?</span>;
 
     <span class="kw">if </span>is_exact_in {
-        <span class="kw">let </span>out_atoms_traded = <span class="kw">if </span>is_base_in {
+        <span class="kw">let </span>out_atoms_traded: u64 = <span class="kw">if </span>is_base_in {
             quote_atoms_traded.as_u64()
         } <span class="kw">else </span>{
             base_atoms_traded.as_u64()
@@ -574,8 +614,8 @@
     }
 
     <span class="kw">let </span>(end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
-    <span class="kw">let </span>extra_base_atoms = end_base_atoms.checked_sub(initial_base_atoms)<span class="question-mark">?</span>;
-    <span class="kw">let </span>extra_quote_atoms = end_quote_atoms.checked_sub(initial_quote_atoms)<span class="question-mark">?</span>;
+    <span class="kw">let </span>extra_base_atoms: BaseAtoms = end_base_atoms.checked_sub(initial_base_atoms)<span class="question-mark">?</span>;
+    <span class="kw">let </span>extra_quote_atoms: QuoteAtoms = end_quote_atoms.checked_sub(initial_quote_atoms)<span class="question-mark">?</span>;
 
     <span class="comment">// Transfer tokens
     </span><span class="kw">if </span>is_base_in {
