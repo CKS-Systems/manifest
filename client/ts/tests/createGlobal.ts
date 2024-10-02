@@ -15,9 +15,11 @@ async function testCreateGlobal(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
   const payerKeypair: Keypair = Keypair.generate();
   // Get SOL for rent.
+  console.log('Airdropping sol');
   await airdropSol(connection, payerKeypair.publicKey);
 
   await new Promise((f) => setTimeout(f, 1_000));
+  console.log('Creating mint');
   const tokenMint: PublicKey = await createMint(
     connection,
     payerKeypair,
@@ -29,6 +31,7 @@ async function testCreateGlobal(): Promise<void> {
     `Created tokenMint ${tokenMint}, global will be at ${getGlobalAddress(tokenMint)}`,
   );
   await new Promise((f) => setTimeout(f, 1_000));
+  console.log('Creating global');
   await createGlobal(connection, payerKeypair, tokenMint);
   await new Promise((f) => setTimeout(f, 1_000));
 
