@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727867838635,
+  "lastUpdate": 1727867839581,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -3959,6 +3959,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6273,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23b14ab2843410eed86e477e3b7c25320ee962d6",
+          "message": "Volume tracking in wrapper (#96)\n\n* volume tracking in wrapper\r\n\r\n* lint\r\n\r\n* fmt\r\n\r\n* update open order beet\r\n\r\n* rename\r\n\r\n* log\r\n\r\n* log\r\n\r\n* lint\r\n\r\n* cast to number\r\n\r\n* fix test\r\n\r\n* fix idl\r\n\r\n* fix price bytes\r\n\r\n* update volume test\r\n\r\n* update volume test\r\n\r\n* update volume test\r\n\r\n* ui wrapper fix\r\n\r\n* remove effective price\r\n\r\n* remove effective price",
+          "timestamp": "2024-10-02T06:52:28-04:00",
+          "tree_id": "c6760c79459fe6602051de6357a841b1b9d42384",
+          "url": "https://github.com/CKS-Systems/manifest/commit/23b14ab2843410eed86e477e3b7c25320ee962d6"
+        },
+        "date": 1727867838422,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3557,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5664,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6280,
             "unit": "CU",
             "range": "",
             "extra": ""
