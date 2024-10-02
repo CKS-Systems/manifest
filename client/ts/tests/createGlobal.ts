@@ -58,6 +58,7 @@ export async function createGlobal(
     tx,
     [payerKeypair],
     {
+      skipPreflight: true,
       commitment: 'finalized',
     },
   );
