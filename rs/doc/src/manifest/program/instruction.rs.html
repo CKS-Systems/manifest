@@ -280,16 +280,16 @@
     #[account(<span class="number">1</span>, writable, name = <span class="string">"global"</span>, desc = <span class="string">"Global account"</span>)]
     #[account(<span class="number">2</span>, name = <span class="string">"mint"</span>, desc = <span class="string">"Mint for this global account"</span>)]
     #[account(<span class="number">3</span>, writable, name = <span class="string">"global_vault"</span>, desc = <span class="string">"Global vault"</span>)]
-    #[account(<span class="number">4</span>, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
+    #[account(<span class="number">4</span>, writable, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
     #[account(<span class="number">5</span>, name = <span class="string">"token_program"</span>, desc = <span class="string">"Token program(22)"</span>)]
     </span>GlobalDeposit = <span class="number">9</span>,
 
-    <span class="doccomment">/// Deposit into global account for a given token.
+    <span class="doccomment">/// Withdraw from global account for a given token.
     </span><span class="attr">#[account(<span class="number">0</span>, writable, signer, name = <span class="string">"payer"</span>, desc = <span class="string">"Payer"</span>)]
     #[account(<span class="number">1</span>, writable, name = <span class="string">"global"</span>, desc = <span class="string">"Global account"</span>)]
     #[account(<span class="number">2</span>, name = <span class="string">"mint"</span>, desc = <span class="string">"Mint for this global account"</span>)]
     #[account(<span class="number">3</span>, writable, name = <span class="string">"global_vault"</span>, desc = <span class="string">"Global vault"</span>)]
-    #[account(<span class="number">4</span>, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
+    #[account(<span class="number">4</span>, writable, name = <span class="string">"trader_token"</span>, desc = <span class="string">"Trader token account"</span>)]
     #[account(<span class="number">5</span>, name = <span class="string">"token_program"</span>, desc = <span class="string">"Token program(22)"</span>)]
     </span>GlobalWithdraw = <span class="number">10</span>,
 
