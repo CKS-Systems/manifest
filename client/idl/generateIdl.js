@@ -201,7 +201,7 @@ function modifyIdlCore(programName) {
           });
           break;
         }
-        case 'GlobalEvict':
+        case 'GlobalEvict': {
           instruction.args.push({
             name: 'params',
             type: {
@@ -209,6 +209,7 @@ function modifyIdlCore(programName) {
             },
           });
           break;
+        }
         case 'GlobalClean':
           instruction.args.push({
             name: 'params',
