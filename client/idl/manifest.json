@@ -647,7 +647,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -712,7 +712,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"

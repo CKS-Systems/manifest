@@ -44,7 +44,7 @@ export const GlobalWithdrawStruct = new beet.BeetArgsStruct<
  * @property [_writable_] global
  * @property [] mint
  * @property [_writable_] globalVault
- * @property [] traderToken
+ * @property [_writable_] traderToken
  * @category Instructions
  * @category GlobalWithdraw
  * @category generated
@@ -102,7 +102,7 @@ export function createGlobalWithdrawInstruction(
     },
     {
       pubkey: accounts.traderToken,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
