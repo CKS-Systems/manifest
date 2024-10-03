@@ -73,7 +73,8 @@ pub struct FillLog {
     pub maker_sequence_number: u64,
     pub taker_sequence_number: u64,
     pub taker_is_buy: PodBool,
-    pub _padding: [u8; 15],
+    pub is_maker_global: PodBool,
+    pub _padding: [u8; 14],
 }
 
 #[repr(C)]

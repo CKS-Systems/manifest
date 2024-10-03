@@ -28,6 +28,9 @@ pub struct SwapParams {
     in_atoms: u64,
     out_atoms: u64,
     is_base_in: bool,
+    // Exact in is a technical term that doesnt actually mean exact. It is
+    // desired. If not that much can be fulfilled, less will be allowed assuming
+    // the min_out/max_in is satisfied.
     is_exact_in: bool,
 }
 
@@ -88,6 +91,11 @@ pub(crate) fn process_swap(
     // net token transfers will be handled later
     dynamic_account.deposit(payer.key, in_atoms, is_base_in)?;
 
+    // 4 cases:
+    // 1. Exact in base. Simplest case, just use the base atoms given.
+    // 2. Exact in quote. Search the asks for the number of base atoms in bids to match.
+    // 3. Exact out quote. Search the bids for the number of base atoms needed to match to get the right quote out.
+    // 4. Exact out base. Use the number of out atoms as the number of atoms to place_order against.
     let base_atoms: BaseAtoms = if is_exact_in {
         if is_base_in {
             // input=desired max(base) output=checked min(quote)
@@ -97,7 +105,6 @@ pub(crate) fn process_swap(
             // round down base amount to not cross quote limit
             dynamic_account.impact_base_atoms(
                 true,
-                false,
                 QuoteAtoms::new(in_atoms),
                 &global_trade_accounts_opts,
             )?
@@ -108,7 +115,6 @@ pub(crate) fn process_swap(
             // round up base amount to ensure not staying below quote limit
             dynamic_account.impact_base_atoms(
                 false,
-                true,
                 QuoteAtoms::new(out_atoms),
                 &global_trade_accounts_opts,
             )?
@@ -117,6 +123,20 @@ pub(crate) fn process_swap(
             BaseAtoms::new(out_atoms)
         }
     };
+
+    // Note that in the case of fully exhausting the book, exact in/out will not
+    // be respected. It should be treated as a desired in/out. This pushes the
+    // burden of checking the results onto the caller program.
+
+    // Example case is exact quote in. User wants exact quote in of 1_000_000
+    // and min base out of 1_000. Suppose they fully exhaust the book and get
+    // out 2_000 but that is not enough to fully use the entire 1_000_000. In
+    // this case the ix will succeed.
+
+    // Another interesting case is exact quote out. Suppose the user is doing
+    // exact quote out 1_000_000 with max_base_in of 1_000. If it fully exhausts
+    // the book without using the entire max_base_in and that is still not
+    // enough for the exact quote amount, the transaction will still succeed.
 
     let price: QuoteAtomsPerBaseAtom = if is_base_in {
         QuoteAtomsPerBaseAtom::MIN
@@ -146,7 +166,7 @@ pub(crate) fn process_swap(
     })?;
 
     if is_exact_in {
-        let out_atoms_traded = if is_base_in {
+        let out_atoms_traded: u64 = if is_base_in {
             quote_atoms_traded.as_u64()
         } else {
             base_atoms_traded.as_u64()
@@ -174,8 +194,8 @@ pub(crate) fn process_swap(
     }
 
     let (end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
-    let extra_base_atoms = end_base_atoms.checked_sub(initial_base_atoms)?;
-    let extra_quote_atoms = end_quote_atoms.checked_sub(initial_quote_atoms)?;
+    let extra_base_atoms: BaseAtoms = end_base_atoms.checked_sub(initial_base_atoms)?;
+    let extra_quote_atoms: QuoteAtoms = end_quote_atoms.checked_sub(initial_quote_atoms)?;
 
     // Transfer tokens
     if is_base_in {
