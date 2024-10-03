@@ -101,13 +101,8 @@ function modifyIdlCore(programName) {
           return field;
         });
       }
-<<<<<<< HEAD
-      if (idlAccount.name == "QuoteAtomsPerBaseAtom") {
-        idlAccount.type.fields[0].type = "u128";
-=======
       if (idlAccount.name == 'QuoteAtomsPerBaseAtom') {
         idlAccount.type.fields[0].type = 'u128';
->>>>>>> eb8754ccd43eb05dc9ec6676b4c71055cc1be6c8
       }
     }
 
