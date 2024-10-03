@@ -2,6 +2,13 @@
     "name": "@cks-systems/manifest-sdk",
     "version": "0.1.2",
     "description": "TypeScript SDK for Manifest",
+    "keywords": [
+        "manifest",
+        "solana",
+        "defi",
+        "dex",
+        "clob"
+    ],
     "author": "CKS Systems",
     "repository": "https://github.com/CKS-Systems/manifest",
     "main": "./dist/cjs/index.js",
