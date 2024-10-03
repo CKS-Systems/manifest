@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727986849538,
+  "lastUpdate": 1727990632236,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4683,6 +4683,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6235,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c78104547d3bc1e25b1cf15162cec0e4bdf89e8b",
+          "message": "Change equality key for resting orders (#127)\n\n* change equality key for resting orders\r\n\r\n* test fix\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-03T21:58:47+01:00",
+          "tree_id": "16303cef5c981bc4089ebefe774a1ef9f73289d5",
+          "url": "https://github.com/CKS-Systems/manifest/commit/c78104547d3bc1e25b1cf15162cec0e4bdf89e8b"
+        },
+        "date": 1727990630498,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3503,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5588,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6245,
             "unit": "CU",
             "range": "",
             "extra": ""
