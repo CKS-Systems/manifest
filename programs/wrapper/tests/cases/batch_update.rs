@@ -42,7 +42,6 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         None,
     );
@@ -69,7 +68,6 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         None,
     );
@@ -109,7 +107,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -119,7 +116,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -129,7 +125,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -139,7 +134,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
         ],
         None,
@@ -254,7 +248,6 @@ async fn sync_remove_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         None,
     );
@@ -280,7 +273,6 @@ async fn sync_remove_test() -> anyhow::Result<()> {
             true,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         None,
     );
@@ -363,7 +355,6 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         None,
     );
@@ -445,7 +436,6 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
         Some(0),
     );

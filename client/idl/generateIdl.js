@@ -81,7 +81,9 @@ function modifyIdlCore(programName) {
           discriminator: [
             ...genLogDiscriminator(idl.metadata.address, idlAccount.name),
           ],
-          fields: idlAccount.type.fields,
+          fields: [
+              ...(idlAccount.type.fields).map((field) => { return { ...field, index: false };}),
+          ]
         };
         idl.events.push(event);
       }
@@ -224,6 +226,10 @@ function modifyIdlCore(programName) {
         }
       }
     }
+
+    // Return type has a tuple which anchor does not support
+    idl.types = idl.types.filter((idlType) => idlType.name != "BatchUpdateReturn");
+
   } else if (programName == 'ui_wrapper') {
     idl.types.push({
       name: 'OrderType',
@@ -253,7 +259,6 @@ function modifyIdlCore(programName) {
         });
       }
     }
-
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {

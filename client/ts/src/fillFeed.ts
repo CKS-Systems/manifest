@@ -5,6 +5,17 @@ import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
 import { genAccDiscriminator } from './utils/discriminator';
+import * as promClient from 'prom-client';
+import express from 'express';
+import promBundle from 'express-prom-bundle';
+
+// For live monitoring of the fill feed. For a more complete look at fill
+// history stats, need to index all trades.
+const fills = new promClient.Counter({
+  name: 'fills',
+  help: 'Number of fills',
+  labelNames: ['market', 'isGlobal', 'takerIsBuy'] as const,
+});
 
 /**
  * FillFeed example implementation.
@@ -105,10 +116,15 @@ export class FillFeed {
       const deserializedFillLog: FillLog = FillLog.deserialize(
         buffer.subarray(8),
       )[0];
-      console.log(
-        'Got a fill',
-        JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
+      const resultString: string = JSON.stringify(
+        toFillLogResult(deserializedFillLog, signature.slot),
       );
+      console.log('Got a fill', resultString);
+      fills.inc({
+        market: deserializedFillLog.market.toString(),
+        isGlobal: deserializedFillLog.isMakerGlobal.toString(),
+        takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
+      });
       this.wss.clients.forEach((client) => {
         client.send(
           JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
@@ -127,6 +143,27 @@ export async function runFillFeed() {
     process.env.RPC_URL || 'http://127.0.0.1:8899',
     'confirmed',
   );
+
+  promClient.collectDefaultMetrics({
+    labels: {
+      app: 'fillFeed',
+    },
+  });
+
+  const register = new promClient.Registry();
+  register.setDefaultLabels({
+    app: 'fillFeed',
+  });
+  const metricsApp = express();
+  metricsApp.listen(8080);
+
+  const promMetrics = promBundle({
+    includeMethod: true,
+    metricsApp,
+    autoregister: false,
+  });
+  metricsApp.use(promMetrics);
+
   const fillFeed: FillFeed = new FillFeed(connection);
   await fillFeed.parseLogs();
 }
@@ -151,6 +188,8 @@ export type FillLogResult = {
   price: number;
   /** Boolean to indicate which side the trade was. */
   takerIsBuy: boolean;
+  /** Boolean to indicate whether the maker side is global. */
+  isMakerGlobal: boolean;
   /** Sequential number for every order placed / matched wraps around at u64::MAX */
   makerSequenceNumber: string;
   /** Sequential number for every order placed / matched wraps around at u64::MAX */
@@ -167,6 +206,7 @@ function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
     quoteAtoms: fillLog.quoteAtoms.inner.toString(),
     price: convertU128(fillLog.price.inner),
     takerIsBuy: fillLog.takerIsBuy,
+    isMakerGlobal: fillLog.isMakerGlobal,
     makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
     takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
     slot,

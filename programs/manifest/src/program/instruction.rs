@@ -54,8 +54,8 @@ pub enum ManifestInstruction {
     #[account(7, name = "base_mint", desc = "Base mint, only inlcuded if base is Token22, otherwise not required")]
     #[account(8, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
     #[account(9, name = "quote_mint", desc = "Quote mint, only inlcuded if base is Token22, otherwise not required")]
-    #[account(10, writable, optional, name = "global", desc = "Global account")]
-    #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
+    // #[account(10, writable, optional, name = "global", desc = "Global account")]
+    // #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
     Swap = 4,
 
     /// Expand a market.
@@ -104,16 +104,16 @@ pub enum ManifestInstruction {
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalDeposit = 9,
 
-    /// Deposit into global account for a given token.
+    /// Withdraw from global account for a given token.
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalWithdraw = 10,
 

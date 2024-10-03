@@ -1,5 +1,4 @@
 export * from './BatchUpdateParams';
-export * from './BatchUpdateReturn';
 export * from './CancelOrderParams';
 export * from './DepositParams';
 export * from './GlobalCleanParams';
