@@ -66,6 +66,9 @@ pub(crate) fn process_global_deposit(
                 payer.as_ref().clone(),
             ],
         )?;
+        // TODO: Check the actual amount received and use that as the
+        // amount_atoms, rather than what the user said because of transfer
+        // fees.
     } else {
         invoke(
             &spl_token::instruction::transfer(

@@ -15,7 +15,6 @@ export type WrapperPlaceOrderParams = {
   isBid: boolean;
   lastValidSlot: number;
   orderType: OrderType;
-  minOutAtoms: beet.bignum;
 };
 
 /**
@@ -32,7 +31,6 @@ export const wrapperPlaceOrderParamsBeet =
       ['isBid', beet.bool],
       ['lastValidSlot', beet.u32],
       ['orderType', orderTypeBeet],
-      ['minOutAtoms', beet.u64],
     ],
     'WrapperPlaceOrderParams',
   );

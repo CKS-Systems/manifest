@@ -993,6 +993,76 @@ async fn swap_global() -> anyhow::Result<()> {
     Ok(())
 }
 
+// This test case illustrates that the exact in is really just a desired in.
+#[tokio::test]
+async fn swap_full_match_sell_exact_in_exhaust_book() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
+    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+    test_fixture
+        .deposit_for_keypair(Token::USDC, 3_000 * USDC_UNIT_SIZE, &second_keypair)
+        .await?;
+
+    // 2 bids for 1@1 and 2@.5
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_instruction(
+            &test_fixture.market_fixture.key,
+            &second_keypair.pubkey(),
+            None,
+            vec![],
+            vec![
+                PlaceOrderParams::new(
+                    1 * SOL_UNIT_SIZE,
+                    1,
+                    0,
+                    true,
+                    OrderType::Limit,
+                    NO_EXPIRATION_LAST_VALID_SLOT,
+                ),
+                PlaceOrderParams::new(
+                    2 * SOL_UNIT_SIZE,
+                    5,
+                    -1,
+                    true,
+                    OrderType::Limit,
+                    NO_EXPIRATION_LAST_VALID_SLOT,
+                ),
+            ],
+            None,
+            None,
+            Some(*test_fixture.market_fixture.market.get_quote_mint()),
+            None,
+        )],
+        Some(&second_keypair.pubkey()),
+        &[&second_keypair],
+    )
+    .await?;
+    // Swapper will exact_in of 4, min quote out of 2. Result should be that it
+    // succeeds. It will not be able to fully fill all the exact in of 4 and
+    // there will be 1 leftover and it gets out 1*1 + 2*.5 = 2 quote.
+    test_fixture
+        .sol_mint_fixture
+        .mint_to(&test_fixture.payer_sol_fixture.key, 4 * SOL_UNIT_SIZE)
+        .await;
+
+    test_fixture
+        .swap(4 * SOL_UNIT_SIZE, 2_000 * USDC_UNIT_SIZE, true, true)
+        .await?;
+
+    assert_eq!(
+        test_fixture.payer_sol_fixture.balance_atoms().await,
+        1 * SOL_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture.payer_usdc_fixture.balance_atoms().await,
+        2_000 * USDC_UNIT_SIZE
+    );
+
+    Ok(())
+}
+
 // Global is on the USDC, taker is sending in SOL. Global order is not backed,
 // so the order does not get the global price.
 #[tokio::test]

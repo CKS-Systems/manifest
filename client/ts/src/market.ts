@@ -27,8 +27,7 @@ export type RestingOrderInternal = {
   sequenceNumber: bignum;
   // Deserializes to UInt8Array, but we then convert it to number.
   price: bignum;
-  effectivePrice: bignum;
-  padding: bignum[]; // 16 bytes
+  padding: bignum[]; // 22 bytes
 };
 
 /**

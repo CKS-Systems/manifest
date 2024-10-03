@@ -105,7 +105,6 @@ export async function depositPlaceOrder(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -122,7 +121,6 @@ export async function depositPlaceOrder(
       isBid,
       lastValidSlot: lastValidSlot,
       orderType: orderType,
-      minOutTokens,
       clientOrderId,
     },
   );

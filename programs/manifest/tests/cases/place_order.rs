@@ -725,3 +725,53 @@ async fn place_order_already_expired_test() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// Transaction should succeed but no order rests on the book.
+#[tokio::test]
+async fn place_order_zero_price() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+
+    test_fixture
+        .place_order(
+            Side::Ask,
+            1 * SOL_UNIT_SIZE,
+            0,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )
+        .await?;
+    assert_eq!(
+        test_fixture.market_fixture.get_resting_orders().await.len(),
+        0
+    );
+
+    Ok(())
+}
+
+// Transaction should succeed but no order rests on the book.
+#[tokio::test]
+async fn place_order_zero_size() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+
+    test_fixture
+        .place_order(
+            Side::Ask,
+            0,
+            1,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )
+        .await?;
+    assert_eq!(
+        test_fixture.market_fixture.get_resting_orders().await.len(),
+        0
+    );
+
+    Ok(())
+}
