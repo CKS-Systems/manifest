@@ -46,8 +46,6 @@ export const SwapStruct = new beet.BeetArgsStruct<
  * @property [] baseMint
  * @property [] tokenProgramQuote
  * @property [] quoteMint
- * @property [_writable_] global
- * @property [_writable_] globalVault
  * @category Instructions
  * @category Swap
  * @category generated
@@ -63,8 +61,6 @@ export type SwapInstructionAccounts = {
   baseMint: web3.PublicKey;
   tokenProgramQuote: web3.PublicKey;
   quoteMint: web3.PublicKey;
-  global: web3.PublicKey;
-  globalVault: web3.PublicKey;
 };
 
 export const swapInstructionDiscriminator = 4;
@@ -137,16 +133,6 @@ export function createSwapInstruction(
     {
       pubkey: accounts.quoteMint,
       isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.global,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.globalVault,
-      isWritable: true,
       isSigner: false,
     },
   ];
