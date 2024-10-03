@@ -7,18 +7,8 @@ Typescript library for interacting with Manifest
 Install via npm:
 
 ```sh
-# add via npm (once published)
+# add via npm
 yarn add @cks-systems/manifest-sdk
-```
-
-alternatively via git in your `package.json`:
-
-```json
-{
-  "dependencies": {
-    "@cks-systems/manifest-sdk": "git+ssh://git@github.com/CKS-Systems/manifest.git"
-  }
-}
 ```
 
 ## Usage
