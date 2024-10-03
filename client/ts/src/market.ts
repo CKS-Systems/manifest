@@ -284,7 +284,7 @@ export class Market {
    * @returns RestingOrder[]
    */
   public bidsL2(): RestingOrder[] {
-    return this.data.bids.reverse();
+    return this.data.bids.slice().reverse();
   }
 
   /**
@@ -293,7 +293,7 @@ export class Market {
    * @returns RestingOrder[]
    */
   public asksL2(): RestingOrder[] {
-    return this.data.asks.reverse();
+    return this.data.asks.slice().reverse();
   }
 
   /**
