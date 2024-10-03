@@ -67,12 +67,8 @@ export class PlatformFeeLog implements PlatformFeeLogArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
-    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<PlatformFeeLog> {
-    const accountInfo = await connection.getAccountInfo(
-      address,
-      commitmentOrConfig,
-    );
+    const accountInfo = await connection.getAccountInfo(address);
     if (accountInfo == null) {
       throw new Error(`Unable to find PlatformFeeLog account at ${address}`);
     }
