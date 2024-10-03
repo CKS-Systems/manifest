@@ -1,6 +1,6 @@
 {
     "name": "@cks-systems/manifest-sdk",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "description": "TypeScript SDK for Manifest",
     "author": "CKS Systems",
     "repository": "https://github.com/CKS-Systems/manifest",
@@ -13,6 +13,8 @@
     },
     "license": "MIT",
     "scripts": {
+        "prepublishOnly": "cp README.md README.back.md && cp ./client/ts/README.md README.md",
+        "postpublish": "mv README.back.md README.md",
         "build": "rimraf dist && yarn build:browser && yarn build:node && yarn build:types",
         "build:node": "tsc -p tsconfig.cjs.json --noEmit false",
         "build:browser": "tsc -p tsconfig.esm.json --noEmit false",
