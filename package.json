@@ -1,6 +1,9 @@
 {
     "name": "@cks-systems/manifest-sdk",
     "version": "0.1.3",
+    "publishConfig": {
+        "access": "public"
+    },
     "description": "TypeScript SDK for Manifest",
     "keywords": [
         "manifest",
