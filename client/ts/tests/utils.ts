@@ -3,6 +3,12 @@ import { assert } from 'chai';
 import { getClusterFromConnection } from '../src/utils/solana';
 import { toMantissaAndExponent } from '../src';
 
+export const areFloatsEqual = (
+  num1: number,
+  num2: number,
+  epsilon: number = 1e-10,
+): boolean => Math.abs(num1 - num2) < epsilon;
+
 async function testUtils(): Promise<void> {
   const localnetConnection: Connection = new Connection(
     'http://127.0.0.1:8899',

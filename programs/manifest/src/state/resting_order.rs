@@ -169,7 +169,7 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.price) == (other.price)
+        (self.sequence_number) == (other.sequence_number)
     }
 }
 
@@ -222,7 +222,7 @@ mod test {
             0,
             BaseAtoms::new(1_000_000_000),
             QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
-            0,
+            1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             true,
             OrderType::Limit,
@@ -245,7 +245,7 @@ mod test {
             0,
             BaseAtoms::new(1_000_000_000),
             QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
-            0,
+            1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
             OrderType::Limit,

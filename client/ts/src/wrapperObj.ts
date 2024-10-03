@@ -26,6 +26,8 @@ export interface MarketInfoParsed {
   baseBalanceAtoms: bignum;
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
+  /** Quote volume in atoms. */
+  quoteVolumeAtoms: bignum;
   /** Open orders. */
   orders: OpenOrder[];
   /** Last update slot number. */
@@ -59,7 +61,7 @@ export interface OpenOrder {
   /** Number of base atoms in the order. */
   numBaseAtoms: bignum;
   /** Hint for the location of the order in the manifest dynamic data. */
-  dataIndex: number;
+  marketDataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
   lastValidSlot: number;
   /** Boolean for whether this order is on the bid side. */
@@ -73,7 +75,7 @@ export interface OpenOrderInternal {
   clientOrderId: bignum;
   orderSequenceNumber: bignum;
   numBaseAtoms: bignum;
-  dataIndex: number;
+  marketDataIndex: number;
   lastValidSlot: number;
   isBid: boolean;
   orderType: number;
@@ -292,6 +294,7 @@ export class Wrapper {
           market: marketInfoRaw.market,
           baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
           quoteBalanceAtoms: marketInfoRaw.quoteBalanceAtoms,
+          quoteVolumeAtoms: marketInfoRaw.quoteVolumeAtoms,
           orders: parsedOpenOrdersWithPrice,
           lastUpdatedSlot: marketInfoRaw.lastUpdatedSlot,
         };

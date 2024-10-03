@@ -341,10 +341,6 @@
             "type": {
               "defined": "OrderType"
             }
-          },
-          {
-            "name": "minOutAtoms",
-            "type": "u64"
           }
         ]
       }
