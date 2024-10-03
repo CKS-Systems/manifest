@@ -1746,7 +1746,10 @@
         },
         {
           "name": "isMakerGlobal",
-          "type": "bool"
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
         },
         {
           "name": "padding",
