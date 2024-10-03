@@ -444,7 +444,7 @@
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>RestingOrder {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        (<span class="self">self</span>.price) == (other.price)
+        (<span class="self">self</span>.sequence_number) == (other.sequence_number)
     }
 }
 
@@ -497,7 +497,7 @@
             <span class="number">0</span>,
             BaseAtoms::new(<span class="number">1_000_000_000</span>),
             QuoteAtomsPerBaseAtom::try_from(<span class="number">1.01</span>).unwrap(),
-            <span class="number">0</span>,
+            <span class="number">1</span>,
             NO_EXPIRATION_LAST_VALID_SLOT,
             <span class="bool-val">true</span>,
             OrderType::Limit,
@@ -520,7 +520,7 @@
             <span class="number">0</span>,
             BaseAtoms::new(<span class="number">1_000_000_000</span>),
             QuoteAtomsPerBaseAtom::try_from(<span class="number">1.01</span>).unwrap(),
-            <span class="number">0</span>,
+            <span class="number">1</span>,
             NO_EXPIRATION_LAST_VALID_SLOT,
             <span class="bool-val">false</span>,
             OrderType::Limit,
