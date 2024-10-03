@@ -104,16 +104,16 @@ pub enum ManifestInstruction {
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalDeposit = 9,
 
-    /// Deposit into global account for a given token.
+    /// Withdraw from global account for a given token.
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalWithdraw = 10,
 

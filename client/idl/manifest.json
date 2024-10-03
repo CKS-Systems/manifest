@@ -629,7 +629,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -694,7 +694,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -974,11 +974,15 @@
             "type": "bool"
           },
           {
+            "name": "isMakerGlobal",
+            "type": "bool"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                15
+                14
               ]
             }
           }
@@ -1741,11 +1745,15 @@
           "index": false
         },
         {
+          "name": "isMakerGlobal",
+          "type": "bool"
+        },
+        {
           "name": "padding",
           "type": {
             "array": [
               "u8",
-              15
+              14
             ]
           },
           "index": false

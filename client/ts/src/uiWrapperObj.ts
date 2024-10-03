@@ -18,7 +18,7 @@ import {
   PROGRAM_ID,
   SettleFundsInstructionArgs,
 } from './ui_wrapper';
-import { marketInfoBeet, openOrderBeet } from './utils/beet';
+import { marketInfoBeet, uiOpenOrderBeet } from './utils/beet';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
   FIXED_WRAPPER_HEADER_SIZE,
@@ -101,12 +101,12 @@ export interface OpenOrder {
   orderType: OrderType;
 }
 
-export interface OpenOrderInternal {
+export interface UIOpenOrderInternal {
   price: Uint8Array;
   clientOrderId: bignum;
   orderSequenceNumber: bignum;
   numBaseAtoms: bignum;
-  dataIndex: number;
+  marketDataIndex: number;
   lastValidSlot: number;
   isBid: boolean;
   orderType: number;
@@ -337,19 +337,20 @@ export class UiWrapper {
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfoRaw) => {
         const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
-        const parsedOpenOrders: OpenOrderInternal[] =
+        const parsedOpenOrders: UIOpenOrderInternal[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                openOrderBeet,
+                uiOpenOrderBeet,
               )
             : [];
 
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: OpenOrderInternal) => {
+          (openOrder: UIOpenOrderInternal) => {
             return {
               ...openOrder,
+              dataIndex: openOrder.marketDataIndex,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
           },

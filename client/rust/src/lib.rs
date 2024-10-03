@@ -103,7 +103,7 @@ impl Amm for ManifestMarket {
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
             market
-                .impact_base_atoms(true, true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
                 .as_u64()
         };
         Ok(Quote {
