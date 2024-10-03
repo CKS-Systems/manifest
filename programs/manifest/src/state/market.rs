@@ -921,9 +921,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 !is_bid,
                 false,
                 if is_bid {
-                    (remaining_base_atoms.checked_mul(price, true))
-                        .unwrap()
-                        .into()
+                    remaining_base_atoms.checked_mul(price, true)?.into()
                 } else {
                     remaining_base_atoms.into()
                 },
@@ -1002,7 +1000,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let amount_atoms: u64 = if is_bid {
             (resting_order
                 .get_price()
-                .checked_quote_for_base(resting_order.get_num_base_atoms(), false)
+                .checked_quote_for_base(resting_order.get_num_base_atoms(), true)
                 .unwrap())
             .into()
         } else {
