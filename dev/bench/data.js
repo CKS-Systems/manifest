@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727912823439,
+  "lastUpdate": 1727913783182,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4419,6 +4419,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6222,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a6c9f172efad8c65bb56d75478b4bf3092ff39e",
+          "message": "Allow token 22 extensions designed for rugging (#76)\n\n* enable token 22 extensions for rugging\r\n\r\n* comment\r\n\r\n* fmt",
+          "timestamp": "2024-10-02T19:38:12-04:00",
+          "tree_id": "4858299f5e38e69f6725b74175bfd032894233af",
+          "url": "https://github.com/CKS-Systems/manifest/commit/9a6c9f172efad8c65bb56d75478b4bf3092ff39e"
+        },
+        "date": 1727913782048,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3491,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5548,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6213,
             "unit": "CU",
             "range": "",
             "extra": ""
