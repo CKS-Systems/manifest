@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727983510382,
+  "lastUpdate": 1727983816415,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4551,6 +4551,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6248,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cff55f75dc9f981619a99b621342a65b610f3106",
+          "message": "Update idl for anchor (#141)\n\n* update idl for pricing\r\n\r\n* Update idl for anchor\r\n\r\n* update client\r\n\r\n* update idl\r\n\r\n* update errors\r\n\r\n* merge\r\n\r\n* fix\r\n\r\n* update idl",
+          "timestamp": "2024-10-03T21:05:14+02:00",
+          "tree_id": "5c39a2b55e928c750a862bbaa39ea0c192f751c8",
+          "url": "https://github.com/CKS-Systems/manifest/commit/cff55f75dc9f981619a99b621342a65b610f3106"
+        },
+        "date": 1727983815537,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3505,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5597,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6236,
             "unit": "CU",
             "range": "",
             "extra": ""
