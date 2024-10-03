@@ -1527,8 +1527,6 @@
       "code": 17,
       "name": "IncorrectAccount",
       "msg": "Account key did not match expected"
-<<<<<<< HEAD
-=======
     },
     {
       "code": 18,
@@ -1549,7 +1547,6 @@
       "code": 21,
       "name": "InvalidClean",
       "msg": "Tried to clean order that was not eligible to be cleaned"
->>>>>>> eb8754ccd43eb05dc9ec6676b4c71055cc1be6c8
     }
   ],
   "metadata": {

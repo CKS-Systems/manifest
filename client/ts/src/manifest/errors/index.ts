@@ -417,8 +417,6 @@ createErrorFromNameLookup.set(
 );
 
 /**
-<<<<<<< HEAD
-=======
  * InvalidMint: 'Mint not allowed for market'
  *
  * @category Errors
@@ -502,7 +500,6 @@ createErrorFromCodeLookup.set(0x15, () => new InvalidCleanError());
 createErrorFromNameLookup.set('InvalidClean', () => new InvalidCleanError());
 
 /**
->>>>>>> eb8754ccd43eb05dc9ec6676b4c71055cc1be6c8
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

@@ -61,8 +61,12 @@ export class GlobalWithdrawLog implements GlobalWithdrawLogArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
+    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<GlobalWithdrawLog> {
-    const accountInfo = await connection.getAccountInfo(address);
+    const accountInfo = await connection.getAccountInfo(
+      address,
+      commitmentOrConfig,
+    );
     if (accountInfo == null) {
       throw new Error(`Unable to find GlobalWithdrawLog account at ${address}`);
     }

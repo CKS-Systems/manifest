@@ -91,8 +91,12 @@ export class FillLog implements FillLogArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
+    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<FillLog> {
-    const accountInfo = await connection.getAccountInfo(address);
+    const accountInfo = await connection.getAccountInfo(
+      address,
+      commitmentOrConfig,
+    );
     if (accountInfo == null) {
       throw new Error(`Unable to find FillLog account at ${address}`);
     }
