@@ -417,6 +417,92 @@ createErrorFromNameLookup.set(
 );
 
 /**
+<<<<<<< HEAD
+=======
+ * InvalidMint: 'Mint not allowed for market'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidMintError extends Error {
+  readonly code: number = 0x12;
+  readonly name: string = 'InvalidMint';
+  constructor() {
+    super('Mint not allowed for market');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidMintError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x12, () => new InvalidMintError());
+createErrorFromNameLookup.set('InvalidMint', () => new InvalidMintError());
+
+/**
+ * TooManyGlobalSeats: 'Cannot claim a new global seat, use evict'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class TooManyGlobalSeatsError extends Error {
+  readonly code: number = 0x13;
+  readonly name: string = 'TooManyGlobalSeats';
+  constructor() {
+    super('Cannot claim a new global seat, use evict');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, TooManyGlobalSeatsError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x13, () => new TooManyGlobalSeatsError());
+createErrorFromNameLookup.set(
+  'TooManyGlobalSeats',
+  () => new TooManyGlobalSeatsError(),
+);
+
+/**
+ * InvalidEvict: 'Can only evict the lowest depositor'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidEvictError extends Error {
+  readonly code: number = 0x14;
+  readonly name: string = 'InvalidEvict';
+  constructor() {
+    super('Can only evict the lowest depositor');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidEvictError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x14, () => new InvalidEvictError());
+createErrorFromNameLookup.set('InvalidEvict', () => new InvalidEvictError());
+
+/**
+ * InvalidClean: 'Tried to clean order that was not eligible to be cleaned'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidCleanError extends Error {
+  readonly code: number = 0x15;
+  readonly name: string = 'InvalidClean';
+  constructor() {
+    super('Tried to clean order that was not eligible to be cleaned');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidCleanError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x15, () => new InvalidCleanError());
+createErrorFromNameLookup.set('InvalidClean', () => new InvalidCleanError());
+
+/**
+>>>>>>> eb8754ccd43eb05dc9ec6676b4c71055cc1be6c8
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

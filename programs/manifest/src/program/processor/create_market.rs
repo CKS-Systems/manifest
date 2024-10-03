@@ -1,8 +1,9 @@
-use std::mem::size_of;
+use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{assert_with_msg, expand_market_if_needed, ManifestError},
+    program::{expand_market_if_needed, ManifestError},
+    require,
     state::MarketFixed,
     utils::create_account,
     validation::{get_vault_address, loaders::CreateMarketContext},
@@ -11,6 +12,13 @@ use hypertree::{get_mut_helper, trace};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
     pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+};
+use spl_token_2022::{
+    extension::{
+        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
+        BaseStateWithExtensions, StateWithExtensions,
+    },
+    state::Mint,
 };
 
 pub(crate) fn process_create_market(
@@ -33,11 +41,34 @@ pub(crate) fn process_create_market(
         token_program_22,
     } = create_market_context;
 
-    assert_with_msg(
+    require!(
         base_mint.info.key != quote_mint.info.key,
         ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
+
+    for mint in [base_mint.as_ref(), quote_mint.as_ref()] {
+        if *mint.owner == spl_token_2022::id() {
+            let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+            let pool_mint: StateWithExtensions<'_, Mint> =
+                StateWithExtensions::<Mint>::unpack(&mint_data)?;
+            // Closable mints can be replaced with different ones, breaking some saved info on the market.
+            if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
+                let close_authority: Option<Pubkey> = extension.close_authority.into();
+                require!(
+                    close_authority.is_none(),
+                    ManifestError::InvalidMint,
+                    "Closable mints are not allowed",
+                )?;
+            }
+            // Transfer fees make the amounts on withdraw and deposit not match what is expected.
+            require!(
+                pool_mint.get_extension::<TransferFeeConfig>().is_err(),
+                ManifestError::InvalidMint,
+                "Transfer fee mints are not allowed",
+            )?;
+        }
+    }
 
     {
         // Create the base and quote vaults of this market
@@ -104,10 +135,14 @@ pub(crate) fn process_create_market(
             }
         }
 
-        // Do not need to initialize with the system program because it is assumed
-        // that it is done already and loaded with rent.
+        // Do not need to initialize with the system program because it is
+        // assumed that it is done already and loaded with rent. That is not at
+        // a PDA because we do not want to be restricted to a single market for
+        // a pair. If there is lock contention and hotspotting for one market,
+        // it could be useful to have a second where it is easier to land
+        // transactions. That protection is worth the possibility that users
+        // would use an inactive market when multiple exist.
 
-        // TODO: Make the market be at a PDA to enforce only 1 market per Base/Quote pair.
         // Setup the empty market
         let empty_market_fixed: MarketFixed =
             MarketFixed::new_empty(&base_mint, &quote_mint, market.key);

@@ -54,12 +54,8 @@ export class QuoteAtoms implements QuoteAtomsArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
-    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<QuoteAtoms> {
-    const accountInfo = await connection.getAccountInfo(
-      address,
-      commitmentOrConfig,
-    );
+    const accountInfo = await connection.getAccountInfo(address);
     if (accountInfo == null) {
       throw new Error(`Unable to find QuoteAtoms account at ${address}`);
     }

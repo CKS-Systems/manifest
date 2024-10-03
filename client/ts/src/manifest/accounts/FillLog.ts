@@ -6,8 +6,8 @@
  */
 
 import * as web3 from '@solana/web3.js';
-import * as beetSolana from '@metaplex-foundation/beet-solana';
 import * as beet from '@metaplex-foundation/beet';
+import * as beetSolana from '@metaplex-foundation/beet-solana';
 import {
   QuoteAtomsPerBaseAtom,
   quoteAtomsPerBaseAtomBeet,
@@ -27,6 +27,8 @@ export type FillLogArgs = {
   price: QuoteAtomsPerBaseAtom;
   baseAtoms: BaseAtoms;
   quoteAtoms: QuoteAtoms;
+  makerSequenceNumber: beet.bignum;
+  takerSequenceNumber: beet.bignum;
   takerIsBuy: boolean;
   padding: number[] /* size: 15 */;
 };
@@ -45,6 +47,8 @@ export class FillLog implements FillLogArgs {
     readonly price: QuoteAtomsPerBaseAtom,
     readonly baseAtoms: BaseAtoms,
     readonly quoteAtoms: QuoteAtoms,
+    readonly makerSequenceNumber: beet.bignum,
+    readonly takerSequenceNumber: beet.bignum,
     readonly takerIsBuy: boolean,
     readonly padding: number[] /* size: 15 */,
   ) {}
@@ -60,6 +64,8 @@ export class FillLog implements FillLogArgs {
       args.price,
       args.baseAtoms,
       args.quoteAtoms,
+      args.makerSequenceNumber,
+      args.takerSequenceNumber,
       args.takerIsBuy,
       args.padding,
     );
@@ -85,12 +91,8 @@ export class FillLog implements FillLogArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
-    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<FillLog> {
-    const accountInfo = await connection.getAccountInfo(
-      address,
-      commitmentOrConfig,
-    );
+    const accountInfo = await connection.getAccountInfo(address);
     if (accountInfo == null) {
       throw new Error(`Unable to find FillLog account at ${address}`);
     }
@@ -171,6 +173,28 @@ export class FillLog implements FillLogArgs {
       price: this.price,
       baseAtoms: this.baseAtoms,
       quoteAtoms: this.quoteAtoms,
+      makerSequenceNumber: (() => {
+        const x = <{ toNumber: () => number }>this.makerSequenceNumber;
+        if (typeof x.toNumber === 'function') {
+          try {
+            return x.toNumber();
+          } catch (_) {
+            return x;
+          }
+        }
+        return x;
+      })(),
+      takerSequenceNumber: (() => {
+        const x = <{ toNumber: () => number }>this.takerSequenceNumber;
+        if (typeof x.toNumber === 'function') {
+          try {
+            return x.toNumber();
+          } catch (_) {
+            return x;
+          }
+        }
+        return x;
+      })(),
       takerIsBuy: this.takerIsBuy,
       padding: this.padding,
     };
@@ -189,6 +213,8 @@ export const fillLogBeet = new beet.BeetStruct<FillLog, FillLogArgs>(
     ['price', quoteAtomsPerBaseAtomBeet],
     ['baseAtoms', baseAtomsBeet],
     ['quoteAtoms', quoteAtomsBeet],
+    ['makerSequenceNumber', beet.u64],
+    ['takerSequenceNumber', beet.u64],
     ['takerIsBuy', beet.bool],
     ['padding', beet.uniformFixedSizeArray(beet.u8, 15)],
   ],

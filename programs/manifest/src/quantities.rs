@@ -1,14 +1,15 @@
-use crate::program::{assert_with_msg, ManifestError};
+use crate::program::ManifestError;
 use borsh::{BorshDeserialize as Deserialize, BorshSerialize as Serialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::trace;
 use shank::ShankAccount;
-use solana_program::{msg, program_error::ProgramError};
+use solana_program::program_error::ProgramError;
+use static_assertions::{const_assert, const_assert_eq};
 use std::{
     cmp::Ordering,
     fmt::Display,
-    ops::{Add, AddAssign, Div},
-    u128, u64,
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
+    u128, u32, u64,
 };
 
 /// New and as_u64 for creating and switching to u64 when needing to use base or
@@ -18,9 +19,10 @@ pub trait WrapperU64 {
     fn as_u64(&self) -> u64;
 }
 
-macro_rules! checked_add {
+macro_rules! checked_math {
     ($type_name:ident) => {
         impl $type_name {
+            #[inline(always)]
             pub fn checked_add(self, other: Self) -> Result<$type_name, ManifestError> {
                 let result_or: Option<u64> = self.inner.checked_add(other.inner);
                 if result_or.is_none() {
@@ -30,6 +32,7 @@ macro_rules! checked_add {
                 }
             }
 
+            #[inline(always)]
             pub fn checked_sub(self, other: Self) -> Result<$type_name, ManifestError> {
                 let result_or: Option<u64> = self.inner.checked_sub(other.inner);
                 if result_or.is_none() {
@@ -42,34 +45,92 @@ macro_rules! checked_add {
     };
 }
 
+macro_rules! overflow_math {
+    ($type_name:ident) => {
+        impl $type_name {
+            #[inline(always)]
+            pub fn overflowing_add(self, other: Self) -> ($type_name, bool) {
+                let (sum, overflow) = self.inner.overflowing_add(other.inner);
+                ($type_name::new(sum), overflow)
+            }
+
+            #[inline(always)]
+            pub fn saturating_add(self, other: Self) -> $type_name {
+                let sum = self.inner.saturating_add(other.inner);
+                $type_name::new(sum)
+            }
+
+            #[inline(always)]
+            pub fn saturating_sub(self, other: Self) -> $type_name {
+                let difference = self.inner.saturating_sub(other.inner);
+                $type_name::new(difference)
+            }
+
+            #[inline(always)]
+            pub fn wrapping_add(self, other: Self) -> $type_name {
+                let sum = self.inner.wrapping_add(other.inner);
+                $type_name::new(sum)
+            }
+
+            #[inline(always)]
+            pub fn wrapping_sub(self, other: Self) -> $type_name {
+                let difference = self.inner.wrapping_sub(other.inner);
+                $type_name::new(difference)
+            }
+        }
+    };
+}
+
 macro_rules! basic_math {
     ($type_name:ident) => {
         impl Add for $type_name {
             type Output = Self;
+
+            #[inline(always)]
             fn add(self, other: Self) -> Self {
                 $type_name::new(self.inner + other.inner)
             }
         }
 
         impl AddAssign for $type_name {
+            #[inline(always)]
             fn add_assign(&mut self, other: Self) {
                 *self = *self + other;
             }
         }
 
+        impl Sub for $type_name {
+            type Output = Self;
+
+            #[inline(always)]
+            fn sub(self, other: Self) -> Self {
+                $type_name::new(self.inner - other.inner)
+            }
+        }
+
+        impl SubAssign for $type_name {
+            #[inline(always)]
+            fn sub_assign(&mut self, other: Self) {
+                *self = *self - other;
+            }
+        }
+
         impl Default for $type_name {
+            #[inline(always)]
             fn default() -> Self {
                 Self::ZERO
             }
         }
 
         impl Display for $type_name {
+            #[inline(always)]
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 self.inner.fmt(f)
             }
         }
 
         impl PartialEq for $type_name {
+            #[inline(always)]
             fn eq(&self, other: &Self) -> bool {
                 self.inner == other.inner
             }
@@ -82,10 +143,12 @@ macro_rules! basic_math {
 macro_rules! basic_u64 {
     ($type_name:ident) => {
         impl WrapperU64 for $type_name {
+            #[inline(always)]
             fn new(value: u64) -> Self {
                 $type_name { inner: value }
             }
 
+            #[inline(always)]
             fn as_u64(&self) -> u64 {
                 self.inner
             }
@@ -95,6 +158,7 @@ macro_rules! basic_u64 {
             pub const ZERO: Self = $type_name { inner: 0 };
             pub const ONE: Self = $type_name { inner: 1 };
 
+            #[inline(always)]
             pub fn min(self, other: Self) -> Self {
                 if self.inner <= other.inner {
                     self
@@ -105,6 +169,7 @@ macro_rules! basic_u64 {
         }
 
         impl From<$type_name> for u64 {
+            #[inline(always)]
             fn from(x: $type_name) -> u64 {
                 x.inner
             }
@@ -112,19 +177,22 @@ macro_rules! basic_u64 {
 
         // Below should only be used in tests.
         impl PartialEq<u64> for $type_name {
+            #[inline(always)]
             fn eq(&self, other: &u64) -> bool {
                 self.inner == *other
             }
         }
 
         impl PartialEq<$type_name> for u64 {
+            #[inline(always)]
             fn eq(&self, other: &$type_name) -> bool {
                 *self == other.inner
             }
         }
 
         basic_math!($type_name);
-        checked_add!($type_name);
+        checked_math!($type_name);
+        overflow_math!($type_name);
     };
 }
 
@@ -162,22 +230,28 @@ pub struct QuoteAtomsPerBaseAtom {
     inner: [u64; 2],
 }
 
-fn u128_to_u64_slice(a: u128) -> [u64; 2] {
-    bytemuck::cast(a)
+// These conversions are necessary, bc. the compiler forces 16 byte alignment
+// on the u128 type, which is not necessary given that the target architecture
+// has no native support for u128 math and requires us only to be 8 byte
+// aligned.
+const fn u128_to_u64_slice(a: u128) -> [u64; 2] {
+    unsafe {
+        let ptr: *const u128 = &a;
+        *ptr.cast::<[u64; 2]>()
+    }
 }
 fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
-    bytemuck::cast(a)
+    unsafe {
+        let ptr: *const [u64; 2] = &a;
+        *ptr.cast::<u128>()
+    }
 }
 
 const ATOM_LIMIT: u128 = u64::MAX as u128;
-const D20: u128 = 10u128.pow(20);
-const D20F: f64 = D20 as f64;
+const D18: u128 = 10u128.pow(18);
+const D18F: f64 = D18 as f64;
 
-const DECIMAL_CONSTANTS: [u128; 31] = [
-    10u128.pow(30),
-    10u128.pow(29),
-    10u128.pow(28),
-    10u128.pow(27),
+const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(26),
     10u128.pow(25),
     10u128.pow(24),
@@ -206,68 +280,90 @@ const DECIMAL_CONSTANTS: [u128; 31] = [
     10u128.pow(01),
     10u128.pow(00),
 ];
+// ensures that the index lookup is correct when converting from floating point
+const_assert_eq!(
+    DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
+    D18
+);
+
+// ensures that we can remove bounds checks on certain multiplications
+const_assert!(DECIMAL_CONSTANTS[0] * (u32::MAX as u128) < u128::MAX);
+const_assert!(D18 * (u64::MAX as u128) < u128::MAX);
 
 // Prices
 impl QuoteAtomsPerBaseAtom {
     pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: [0; 2] };
-    pub const MIN: Self = QuoteAtomsPerBaseAtom::ZERO;
-    pub const MAX: Self = QuoteAtomsPerBaseAtom {
-        inner: [u64::MAX; 2],
-    };
+    pub const MIN: Self = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, Self::MIN_EXP);
+    pub const MAX: Self =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, Self::MAX_EXP);
+    pub const MIN_EXP: i8 = -18;
+    pub const MAX_EXP: i8 = 8;
+
+    #[inline(always)]
+    const fn from_mantissa_and_exponent_(mantissa: u32, exponent: i8) -> Self {
+        /* map exponent to array range
+          8 ->  [0] -> D26
+          0 ->  [8] -> D18
+        -10 -> [18] -> D08
+        -18 -> [26] ->  D0
+        */
+        let offset = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
+        // can not overflow 10^26 * u32::MAX < u128::MAX
+        let inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(inner),
+        }
+    }
 
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
     ) -> Result<Self, PriceConversionError> {
-        if exponent > 10 {
-            msg!("invalid exponent {exponent} > 10 would truncate",);
-            return Err(PriceConversionError(0x0));
-        }
-        if exponent < -20 {
-            msg!("invalid exponent {exponent} < -20 would truncate",);
+        if exponent > Self::MAX_EXP {
+            trace!("invalid exponent {exponent} > 8 would truncate",);
             return Err(PriceConversionError(0x1));
         }
-        /* map exponent to array range
-         10 -> [0]  -> D30
-          0 -> [10] -> D20
-        -10 -> [20] -> D10
-        -20 -> [30] ->  D0
-        */
-        let offset = -(exponent - 10) as usize;
-        let inner = DECIMAL_CONSTANTS[offset]
-            .checked_mul(mantissa as u128)
-            .ok_or(PriceConversionError(0x2))?;
-        return Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(inner),
-        });
+        if exponent < Self::MIN_EXP {
+            trace!("invalid exponent {exponent} < -18 would truncate",);
+            return Err(PriceConversionError(0x2));
+        }
+        Ok(Self::from_mantissa_and_exponent_(mantissa, exponent))
     }
 
+    #[inline(always)]
     pub fn checked_base_for_quote(
         self,
         quote_atoms: QuoteAtoms,
         round_up: bool,
     ) -> Result<BaseAtoms, ProgramError> {
+        // prevents division by zero further down the line. zero is not an
+        // ideal answer, but this is only used in impact_base_atoms, which
+        // is used to calculate error free order sizes and for that purpose
+        // it works well.
         if self == Self::ZERO {
-            return Ok(BaseAtoms::new(0));
+            return Ok(BaseAtoms::ZERO);
         }
-        let dividend = D20
-            .checked_mul(quote_atoms.inner as u128)
-            .ok_or(PriceConversionError(0x4))?;
+        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
+        let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
+        trace!(
+            "checked_base_for_quote {dividend}/{inner} {round_up} {}>{}",
+            dividend.div_ceil(inner),
+            dividend.div(inner)
+        );
         let base_atoms = if round_up {
             dividend.div_ceil(inner)
         } else {
             dividend.div(inner)
         };
-        assert_with_msg(
-            base_atoms <= ATOM_LIMIT,
-            ManifestError::Overflow,
-            "Overflow",
-        )?;
-        Ok(BaseAtoms::new(base_atoms as u64))
+        if base_atoms <= ATOM_LIMIT {
+            Ok(BaseAtoms::new(base_atoms as u64))
+        } else {
+            Err(PriceConversionError(0x5).into())
+        }
     }
 
-    #[inline]
+    #[inline(always)]
     fn checked_quote_for_base_(
         self,
         base_atoms: BaseAtoms,
@@ -278,20 +374,18 @@ impl QuoteAtomsPerBaseAtom {
             .checked_mul(base_atoms.inner as u128)
             .ok_or(PriceConversionError(0x8))?;
         let quote_atoms = if round_up {
-            product.div_ceil(D20)
+            product.div_ceil(D18)
         } else {
-            product.div(D20)
+            product.div(D18)
         };
-        trace!("base:{base_atoms} price:{self} quote:{quote_atoms}");
-        assert_with_msg(
-            quote_atoms <= ATOM_LIMIT,
-            ManifestError::Overflow,
-            "Overflow",
-        )?;
-
-        return Ok(quote_atoms);
+        if quote_atoms <= ATOM_LIMIT {
+            Ok(quote_atoms)
+        } else {
+            Err(PriceConversionError(0x9).into())
+        }
     }
 
+    #[inline(always)]
     pub fn checked_quote_for_base(
         self,
         other: BaseAtoms,
@@ -301,6 +395,7 @@ impl QuoteAtomsPerBaseAtom {
             .map(|r| QuoteAtoms::new(r as u64))
     }
 
+    #[inline(always)]
     pub fn checked_effective_price(
         self,
         num_base_atoms: BaseAtoms,
@@ -310,11 +405,10 @@ impl QuoteAtomsPerBaseAtom {
             return Ok(self);
         }
         let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        let quote_matched_d20 = quote_matched_atoms
-            .checked_mul(D20)
-            .ok_or(PriceConversionError(0x9))?;
+        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
+        let quote_matched_d18 = quote_matched_atoms.wrapping_mul(D18);
         // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d20.div(num_base_atoms.inner as u128);
+        let inner = quote_matched_d18.div(num_base_atoms.inner as u128);
         Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         })
@@ -322,18 +416,21 @@ impl QuoteAtomsPerBaseAtom {
 }
 
 impl Ord for QuoteAtomsPerBaseAtom {
+    #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
         (u64_slice_to_u128(self.inner)).cmp(&u64_slice_to_u128(other.inner))
     }
 }
 
 impl PartialOrd for QuoteAtomsPerBaseAtom {
+    #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for QuoteAtomsPerBaseAtom {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         (self.inner) == (other.inner)
     }
@@ -345,7 +442,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{}",
-            &(u64_slice_to_u128(self.inner) as f64 / D20F)
+            &(u64_slice_to_u128(self.inner) as f64 / D18F)
         ))
     }
 }
@@ -353,7 +450,7 @@ impl std::fmt::Display for QuoteAtomsPerBaseAtom {
 impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QuoteAtomsPerBaseAtom")
-            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D20F))
+            .field("value", &(u64_slice_to_u128(self.inner) as f64 / D18F))
             .finish()
     }
 }
@@ -369,30 +466,58 @@ impl From<PriceConversionError> for ProgramError {
     }
 }
 
+#[inline(always)]
+fn encode_mantissa_and_exponent(value: f64) -> (u32, i8) {
+    let mut exponent: i8 = 0;
+    // prevent overflow when casting to u32
+    while exponent < QuoteAtomsPerBaseAtom::MAX_EXP
+        && calculate_mantissa(value, exponent) > u32::MAX as f64
+    {
+        exponent += 1;
+    }
+    // prevent underflow and maximize precision available
+    while exponent > QuoteAtomsPerBaseAtom::MIN_EXP
+        && calculate_mantissa(value, exponent) < (u32::MAX / 10) as f64
+    {
+        exponent -= 1;
+    }
+    (calculate_mantissa(value, exponent) as u32, exponent)
+}
+
+#[inline(always)]
+fn calculate_mantissa(value: f64, exp: i8) -> f64 {
+    (value * 10f64.powi(-exp as i32)).round()
+}
+
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
     type Error = PriceConversionError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let mantissa = value * D20F;
-        if mantissa.is_infinite() {
-            msg!("infinite can not be expressed as fixed point decimal");
+        if value.is_infinite() {
+            trace!("infinite can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xC));
         }
-        if mantissa.is_nan() {
-            msg!("nan can not be expressed as fixed point decimal");
+        if value.is_nan() {
+            trace!("nan can not be expressed as fixed point decimal");
             return Err(PriceConversionError(0xD));
         }
-        if mantissa > u128::MAX as f64 {
-            msg!("price is too large");
+        if value.is_sign_negative() {
+            trace!("price {value} can not be negative");
             return Err(PriceConversionError(0xE));
         }
-        Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(mantissa as u128),
-        })
+        if calculate_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
+            trace!("price {value} is too large");
+            return Err(PriceConversionError(0xF));
+        }
+
+        let (mantissa, exponent) = encode_mantissa_and_exponent(value);
+
+        Self::try_from_mantissa_and_exponent(mantissa, exponent)
     }
 }
 
 impl BaseAtoms {
+    #[inline(always)]
     pub fn checked_mul(
         self,
         other: QuoteAtomsPerBaseAtom,
@@ -440,10 +565,28 @@ fn test_checked_sub() {
 }
 
 #[test]
+fn test_overflowing_add() {
+    let base_atoms: BaseAtoms = BaseAtoms::new(u64::MAX);
+    let (sum, overflow_detected) = base_atoms.overflowing_add(base_atoms);
+    assert!(overflow_detected);
+
+    let expected = base_atoms - BaseAtoms::ONE;
+    assert_eq!(sum, expected);
+}
+
+#[test]
+fn test_wrapping_add() {
+    let base_atoms: BaseAtoms = BaseAtoms::new(u64::MAX);
+    let sum = base_atoms.wrapping_add(base_atoms);
+    let expected = base_atoms - BaseAtoms::ONE;
+    assert_eq!(sum, expected);
+}
+
+#[test]
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
-        inner: u128_to_u64_slice(100 * D20 - 1),
+        inner: u128_to_u64_slice(100 * D18 - 1),
     };
     assert_eq!(
         base_atoms
@@ -454,13 +597,84 @@ fn test_multiply_macro() {
 }
 
 #[test]
+fn test_price_limits() {
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        1,
+        QuoteAtomsPerBaseAtom::MAX_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        u32::MAX,
+        QuoteAtomsPerBaseAtom::MAX_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        1,
+        QuoteAtomsPerBaseAtom::MIN_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        u32::MAX,
+        QuoteAtomsPerBaseAtom::MIN_EXP
+    )
+    .is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from(
+        u32::MAX as f64 * 10f64.powi(QuoteAtomsPerBaseAtom::MAX_EXP as i32)
+    )
+    .is_ok());
+
+    // failures
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        1,
+        QuoteAtomsPerBaseAtom::MAX_EXP + 1
+    )
+    .is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+        1,
+        QuoteAtomsPerBaseAtom::MIN_EXP - 1
+    )
+    .is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(-1f64).is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(u128::MAX as f64).is_err());
+    assert!(QuoteAtomsPerBaseAtom::try_from(1f64 / 0f64).is_err());
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+#[repr(C)]
+struct AlignmentTest {
+    _alignment_fix: u128,
+    _pad: u64,
+    price: QuoteAtomsPerBaseAtom,
+}
+
+#[test]
+fn test_alignment() {
+    let mut t = AlignmentTest::default();
+    t.price = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, 0);
+    let mut s = t.clone();
+    t.price = s
+        .price
+        .checked_effective_price(BaseAtoms::new(u32::MAX as u64), true)
+        .unwrap();
+    let q = t
+        .price
+        .checked_base_for_quote(QuoteAtoms::new(u32::MAX as u64), true)
+        .unwrap();
+    t._pad = q.as_u64();
+    s._pad = s.price.checked_quote_for_base(q, true).unwrap().as_u64();
+
+    println!("s:{s:?} t:{t:?}");
+}
+
+#[test]
 fn test_print() {
     println!("{}", BaseAtoms::new(1));
     println!("{}", QuoteAtoms::new(2));
     println!(
         "{}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D20 / 100),
+            inner: u128_to_u64_slice(123 * D18 / 100),
         }
     );
 }
@@ -472,7 +686,7 @@ fn test_debug() {
     println!(
         "{:?}",
         QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(123 * D20 / 100),
+            inner: u128_to_u64_slice(123 * D18 / 100),
         }
     );
 }

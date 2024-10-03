@@ -13,7 +13,7 @@ const rootDir = path.join(__dirname, '..', '..', '.crates');
 
 async function main() {
   console.log('Root dir address:', rootDir);
-  ['manifest', 'wrapper'].map(async (programName) => {
+  ['manifest', 'ui-wrapper', 'wrapper'].map(async (programName) => {
     const programDir = path.join(
       __dirname,
       '..',
@@ -44,7 +44,7 @@ async function main() {
       '--crate-root',
       programDir,
     ]);
-    modifyIdlCore(programName);
+    modifyIdlCore(programName.replace('-', '_'));
   });
 }
 
@@ -81,13 +81,13 @@ function modifyIdlCore(programName) {
           discriminator: [
             ...genLogDiscriminator(idl.metadata.address, idlAccount.name),
           ],
-          fields: idlAccount.type.fields,
+          fields: [
+              ...(idlAccount.type.fields).map((field) => { return { ...field, index: false };}),
+          ]
         };
         idl.events.push(event);
       }
     }
-
-    // TODO: Override u128 price in the output for QuoteAtomsPerBaseAtom
 
     for (const idlAccount of idl.accounts) {
       if (idlAccount.type && idlAccount.type.fields) {
@@ -101,8 +101,13 @@ function modifyIdlCore(programName) {
           return field;
         });
       }
+<<<<<<< HEAD
       if (idlAccount.name == "QuoteAtomsPerBaseAtom") {
         idlAccount.type.fields[0].type = "u128";
+=======
+      if (idlAccount.name == 'QuoteAtomsPerBaseAtom') {
+        idlAccount.type.fields[0].type = 'u128';
+>>>>>>> eb8754ccd43eb05dc9ec6676b4c71055cc1be6c8
       }
     }
 
@@ -194,6 +199,111 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'GlobalWithdraw': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalWithdrawParams',
+            },
+          });
+          break;
+        }
+        case 'GlobalEvict':
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalEvictParams',
+            },
+          });
+          break;
+        case 'GlobalClean':
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'GlobalCleanParams',
+            },
+          });
+          break;
+        default: {
+          console.log(instruction);
+          throw new Error('Unexpected instruction');
+        }
+      }
+    }
+
+    // Return type has a tuple which anchor does not support
+    idl.types = idl.types.filter((idlType) => idlType.name != "BatchUpdateReturn");
+
+  } else if (programName == 'ui_wrapper') {
+    idl.types.push({
+      name: 'OrderType',
+      type: {
+        kind: 'enum',
+        variants: [
+          {
+            name: 'Limit',
+          },
+          {
+            name: 'ImmediateOrCancel',
+          },
+          {
+            name: 'PostOnly',
+          },
+        ],
+      },
+    });
+
+    for (const idlType of idl.types) {
+      if (idlType.type && idlType.type.fields) {
+        idlType.type.fields = idlType.type.fields.map((field) => {
+          if (field.type.defined == 'PodBool') {
+            field.type = 'bool';
+          }
+          return field;
+        });
+      }
+    }
+
+    for (const instruction of idl.instructions) {
+      switch (instruction.name) {
+        case 'CreateWrapper': {
+          break;
+        }
+        case 'ClaimSeat': {
+          // Claim seat does not have params
+          break;
+        }
+        case 'PlaceOrder': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperPlaceOrderParams',
+            },
+          });
+          break;
+        }
+        case 'EditOrder': {
+          // Edit Order is not yet implemented
+          break;
+        }
+        case 'CancelOrder': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperCancelOrderParams',
+            },
+          });
+          break;
+        }
+        case 'SettleFunds': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperSettleFundsParams',
+            },
+          });
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');
@@ -201,18 +311,6 @@ function modifyIdlCore(programName) {
       }
     }
   } else if (programName == 'wrapper') {
-    // Solita does not support f64
-    // https://github.com/metaplex-foundation/beet/issues/48
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.name == 'price') {
-            field.type = 'FixedSizeUint8Array';
-          }
-          return field;
-        });
-      }
-    }
     idl.types.push({
       name: 'DepositParams',
       type: {
@@ -252,10 +350,7 @@ function modifyIdlCore(programName) {
             name: 'PostOnly',
           },
           {
-            name: 'PostOnlySlide',
-          },
-          {
-            name: 'FillOrKill',
+            name: 'Global',
           },
         ],
       },
@@ -266,9 +361,6 @@ function modifyIdlCore(programName) {
         idlType.type.fields = idlType.type.fields.map((field) => {
           if (field.type.defined == 'PodBool') {
             field.type = 'bool';
-          }
-          if (field.type.defined == 'f64') {
-            field.type = 'FixedSizeUint8Array';
           }
           return field;
         });

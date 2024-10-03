@@ -1,7 +1,6 @@
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::trace;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
 };
@@ -30,7 +29,6 @@ pub(crate) fn process_global_deposit(
     accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
-    trace!("process_global_claim_seat accs={accounts:?}");
     let global_deposit_context: GlobalDepositContext = GlobalDepositContext::load(accounts)?;
     let GlobalDepositParams { amount_atoms } = GlobalDepositParams::try_from_slice(data)?;
 

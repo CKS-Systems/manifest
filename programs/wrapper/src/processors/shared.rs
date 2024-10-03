@@ -9,14 +9,16 @@ use crate::{
 };
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, TreeReadOperations, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, HyperTreeReadOperations,
+    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RBNode, RedBlackTree,
+    RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::assert_with_msg,
+    program::get_dynamic_account,
     quantities::BaseAtoms,
-    state::{claimed_seat::ClaimedSeat, MarketRef, RestingOrder},
-    validation::{Program, Signer},
+    require,
+    state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
+    validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -30,14 +32,16 @@ use solana_program::{
 };
 use static_assertions::const_assert_eq;
 
-pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 64;
+pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 80;
 pub const BLOCK_HEADER_SIZE: usize = 16;
 pub const WRAPPER_BLOCK_SIZE: usize = WRAPPER_BLOCK_PAYLOAD_SIZE + BLOCK_HEADER_SIZE;
+
+pub const EXPECTED_ORDER_BATCH_SIZE: usize = 16;
 
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 pub struct UnusedWrapperFreeListPadding {
-    _padding: [u64; 7],
+    _padding: [u64; 9],
     _padding2: [u32; 5],
 }
 pub const FREE_LIST_HEADER_SIZE: usize = 4;
@@ -122,7 +126,7 @@ fn does_need_expand(wrapper_state: &WrapperStateAccountInfo) -> bool {
     let (fixed_data, _dynamic_data) = wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
 
     let wrapper_fixed: &ManifestWrapperStateFixed = get_helper(fixed_data, 0);
-    return wrapper_fixed.free_list_head_index == NIL;
+    wrapper_fixed.free_list_head_index == NIL
 }
 
 pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &Pubkey) {
@@ -136,12 +140,22 @@ pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &
 
 pub(crate) fn sync(
     wrapper_state: &WrapperStateAccountInfo,
-    market: &Pubkey,
-    market_ref: MarketRef,
+    market: &ManifestAccountInfo<MarketFixed>,
 ) -> ProgramResult {
-    let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market);
+    let market_info_index: DataIndex =
+        get_market_info_index_for_market(wrapper_state, market.info.key);
+    sync_fast(wrapper_state, market, market_info_index)
+}
 
-    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
+pub(crate) fn sync_fast(
+    wrapper_state: &WrapperStateAccountInfo,
+    market: &ManifestAccountInfo<MarketFixed>,
+    market_info_index: DataIndex,
+) -> ProgramResult {
+    let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
+    let market_ref = get_dynamic_account::<MarketFixed>(&market_data);
+
+    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data()?;
     let (fixed_data, wrapper_dynamic_data) =
         wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
 
@@ -150,17 +164,23 @@ pub(crate) fn sync(
             .get_mut_value();
     let mut orders_root_index: DataIndex = market_info.orders_root_index;
 
+    // Sync open orders
     if orders_root_index != NIL {
         let orders_tree: OpenOrdersTreeReadOnly =
             OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
 
+        // pass 1: iterates over all open orders in the target market stored on this wrapper
+        // - find all wrapper orders to remove bc. the core order has been cancelled or fully matched
+        // - save all remaining wrapper orders with their core counter-part to sync in pass 2
+        //
         // Cannot do this in one pass because we need the data borrowed for the
         // iterator so cannot also borrow it for updating the nodes.
-        let mut to_remove_indices: Vec<DataIndex> = Vec::new();
-        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> = Vec::new();
-        for (order_index, order) in orders_tree.iter() {
-            let expected_sequence_number: u64 = order.get_value().get_order_sequence_number();
-            let core_data_index: DataIndex = order.get_value().get_market_data_index();
+        let mut to_remove_indices: Vec<DataIndex> = Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
+        let mut to_update_and_core_indices: Vec<(DataIndex, DataIndex)> =
+            Vec::with_capacity(EXPECTED_ORDER_BATCH_SIZE);
+        for (order_index, order) in orders_tree.iter::<WrapperOpenOrder>() {
+            let expected_sequence_number: u64 = order.get_order_sequence_number();
+            let core_data_index: DataIndex = order.get_market_data_index();
             // Verifies that it is not just zeroed and happens to match seq num,
             // also check that there are base atoms left.
             let core_resting_order: &RestingOrder =
@@ -173,24 +193,24 @@ pub(crate) fn sync(
                 to_update_and_core_indices.push((order_index, core_data_index));
             }
         }
-        // Update the amounts if there was partial fills.
+        // pass 2: update all amounts & prices
         for (to_update_index, core_data_index) in to_update_and_core_indices.iter() {
-            let node: &mut RBNode<WrapperOpenOrder> =
-                get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index);
+            let node: &mut WrapperOpenOrder =
+                get_mut_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, *to_update_index)
+                    .get_mut_value();
             let core_resting_order: &RestingOrder =
                 get_helper::<RBNode<RestingOrder>>(market_ref.dynamic, *core_data_index)
                     .get_value();
-            node.get_mut_value()
-                .update_remaining(core_resting_order.get_num_base_atoms());
 
-            // Needed because the way things are added could be off by 1 when
-            // one of the orders fully matches as it is being placed. We only
-            // know that the indices are right, not the actual orders there.
-            node.get_mut_value()
-                .set_price(core_resting_order.get_price());
-            node.get_mut_value()
-                .set_is_bid(core_resting_order.get_is_bid());
+            // Needed for partial fills
+            node.update_remaining(core_resting_order.get_num_base_atoms());
+
+            // Needed for performance, because we dont want to recalculate the
+            // price in batch update twice
+            node.set_price(core_resting_order.get_price());
         }
+
+        // pass 3: delete removed nodes from tree
         let mut orders_tree: RedBlackTree<WrapperOpenOrder> =
             RedBlackTree::<WrapperOpenOrder>::new(wrapper_dynamic_data, orders_root_index, NIL);
         for to_remove_index in to_remove_indices.iter() {
@@ -198,11 +218,11 @@ pub(crate) fn sync(
         }
         orders_root_index = orders_tree.get_root_index();
 
+        // pass 4: add removed nodes into freelist
         let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
         let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
             FreeList::new(wrapper_dynamic_data, wrapper_fixed.free_list_head_index);
         for open_order_index in to_remove_indices.iter() {
-            // Free the node in wrapper.
             free_list.add(*open_order_index);
         }
         wrapper_fixed.free_list_head_index = free_list.get_head();
@@ -220,6 +240,7 @@ pub(crate) fn sync(
         get_helper::<RBNode<ClaimedSeat>>(market_ref.dynamic, market_info.trader_index).get_value();
     market_info.base_balance = claimed_seat.base_withdrawable_balance;
     market_info.quote_balance = claimed_seat.quote_withdrawable_balance;
+    market_info.quote_volume = claimed_seat.quote_volume;
     market_info.last_updated_slot = Clock::get().unwrap().slot as u32;
 
     Ok(())
@@ -246,81 +267,6 @@ pub(crate) fn get_market_info_index_for_market(
     market_info_index
 }
 
-pub(crate) fn get_wrapper_order_indexes_by_client_order_id(
-    wrapper_state: &WrapperStateAccountInfo,
-    market_key: &Pubkey,
-    client_order_id: u64,
-) -> Vec<DataIndex> {
-    // Lookup all orders with that client_order_id
-    let market_info_index: DataIndex = get_market_info_index_for_market(wrapper_state, market_key);
-    let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data().unwrap();
-    let (_fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
-
-    let orders_root_index: DataIndex =
-        get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index)
-            .get_value()
-            .orders_root_index;
-
-    let matching_order_indexes: Vec<DataIndex> = lookup_order_indexes_by_client_order_id(
-        client_order_id,
-        wrapper_dynamic_data,
-        orders_root_index,
-    );
-
-    matching_order_indexes
-}
-
-pub(crate) fn lookup_order_indexes_by_client_order_id(
-    client_order_id: u64,
-    wrapper_dynamic_data: &[u8],
-    orders_root_index: DataIndex,
-) -> Vec<DataIndex> {
-    let open_orders_tree: OpenOrdersTreeReadOnly =
-        OpenOrdersTreeReadOnly::new(wrapper_dynamic_data, orders_root_index, NIL);
-    let matching_order_index: DataIndex =
-        open_orders_tree.lookup_index(&WrapperOpenOrder::new_empty(client_order_id));
-
-    let mut result: Vec<DataIndex> = Vec::new();
-    result.push(matching_order_index);
-
-    let mut current_order_index: DataIndex =
-        open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(matching_order_index);
-    while current_order_index != NIL {
-        if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
-            .get_value()
-            .get_client_order_id()
-            != client_order_id
-        {
-            break;
-        }
-        result.push(current_order_index);
-        current_order_index =
-            open_orders_tree.get_predecessor_index::<WrapperOpenOrder>(current_order_index);
-    }
-
-    let mut current_order_index: DataIndex =
-        open_orders_tree.get_successor_index::<WrapperOpenOrder>(matching_order_index);
-    while current_order_index != NIL {
-        if get_helper::<RBNode<WrapperOpenOrder>>(wrapper_dynamic_data, current_order_index)
-            .get_value()
-            .get_client_order_id()
-            != client_order_id
-        {
-            break;
-        }
-        result.push(current_order_index);
-        current_order_index =
-            open_orders_tree.get_successor_index::<WrapperOpenOrder>(current_order_index);
-    }
-
-    // Not necessary but useful in practice.
-    result.sort_unstable();
-    result.dedup();
-
-    result
-}
-
 /// Validation for wrapper account
 #[derive(Clone)]
 pub struct WrapperStateAccountInfo<'a, 'info> {
@@ -338,7 +284,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     fn _new_unchecked(
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Wrapper must be owned by the program",
@@ -356,7 +302,7 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
 
-        assert_with_msg(
+        require!(
             header.discriminant == WRAPPER_STATE_DISCRIMINANT,
             ProgramError::InvalidAccountData,
             "Invalid wrapper state discriminant",
@@ -372,13 +318,13 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
         let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-        assert_with_msg(
+        require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
             "Market must be owned by the Manifest program",
         )?;
         // On initialization, the discriminant is not set yet.
-        assert_with_msg(
+        require!(
             header.discriminant == 0,
             ProgramError::InvalidAccountData,
             "Expected uninitialized market with discriminant 0",

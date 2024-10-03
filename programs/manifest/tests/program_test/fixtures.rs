@@ -3,22 +3,20 @@ use std::{
     io::Error,
 };
 
-use hypertree::{DataIndex, NIL};
+use hypertree::{DataIndex, HyperTreeValueIteratorTrait};
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
         batch_update_instruction,
         claim_seat_instruction::claim_seat_instruction,
         create_market_instructions, deposit_instruction, get_dynamic_value,
-        global_add_trader_instruction, global_claim_seat_instruction,
+        global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
-        global_deposit_instruction, swap_instruction, withdraw_instruction,
+        global_deposit_instruction, global_withdraw_instruction, swap_instruction,
+        withdraw_instruction,
     },
     quantities::WrapperU64,
-    state::{
-        BooksideReadOnly, GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType,
-        RestingOrder,
-    },
+    state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType, RestingOrder},
     validation::{get_global_address, MintAccountInfo},
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
@@ -62,6 +60,7 @@ pub struct TestFixture {
     pub payer_usdc_fixture: TokenAccountFixture,
     pub market_fixture: MarketFixture,
     pub global_fixture: GlobalFixture,
+    pub sol_global_fixture: GlobalFixture,
     pub second_keypair: Keypair,
 }
 
@@ -94,8 +93,8 @@ impl TestFixture {
 
         let mut global_fixture: GlobalFixture =
             GlobalFixture::new(Rc::clone(&context), &usdc_mint_f.key).await;
-        // Make a sol global fixture for trading, but dont need to save it.
-        GlobalFixture::new(Rc::clone(&context), &sol_mint_f.key).await;
+        let mut sol_global_fixture: GlobalFixture =
+            GlobalFixture::new(Rc::clone(&context), &sol_mint_f.key).await;
 
         let payer: Pubkey = context.borrow().payer.pubkey();
         let payer_sol_fixture: TokenAccountFixture =
@@ -104,6 +103,7 @@ impl TestFixture {
             TokenAccountFixture::new(Rc::clone(&context), &usdc_mint_f.key, &payer).await;
         market_fixture.reload().await;
         global_fixture.reload().await;
+        sol_global_fixture.reload().await;
 
         TestFixture {
             context: Rc::clone(&context),
@@ -111,10 +111,33 @@ impl TestFixture {
             sol_mint_fixture: sol_mint_f,
             market_fixture,
             global_fixture,
+            sol_global_fixture,
             payer_sol_fixture,
             payer_usdc_fixture,
             second_keypair,
         }
+    }
+
+    pub async fn try_new_for_matching_test() -> anyhow::Result<TestFixture, BanksClientError> {
+        let mut test_fixture = TestFixture::new().await;
+        let second_keypair = test_fixture.second_keypair.insecure_clone();
+
+        test_fixture.claim_seat().await?;
+        test_fixture
+            .deposit(Token::SOL, 1_000 * SOL_UNIT_SIZE)
+            .await?;
+        test_fixture
+            .deposit(Token::USDC, 10_000 * USDC_UNIT_SIZE)
+            .await?;
+
+        test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+        test_fixture
+            .deposit_for_keypair(Token::SOL, 1_000 * SOL_UNIT_SIZE, &second_keypair)
+            .await?;
+        test_fixture
+            .deposit_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
+            .await?;
+        Ok(test_fixture)
     }
 
     pub async fn try_load(
@@ -212,29 +235,6 @@ impl TestFixture {
         .await
     }
 
-    pub async fn global_claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
-        self.global_claim_seat_for_keypair(&self.payer_keypair())
-            .await
-    }
-
-    pub async fn global_claim_seat_for_keypair(
-        &self,
-        keypair: &Keypair,
-    ) -> anyhow::Result<(), BanksClientError> {
-        let global_claim_seat_ix: Instruction = global_claim_seat_instruction(
-            &self.global_fixture.key,
-            &keypair.pubkey(),
-            &self.market_fixture.key,
-        );
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &[global_claim_seat_ix],
-            Some(&keypair.pubkey()),
-            &[keypair],
-        )
-        .await
-    }
-
     pub async fn global_deposit(&mut self, num_atoms: u64) -> anyhow::Result<(), BanksClientError> {
         self.global_deposit_for_keypair(&self.payer_keypair(), num_atoms)
             .await
@@ -260,6 +260,46 @@ impl TestFixture {
         send_tx_with_retry(
             Rc::clone(&self.context),
             &[global_deposit_instruction(
+                &self.global_fixture.mint_key,
+                &keypair.pubkey(),
+                &token_account_fixture.key,
+                &spl_token::id(),
+                num_atoms,
+            )],
+            Some(&keypair.pubkey()),
+            &[&keypair],
+        )
+        .await
+    }
+
+    pub async fn global_withdraw(
+        &mut self,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        self.global_withdraw_for_keypair(&self.payer_keypair(), num_atoms)
+            .await
+    }
+
+    pub async fn global_withdraw_for_keypair(
+        &mut self,
+        keypair: &Keypair,
+        num_atoms: u64,
+    ) -> anyhow::Result<(), BanksClientError> {
+        // Make a throw away token account
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture = TokenAccountFixture::new_with_keypair(
+            Rc::clone(&self.context),
+            &self.global_fixture.mint_key,
+            &keypair.pubkey(),
+            &token_account_keypair,
+        )
+        .await;
+        self.usdc_mint_fixture
+            .mint_to(&token_account_fixture.key, num_atoms)
+            .await;
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[global_withdraw_instruction(
                 &self.global_fixture.mint_key,
                 &keypair.pubkey(),
                 &token_account_fixture.key,
@@ -736,25 +776,24 @@ impl MarketFixture {
         self.market.get_trader_balance(trader).1.as_u64()
     }
 
+    pub async fn get_quote_volume(&mut self, trader: &Pubkey) -> u64 {
+        self.reload().await;
+        self.market.get_trader_voume(trader).as_u64()
+    }
+
     pub async fn get_resting_orders(&mut self) -> Vec<RestingOrder> {
         self.reload().await;
-        let bids: BooksideReadOnly = BooksideReadOnly::new(
-            self.market.dynamic.as_slice(),
-            self.market.fixed.get_bids_root_index(),
-            NIL,
-        );
-        let asks: BooksideReadOnly = BooksideReadOnly::new(
-            self.market.dynamic.as_slice(),
-            self.market.fixed.get_asks_root_index(),
-            NIL,
-        );
-        let mut bids_vec: Vec<RestingOrder> = bids
-            .iter()
-            .map(|node| *node.1.get_value())
+        let mut bids_vec: Vec<RestingOrder> = self
+            .market
+            .get_bids()
+            .iter::<RestingOrder>()
+            .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
-        let asks_vec: Vec<RestingOrder> = asks
-            .iter()
-            .map(|node| *node.1.get_value())
+        let asks_vec: Vec<RestingOrder> = self
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .map(|node| *node.1)
             .collect::<Vec<RestingOrder>>();
         bids_vec.extend(asks_vec);
         bids_vec
@@ -994,7 +1033,6 @@ impl MintFixture {
 pub struct TokenAccountFixture {
     context: Rc<RefCell<ProgramTestContext>>,
     pub key: Pubkey,
-    pub token: spl_token::state::Account,
 }
 
 impl TokenAccountFixture {
@@ -1049,31 +1087,6 @@ impl TokenAccountFixture {
         [init_account_ix, init_token_ix]
     }
 
-    pub async fn new_account(&self) -> Pubkey {
-        let token_account_keypair: Keypair = Keypair::new();
-        let mut context: RefMut<ProgramTestContext> = self.context.borrow_mut();
-
-        let ixs: [Instruction; 2] = Self::create_ixs(
-            context.banks_client.get_rent().await.unwrap(),
-            &self.token.mint,
-            &context.payer.pubkey(),
-            &context.payer.pubkey(),
-            &token_account_keypair,
-        )
-        .await;
-
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &ixs,
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &token_account_keypair],
-        )
-        .await
-        .unwrap();
-
-        token_account_keypair.pubkey()
-    }
-
     pub async fn new_with_keypair_2022(
         context: Rc<RefCell<ProgramTestContext>>,
         mint_pk: &Pubkey,
@@ -1099,7 +1112,6 @@ impl TokenAccountFixture {
         Self {
             context: context_ref.clone(),
             key: keypair.pubkey(),
-            token: get_and_deserialize(context_ref.clone(), keypair.pubkey()).await,
         }
     }
 
@@ -1115,20 +1127,18 @@ impl TokenAccountFixture {
         let instructions: [Instruction; 2] =
             Self::create_ixs(rent, mint_pk, &payer, owner_pk, keypair).await;
 
-        send_tx_with_retry(
+        let _ = send_tx_with_retry(
             Rc::clone(&context),
             &instructions[..],
             Some(&payer),
             &[&payer_keypair, keypair],
         )
-        .await
-        .unwrap();
+        .await;
 
         let context_ref: Rc<RefCell<ProgramTestContext>> = context.clone();
         Self {
             context: context_ref.clone(),
             key: keypair.pubkey(),
-            token: get_and_deserialize(context_ref.clone(), keypair.pubkey()).await,
         }
     }
 
@@ -1155,7 +1165,8 @@ pub async fn get_and_deserialize<T: Pack>(
 ) -> T {
     let mut context: RefMut<ProgramTestContext> = context.borrow_mut();
     loop {
-        let account_or = context.banks_client.get_account(pubkey).await;
+        let account_or: Result<Option<Account>, BanksClientError> =
+            context.banks_client.get_account(pubkey).await;
         if !account_or.is_ok() {
             continue;
         }

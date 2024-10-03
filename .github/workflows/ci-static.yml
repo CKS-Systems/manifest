@@ -1,0 +1,37 @@
+name: Static Analysis
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+    paths:
+      [
+        'programs/**',
+        'lib/**',
+        'Cargo.toml',
+        'Cargo.lock',
+      ]
+  workflow_dispatch:
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run radar
+        id: radar
+        uses: auditware/radar-action@main
+        with:
+          ignore: "low"
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: output.sarif

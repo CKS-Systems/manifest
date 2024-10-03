@@ -34,11 +34,8 @@ pub enum OrderType {
     // Fails if would cross the orderbook.
     PostOnly = 2,
 
-    // Like a post only but slides to a zero spread rather than fail.
-    PostOnlySlide = 3,
-
     // Global orders are post only but use funds from the global account.
-    Global = 4,
+    Global = 3,
 }
 unsafe impl bytemuck::Zeroable for OrderType {}
 unsafe impl bytemuck::Pod for OrderType {}
@@ -60,27 +57,23 @@ pub fn order_type_can_take(order_type: OrderType) -> bool {
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
 pub struct RestingOrder {
     price: QuoteAtomsPerBaseAtom,
-    // Sort key is the worst effective price someone could get by
-    // trading with me due to the rounding being in my favor as a maker.
-    effective_price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,
     sequence_number: u64,
     trader_index: DataIndex,
     last_valid_slot: u32,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; 6],
+    _padding: [u8; 22],
 }
 
 // 16 +  // price
-// 16 +  // effective_price
 //  8 +  // num_base_atoms
 //  8 +  // sequence_number
 //  4 +  // trader_index
 //  4 +  // last_valid_slot
 //  1 +  // is_bid
 //  1 +  // order_type
-//  6    // padding
+// 22    // padding
 // = 64
 const_assert_eq!(size_of::<RestingOrder>(), RESTING_ORDER_SIZE);
 const_assert_eq!(size_of::<RestingOrder>() % 8, 0);
@@ -100,11 +93,10 @@ impl RestingOrder {
             num_base_atoms,
             last_valid_slot,
             price,
-            effective_price: price.checked_effective_price(num_base_atoms, is_bid)?,
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
-            _padding: [0; 6],
+            _padding: Default::default(),
         })
     }
 
@@ -151,9 +143,6 @@ impl RestingOrder {
 
     pub fn reduce(&mut self, size: BaseAtoms) -> ProgramResult {
         self.num_base_atoms = self.num_base_atoms.checked_sub(size)?;
-        self.effective_price = self
-            .price
-            .checked_effective_price(self.num_base_atoms, self.get_is_bid())?;
         Ok(())
     }
 }
@@ -165,9 +154,9 @@ impl Ord for RestingOrder {
         debug_assert!(self.get_is_bid() == other.get_is_bid());
 
         if self.get_is_bid() {
-            (self.effective_price).cmp(&(other.effective_price))
+            (self.price).cmp(&other.price)
         } else {
-            (other.effective_price).cmp(&(self.effective_price))
+            (other.price).cmp(&(self.price))
         }
     }
 }
@@ -222,25 +211,24 @@ mod test {
         let resting_order_1: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1),
-            QuoteAtomsPerBaseAtom::try_from(1.0).unwrap(),
+            QuoteAtomsPerBaseAtom::try_from(1.00000000000001).unwrap(),
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
-            false,
+            true,
             OrderType::Limit,
         )
         .unwrap();
-        // This is better because the effective price for the other is 2.
         let resting_order_2: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1_000_000_000),
             QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
             0,
             NO_EXPIRATION_LAST_VALID_SLOT,
-            false,
+            true,
             OrderType::Limit,
         )
         .unwrap();
-        assert!(resting_order_1 > resting_order_2);
+        assert!(resting_order_1 < resting_order_2);
         assert!(resting_order_1 != resting_order_2);
 
         let resting_order_1: RestingOrder = RestingOrder::new(
@@ -253,7 +241,6 @@ mod test {
             OrderType::Limit,
         )
         .unwrap();
-        // This is better because the effective price for the other is 2.
         let resting_order_2: RestingOrder = RestingOrder::new(
             0,
             BaseAtoms::new(1_000_000_000),
@@ -264,7 +251,7 @@ mod test {
             OrderType::Limit,
         )
         .unwrap();
-        assert!(resting_order_1 < resting_order_2);
+        assert!(resting_order_1 > resting_order_2);
         assert!(resting_order_1 != resting_order_2);
     }
 

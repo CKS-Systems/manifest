@@ -6,16 +6,20 @@
  */
 
 import * as beet from '@metaplex-foundation/beet';
-export type BatchUpdateReturn = {
-  orders: [beet.bignum, number][];
+export type WrapperSettleFundsParams = {
+  feeMantissa: number;
+  platformFeePercent: number;
 };
 
 /**
  * @category userTypes
  * @category generated
  */
-export const batchUpdateReturnBeet =
-  new beet.FixableBeetArgsStruct<BatchUpdateReturn>(
-    [['orders', beet.array(beet.fixedSizeTuple([beet.u64, beet.u32]))]],
-    'BatchUpdateReturn',
+export const wrapperSettleFundsParamsBeet =
+  new beet.BeetArgsStruct<WrapperSettleFundsParams>(
+    [
+      ['feeMantissa', beet.u32],
+      ['platformFeePercent', beet.u8],
+    ],
+    'WrapperSettleFundsParams',
   );

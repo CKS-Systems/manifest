@@ -4,8 +4,13 @@
     "description": "TypeScript SDK for Manifest",
     "author": "CKS Systems",
     "repository": "https://github.com/CKS-Systems/manifest",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/index.js",
+    "types": "./dist/types/src/index.d.ts",
+    "exports": {
+        "require": "./dist/cjs/index.js",
+        "import": "./dist/esm/index.js"
+    },
     "license": "MIT",
     "scripts": {
         "build": "rimraf dist && yarn build:browser && yarn build:node && yarn build:types",
@@ -18,7 +23,7 @@
         "validate": "yarn lint && yarn format",
         "prepare": "yarn build",
         "clean": "rm -rf dist",
-        "test": "TS_NODE_PROJECT='./tsconfig.cjs.json' nyc  --reporter=lcov ts-mocha client/ts/tests/*.ts --timeout 3000000"
+        "test": "TS_NODE_PROJECT='./tsconfig.cjs.json' nyc  --reporter=lcov ts-mocha client/ts/tests/*.ts --parallel --jobs 64 --timeout 1200000"
     },
     "dependencies": {
         "@metaplex-foundation/beet": "^0.7.1",
@@ -32,6 +37,7 @@
         "js-sha256": "^0.11.0",
         "keccak256": "^1.0.6",
         "percentile": "^1.6.0",
+        "rimraf": "^5.0.10",
         "typedoc": "^0.26.3",
         "ws": "^8.18.0",
         "zstddec": "^0.0.2"
@@ -63,5 +69,6 @@
         "ts-mocha": "^10.0.0",
         "ts-node": "^10.9.1",
         "typescript": "^5.5.3"
-    }
+    },
+    "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

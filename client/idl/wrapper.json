@@ -22,14 +22,6 @@
           ]
         },
         {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
-          ]
-        },
-        {
           "name": "wrapperState",
           "isMut": true,
           "isSigner": false,
@@ -77,14 +69,6 @@
           "isSigner": false,
           "docs": [
             "System program"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
           ]
         },
         {
@@ -151,14 +135,6 @@
           "isSigner": false,
           "docs": [
             "Token program"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
           ]
         },
         {
@@ -243,14 +219,6 @@
           ]
         },
         {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
-          ]
-        },
-        {
           "name": "wrapperState",
           "isMut": true,
           "isSigner": false,
@@ -284,6 +252,14 @@
       "name": "BatchUpdate",
       "accounts": [
         {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
           "name": "manifestProgram",
           "isMut": false,
           "isSigner": false,
@@ -313,22 +289,6 @@
           "isSigner": false,
           "docs": [
             "System program"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Payer of rent and gas"
-          ]
-        },
-        {
-          "name": "wrapperState",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Wrapper state"
           ]
         }
       ],
@@ -474,10 +434,7 @@
             "name": "PostOnly"
           },
           {
-            "name": "PostOnlySlide"
-          },
-          {
-            "name": "FillOrKill"
+            "name": "Global"
           }
         ]
       }

@@ -12,7 +12,10 @@ import { Market } from '../src/market';
 import { assert } from 'chai';
 
 async function testWithdraw(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
@@ -26,11 +29,11 @@ async function testWithdraw(): Promise<void> {
 
   await market.reload(connection);
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, true) == 5,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 5,
     'withdraw withdrawable balance check base',
   );
   assert(
-    market.getWithdrawableBalanceAtoms(payerKeypair.publicKey, false) == 0,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'withdraw withdrawable balance check quote',
   );
   market.prettyPrint();
@@ -41,7 +44,7 @@ export async function withdraw(
   payerKeypair: Keypair,
   marketAddress: PublicKey,
   mint: PublicKey,
-  amountAtoms: number,
+  amountTokens: number,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
     connection,
@@ -51,18 +54,15 @@ export async function withdraw(
   const withdrawIx = client.withdrawIx(
     payerKeypair.publicKey,
     mint,
-    amountAtoms,
+    amountTokens,
   );
 
   const signature = await sendAndConfirmTransaction(
     connection,
     new Transaction().add(withdrawIx),
     [payerKeypair],
-    {
-      commitment: 'confirmed',
-    },
   );
-  console.log(`Withdrew ${amountAtoms} atoms in ${signature}`);
+  console.log(`Withdrew ${amountTokens} tokens in ${signature}`);
 }
 
 describe('Withdraw test', () => {

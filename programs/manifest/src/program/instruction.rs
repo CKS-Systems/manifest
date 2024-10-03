@@ -54,8 +54,8 @@ pub enum ManifestInstruction {
     #[account(7, name = "base_mint", desc = "Base mint, only inlcuded if base is Token22, otherwise not required")]
     #[account(8, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
     #[account(9, name = "quote_mint", desc = "Quote mint, only inlcuded if base is Token22, otherwise not required")]
-    #[account(10, writable, optional, name = "global", desc = "Global account")]
-    #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
+    // #[account(10, writable, optional, name = "global", desc = "Global account")]
+    // #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
     Swap = 4,
 
     /// Expand a market.
@@ -99,26 +99,47 @@ pub enum ManifestInstruction {
     #[account(2, name = "system_program", desc = "System program")]
     GlobalAddTrader = 8,
 
-    /// Claim seat on a market.
-    #[account(0, writable, signer, name = "payer", desc = "Payer")]
-    #[account(1, writable, name = "global", desc = "Global account")]
-    #[account(2, name = "system_program", desc = "System program")]
-    #[account(3, writable, name = "market", desc = "Account holding all market state")]
-    GlobalClaimSeat = 9,
-    
-    /// Create global account for a given token.
+    /// Deposit into global account for a given token.
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
-    #[account(3, name = "global_vault", desc = "Global vault")]
+    #[account(3, writable, name = "global_vault", desc = "Global vault")]
     #[account(4, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
-    GlobalDeposit = 10,
+    GlobalDeposit = 9,
 
-    // TODO: Implement this. Users can clean another users unbacked or expired
-    // orders off the orderbook.
-    //#[account(0, writable, signer, name = "payer", desc = "Payer")]
-    // GlobalCleanOrder = 11,
+    /// Deposit into global account for a given token.
+    #[account(0, writable, signer, name = "payer", desc = "Payer")]
+    #[account(1, writable, name = "global", desc = "Global account")]
+    #[account(2, name = "mint", desc = "Mint for this global account")]
+    #[account(3, writable, name = "global_vault", desc = "Global vault")]
+    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(5, name = "token_program", desc = "Token program(22)")]
+    GlobalWithdraw = 10,
+
+    /// Evict another trader from the global account.
+    #[account(0, writable, signer, name = "payer", desc = "Payer")]
+    #[account(1, writable, name = "global", desc = "Global account")]
+    #[account(2, name = "mint", desc = "Mint for this global account")]
+    #[account(3, writable, name = "global_vault", desc = "Global vault")]
+    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(5, name = "evictee_token", desc = "Evictee token account")]
+    #[account(6, name = "token_program", desc = "Token program(22)")]
+    GlobalEvict = 11,
+
+    /// Removes an order from a market that cannot be filled. There are 3
+    /// reasons. It is expired, the global trader got evicted, or the global
+    /// trader no longer has deposited the funds to back the order. This
+    /// function results in cleaner orderbooks which helps reduce variance and
+    /// thus compute unit estimates for traders. It is incentivized by receiving
+    /// gas prepayment deposits. This is not required for normal operation of
+    /// market. It exists as a deterrent to unfillable and unmaintained global
+    /// spam.
+    #[account(0, writable, signer, name = "payer", desc = "Payer for this tx, receiver of rent deposit")]
+    #[account(1, writable, name = "market", desc = "Account holding all market state")]
+    #[account(2, name = "system_program", desc = "System program")]
+    #[account(3, writable, name = "global", desc = "Global account")]
+    GlobalClean = 12,
 }
 
 impl ManifestInstruction {
@@ -129,7 +150,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 10;
+    let num_instructions: u8 = 12;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {

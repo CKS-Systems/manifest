@@ -4,11 +4,13 @@ use std::{
 };
 
 use crate::{
-    state::{constants::BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed},
+    state::{
+        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, GLOBAL_BLOCK_SIZE,
+    },
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
-use hypertree::{get_helper, get_mut_helper, trace};
+use hypertree::{get_helper, get_mut_helper, trace, Get};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
     system_instruction, sysvar::Sysvar,
@@ -28,7 +30,15 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
-    expand_dynamic(payer, manifest_account, system_program)?;
+    expand_market(payer, manifest_account, system_program)
+}
+
+pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
+    payer: &Signer<'a, 'info>,
+    manifest_account: &ManifestAccountInfo<'a, 'info, T>,
+    system_program: &Program<'a, 'info>,
+) -> ProgramResult {
+    expand_dynamic(payer, manifest_account, system_program, MARKET_BLOCK_SIZE)?;
     expand_market_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -39,7 +49,9 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
     system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
-    expand_dynamic(payer, manifest_account, system_program)?;
+    // Expand twice because of two trees at once.
+    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -48,11 +60,12 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
     system_program: &Program<'a, 'info>,
+    block_size: usize,
 ) -> ProgramResult {
     // Account types were already validated, so do not need to reverify that the
     // accounts are in order: payer, expandable_account, system_program, ...
     let expandable_account: &AccountInfo = manifest_account.info;
-    let new_size: usize = expandable_account.data_len() + BLOCK_SIZE;
+    let new_size: usize = expandable_account.data_len() + block_size;
 
     let rent: Rent = Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
@@ -62,7 +75,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let system_program: &AccountInfo = system_program.info;
 
     trace!(
-        "expand_if_needed -> transfer {} {:?}",
+        "expand_dynamic-> transfer {} {:?}",
         lamports_diff,
         expandable_account.key
     );
@@ -76,7 +89,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     )?;
 
     trace!(
-        "expand_if_needed -> realloc {} {:?}",
+        "expand_dynamic-> realloc {} {:?}",
         new_size,
         expandable_account.key
     );
@@ -111,7 +124,7 @@ fn expand_global_fixed(expandable_account: &AccountInfo) -> ProgramResult {
 }
 
 /// Generic get dynamic account from the data bytes of the account.
-pub fn get_dynamic_account<'a, T: Pod>(
+pub fn get_dynamic_account<'a, T: Get>(
     data: &'a Ref<'a, &'a mut [u8]>,
 ) -> DynamicAccount<&'a T, &'a [u8]> {
     let (fixed_data, dynamic) = data.split_at(size_of::<T>());
@@ -122,7 +135,7 @@ pub fn get_dynamic_account<'a, T: Pod>(
 }
 
 /// Generic get mutable dynamic account from the data bytes of the account.
-pub fn get_mut_dynamic_account<'a, T: Pod>(
+pub fn get_mut_dynamic_account<'a, T: Get>(
     data: &'a mut RefMut<'_, &mut [u8]>,
 ) -> DynamicAccount<&'a mut T, &'a mut [u8]> {
     let (fixed_data, dynamic) = data.split_at_mut(size_of::<T>());
@@ -134,7 +147,7 @@ pub fn get_mut_dynamic_account<'a, T: Pod>(
 }
 
 /// Generic get owned dynamic account from the data bytes of the account.
-pub fn get_dynamic_value<T: Pod>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
+pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
     let (fixed_data, dynamic_data) = data.split_at(size_of::<T>());
     let market_fixed: &T = get_helper::<T>(fixed_data, 0_u32);
 

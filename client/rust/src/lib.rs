@@ -7,7 +7,10 @@ use hypertree::get_helper;
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketValue},
-    validation::{get_global_address, get_global_vault_address, get_vault_address},
+    validation::{
+        get_global_address, get_global_vault_address, get_vault_address,
+        loaders::GlobalTradeAccounts,
+    },
 };
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::mem::size_of;
@@ -91,12 +94,17 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
+        let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[None, None];
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
-            market.impact_quote_atoms(false, in_atoms)?.as_u64()
+            market
+                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
-            market.impact_base_atoms(true, true, in_atoms)?.as_u64()
+            market
+                .impact_base_atoms(true, true, in_atoms, global_trade_accounts)?
+                .as_u64()
         };
         Ok(Quote {
             out_amount,
@@ -207,11 +215,12 @@ mod test {
         quantities::{BaseAtoms, GlobalAtoms},
         state::{
             constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, GlobalFixed,
-            GlobalValue, OrderType, BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_FIXED_SIZE,
+            GlobalValue, OrderType, GLOBAL_BLOCK_SIZE, GLOBAL_FIXED_SIZE, MARKET_BLOCK_SIZE,
+            MARKET_FIXED_SIZE,
         },
         validation::{
-            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, TokenAccountInfo,
-            TokenProgram,
+            loaders::GlobalTradeAccounts, ManifestAccountInfo, MintAccountInfo, Signer,
+            TokenAccountInfo, TokenProgram,
         },
     };
     use solana_sdk::{account::Account, account_info::AccountInfo};
@@ -273,7 +282,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -299,6 +308,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -314,6 +324,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -434,7 +445,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -460,6 +471,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -475,6 +487,7 @@ mod test {
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
+                current_slot: None,
             })
             .unwrap();
 
@@ -611,7 +624,7 @@ mod test {
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint_info, &market_key),
             // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; BLOCK_SIZE * 4],
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
         };
         let trader_key: Pubkey =
             Pubkey::from_str("GCtjtH2ehL6BZTjismuZ8JhQnuM6U3bmtxVoFyiHMHGc").unwrap();
@@ -620,19 +633,15 @@ mod test {
 
         let manifest_id: Pubkey = manifest::id();
         let global_key: Pubkey = get_global_address(&quote_mint_key).0;
-        let mut global_lamports: u64 = 0;
+        let mut global_lamports: u64 = 1_000_000;
         let mut global_data_vec: Vec<u8> = Vec::new();
         let global_account_info: AccountInfo = {
             let mut global_value: DynamicAccount<GlobalFixed, Vec<u8>> = GlobalValue {
                 fixed: GlobalFixed::new_empty(&quote_mint_key),
-                dynamic: vec![0; BLOCK_SIZE * 2],
+                dynamic: vec![0; GLOBAL_BLOCK_SIZE * 2],
             };
             global_value.global_expand().unwrap();
             global_value.add_trader(&trader_key).unwrap();
-            global_value.global_expand().unwrap();
-            global_value
-                .claim_seat_on_market(&trader_key, &market_key)
-                .unwrap();
             global_value
                 .deposit_global(&trader_key, GlobalAtoms::new(1_000_000_000_000))
                 .unwrap();
@@ -699,15 +708,31 @@ mod test {
         // Bid for 10 SOL
         market_value.market_expand().unwrap();
 
-        let quote_global_trade_account: GlobalTradeAccounts = GlobalTradeAccounts {
-            mint: Some(quote_mint_info.clone()),
+        let mut lamports: u64 = 100_000;
+        let trader_account_info: AccountInfo<'_> = AccountInfo {
+            key: &trader_key,
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut [])),
+            owner: &Pubkey::new_unique(),
+            rent_epoch: 0,
+            is_signer: true,
+            is_writable: false,
+            executable: false,
+        };
+
+        let quote_global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
+            mint_opt: Some(quote_mint_info.clone()),
             global: ManifestAccountInfo::new(&global_account_info).unwrap(),
-            global_vault: TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            market_vault: TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key)
-                .unwrap(),
-            token_program: TokenProgram::new(&token_program_account_info).unwrap(),
-            trader: trader_key.clone(),
+            global_vault_opt: Some(
+                TokenAccountInfo::new(&global_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            market_vault_opt: Some(
+                TokenAccountInfo::new(&market_vault_account_info, &quote_mint_key).unwrap(),
+            ),
+            token_program_opt: Some(TokenProgram::new(&token_program_account_info).unwrap()),
+            system_program: None,
+            gas_payer_opt: Some(Signer::new(&trader_account_info).unwrap()),
+            gas_receiver_opt: Some(Signer::new(&trader_account_info).unwrap()),
             market: market_key.clone(),
         };
 
@@ -721,7 +746,8 @@ mod test {
                 is_bid: true,
                 last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
                 order_type: OrderType::Global,
-                global_trade_accounts_opts: &[None, Some(quote_global_trade_account)],
+                global_trade_accounts_opts: &[None, Some(quote_global_trade_accounts)],
+                current_slot: None,
             })
             .unwrap();
 
@@ -737,6 +763,7 @@ mod test {
                 order_type: OrderType::Limit,
                 global_trade_accounts_opts: &[None, None],
                 is_bid: false,
+                current_slot: None,
             })
             .unwrap();
 

@@ -43,7 +43,7 @@ export const GlobalDepositStruct = new beet.BeetArgsStruct<
  * @property [_writable_, **signer**] payer
  * @property [_writable_] global
  * @property [] mint
- * @property [] globalVault
+ * @property [_writable_] globalVault
  * @property [] traderToken
  * @category Instructions
  * @category GlobalDeposit
@@ -58,7 +58,7 @@ export type GlobalDepositInstructionAccounts = {
   tokenProgram?: web3.PublicKey;
 };
 
-export const globalDepositInstructionDiscriminator = 10;
+export const globalDepositInstructionDiscriminator = 9;
 
 /**
  * Creates a _GlobalDeposit_ instruction.
@@ -97,7 +97,7 @@ export function createGlobalDepositInstruction(
     },
     {
       pubkey: accounts.globalVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

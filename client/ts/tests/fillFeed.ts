@@ -9,7 +9,10 @@ import { placeOrder } from './placeOrder';
 import WebSocket from 'ws';
 
 async function testFillFeed(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
@@ -19,25 +22,19 @@ async function testFillFeed(): Promise<void> {
   });
 
   // Deposit and place the first order.
-  await deposit(
-    connection,
-    payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    10_000_000_000,
-  );
+  await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 10);
   await deposit(
     connection,
     payerKeypair,
     marketAddress,
     market.quoteMint(),
-    10_000_000_000,
+    25,
   );
   await placeOrder(
     connection,
     payerKeypair,
     marketAddress,
-    5_000_000_000,
+    5,
     5,
     false,
     OrderType.Limit,
@@ -58,7 +55,7 @@ async function checkForFillMessage(
   connection: Connection,
   payerKeypair: Keypair,
   marketAddress: PublicKey,
-) {
+): Promise<void> {
   const ws = new WebSocket('ws://localhost:1234');
 
   ws.on('open', () => {
@@ -78,7 +75,7 @@ async function checkForFillMessage(
     connection,
     payerKeypair,
     marketAddress,
-    5_000,
+    5,
     5,
     true,
     OrderType.Limit,

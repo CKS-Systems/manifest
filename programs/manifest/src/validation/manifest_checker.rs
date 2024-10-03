@@ -1,11 +1,12 @@
-use crate::program::error::assert_with_msg;
 use bytemuck::Pod;
-use hypertree::get_helper;
+use hypertree::{get_helper, Get};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
 };
 use std::{cell::Ref, mem::size_of, ops::Deref};
+
+use crate::require;
 
 /// Validation for manifest accounts.
 #[derive(Clone)]
@@ -15,7 +16,7 @@ pub struct ManifestAccountInfo<'a, 'info, T: ManifestAccount + Pod + Clone> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<'a, 'info, T: ManifestAccount + Pod + Clone> ManifestAccountInfo<'a, 'info, T> {
+impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info, T> {
     pub fn new(
         info: &'a AccountInfo<'info>,
     ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {
@@ -64,30 +65,26 @@ pub trait ManifestAccount {
 }
 
 fn verify_owned_by_manifest(owner: &Pubkey) -> ProgramResult {
-    assert_with_msg(
+    require!(
         owner == &crate::ID,
         ProgramError::IllegalOwner,
-        &format!(
-            "Account must be owned by the Manifest program expected:{} actual:{}",
-            crate::ID,
-            owner
-        ),
+        "Account must be owned by the Manifest program expected:{} actual:{}",
+        crate::ID,
+        owner
     )?;
     Ok(())
 }
 
 fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> ProgramResult {
     let bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-    assert_with_msg(
+    require!(
         size_of::<T>() == bytes.len(),
         ProgramError::InvalidAccountData,
-        &format!(
-            "Incorrect length for uninitialized header expected: {} actual: {}",
-            size_of::<T>(),
-            bytes.len()
-        ),
+        "Incorrect length for uninitialized header expected: {} actual: {}",
+        size_of::<T>(),
+        bytes.len()
     )?;
-    assert_with_msg(
+    require!(
         bytes.iter().all(|&byte| byte == 0),
         ProgramError::InvalidAccountData,
         "Expected zeroed",
@@ -117,6 +114,13 @@ mod test {
 macro_rules! global_seeds {
     ( $mint:expr ) => {
         &[b"global", $mint.as_ref()]
+    };
+}
+
+#[macro_export]
+macro_rules! global_seeds_with_bump {
+    ( $mint:expr, $bump:expr ) => {
+        &[&[b"global", $mint.as_ref(), &[$bump]]]
     };
 }
 

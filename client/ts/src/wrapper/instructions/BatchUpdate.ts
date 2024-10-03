@@ -39,22 +39,20 @@ export const BatchUpdateStruct = new beet.FixableBeetArgsStruct<
 /**
  * Accounts required by the _BatchUpdate_ instruction
  *
+ * @property [_writable_] wrapperState
  * @property [] manifestProgram
  * @property [_writable_, **signer**] owner
  * @property [_writable_] market
- * @property [_writable_, **signer**] payer
- * @property [_writable_] wrapperState
  * @category Instructions
  * @category BatchUpdate
  * @category generated
  */
 export type BatchUpdateInstructionAccounts = {
+  wrapperState: web3.PublicKey;
   manifestProgram: web3.PublicKey;
   owner: web3.PublicKey;
   market: web3.PublicKey;
   systemProgram?: web3.PublicKey;
-  payer: web3.PublicKey;
-  wrapperState: web3.PublicKey;
 };
 
 export const batchUpdateInstructionDiscriminator = 4;
@@ -80,6 +78,11 @@ export function createBatchUpdateInstruction(
   });
   const keys: web3.AccountMeta[] = [
     {
+      pubkey: accounts.wrapperState,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
       pubkey: accounts.manifestProgram,
       isWritable: false,
       isSigner: false,
@@ -97,16 +100,6 @@ export function createBatchUpdateInstruction(
     {
       pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
       isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.payer,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.wrapperState,
-      isWritable: true,
       isSigner: false,
     },
   ];

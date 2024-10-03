@@ -1,40 +1,48 @@
 # ![Logo](assets/brown-contrast-split.png)
+
 # <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
-*The feeless orderbook exchange that supercharges your on-chain trading.*
+
+*The Unlimited Orderbook.*
+
 
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
-
+[![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
+[![Autogen](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
-No more permissioned markets. 
-No more trading fees. 
+No more permissioned markets.
+No more trading fees.
 No more expensive rent to start a market.
-Capital efficiency built-in. 
+Capital efficiency built-in.
 Maximal freedom to exchange risk.
 
-## Comparison
+## Whitepaper
 
+Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
+
+## Comparison
 
 |  |    Openbook    | Phoenix  |Manifest              |
 |--|----------------|-------------------|----------------------|
 | Crankless |No |Yes |Yes |
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
-| Anchor |Yes |Yes |No|
-| Rent|2 SOL |2 SOL |.002 SOL|
+| Anchor |Yes |No|No|
+| Creation Rent|2 SOL |3+ SOL |.004 SOL|
 | License|GPL |Business |GPL|
-| OpenOrders separation for read locking| Yes | No | Yes |
-| Swap accounts| 10 | 8 | 7 |
-| CU | | |
-|Instruction size | | | |
-|Silent failures | Yes| Yes| No|
-|Token 22 | No| No| Yes|
-|Customizable wrapper| No| No| Yes|
+| Read optimized| Yes | No | Yes |
+| Swap accounts| 16 | 8 | 7 |
+| [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
+| Silent failures                                         | Yes                | Yes                | No                                    |
+| Token 22                                                | No                 | No                 | Yes                                   |
+| Composable wrapper                                      | No                 | No                 | Yes                                   |
+| Capital Efficient                                       | No                 | No                 | Yes                                   |
 
 ### Details:
+
 - Cranks were originally used in serum to address the need for solana programs to identify all accounts before landing on chain. This has become obsolete now that orderbooks pack all data into a predictable account.
 - No trading fees forever on Manifest.
 - Lot sizes restrict expressable prices. This meaningfully matters to orderflow through routers that have non-standard sizes. Manifest reduces the min trade size to atomic and increases the the range of expressable prices to cover all that are needed.
@@ -47,11 +55,13 @@ Maximal freedom to exchange risk.
 - Silent failures are an unfortunate feature request from market makers because of how solana transactions work. Manifest rejects this at the infra level, but still allows those who need it to handle in the wrapper.
 - Token 22 is the new version of token program. While it is not useful for defi and will make orderbooks less efficient, there are some notable tokens that will use it. Manifest only takes the performance hit to support token22 precisely when needed and moving token22 tokens, and only then.
 - A new core vs. wrapper program architecture enables greater composability for traders and exchange interfaces. Customize feature sets and distribution for any market requirement.
+- Capital efficient order type that allows market making on multiple markets while reusing capital across them.
 
 ## Design Overview
+
 ### Data Structure
 
-The innovation that allows this next leap in onchain trading is the hypertree [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
+The innovation that allows this next leap in onchain trading is the [`hypertree`](https://github.com/CKS-Systems/manifest/tree/main/lib). All data in the market account fits into graph nodes of the same size (80 bytes), which lets independent data structures grow without being fully initialized from the start by interleaving
 
 The market account holds all relevant information. It begins with a header that stores all of the fixed information for the market like BaseMint, QuoteMint. All variable data (RestingOrders and ClaimedSeats) are in the dynamic
 byte array after the header. There are 3 RedBlack trees for Bids, Asks,
@@ -66,6 +76,7 @@ ClaimedSeats and 1 LinkedList for FreeListNodes, overlapping across each other. 
 </pre>
 
 ### Core vs Wrapper
+
 Manifest implements the orderbook as an infrastructure layer primitive and creates the purest form of risk exchange possible. Other orderbooks get bogged down by special feature requests from trading teams that ultimately make the program bloated and confusing. Manifest strives to only include features that are absolutely necessary to be in the base layer. Anything that can be handled at layers above on the stack will not be done in manifest. This simplification makes formal verification of the program feasible.
 
 Manifest should be interacted with though a wrapper program. Features like ClientOrderId, FillOrKill, PostOnlySlide, adjusting orders for insufficient funds, can and should be in a separate program that does a CPI into Manifest. A reference implementation and deployment of a wrapper are provided, showing what can be done outside the core of an orderbook without needing to be in the orderbook itself.
@@ -83,12 +94,13 @@ cargo build-sbf
 ### Testing
 
 #### Program Test
+
 ```
 cargo test-sbf
 ```
 
 #### Typescript client test
+
 ```
 sh local-validator-test.sh
 ```
-

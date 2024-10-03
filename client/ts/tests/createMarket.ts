@@ -15,7 +15,10 @@ import { createMint } from '@solana/spl-token';
 import { FIXED_MANIFEST_HEADER_SIZE } from '../src/constants';
 
 async function testCreateMarket(): Promise<void> {
-  const connection: Connection = new Connection('http://127.0.0.1:8899');
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
   const payerKeypair: Keypair = Keypair.generate();
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
 
@@ -61,7 +64,7 @@ export async function createMarket(
     programId: PROGRAM_ID,
   });
 
-  const createMarketIx = ManifestClient.createMarketIx(
+  const createMarketIx = ManifestClient['createMarketIx'](
     payerKeypair.publicKey,
     baseMint,
     quoteMint,
@@ -71,14 +74,10 @@ export async function createMarket(
   const tx: Transaction = new Transaction();
   tx.add(createAccountIx);
   tx.add(createMarketIx);
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    tx,
-    [payerKeypair, marketKeypair],
-    {
-      commitment: 'finalized',
-    },
-  );
+  const signature = await sendAndConfirmTransaction(connection, tx, [
+    payerKeypair,
+    marketKeypair,
+  ]);
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
   return marketKeypair.publicKey;
 }

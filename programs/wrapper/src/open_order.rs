@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool, NIL};
 use manifest::{
-    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
     state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
 };
 use static_assertions::const_assert_eq;
@@ -21,7 +21,7 @@ pub struct WrapperOpenOrder {
     is_bid: PodBool,
     order_type: OrderType,
 
-    _padding: [u8; 14],
+    _padding: [u8; 30],
 }
 
 // Blocks on wrapper are bigger than blocks on the market because there is more
@@ -35,8 +35,8 @@ pub struct WrapperOpenOrder {
 // 4 + // last_valid_slot
 // 1 + // is_bid
 // 1 + // order_type
-// 14  // padding
-// = 64
+// 30  // padding
+// = 80
 const_assert_eq!(size_of::<WrapperOpenOrder>(), WRAPPER_BLOCK_PAYLOAD_SIZE);
 const_assert_eq!(size_of::<WrapperOpenOrder>() % 16, 0);
 
@@ -46,7 +46,7 @@ impl WrapperOpenOrder {
         client_order_id: u64,
         order_sequence_number: u64,
         price: QuoteAtomsPerBaseAtom,
-        num_base_atoms: u64,
+        num_base_atoms: BaseAtoms,
         last_valid_slot: u32,
         market_data_index: DataIndex,
         is_bid: bool,
@@ -56,12 +56,12 @@ impl WrapperOpenOrder {
             client_order_id,
             order_sequence_number,
             price,
-            num_base_atoms: BaseAtoms::new(num_base_atoms),
+            num_base_atoms,
             last_valid_slot,
             order_type,
             market_data_index,
             is_bid: PodBool::from_bool(is_bid),
-            _padding: [0; 14],
+            _padding: [0; 30],
         }
     }
 
@@ -76,7 +76,7 @@ impl WrapperOpenOrder {
             order_type: OrderType::Limit,
             market_data_index: NIL,
             is_bid: PodBool::from_bool(true),
-            _padding: [0; 14],
+            _padding: [0; 30],
         }
     }
 
@@ -158,7 +158,7 @@ fn test_display() {
         0,
         0,
         1.0.try_into().unwrap(),
-        0,
+        BaseAtoms::ZERO,
         0,
         0,
         false,
@@ -173,7 +173,7 @@ fn test_cmp() {
         0,
         0,
         1.0.try_into().unwrap(),
-        0,
+        BaseAtoms::ZERO,
         0,
         0,
         false,
@@ -183,7 +183,7 @@ fn test_cmp() {
         1,
         0,
         1.0.try_into().unwrap(),
-        0,
+        BaseAtoms::ZERO,
         0,
         0,
         false,

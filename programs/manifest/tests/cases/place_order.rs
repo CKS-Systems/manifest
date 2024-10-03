@@ -1,10 +1,10 @@
 use std::u64;
 
-use hypertree::{RedBlackTree, NIL};
+use hypertree::HyperTreeValueIteratorTrait;
 use manifest::{
     quantities::WrapperU64,
     state::{
-        constants::{BLOCK_SIZE, MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
+        constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
         OrderType, RestingOrder,
     },
     validation::get_vault_address,
@@ -126,7 +126,7 @@ async fn place_order_not_expand_if_not_needed_test() -> anyhow::Result<()> {
     // Always 1 more than needed.
     assert_eq!(
         loaded_account.data.len(),
-        MARKET_FIXED_SIZE + (3 * BLOCK_SIZE)
+        MARKET_FIXED_SIZE + (3 * MARKET_BLOCK_SIZE)
     );
 
     Ok(())
@@ -204,6 +204,27 @@ async fn match_limit_orders_basic_test() -> anyhow::Result<()> {
             .await,
         0
     );
+
+    // verify volume stats
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_volume(&test_fixture.payer())
+            .await,
+        2_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_volume(&second_keypair.pubkey())
+            .await,
+        2_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture.market_fixture.market.fixed.get_quote_volume(),
+        2_000 * USDC_UNIT_SIZE
+    );
+
     Ok(())
 }
 
@@ -541,37 +562,26 @@ async fn match_limit_orders_with_large_deposits_test() -> anyhow::Result<()> {
         .get_quote_balance_atoms(&second_keypair.pubkey())
         .await;
 
-    let bids: RedBlackTree<RestingOrder> = RedBlackTree::<RestingOrder>::new(
-        test_fixture.market_fixture.market.dynamic.as_mut_slice(),
-        test_fixture
-            .market_fixture
-            .market
-            .fixed
-            .get_bids_root_index(),
-        NIL,
-    );
-    for (_, bid) in bids.iter() {
-        let bid_balance_quote = (bid
-            .get_value()
-            .get_num_base_atoms()
-            .checked_mul(bid.get_value().get_price(), true))
-        .unwrap()
-        .as_u64();
+    for (_, bid) in test_fixture
+        .market_fixture
+        .market
+        .get_bids()
+        .iter::<RestingOrder>()
+    {
+        let bid_balance_quote = (bid.get_num_base_atoms().checked_mul(bid.get_price(), true))
+            .unwrap()
+            .as_u64();
         println!("bid {bid_balance_quote}");
         user_balance_quote += bid_balance_quote;
     }
-    let asks: RedBlackTree<RestingOrder> = RedBlackTree::<RestingOrder>::new(
-        test_fixture.market_fixture.market.dynamic.as_mut_slice(),
-        test_fixture
-            .market_fixture
-            .market
-            .fixed
-            .get_asks_root_index(),
-        NIL,
-    );
 
-    for (_, ask) in asks.iter() {
-        let ask_balance_base = ask.get_value().get_num_base_atoms().as_u64();
+    for (_, ask) in test_fixture
+        .market_fixture
+        .market
+        .get_asks()
+        .iter::<RestingOrder>()
+    {
+        let ask_balance_base = ask.get_num_base_atoms().as_u64();
         println!("ask {ask_balance_base}");
         user_balance_base += ask_balance_base;
     }
@@ -698,123 +708,6 @@ async fn post_only_fail_test() -> anyhow::Result<()> {
             .await,
         0
     );
-    Ok(())
-}
-
-#[tokio::test]
-async fn post_only_slide_test() -> anyhow::Result<()> {
-    let mut test_fixture: TestFixture = TestFixture::new().await;
-    test_fixture.claim_seat().await?;
-
-    // Ask for 2@10
-    test_fixture.deposit(Token::SOL, 20 * SOL_UNIT_SIZE).await?;
-    test_fixture
-        .place_order(
-            Side::Ask,
-            2 * SOL_UNIT_SIZE,
-            10,
-            0,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-            OrderType::Limit,
-        )
-        .await?;
-
-    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
-    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
-    test_fixture
-        .deposit_for_keypair(Token::USDC, 20_000 * USDC_UNIT_SIZE, &second_keypair)
-        .await?;
-
-    // Post only slide should slide the order down to 10.0
-    test_fixture
-        .place_order_for_keypair(
-            Side::Bid,
-            1 * SOL_UNIT_SIZE,
-            11,
-            0,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-            OrderType::PostOnlySlide,
-            &second_keypair,
-        )
-        .await?;
-
-    // To verify that we have 10.00000, withdraw 10 and then unable to do more
-    test_fixture
-        .withdraw_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
-        .await?;
-
-    assert!(test_fixture
-        .withdraw_for_keypair(Token::USDC, 1_000 * USDC_UNIT_SIZE, &second_keypair)
-        .await
-        .is_err());
-    assert!(test_fixture
-        .withdraw_for_keypair(Token::SOL, 1 * SOL_UNIT_SIZE, &second_keypair)
-        .await
-        .is_err());
-    Ok(())
-}
-
-#[tokio::test]
-async fn post_only_slide_ask_test() -> anyhow::Result<()> {
-    let mut test_fixture: TestFixture = TestFixture::new().await;
-    test_fixture.claim_seat().await?;
-
-    // Bid for 1@10
-    test_fixture
-        .deposit(Token::USDC, 20_000 * USDC_UNIT_SIZE)
-        .await?;
-    test_fixture
-        .place_order(
-            Side::Bid,
-            1 * SOL_UNIT_SIZE,
-            10,
-            0,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-            OrderType::Limit,
-        )
-        .await?;
-
-    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
-    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
-    test_fixture
-        .deposit_for_keypair(Token::SOL, 20 * SOL_UNIT_SIZE, &second_keypair)
-        .await?;
-
-    // Post only slide should slide the order up to 10.000001
-    test_fixture
-        .place_order_for_keypair(
-            Side::Ask,
-            1 * SOL_UNIT_SIZE,
-            9,
-            0,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-            OrderType::PostOnlySlide,
-            &second_keypair,
-        )
-        .await?;
-
-    // To verify that we have 1@10.000001, bid 1@12 from main keypair and check results.
-    test_fixture
-        .place_order(
-            Side::Bid,
-            1 * SOL_UNIT_SIZE,
-            12,
-            0,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-            OrderType::Limit,
-        )
-        .await?;
-
-    // Second keypair got 10.00001, so withdraw 10 and not any more.
-    test_fixture
-        .withdraw_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
-        .await?;
-
-    assert!(test_fixture
-        .withdraw_for_keypair(Token::USDC, 1_000 * USDC_UNIT_SIZE, &second_keypair)
-        .await
-        .is_err());
-
     Ok(())
 }
 

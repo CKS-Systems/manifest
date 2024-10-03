@@ -54,12 +54,8 @@ export class QuoteAtomsPerBaseAtom implements QuoteAtomsPerBaseAtomArgs {
   static async fromAccountAddress(
     connection: web3.Connection,
     address: web3.PublicKey,
-    commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig,
   ): Promise<QuoteAtomsPerBaseAtom> {
-    const accountInfo = await connection.getAccountInfo(
-      address,
-      commitmentOrConfig,
-    );
+    const accountInfo = await connection.getAccountInfo(address);
     if (accountInfo == null) {
       throw new Error(
         `Unable to find QuoteAtomsPerBaseAtom account at ${address}`,

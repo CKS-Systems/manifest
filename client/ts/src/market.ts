@@ -1,10 +1,20 @@
-import { PublicKey, Connection } from '@solana/web3.js';
+import {
+  PublicKey,
+  Connection,
+  TransactionInstruction,
+  Keypair,
+  Signer,
+  SystemProgram,
+} from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
+import { createCreateMarketInstruction, PROGRAM_ID } from './manifest';
+import { getVaultAddress } from './utils/market';
+import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 /**
  * Internal use only. Needed because shank doesnt handle f64 and because the
@@ -27,14 +37,14 @@ export type RestingOrderInternal = {
 export type RestingOrder = {
   /** Trader public key. */
   trader: PublicKey;
-  /** Number of base atoms remaining in the order. */
-  numBaseAtoms: bignum;
+  /** Number of base tokens remaining in the order. */
+  numBaseTokens: bignum;
   /** Last slot before this order is invalid and will be removed. */
   lastValidSlot: bignum;
   /** Exchange defined sequenceNumber for this order, guaranteed to be unique. */
   sequenceNumber: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
-  price: number;
+  /** Price as float in tokens of quote per tokens of base. */
+  tokenPrice: number;
 };
 
 /**
@@ -132,7 +142,7 @@ export class Market {
     address: PublicKey;
   }): Promise<Market> {
     const buffer = await connection
-      .getAccountInfo(address, 'confirmed')
+      .getAccountInfo(address)
       .then((accountInfo) => accountInfo?.data);
 
     if (buffer === undefined) {
@@ -148,7 +158,7 @@ export class Market {
    */
   public async reload(connection: Connection): Promise<void> {
     const buffer = await connection
-      .getAccountInfo(this.address, 'confirmed')
+      .getAccountInfo(this.address)
       .then((accountInfo) => accountInfo?.data);
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
@@ -157,27 +167,30 @@ export class Market {
   }
 
   /**
-   * Get the amount in atoms of balance that is deposited on the exchange, does
+   * Get the amount in tokens of balance that is deposited on this market, does
    * not include tokens currently in open orders.
    *
    * @param trader PublicKey of the trader to check balance of
    * @param isBase boolean for whether this is checking base or quote
    *
-   * @returns number in atoms
+   * @returns number in tokens
    */
-  public getWithdrawableBalanceAtoms(
+  public getWithdrawableBalanceTokens(
     trader: PublicKey,
     isBase: boolean,
   ): number {
     const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
-      return claimedSeat.publicKey.toBase58() == trader.toBase58();
+      return claimedSeat.publicKey.equals(trader);
     });
     // No seat claimed.
     if (filteredSeats.length == 0) {
       return 0;
     }
     const seat: ClaimedSeat = filteredSeats[0];
-    return toNum(isBase ? seat.baseBalance : seat.quoteBalance);
+    const withdrawableBalance = isBase
+      ? toNum(seat.baseBalance) / 10 ** this.baseDecimals()
+      : toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    return withdrawableBalance;
   }
 
   /**
@@ -225,7 +238,7 @@ export class Market {
    */
   public hasSeat(trader: PublicKey): boolean {
     const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
-      return claimedSeat.publicKey.toBase58() == trader.toBase58();
+      return claimedSeat.publicKey.equals(trader);
     });
     return filteredSeats.length > 0;
   }
@@ -260,7 +273,7 @@ export class Market {
   /**
    * Print all information loaded about the market in a human readable format.
    */
-  public prettyPrint() {
+  public prettyPrint(): void {
     console.log('');
     console.log(`Market: ${this.address}`);
     console.log(`========================`);
@@ -272,13 +285,13 @@ export class Market {
     console.log('Bids:');
     this.data.bids.forEach((bid) => {
       console.log(
-        `trader: ${bid.trader} numBaseAtoms: ${bid.numBaseAtoms} price: ${bid.price} lastValidSlot: ${bid.lastValidSlot} sequenceNumber: ${bid.sequenceNumber}`,
+        `trader: ${bid.trader} numBaseTokens: ${bid.numBaseTokens} token price: ${bid.tokenPrice} lastValidSlot: ${bid.lastValidSlot} sequenceNumber: ${bid.sequenceNumber}`,
       );
     });
     console.log('Asks:');
     this.data.asks.forEach((ask) => {
       console.log(
-        `trader: ${ask.trader} numBaseAtoms: ${ask.numBaseAtoms} price: ${ask.price} lastValidSlot: ${ask.lastValidSlot} sequenceNumber: ${ask.sequenceNumber}`,
+        `trader: ${ask.trader} numBaseTokens: ${ask.numBaseTokens} token price: ${ask.tokenPrice} lastValidSlot: ${ask.lastValidSlot} sequenceNumber: ${ask.sequenceNumber}`,
       );
     });
     console.log('ClaimedSeats:');
@@ -349,8 +362,7 @@ export class Market {
     offset += 4;
 
     // _padding2: [u32; 3],
-    // _padding3: [u64; 32],
-    // _padding4: [u64; 8],
+    // _padding3: [u64; 8],
 
     const bids: RestingOrder[] =
       bidsRootIndex != NIL
@@ -360,7 +372,6 @@ export class Market {
             restingOrderBeet,
           ).map((restingOrderInternal: RestingOrderInternal) => {
             return {
-              ...restingOrderInternal,
               trader: publicKeyBeet.deserialize(
                 data.subarray(
                   Number(restingOrderInternal.traderIndex) +
@@ -371,7 +382,13 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: convertU128(restingOrderInternal.price),
+              numBaseTokens:
+                toNum(restingOrderInternal.numBaseAtoms) /
+                10 ** baseMintDecimals,
+              tokenPrice:
+                convertU128(restingOrderInternal.price) *
+                10 ** (baseMintDecimals - quoteMintDecimals),
+              ...restingOrderInternal,
             };
           })
         : [];
@@ -384,7 +401,6 @@ export class Market {
             restingOrderBeet,
           ).map((restingOrderInternal: RestingOrderInternal) => {
             return {
-              ...restingOrderInternal,
               trader: publicKeyBeet.deserialize(
                 data.subarray(
                   Number(restingOrderInternal.traderIndex) +
@@ -395,7 +411,13 @@ export class Market {
                     FIXED_MANIFEST_HEADER_SIZE,
                 ),
               )[0].publicKey,
-              price: convertU128(restingOrderInternal.price),
+              numBaseTokens:
+                toNum(restingOrderInternal.numBaseAtoms) /
+                10 ** baseMintDecimals,
+              tokenPrice:
+                convertU128(restingOrderInternal.price) *
+                10 ** (baseMintDecimals - quoteMintDecimals),
+              ...restingOrderInternal,
             };
           })
         : [];
@@ -421,5 +443,72 @@ export class Market {
       asks,
       claimedSeats,
     };
+  }
+
+  static async findByMints(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+  ): Promise<Market[]> {
+    // Based on the MarketFixed struct
+    const baseMintOffset = 16;
+    const quoteMintOffset = 48;
+
+    const filters = [
+      {
+        memcmp: {
+          offset: baseMintOffset,
+          bytes: baseMint.toBase58(),
+        },
+      },
+      {
+        memcmp: {
+          offset: quoteMintOffset,
+          bytes: quoteMint.toBase58(),
+        },
+      },
+    ];
+
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters,
+    });
+
+    return accounts.map(({ account, pubkey }) =>
+      Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
+    );
+  }
+
+  static async setupIxs(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    payer: PublicKey,
+  ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
+    const marketKeypair: Keypair = Keypair.generate();
+    const createAccountIx: TransactionInstruction = SystemProgram.createAccount(
+      {
+        fromPubkey: payer,
+        newAccountPubkey: marketKeypair.publicKey,
+        space: FIXED_MANIFEST_HEADER_SIZE,
+        lamports: await connection.getMinimumBalanceForRentExemption(
+          FIXED_MANIFEST_HEADER_SIZE,
+        ),
+        programId: PROGRAM_ID,
+      },
+    );
+
+    const market = marketKeypair.publicKey;
+    const baseVault = getVaultAddress(market, baseMint);
+    const quoteVault = getVaultAddress(market, quoteMint);
+    const createMarketIx = createCreateMarketInstruction({
+      payer,
+      baseMint,
+      quoteMint,
+      market,
+      baseVault,
+      quoteVault,
+      tokenProgram22: TOKEN_2022_PROGRAM_ID,
+    });
+    return { ixs: [createAccountIx, createMarketIx], signers: [marketKeypair] };
   }
 }

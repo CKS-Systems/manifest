@@ -117,8 +117,7 @@ impl TestFixture {
             MarketFixture::new(Rc::clone(&context), market_keypair.pubkey()).await;
 
         let create_wrapper_ixs: Vec<Instruction> =
-            create_wrapper_instructions(&payer_pubkey, &payer_pubkey, &wrapper_keypair.pubkey())
-                .unwrap();
+            create_wrapper_instructions(&payer_pubkey, &wrapper_keypair.pubkey()).unwrap();
         send_tx_with_retry(
             Rc::clone(&context),
             &create_wrapper_ixs[..],
@@ -185,12 +184,8 @@ impl TestFixture {
         keypair: &Keypair,
         wrapper_state: &Pubkey,
     ) -> anyhow::Result<(), BanksClientError> {
-        let claim_seat_ix: Instruction = claim_seat_instruction(
-            &self.market.key,
-            &keypair.pubkey(),
-            &keypair.pubkey(),
-            wrapper_state,
-        );
+        let claim_seat_ix: Instruction =
+            claim_seat_instruction(&self.market.key, &keypair.pubkey(), wrapper_state);
         send_tx_with_retry(
             Rc::clone(&self.context),
             &[claim_seat_ix],

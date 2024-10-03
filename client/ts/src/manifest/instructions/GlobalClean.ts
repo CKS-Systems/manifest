@@ -7,48 +7,72 @@
 
 import * as beet from '@metaplex-foundation/beet';
 import * as web3 from '@solana/web3.js';
+import {
+  GlobalCleanParams,
+  globalCleanParamsBeet,
+} from '../types/GlobalCleanParams';
 
 /**
  * @category Instructions
- * @category GlobalClaimSeat
+ * @category GlobalClean
  * @category generated
  */
-export const GlobalClaimSeatStruct = new beet.BeetArgsStruct<{
-  instructionDiscriminator: number;
-}>([['instructionDiscriminator', beet.u8]], 'GlobalClaimSeatInstructionArgs');
+export type GlobalCleanInstructionArgs = {
+  params: GlobalCleanParams;
+};
 /**
- * Accounts required by the _GlobalClaimSeat_ instruction
+ * @category Instructions
+ * @category GlobalClean
+ * @category generated
+ */
+export const GlobalCleanStruct = new beet.BeetArgsStruct<
+  GlobalCleanInstructionArgs & {
+    instructionDiscriminator: number;
+  }
+>(
+  [
+    ['instructionDiscriminator', beet.u8],
+    ['params', globalCleanParamsBeet],
+  ],
+  'GlobalCleanInstructionArgs',
+);
+/**
+ * Accounts required by the _GlobalClean_ instruction
  *
  * @property [_writable_, **signer**] payer
- * @property [_writable_] global
  * @property [_writable_] market
+ * @property [_writable_] global
  * @category Instructions
- * @category GlobalClaimSeat
+ * @category GlobalClean
  * @category generated
  */
-export type GlobalClaimSeatInstructionAccounts = {
+export type GlobalCleanInstructionAccounts = {
   payer: web3.PublicKey;
-  global: web3.PublicKey;
-  systemProgram?: web3.PublicKey;
   market: web3.PublicKey;
+  systemProgram?: web3.PublicKey;
+  global: web3.PublicKey;
 };
 
-export const globalClaimSeatInstructionDiscriminator = 9;
+export const globalCleanInstructionDiscriminator = 12;
 
 /**
- * Creates a _GlobalClaimSeat_ instruction.
+ * Creates a _GlobalClean_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
- * @category GlobalClaimSeat
+ * @category GlobalClean
  * @category generated
  */
-export function createGlobalClaimSeatInstruction(
-  accounts: GlobalClaimSeatInstructionAccounts,
+export function createGlobalCleanInstruction(
+  accounts: GlobalCleanInstructionAccounts,
+  args: GlobalCleanInstructionArgs,
   programId = new web3.PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms'),
 ) {
-  const [data] = GlobalClaimSeatStruct.serialize({
-    instructionDiscriminator: globalClaimSeatInstructionDiscriminator,
+  const [data] = GlobalCleanStruct.serialize({
+    instructionDiscriminator: globalCleanInstructionDiscriminator,
+    ...args,
   });
   const keys: web3.AccountMeta[] = [
     {
@@ -57,7 +81,7 @@ export function createGlobalClaimSeatInstruction(
       isSigner: true,
     },
     {
-      pubkey: accounts.global,
+      pubkey: accounts.market,
       isWritable: true,
       isSigner: false,
     },
@@ -67,7 +91,7 @@ export function createGlobalClaimSeatInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.market,
+      pubkey: accounts.global,
       isWritable: true,
       isSigner: false,
     },
