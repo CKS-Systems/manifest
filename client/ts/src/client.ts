@@ -41,6 +41,7 @@ import {
 } from './wrapper';
 import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
+import { genAccDiscriminator } from './utils/discriminator';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
 
 export interface SetupData {
@@ -54,8 +55,9 @@ type WrapperResponse = Readonly<{
   pubkey: PublicKey;
 }>;
 
-// TODO: compute this rather than hardcode
-export const marketDiscriminator: string = 'hFwv1prLTHL';
+const marketDiscriminator: Buffer = genAccDiscriminator(
+  'manifest::state::market::MarketFixed',
+);
 
 export class ManifestClient {
   private isBase22: boolean;
@@ -115,7 +117,15 @@ export class ManifestClient {
     connection: Connection,
   ): Promise<PublicKey[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [{ memcmp: { offset: 0, bytes: marketDiscriminator } }],
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: marketDiscriminator.toString('base64'),
+            encoding: 'base64',
+          },
+        },
+      ],
     });
 
     return accounts.map((a) => a.pubkey);
@@ -863,7 +873,7 @@ export class ManifestClient {
    * @returns Promise<TransactionInstruction>
    */
   public static async globalDepositIx(
-    connection,
+    connection: Connection,
     payer: PublicKey,
     globalMint: PublicKey,
     amountTokens: number,
@@ -907,7 +917,7 @@ export class ManifestClient {
    * @returns Promise<TransactionInstruction>
    */
   public static async globalWithdrawIx(
-    connection,
+    connection: Connection,
     payer: PublicKey,
     globalMint: PublicKey,
     amountTokens: number,
