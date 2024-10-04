@@ -580,7 +580,7 @@ fn test_checked_base_for_quote_edge_cases() {
 #[test]
 fn test_checked_quote_for_base_edge_cases() {
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
-        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, 10);
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, 5);
     assert!(quote_atoms_per_base_atom
         .checked_quote_for_base(BaseAtoms::new(u64::MAX), false)
         .is_err(),);
