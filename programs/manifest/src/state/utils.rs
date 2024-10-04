@@ -175,6 +175,9 @@ pub(crate) fn can_back_order<'a, 'info>(
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -> bool {
+    if global_trade_accounts_opt.is_none() {
+        return false;
+    }
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, .. } = global_trade_accounts;
 

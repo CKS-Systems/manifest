@@ -3,21 +3,25 @@ use jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
 };
 
-use hypertree::get_helper;
+use hypertree::{get_helper, get_mut_helper};
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
-    state::{DynamicAccount, MarketFixed, MarketValue},
+    state::{
+        DynamicAccount, GlobalFixed, GlobalValue, MarketFixed, MarketValue, GLOBAL_FIXED_SIZE,
+    },
     validation::{
         get_global_address, get_global_vault_address, get_vault_address,
-        loaders::GlobalTradeAccounts,
+        loaders::GlobalTradeAccounts, ManifestAccountInfo,
     },
 };
-use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
-use std::mem::size_of;
+use solana_sdk::{account_info::AccountInfo, instruction::AccountMeta, pubkey::Pubkey};
+use std::{cell::RefCell, mem::size_of, rc::Rc};
 
 #[derive(Clone)]
 pub struct ManifestMarket {
     market: MarketValue,
+    base_global: Option<GlobalValue>,
+    quote_global: Option<GlobalValue>,
     key: Pubkey,
     label: String,
     base_token_program: Pubkey,
@@ -30,6 +34,12 @@ impl ManifestMarket {
     }
     pub fn get_quote_mint(&self) -> Pubkey {
         *self.market.get_quote_mint()
+    }
+    pub fn get_base_global(&self) -> Pubkey {
+        get_global_address(self.market.get_base_mint()).0
+    }
+    pub fn get_quote_global(&self) -> Pubkey {
+        get_global_address(self.market.get_quote_mint()).0
     }
 }
 
@@ -51,7 +61,13 @@ impl Amm for ManifestMarket {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        vec![self.key, self.get_base_mint(), self.get_quote_mint()]
+        vec![
+            self.key,
+            self.get_base_mint(),
+            self.get_quote_mint(),
+            self.get_base_global(),
+            self.get_quote_global(),
+        ]
     }
 
     fn from_keyed_account(keyed_account: &KeyedAccount) -> Result<Self> {
@@ -65,6 +81,8 @@ impl Amm for ManifestMarket {
                 fixed: *market_fixed,
                 dynamic: dynamic_data.to_vec(),
             },
+            base_global: None,
+            quote_global: None,
             key: keyed_account.key,
             label: "Manifest".into(),
             // Gets updated on the first iter
@@ -80,6 +98,22 @@ impl Amm for ManifestMarket {
         if let Some(mint) = account_map.get(&self.get_quote_mint()) {
             self.quote_token_program = mint.owner;
         };
+        if let Some(global) = account_map.get(&self.get_quote_global()) {
+            let (header_bytes, dynamic_data) = global.data.split_at(size_of::<GlobalFixed>());
+            let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(header_bytes, 0_u32);
+            self.quote_global = Some(DynamicAccount::<GlobalFixed, Vec<u8>> {
+                fixed: *global_fixed,
+                dynamic: dynamic_data.to_vec(),
+            });
+        };
+        if let Some(global) = account_map.get(&self.get_base_global()) {
+            let (header_bytes, dynamic_data) = global.data.split_at(size_of::<GlobalFixed>());
+            let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(header_bytes, 0_u32);
+            self.base_global = Some(DynamicAccount::<GlobalFixed, Vec<u8>> {
+                fixed: *global_fixed,
+                dynamic: dynamic_data.to_vec(),
+            });
+        };
 
         let market_account: &solana_sdk::account::Account = account_map.get(&self.key).unwrap();
 
@@ -94,8 +128,85 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
-        // TODO: Make and track global trade accounts
-        let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[None, None];
+
+        let mut data_vec: Vec<u8> = Vec::new();
+        if self.quote_global.is_some() {
+            let mut header_bytes: [u8; GLOBAL_FIXED_SIZE] = [0; GLOBAL_FIXED_SIZE];
+            *get_mut_helper::<GlobalFixed>(&mut header_bytes, 0_u32) =
+                self.quote_global.as_ref().unwrap().fixed;
+            data_vec.extend_from_slice(&header_bytes);
+            data_vec.append(&mut self.quote_global.as_ref().unwrap().dynamic.clone());
+        }
+
+        let mut lamports: u64 = 0;
+        let account_info: AccountInfo<'_> = AccountInfo {
+            key: &self.get_quote_global(),
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut data_vec[..])),
+            owner: &manifest::ID,
+            rent_epoch: 0,
+            is_signer: false,
+            is_writable: false,
+            executable: false,
+        };
+        let quote_global_trade_accounts_opt: Option<GlobalTradeAccounts> =
+            if self.quote_global.is_some() {
+                Some(GlobalTradeAccounts {
+                    mint_opt: None,
+                    global: ManifestAccountInfo::new(&account_info).unwrap(),
+                    global_vault_opt: None,
+                    market_vault_opt: None,
+                    token_program_opt: None,
+                    system_program: None,
+                    gas_payer_opt: None,
+                    gas_receiver_opt: None,
+                    market: self.key.clone(),
+                })
+            } else {
+                None
+            };
+
+        let mut data_vec: Vec<u8> = Vec::new();
+        if self.base_global.is_some() {
+            let mut header_bytes: [u8; GLOBAL_FIXED_SIZE] = [0; GLOBAL_FIXED_SIZE];
+            *get_mut_helper::<GlobalFixed>(&mut header_bytes, 0_u32) =
+                self.base_global.as_ref().unwrap().fixed;
+            data_vec.extend_from_slice(&header_bytes);
+            data_vec.append(&mut self.base_global.as_ref().unwrap().dynamic.clone());
+        }
+
+        let mut lamports: u64 = 0;
+        let account_info: AccountInfo<'_> = AccountInfo {
+            key: &self.get_base_global(),
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut data_vec[..])),
+            owner: &manifest::ID,
+            rent_epoch: 0,
+            is_signer: false,
+            is_writable: false,
+            executable: false,
+        };
+        let base_global_trade_accounts_opt: Option<GlobalTradeAccounts> =
+            if self.base_global.is_some() {
+                Some(GlobalTradeAccounts {
+                    mint_opt: None,
+                    global: ManifestAccountInfo::new(&account_info).unwrap(),
+                    global_vault_opt: None,
+                    market_vault_opt: None,
+                    token_program_opt: None,
+                    system_program: None,
+                    gas_payer_opt: None,
+                    gas_receiver_opt: None,
+                    market: self.key.clone(),
+                })
+            } else {
+                None
+            };
+
+        let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[
+            base_global_trade_accounts_opt,
+            quote_global_trade_accounts_opt,
+        ];
 
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
@@ -522,7 +633,7 @@ mod test {
         assert_eq!(manifest_market.key(), market_key);
         assert_eq!(manifest_market.program_id(), manifest::id());
         assert_eq!(manifest_market.get_reserve_mints()[0], base_mint_key);
-        assert_eq!(manifest_market.get_accounts_to_update().len(), 3);
+        assert_eq!(manifest_market.get_accounts_to_update().len(), 5);
 
         let swap_params: SwapParams = SwapParams {
             in_amount: 1,
@@ -563,7 +674,6 @@ mod test {
         assert_eq!(manifest_market.program_dependencies().len(), 0);
     }
 
-    /*
     #[test]
     fn test_jupiter_global_22() {
         let base_mint_key: Pubkey =
@@ -794,9 +904,35 @@ mod test {
         let mut manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_keyed_account).unwrap();
 
+        let mut quote_global_value: DynamicAccount<GlobalFixed, Vec<u8>> = GlobalValue {
+            fixed: GlobalFixed::new_empty(&quote_mint_key),
+            dynamic: vec![0; GLOBAL_BLOCK_SIZE * 2],
+        };
+        quote_global_value.global_expand().unwrap();
+        quote_global_value.add_trader(&trader_key).unwrap();
+        quote_global_value
+            .deposit_global(&trader_key, GlobalAtoms::new(1_000_000_000))
+            .unwrap();
+
+        let mut header_bytes: [u8; GLOBAL_FIXED_SIZE] = [0; GLOBAL_FIXED_SIZE];
+        *get_mut_helper::<GlobalFixed>(&mut header_bytes, 0_u32) = quote_global_value.fixed;
+
+        let mut data_vec: Vec<u8> = Vec::new();
+        data_vec.extend_from_slice(&header_bytes);
+        data_vec.append(&mut quote_global_value.dynamic);
+
+        let quote_global_account: Account = Account {
+            lamports: 0,
+            data: data_vec,
+            owner: manifest::id(),
+            executable: false,
+            rent_epoch: 0,
+        };
+
         let accounts_map: AccountMap = HashMap::from([
             (market_key, market_account),
             (quote_mint_key, quote_mint_account),
+            (manifest_market.get_quote_global(), quote_global_account),
         ]);
 
         manifest_market.update(&accounts_map).unwrap();
@@ -834,5 +970,4 @@ mod test {
             };
         }
     }
-    */
 }
