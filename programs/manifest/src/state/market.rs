@@ -350,7 +350,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 continue;
             }
 
-            let matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
+            let matched_price: QuoteAtomsPerBaseAtom = resting_order.get_price();
             // base_atoms_limit is the number of base atoms that you get if you
             // were to trade all of the remaining quote atoms at the current
             // price. Rounding is done in the taker favor because at the limit,
@@ -363,9 +363,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             // Either fill the entire resting order, or only the
             // base_atoms_limit, in which case, this is the last iteration.
             let matched_base_atoms: BaseAtoms =
-                other_order.get_num_base_atoms().min(base_atoms_limit);
+                resting_order.get_num_base_atoms().min(base_atoms_limit);
             let did_fully_match_resting_order: bool =
-                base_atoms_limit >= other_order.get_num_base_atoms();
+                base_atoms_limit >= resting_order.get_num_base_atoms();
 
             // Number of quote atoms matched exactly. Always round in taker favor
             // here because we already know that taker did not finish on the last
@@ -613,13 +613,13 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         let mut remaining_base_atoms: BaseAtoms = num_base_atoms;
         while remaining_base_atoms > BaseAtoms::ZERO && current_maker_order_index != NIL {
-            let other_order: &RestingOrder =
-                get_helper::<RBNode<RestingOrder>>(dynamic, current_order_index).get_value();
+            let maker_order: &RestingOrder =
+                get_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index).get_value();
 
             // Remove the resting order if expired.
-            if other_order.is_expired(now_slot) {
-                let next_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+            if maker_order.is_expired(now_slot) {
+                let next_maker_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
                 remove_and_update_balances(
                     fixed,
                     dynamic,
@@ -674,7 +674,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             let taker: Pubkey = get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
                 .get_value()
                 .trader;
-            let is_global: bool = other_order.is_global();
+            let is_global: bool = maker_order.is_global();
 
             if is_global {
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
@@ -692,8 +692,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     }),
                 )?;
                 if !has_enough_tokens {
-                    let next_order_index: DataIndex =
-                        get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+                    let next_maker_order_index: DataIndex =
+                        get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
                     remove_and_update_balances(
                         fixed,
                         dynamic,
@@ -820,8 +820,8 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     remove_from_global(&global_trade_accounts_opt, &maker)?;
                 }
 
-                let next_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+                let next_maker_order_index: DataIndex =
+                    get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
                 remove_order_from_tree_and_free(fixed, dynamic, current_maker_order_index, !is_bid)?;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_maker_order_index = next_maker_order_index;
