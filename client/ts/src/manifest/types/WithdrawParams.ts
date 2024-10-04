@@ -8,13 +8,18 @@
 import * as beet from '@metaplex-foundation/beet';
 export type WithdrawParams = {
   amountAtoms: beet.bignum;
+  traderIndexHint: beet.COption<number>;
 };
 
 /**
  * @category userTypes
  * @category generated
  */
-export const withdrawParamsBeet = new beet.BeetArgsStruct<WithdrawParams>(
-  [['amountAtoms', beet.u64]],
-  'WithdrawParams',
-);
+export const withdrawParamsBeet =
+  new beet.FixableBeetArgsStruct<WithdrawParams>(
+    [
+      ['amountAtoms', beet.u64],
+      ['traderIndexHint', beet.coption(beet.u32)],
+    ],
+    'WithdrawParams',
+  );

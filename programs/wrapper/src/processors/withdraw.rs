@@ -54,6 +54,8 @@ pub(crate) fn process_withdraw(
         amount_atoms,
         trader_index_hint,
     } = WithdrawParams::try_from_slice(data)?;
+    // TODO: Lookup the trader index hint if not provided.
+
     // Call the withdraw CPI
     invoke(
         &withdraw_instruction(

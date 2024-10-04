@@ -53,6 +53,8 @@ pub(crate) fn process_deposit(
         amount_atoms,
         trader_index_hint,
     } = DepositParams::try_from_slice(data)?;
+    // TODO: Lookup the trader index hint if not provided.
+
     // Call the deposit CPI
     invoke(
         &deposit_instruction(

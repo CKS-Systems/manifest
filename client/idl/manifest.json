@@ -1332,6 +1332,12 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           }
         ]
       }
@@ -1416,6 +1422,12 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           }
         ]
       }

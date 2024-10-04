@@ -23,7 +23,7 @@ export type DepositInstructionArgs = {
  * @category Deposit
  * @category generated
  */
-export const DepositStruct = new beet.BeetArgsStruct<
+export const DepositStruct = new beet.FixableBeetArgsStruct<
   DepositInstructionArgs & {
     instructionDiscriminator: number;
   }
