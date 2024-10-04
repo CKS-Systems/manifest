@@ -4,6 +4,7 @@ use hypertree::{
     HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
     RedBlackTreeReadOnly, NIL,
 };
+use shank::ShankType;
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 use std::mem::size_of;
@@ -67,7 +68,7 @@ const_assert_eq!(
 // Does not need to align to word boundaries because does not deserialize.
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct MarketFixed {
     /// Discriminant for identifying this type of account.
     pub discriminant: u64,

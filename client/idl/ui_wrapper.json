@@ -559,6 +559,106 @@
   ],
   "types": [
     {
+      "name": "MarketInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "ordersRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "traderIndex",
+            "type": "u32"
+          },
+          {
+            "name": "baseBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolumeUnpaid",
+            "type": "u64"
+          },
+          {
+            "name": "lastUpdatedSlot",
+            "type": "u32"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u32",
+                1
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperOpenOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price",
+            "type": "u128"
+          },
+          {
+            "name": "clientOrderId",
+            "type": "u64"
+          },
+          {
+            "name": "orderSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "numBaseAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "marketDataIndex",
+            "type": "u32"
+          },
+          {
+            "name": "lastValidSlot",
+            "type": "u32"
+          },
+          {
+            "name": "isBid",
+            "type": "bool"
+          },
+          {
+            "name": "orderType",
+            "type": {
+              "defined": "OrderType"
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                30
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "WrapperCancelOrderParams",
       "type": {
         "kind": "struct",
