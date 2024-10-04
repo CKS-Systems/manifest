@@ -70,7 +70,6 @@ const PlaceOrder = ({
       isBid: side == 'buy',
       lastValidSlot: 0,
       orderType: OrderType.Limit,
-      minOutTokens: 0,
       clientOrderId: Number(clientOrderId),
     };
 
