@@ -1,7 +1,6 @@
-use crate::ManifestWrapperInstruction;
+use crate::{processors::deposit::WrapperDepositParams, ManifestWrapperInstruction};
 use borsh::BorshSerialize;
-use hypertree::DataIndex;
-use manifest::{program::deposit::DepositParams, validation::get_vault_address};
+use manifest::validation::get_vault_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -15,7 +14,6 @@ pub fn deposit_instruction(
     trader_token_account: &Pubkey,
     wrapper_state: &Pubkey,
     token_program: Pubkey,
-    trader_index_hint: Option<DataIndex>,
 ) -> Instruction {
     let (vault_address, _) = get_vault_address(market, mint);
     Instruction {
@@ -32,7 +30,7 @@ pub fn deposit_instruction(
         ],
         data: [
             ManifestWrapperInstruction::Deposit.to_vec(),
-            DepositParams::new(amount_atoms, trader_index_hint)
+            WrapperDepositParams::new(amount_atoms)
                 .try_to_vec()
                 .unwrap(),
         ]

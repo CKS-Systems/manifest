@@ -74,6 +74,7 @@ pub(crate) fn process_deposit(
     let market_info: MarketInfo =
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
     let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
+    drop(wrapper_data);
 
     // Call the deposit CPI
     invoke(

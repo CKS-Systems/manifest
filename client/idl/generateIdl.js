@@ -302,7 +302,7 @@ function modifyIdlCore(programName) {
     }
   } else if (programName == 'wrapper') {
     idl.types.push({
-      name: 'DepositParams',
+      name: 'WrapperDepositParams',
       type: {
         kind: 'struct',
         fields: [
@@ -314,7 +314,7 @@ function modifyIdlCore(programName) {
       },
     });
     idl.types.push({
-      name: 'WithdrawParams',
+      name: 'WrapperWithdrawParams',
       type: {
         kind: 'struct',
         fields: [
@@ -370,7 +370,7 @@ function modifyIdlCore(programName) {
           instruction.args.push({
             name: 'params',
             type: {
-              defined: 'DepositParams',
+              defined: 'WrapperDepositParams',
             },
           });
           break;
@@ -379,7 +379,7 @@ function modifyIdlCore(programName) {
           instruction.args.push({
             name: 'params',
             type: {
-              defined: 'WithdrawParams',
+              defined: 'WrapperWithdrawParams',
             },
           });
           break;
