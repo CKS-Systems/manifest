@@ -500,6 +500,29 @@ createErrorFromCodeLookup.set(0x15, () => new InvalidCleanError());
 createErrorFromNameLookup.set('InvalidClean', () => new InvalidCleanError());
 
 /**
+ * PriceConversionError: 'Error in converting price'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class PriceConversionErrorError extends Error {
+  readonly code: number = 0x16;
+  readonly name: string = 'PriceConversionError';
+  constructor() {
+    super('Error in converting price');
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, PriceConversionErrorError);
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x16, () => new PriceConversionErrorError());
+createErrorFromNameLookup.set(
+  'PriceConversionError',
+  () => new PriceConversionErrorError(),
+);
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

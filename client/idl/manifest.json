@@ -1551,6 +1551,11 @@
       "code": 21,
       "name": "InvalidClean",
       "msg": "Tried to clean order that was not eligible to be cleaned"
+    },
+    {
+      "code": 22,
+      "name": "PriceConversionError",
+      "msg": "Error in converting price"
     }
   ],
   "metadata": {
