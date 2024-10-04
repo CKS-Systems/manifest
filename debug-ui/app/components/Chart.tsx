@@ -56,10 +56,11 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         const timestamp = Math.floor(time / 60) * 60; // Group by minute
 
         const quoteTokens =
-          fill.quoteAtoms /
+          Number(fill.quoteAtoms) /
           10 ** Number(marketRef.current?.quoteDecimals() || 0);
         const baseTokens =
-          fill.baseAtoms / 10 ** Number(marketRef.current?.baseDecimals() || 0);
+          Number(fill.baseAtoms) /
+          10 ** Number(marketRef.current?.baseDecimals() || 0);
 
         const price = Number((quoteTokens / baseTokens).toFixed(4));
 
