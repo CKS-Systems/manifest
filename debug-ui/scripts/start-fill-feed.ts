@@ -10,9 +10,14 @@ if (!RPC_URL) {
 }
 
 const run = async () => {
-  const conn = new Connection(RPC_URL!, "confirmed");
+  console.log('starting fill feed...');
+
+  const conn = new Connection(RPC_URL!, 'confirmed');
   const feed = new FillFeed(conn);
   await feed.parseLogs(false);
 };
 
-run().catch(console.error);
+run().catch((e) => {
+  console.error(e);
+  throw e;
+});
