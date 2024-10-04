@@ -53,7 +53,8 @@ pub(crate) fn process_deposit(
         amount_atoms,
         trader_index_hint,
     } = DepositParams::try_from_slice(data)?;
-    // TODO: Lookup the trader index hint if not provided.
+    // Does not lookup trader index hint when not provided because we dont
+    // actually need a claimed seat on wrapper level to deposit/withdraw.
 
     // Call the deposit CPI
     invoke(
