@@ -476,7 +476,6 @@ export class ManifestClient {
       {
         params: {
           amountAtoms,
-          traderIndexHint: null,
         },
       },
     );
@@ -524,7 +523,6 @@ export class ManifestClient {
       {
         params: {
           amountAtoms,
-          traderIndexHint: null,
         },
       },
     );
@@ -592,7 +590,6 @@ export class ManifestClient {
           cancels: [],
           cancelAll: false,
           orders: [toWrapperPlaceOrderParams(this.market, params)],
-          traderIndexHint: null,
         },
       },
     );
@@ -716,7 +713,6 @@ export class ManifestClient {
           cancels: [params],
           cancelAll: false,
           orders: [],
-          traderIndexHint: null,
         },
       },
     );
@@ -749,7 +745,6 @@ export class ManifestClient {
           orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
             toWrapperPlaceOrderParams(this.market, params),
           ),
-          traderIndexHint: null,
         },
       },
     );
@@ -773,7 +768,6 @@ export class ManifestClient {
           cancels: [],
           cancelAll: true,
           orders: [],
-          traderIndexHint: null,
         },
       },
     );

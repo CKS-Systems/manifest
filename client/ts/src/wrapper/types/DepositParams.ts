@@ -8,17 +8,13 @@
 import * as beet from '@metaplex-foundation/beet';
 export type DepositParams = {
   amountAtoms: beet.bignum;
-  traderIndexHint: beet.COption<number>;
 };
 
 /**
  * @category userTypes
  * @category generated
  */
-export const depositParamsBeet = new beet.FixableBeetArgsStruct<DepositParams>(
-  [
-    ['amountAtoms', beet.u64],
-    ['traderIndexHint', beet.coption(beet.u32)],
-  ],
+export const depositParamsBeet = new beet.BeetArgsStruct<DepositParams>(
+  [['amountAtoms', beet.u64]],
   'DepositParams',
 );

@@ -310,12 +310,6 @@ function modifyIdlCore(programName) {
             name: 'amountAtoms',
             type: 'u64',
           },
-          {
-            name: 'traderIndexHint',
-            type: {
-              option: 'u32'
-            }
-          },
         ],
       },
     });
@@ -327,12 +321,6 @@ function modifyIdlCore(programName) {
           {
             name: 'amountAtoms',
             type: 'u64',
-          },
-          {
-            name: 'traderIndexHint',
-            type: {
-              option: 'u32'
-            }
           },
         ],
       },

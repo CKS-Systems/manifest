@@ -381,12 +381,30 @@
                 "defined": "WrapperPlaceOrderParams"
               }
             }
-          },
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperDepositParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            "name": "traderIndexHint",
-            "type": {
-              "option": "u32"
-            }
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperWithdrawParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
           }
         ]
       }
@@ -399,12 +417,6 @@
           {
             "name": "amountAtoms",
             "type": "u64"
-          },
-          {
-            "name": "traderIndexHint",
-            "type": {
-              "option": "u32"
-            }
           }
         ]
       }
@@ -417,12 +429,6 @@
           {
             "name": "amountAtoms",
             "type": "u64"
-          },
-          {
-            "name": "traderIndexHint",
-            "type": {
-              "option": "u32"
-            }
           }
         ]
       }
