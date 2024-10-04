@@ -18,7 +18,9 @@ use solana_program::{
 
 use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
 
-use super::shared::{check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo};
+use super::shared::{
+    check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo,
+};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct WrapperWithdrawParams {
@@ -27,9 +29,7 @@ pub struct WrapperWithdrawParams {
 
 impl WrapperWithdrawParams {
     pub fn new(amount_atoms: u64) -> Self {
-        WrapperWithdrawParams {
-            amount_atoms,
-        }
+        WrapperWithdrawParams { amount_atoms }
     }
 }
 
@@ -66,9 +66,7 @@ pub(crate) fn process_withdraw(
     drop(market_fixed);
 
     // Params are a direct pass through.
-    let WrapperWithdrawParams {
-        amount_atoms,
-    } = WrapperWithdrawParams::try_from_slice(data)?;
+    let WrapperWithdrawParams { amount_atoms } = WrapperWithdrawParams::try_from_slice(data)?;
 
     // TODO: Make a helper for get_trader_index_hint_for_market
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;

@@ -18,7 +18,9 @@ use solana_program::{
 
 use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
 
-use super::shared::{check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo};
+use super::shared::{
+    check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo,
+};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct WrapperDepositParams {
@@ -27,9 +29,7 @@ pub struct WrapperDepositParams {
 
 impl WrapperDepositParams {
     pub fn new(amount_atoms: u64) -> Self {
-        WrapperDepositParams {
-            amount_atoms,
-        }
+        WrapperDepositParams { amount_atoms }
     }
 }
 
@@ -64,9 +64,7 @@ pub(crate) fn process_deposit(
     };
     drop(market_fixed);
 
-    let WrapperDepositParams {
-        amount_atoms,
-    } = WrapperDepositParams::try_from_slice(data)?;
+    let WrapperDepositParams { amount_atoms } = WrapperDepositParams::try_from_slice(data)?;
 
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
     let (_fixed_data, wrapper_dynamic_data) =
