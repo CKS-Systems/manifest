@@ -62,7 +62,6 @@ async function batchUpdate(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -79,7 +78,6 @@ async function batchUpdate(
         isBid,
         lastValidSlot: lastValidSlot,
         orderType: orderType,
-        minOutTokens,
         clientOrderId,
       },
     ],

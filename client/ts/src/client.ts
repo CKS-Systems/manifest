@@ -19,6 +19,10 @@ import {
 } from '@solana/spl-token';
 import {
   createCreateMarketInstruction,
+  createGlobalAddTraderInstruction,
+  createGlobalCreateInstruction,
+  createGlobalDepositInstruction,
+  createGlobalWithdrawInstruction,
   createSwapInstruction,
 } from './manifest/instructions';
 import { OrderType, SwapParams } from './manifest/types';
@@ -37,6 +41,8 @@ import {
 } from './wrapper';
 import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
+import { genAccDiscriminator } from './utils/discriminator';
+import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
 
 export interface SetupData {
   setupNeeded: boolean;
@@ -49,8 +55,9 @@ type WrapperResponse = Readonly<{
   pubkey: PublicKey;
 }>;
 
-// TODO: compute this rather than hardcode
-export const marketDiscriminator: string = 'hFwv1prLTHL';
+const marketDiscriminator: Buffer = genAccDiscriminator(
+  'manifest::state::market::MarketFixed',
+);
 
 export class ManifestClient {
   private isBase22: boolean;
@@ -64,6 +71,7 @@ export class ManifestClient {
     private baseMint: Mint,
     private quoteMint: Mint,
   ) {
+    // If no extension data then the mint is not Token2022
     this.isBase22 = baseMint.tlvData.length > 0;
     this.isQuote22 = quoteMint.tlvData.length > 0;
   }
@@ -109,7 +117,15 @@ export class ManifestClient {
     connection: Connection,
   ): Promise<PublicKey[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [{ memcmp: { offset: 0, bytes: marketDiscriminator } }],
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: marketDiscriminator.toString('base64'),
+            encoding: 'base64',
+          },
+        },
+      ],
     });
 
     return accounts.map((a) => a.pubkey);
@@ -799,6 +815,140 @@ export class ManifestClient {
     );
     return [cancelAllSig, wihdrawAllSig];
   }
+
+  /**
+   * CreateGlobalCreate instruction. Creates the global account. Should be used only once per mint.
+   *
+   * @param connection Connection to pull mint info
+   * @param payer PublicKey of the trader
+   * @param globalMint PublicKey of the globalMint
+   *
+   * @returns Promise<TransactionInstruction>
+   */
+  private static async createGlobalCreateIx(
+    connection: Connection,
+    payer: PublicKey,
+    globalMint: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const global: PublicKey = getGlobalAddress(globalMint);
+    const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
+    const mintInfo: Mint = await getMint(connection, globalMint);
+    const is22: boolean = mintInfo.tlvData.length > 0;
+    return createGlobalCreateInstruction({
+      payer,
+      global,
+      mint: globalMint,
+      globalVault,
+      tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    });
+  }
+
+  /**
+   * CreateGlobalAddTrader instruction. Adds a new trader to the global account
+   *
+   * @param payer PublicKey of the trader
+   * @param globalMint PublicKey of the globalMint
+   *
+   * @returns TransactionInstruction
+   */
+  public static createGlobalAddTraderIx(
+    payer: PublicKey,
+    globalMint: PublicKey,
+  ): TransactionInstruction {
+    const global: PublicKey = getGlobalAddress(globalMint);
+    return createGlobalAddTraderInstruction({
+      payer,
+      global,
+    });
+  }
+
+  /**
+   * Global deposit instruction
+   *
+   * @param connection Connection to pull mint info
+   * @param payer PublicKey of the trader
+   * @param globalMint PublicKey for global mint deposit.
+   * @param amountTokens Number of tokens to deposit.
+   *
+   * @returns Promise<TransactionInstruction>
+   */
+  public static async globalDepositIx(
+    connection: Connection,
+    payer: PublicKey,
+    globalMint: PublicKey,
+    amountTokens: number,
+  ): Promise<TransactionInstruction> {
+    const globalAddress: PublicKey = getGlobalAddress(globalMint);
+    const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      globalMint,
+      payer,
+    );
+    const mintInfo: Mint = await getMint(connection, globalMint);
+    const is22: boolean = mintInfo.tlvData.length > 0;
+    const mintDecimals = mintInfo.decimals;
+    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+
+    return createGlobalDepositInstruction(
+      {
+        payer: payer,
+        global: globalAddress,
+        mint: globalMint,
+        globalVault: globalVault,
+        traderToken: traderTokenAccount,
+        tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+      },
+      {
+        params: {
+          amountAtoms,
+        },
+      },
+    );
+  }
+
+  /**
+   * Global withdraw instruction
+   *
+   * @param connection Connection to pull mint info
+   * @param payer PublicKey of the trader
+   * @param globalMint PublicKey for global mint withdraw.
+   * @param amountTokens Number of tokens to withdraw.
+   *
+   * @returns Promise<TransactionInstruction>
+   */
+  public static async globalWithdrawIx(
+    connection: Connection,
+    payer: PublicKey,
+    globalMint: PublicKey,
+    amountTokens: number,
+  ): Promise<TransactionInstruction> {
+    const globalAddress: PublicKey = getGlobalAddress(globalMint);
+    const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      globalMint,
+      payer,
+    );
+    const mintInfo: Mint = await getMint(connection, globalMint);
+    const is22: boolean = mintInfo.tlvData.length > 0;
+    const mintDecimals = mintInfo.decimals;
+    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+
+    return createGlobalWithdrawInstruction(
+      {
+        payer: payer,
+        global: globalAddress,
+        mint: globalMint,
+        globalVault: globalVault,
+        traderToken: traderTokenAccount,
+        tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+      },
+      {
+        params: {
+          amountAtoms,
+        },
+      },
+    );
+  }
 }
 
 /**
@@ -815,8 +965,6 @@ export type WrapperPlaceOrderParamsExternal = {
   lastValidSlot: number;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
-  /** Used in fill or kill orders. Set to zero otherwise. */
-  minOutTokens?: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
 };
@@ -839,18 +987,11 @@ function toWrapperPlaceOrderParams(
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken,
   );
 
-  const minOutTokens = wrapperPlaceOrderParamsExternal.minOutTokens ?? 0;
-
-  const minOutAtoms = wrapperPlaceOrderParamsExternal.isBid
-    ? Math.floor(minOutTokens * baseAtomsPerToken)
-    : Math.floor(minOutTokens * quoteAtomsPerToken);
-
   return {
     ...wrapperPlaceOrderParamsExternal,
     baseAtoms: numBaseAtoms,
     priceMantissa,
     priceExponent,
-    minOutAtoms,
   };
 }
 
