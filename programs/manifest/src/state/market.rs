@@ -618,8 +618,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
             // Remove the resting order if expired.
             if maker_order.is_expired(now_slot) {
-                let next_maker_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
+                let next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    is_bid,
+                );
                 remove_and_update_balances(
                     fixed,
                     dynamic,
@@ -692,8 +696,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     }),
                 )?;
                 if !has_enough_tokens {
-                    let next_maker_order_index: DataIndex =
-                        get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
+                    let next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                        fixed,
+                        dynamic,
+                        current_maker_order_index,
+                        is_bid,
+                    );
                     remove_and_update_balances(
                         fixed,
                         dynamic,
@@ -820,9 +828,18 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     remove_from_global(&global_trade_accounts_opt, &maker)?;
                 }
 
-                let next_maker_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_maker_order_index, is_bid);
-                remove_order_from_tree_and_free(fixed, dynamic, current_maker_order_index, !is_bid)?;
+                let next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    is_bid,
+                );
+                remove_order_from_tree_and_free(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    !is_bid,
+                )?;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_maker_order_index = next_maker_order_index;
             } else {
