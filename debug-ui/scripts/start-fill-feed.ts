@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { FillFeed } from '@cks-systems/manifest-sdk';
+import { FillFeed } from '@cks-systems/manifest-sdk/fillFeed';
 import { Connection } from '@solana/web3.js';
 
 const { RPC_URL } = process.env;

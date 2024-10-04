@@ -27,8 +27,7 @@ export type RestingOrderInternal = {
   sequenceNumber: bignum;
   // Deserializes to UInt8Array, but we then convert it to number.
   price: bignum;
-  effectivePrice: bignum;
-  padding: bignum[]; // 16 bytes
+  padding: bignum[]; // 22 bytes
 };
 
 /**
@@ -259,6 +258,42 @@ export class Market {
    */
   public asks(): RestingOrder[] {
     return this.data.asks;
+  }
+
+  /**
+   * Get the most competitive bid price
+   *
+   * @returns number | undefined
+   */
+  public bestBidPrice(): number | undefined {
+    return this.data.bids[this.data.bids.length - 1]?.tokenPrice;
+  }
+
+  /**
+   * Get the most competitive ask price.
+   *
+   * @returns number | undefined
+   */
+  public bestAskPrice(): number | undefined {
+    return this.data.asks[this.data.asks.length - 1]?.tokenPrice;
+  }
+
+  /**
+   * Get all open bids on the market ordered from most competitive to least.
+   *
+   * @returns RestingOrder[]
+   */
+  public bidsL2(): RestingOrder[] {
+    return this.data.bids.slice().reverse();
+  }
+
+  /**
+   * Get all open asks on the market ordered from most competitive to least.
+   *
+   * @returns RestingOrder[]
+   */
+  public asksL2(): RestingOrder[] {
+    return this.data.asks.slice().reverse();
   }
 
   /**
