@@ -49,7 +49,6 @@ pub(crate) fn process_claim_seat(
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
 
-    // TODO: check if seat already exists if no create it:
     let trader_index: DataIndex = {
         let trader_index: DataIndex = {
             let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
