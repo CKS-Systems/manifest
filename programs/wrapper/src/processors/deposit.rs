@@ -49,7 +49,10 @@ pub(crate) fn process_deposit(
     drop(market_fixed);
 
     // Params are a direct pass through.
-    let DepositParams { amount_atoms } = DepositParams::try_from_slice(data)?;
+    let DepositParams {
+        amount_atoms,
+        trader_index_hint,
+    } = DepositParams::try_from_slice(data)?;
     // Call the deposit CPI
     invoke(
         &deposit_instruction(
@@ -59,6 +62,7 @@ pub(crate) fn process_deposit(
             amount_atoms,
             trader_token_account.key,
             *token_program.key,
+            trader_index_hint,
         ),
         &[
             manifest_program.info.clone(),

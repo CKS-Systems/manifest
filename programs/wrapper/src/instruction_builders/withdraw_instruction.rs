@@ -1,5 +1,6 @@
 use crate::ManifestWrapperInstruction;
 use borsh::BorshSerialize;
+use hypertree::DataIndex;
 use manifest::{program::withdraw::WithdrawParams, validation::get_vault_address};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -14,6 +15,7 @@ pub fn withdraw_instruction(
     trader_token_account: &Pubkey,
     wrapper_state: &Pubkey,
     token_program: Pubkey,
+    trader_index_hint: Option<DataIndex>,
 ) -> Instruction {
     let (vault_address, _) = get_vault_address(market, mint);
     Instruction {
@@ -30,7 +32,9 @@ pub fn withdraw_instruction(
         ],
         data: [
             ManifestWrapperInstruction::Withdraw.to_vec(),
-            WithdrawParams::new(amount_atoms).try_to_vec().unwrap(),
+            WithdrawParams::new(amount_atoms, trader_index_hint)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     }

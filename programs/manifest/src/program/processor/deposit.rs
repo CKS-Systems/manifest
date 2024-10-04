@@ -6,20 +6,25 @@ use crate::{
     validation::loaders::DepositContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::DataIndex;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
 };
 
-use super::shared::get_mut_dynamic_account;
+use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DepositParams {
     pub amount_atoms: u64,
+    pub trader_index_hint: Option<DataIndex>,
 }
 
 impl DepositParams {
-    pub fn new(amount_atoms: u64) -> Self {
-        DepositParams { amount_atoms }
+    pub fn new(amount_atoms: u64, trader_index_hint: Option<DataIndex>) -> Self {
+        DepositParams {
+            amount_atoms,
+            trader_index_hint,
+        }
     }
 }
 
@@ -29,7 +34,10 @@ pub(crate) fn process_deposit(
     data: &[u8],
 ) -> ProgramResult {
     let deposit_context: DepositContext = DepositContext::load(accounts)?;
-    let DepositParams { amount_atoms } = DepositParams::try_from_slice(data)?;
+    let DepositParams {
+        amount_atoms,
+        trader_index_hint,
+    } = DepositParams::try_from_slice(data)?;
 
     let DepositContext {
         market,
@@ -98,7 +106,9 @@ pub(crate) fn process_deposit(
         )?;
     }
 
-    dynamic_account.deposit(payer.key, amount_atoms, is_base)?;
+    let trader_index: DataIndex =
+        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+    dynamic_account.deposit(trader_index, amount_atoms, is_base)?;
 
     emit_stack(DepositLog {
         market: *market.key,

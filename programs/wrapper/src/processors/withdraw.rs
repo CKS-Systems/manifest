@@ -50,7 +50,10 @@ pub(crate) fn process_withdraw(
     drop(market_fixed);
 
     // Params are a direct pass through.
-    let WithdrawParams { amount_atoms } = WithdrawParams::try_from_slice(data)?;
+    let WithdrawParams {
+        amount_atoms,
+        trader_index_hint,
+    } = WithdrawParams::try_from_slice(data)?;
     // Call the withdraw CPI
     invoke(
         &withdraw_instruction(
@@ -59,7 +62,9 @@ pub(crate) fn process_withdraw(
             &mint,
             amount_atoms,
             trader_token_account.key,
+            // TODO: Support token 22
             spl_token::id(),
+            trader_index_hint,
         ),
         &[
             manifest_program.info.clone(),

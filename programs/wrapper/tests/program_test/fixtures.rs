@@ -276,6 +276,7 @@ impl TestFixture {
             &trader_token_account,
             wrapper_state,
             spl_token::id(),
+            None,
         );
 
         send_tx_with_retry(
@@ -351,6 +352,7 @@ impl TestFixture {
             &trader_token_account,
             &self.wrapper.key,
             spl_token::id(),
+            None,
         );
 
         send_tx_with_retry(

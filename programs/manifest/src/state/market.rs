@@ -526,7 +526,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    // Uses mut instead of immutable because of trait issues.
+    // TODO: Fix this. Uses mut instead of immutable because of trait issues.
     pub fn get_trader_index(&mut self, trader: &Pubkey) -> DataIndex {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
@@ -537,6 +537,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         trader_index
     }
 
+    // Only used when temporarily claiming for swap and we dont have the system
+    // program to expand. Otherwise, there is no reason to ever give up your
+    // seat.
     pub fn release_seat(&mut self, trader: &Pubkey) -> ProgramResult {
         let trader_seat_index: DataIndex = self.get_trader_index(trader);
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
@@ -555,8 +558,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    pub fn deposit(&mut self, trader: &Pubkey, amount_atoms: u64, is_base: bool) -> ProgramResult {
-        let trader_index: DataIndex = self.get_trader_index(trader);
+    pub fn deposit(
+        &mut self,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -> ProgramResult {
         require!(
             trader_index != NIL,
             ManifestError::InvalidDepositAccounts,
@@ -568,9 +575,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    pub fn withdraw(&mut self, trader: &Pubkey, amount_atoms: u64, is_base: bool) -> ProgramResult {
-        let trader_index: DataIndex = self.get_trader_index(trader);
-
+    pub fn withdraw(
+        &mut self,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -> ProgramResult {
         let DynamicAccount { dynamic, .. } = self.borrow_mut();
         update_balance(dynamic, trader_index, is_base, false, amount_atoms)?;
         Ok(())

@@ -16,6 +16,7 @@ use crate::{
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
     pub amount_atoms: u64,
+    // Does not use hinted index since this should be rare. Also, the lookup is in global account, not ClaimedSeats tree, so would require new set of helpers.
 }
 
 impl GlobalDepositParams {
