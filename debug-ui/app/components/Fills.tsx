@@ -6,6 +6,7 @@ import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { ReactElement, useEffect, useState, useRef } from 'react';
+import { toast } from 'react-toastify';
 
 const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const { connection: conn } = useConnection();
@@ -27,7 +28,12 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
   useEffect(() => {
     if (!wsRef.current) {
-      const ws = new WebSocket('ws://localhost:1234');
+      const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
+      if (!feedUrl) {
+        toast.error('NEXT_PUBLIC_FEED_URL not set');
+        throw new Error('NEXT_PUBLIC_FEED_URL not set');
+      }
+      const ws = new WebSocket(feedUrl);
       wsRef.current = ws;
 
       ws.onopen = (message): void => {

@@ -12,6 +12,7 @@ import {
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import { toast } from 'react-toastify';
 
 const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +35,12 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   }, [conn, marketAddress]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:1234');
+    const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
+    if (!feedUrl) {
+      toast.error('NEXT_PUBLIC_FEED_URL not set');
+      throw new Error('NEXT_PUBLIC_FEED_URL not set');
+    }
+    const ws = new WebSocket(feedUrl);
     let fillsInCurrentInterval: CandlestickData | null = null;
 
     ws.onmessage = async (message): Promise<void> => {
