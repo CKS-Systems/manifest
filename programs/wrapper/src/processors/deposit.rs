@@ -66,12 +66,11 @@ pub(crate) fn process_deposit(
 
     let WrapperDepositParams { amount_atoms } = WrapperDepositParams::try_from_slice(data)?;
 
+    let market_info_index: DataIndex =
+        get_market_info_index_for_market(&wrapper_state, market.info.key);
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
     let (_fixed_data, wrapper_dynamic_data) =
         wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
-
-    let market_info_index: DataIndex =
-        get_market_info_index_for_market(&wrapper_state, market.info.key);
     let market_info: MarketInfo =
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
     let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
