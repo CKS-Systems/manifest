@@ -123,6 +123,12 @@ function modifyIdlCore(programName) {
               defined: 'DepositParams',
             },
           });
+          instruction.args.push({
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
+          });
           break;
         }
         case 'Withdraw': {
@@ -132,23 +138,11 @@ function modifyIdlCore(programName) {
               defined: 'WithdrawParams',
             },
           });
-          break;
-        }
-        case 'PlaceOrder': {
           instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'PlaceOrderParams',
-            },
-          });
-          break;
-        }
-        case 'CancelOrder': {
-          instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'CancelOrderParams',
-            },
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           });
           break;
         }
@@ -316,6 +310,12 @@ function modifyIdlCore(programName) {
             name: 'amountAtoms',
             type: 'u64',
           },
+          {
+            name: 'traderIndexHint',
+            type: {
+              option: 'u32'
+            }
+          },
         ],
       },
     });
@@ -327,6 +327,12 @@ function modifyIdlCore(programName) {
           {
             name: 'amountAtoms',
             type: 'u64',
+          },
+          {
+            name: 'traderIndexHint',
+            type: {
+              option: 'u32'
+            }
           },
         ],
       },

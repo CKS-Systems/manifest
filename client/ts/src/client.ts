@@ -476,6 +476,7 @@ export class ManifestClient {
       {
         params: {
           amountAtoms,
+          traderIndexHint: null,
         },
       },
     );
@@ -523,6 +524,7 @@ export class ManifestClient {
       {
         params: {
           amountAtoms,
+          traderIndexHint: null,
         },
       },
     );

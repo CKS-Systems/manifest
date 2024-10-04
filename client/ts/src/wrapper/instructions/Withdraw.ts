@@ -23,7 +23,7 @@ export type WithdrawInstructionArgs = {
  * @category Withdraw
  * @category generated
  */
-export const WithdrawStruct = new beet.BeetArgsStruct<
+export const WithdrawStruct = new beet.FixableBeetArgsStruct<
   WithdrawInstructionArgs & {
     instructionDiscriminator: number;
   }
