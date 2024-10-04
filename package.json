@@ -1,6 +1,11 @@
 {
     "name": "@cks-systems/manifest-sdk",
     "version": "0.1.4",
+    "files": [
+        "dist/",
+        "README.md",
+        "client/ts/src"
+    ],
     "publishConfig": {
         "access": "public"
     },
