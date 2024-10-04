@@ -310,7 +310,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             let matched_quote_atoms: QuoteAtoms =
                 matched_price.checked_quote_for_base(matched_base_atoms, !is_bid)?;
 
-            if !self.is_global_order_backed(
+            if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
                 global_trade_accounts_opts,
@@ -384,7 +384,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 is_bid != did_fully_match_resting_order,
             )?;
 
-            if !self.is_global_order_backed(
+            if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
                 global_trade_accounts_opts,
@@ -472,7 +472,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         )
     }
 
-    fn is_global_order_backed(
+    fn is_unbacked_global_order(
         &self,
         resting_order: &RestingOrder,
         is_bid: bool,
@@ -501,10 +501,10 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 }),
             );
             if !has_enough_tokens {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
 }
 
