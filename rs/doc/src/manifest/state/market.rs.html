@@ -1253,6 +1253,26 @@
 <a href="#1251" id="1251">1251</a>
 <a href="#1252" id="1252">1252</a>
 <a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
+<a href="#1262" id="1262">1262</a>
+<a href="#1263" id="1263">1263</a>
+<a href="#1264" id="1264">1264</a>
+<a href="#1265" id="1265">1265</a>
+<a href="#1266" id="1266">1266</a>
+<a href="#1267" id="1267">1267</a>
+<a href="#1268" id="1268">1268</a>
+<a href="#1269" id="1269">1269</a>
+<a href="#1270" id="1270">1270</a>
+<a href="#1271" id="1271">1271</a>
+<a href="#1272" id="1272">1272</a>
+<a href="#1273" id="1273">1273</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
@@ -1554,16 +1574,16 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms = limit_base_atoms;
-        <span class="kw">for </span>(<span class="kw">_</span>, other_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
-            <span class="kw">if </span>other_order.is_expired(now_slot) {
+        <span class="kw">for </span>(<span class="kw">_</span>, resting_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
+            <span class="kw">if </span>resting_order.is_expired(now_slot) {
                 <span class="kw">continue</span>;
             }
-            <span class="kw">let </span>matched_price = other_order.get_price();
-            <span class="kw">let </span>matched_base_atoms = other_order.get_num_base_atoms().min(remaining_base_atoms);
+            <span class="kw">let </span>matched_price = resting_order.get_price();
+            <span class="kw">let </span>matched_base_atoms = resting_order.get_num_base_atoms().min(remaining_base_atoms);
             <span class="kw">let </span>matched_quote_atoms =
                 matched_price.checked_quote_for_base(matched_base_atoms, is_bid)<span class="question-mark">?</span>;
 
-            <span class="kw">if </span>other_order.get_order_type() == OrderType::Global {
+            <span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
                 <span class="comment">// TODO: Check if the order is backed
             </span>}
             total_quote_atoms_matched =
@@ -1600,12 +1620,12 @@
         <span class="kw">let </span><span class="kw-2">mut </span>total_matched_base_atoms: BaseAtoms = BaseAtoms::ZERO;
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
 
-        <span class="kw">for </span>(<span class="kw">_</span>, other_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
-            <span class="kw">if </span>other_order.is_expired(now_slot) {
+        <span class="kw">for </span>(<span class="kw">_</span>, resting_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
+            <span class="kw">if </span>resting_order.is_expired(now_slot) {
                 <span class="kw">continue</span>;
             }
 
-            <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
+            <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = resting_order.get_price();
             <span class="comment">// base_atoms_limit is the number of base atoms that you get if you
             // were to trade all of the remaining quote atoms at the current
             // price. Rounding is done in the taker favor because at the limit,
@@ -1618,9 +1638,9 @@
             <span class="comment">// Either fill the entire resting order, or only the
             // base_atoms_limit, in which case, this is the last iteration.
             </span><span class="kw">let </span>matched_base_atoms: BaseAtoms =
-                other_order.get_num_base_atoms().min(base_atoms_limit);
+                resting_order.get_num_base_atoms().min(base_atoms_limit);
             <span class="kw">let </span>did_fully_match_resting_order: bool =
-                base_atoms_limit &gt;= other_order.get_num_base_atoms();
+                base_atoms_limit &gt;= resting_order.get_num_base_atoms();
 
             <span class="comment">// Number of quote atoms matched exactly. Always round in taker favor
             // here because we already know that taker did not finish on the last
@@ -1632,7 +1652,7 @@
             )<span class="question-mark">?</span>;
 
             <span class="comment">// TODO: Clean this up into a separate function.
-            </span><span class="kw">if </span>other_order.get_order_type() == OrderType::Global {
+            </span><span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
                 <span class="comment">// If global accounts are needed but not present, then this will
                 // crash. This is an intentional product decision. Would be
                 // valid to walk past, but we have chosen to give no fill rather
@@ -1645,7 +1665,7 @@
                 };
                 <span class="kw">let </span>has_enough_tokens: bool = can_back_order(
                     global_trade_accounts_opt,
-                    <span class="self">self</span>.get_trader_key_by_index(other_order.get_trader_index()),
+                    <span class="self">self</span>.get_trader_key_by_index(resting_order.get_trader_index()),
                     GlobalAtoms::new(<span class="kw">if </span>is_bid {
                         matched_base_atoms.as_u64()
                     } <span class="kw">else </span>{
@@ -1857,7 +1877,7 @@
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>current_order_index: DataIndex = <span class="kw">if </span>is_bid {
+        <span class="kw">let </span><span class="kw-2">mut </span>current_maker_order_index: DataIndex = <span class="kw">if </span>is_bid {
             fixed.asks_best_index
         } <span class="kw">else </span>{
             fixed.bids_best_index
@@ -1867,27 +1887,31 @@
         <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_traded: QuoteAtoms = QuoteAtoms::ZERO;
 
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = num_base_atoms;
-        <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_order_index != NIL {
-            <span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
-                get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index).get_value();
+        <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_maker_order_index != NIL {
+            <span class="kw">let </span>maker_order: <span class="kw-2">&amp;</span>RestingOrder =
+                get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index).get_value();
 
             <span class="comment">// Remove the resting order if expired.
-            </span><span class="kw">if </span>other_order.is_expired(now_slot) {
-                <span class="kw">let </span>next_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+            </span><span class="kw">if </span>maker_order.is_expired(now_slot) {
+                <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    is_bid,
+                );
                 remove_and_update_balances(
                     fixed,
                     dynamic,
-                    current_order_index,
+                    current_maker_order_index,
                     global_trade_accounts_opts,
                 )<span class="question-mark">?</span>;
-                current_order_index = next_order_index;
+                current_maker_order_index = next_maker_order_index;
                 <span class="kw">continue</span>;
             }
 
             <span class="comment">// Stop trying to match if price no longer satisfies limit.
-            </span><span class="kw">if </span>(is_bid &amp;&amp; other_order.get_price() &gt; price)
-                || (!is_bid &amp;&amp; other_order.get_price() &lt; price)
+            </span><span class="kw">if </span>(is_bid &amp;&amp; maker_order.get_price() &gt; price)
+                || (!is_bid &amp;&amp; maker_order.get_price() &lt; price)
             {
                 <span class="kw">break</span>;
             }
@@ -1901,17 +1925,17 @@
             );
             assert_can_take(order_type)<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>maker_sequence_number = other_order.get_sequence_number();
-            <span class="kw">let </span>other_trader_index: DataIndex = other_order.get_trader_index();
+            <span class="kw">let </span>maker_sequence_number = maker_order.get_sequence_number();
+            <span class="kw">let </span>maker_trader_index: DataIndex = maker_order.get_trader_index();
             <span class="kw">let </span>did_fully_match_resting_order: bool =
-                remaining_base_atoms &gt;= other_order.get_num_base_atoms();
+                remaining_base_atoms &gt;= maker_order.get_num_base_atoms();
             <span class="kw">let </span>base_atoms_traded: BaseAtoms = <span class="kw">if </span>did_fully_match_resting_order {
-                other_order.get_num_base_atoms()
+                maker_order.get_num_base_atoms()
             } <span class="kw">else </span>{
                 remaining_base_atoms
             };
 
-            <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = other_order.get_price();
+            <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = maker_order.get_price();
 
             <span class="comment">// on full fill: round in favor of the taker
             // on partial fill: round in favor of the maker
@@ -1923,13 +1947,13 @@
             <span class="comment">// If it is a global order, just in time bring the funds over, or
             // remove from the tree and continue on to the next order.
             </span><span class="kw">let </span>maker: Pubkey =
-                get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, other_order.get_trader_index())
+                get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, maker_order.get_trader_index())
                     .get_value()
                     .trader;
             <span class="kw">let </span>taker: Pubkey = get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index)
                 .get_value()
                 .trader;
-            <span class="kw">let </span>is_global: bool = other_order.is_global();
+            <span class="kw">let </span>is_global: bool = maker_order.is_global();
 
             <span class="kw">if </span>is_global {
                 <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
@@ -1947,15 +1971,19 @@
                     }),
                 )<span class="question-mark">?</span>;
                 <span class="kw">if </span>!has_enough_tokens {
-                    <span class="kw">let </span>next_order_index: DataIndex =
-                        get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
+                    <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                        fixed,
+                        dynamic,
+                        current_maker_order_index,
+                        is_bid,
+                    );
                     remove_and_update_balances(
                         fixed,
                         dynamic,
-                        current_order_index,
+                        current_maker_order_index,
                         global_trade_accounts_opts,
                     )<span class="question-mark">?</span>;
-                    current_order_index = next_order_index;
+                    current_maker_order_index = next_maker_order_index;
                     <span class="kw">continue</span>;
                 }
             }
@@ -1984,20 +2012,18 @@
             // is exact. The rounding is always on quote.
             </span><span class="kw">if </span>!is_bid {
                 <span class="comment">// These are only used when is_bid, included up here for borrow checker reasons.
-                </span><span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
-                    get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index).get_value();
-                <span class="kw">let </span>previous_maker_quote_atoms_allocated: QuoteAtoms =
-                    matched_price.checked_quote_for_base(other_order.get_num_base_atoms(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+                </span><span class="kw">let </span>previous_maker_quote_atoms_allocated: QuoteAtoms =
+                    matched_price.checked_quote_for_base(maker_order.get_num_base_atoms(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
                 <span class="kw">let </span>new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
                     .checked_quote_for_base(
-                        other_order
+                        maker_order
                             .get_num_base_atoms()
                             .checked_sub(base_atoms_traded)<span class="question-mark">?</span>,
                         <span class="bool-val">true</span>,
                     )<span class="question-mark">?</span>;
                 update_balance(
                     dynamic,
-                    other_trader_index,
+                    maker_trader_index,
                     is_bid,
                     <span class="bool-val">true</span>,
                     (previous_maker_quote_atoms_allocated
@@ -2010,7 +2036,7 @@
             <span class="comment">// Increase maker from the matched amount in the trade.
             </span>update_balance(
                 dynamic,
-                other_trader_index,
+                maker_trader_index,
                 !is_bid,
                 <span class="bool-val">true</span>,
                 <span class="kw">if </span>is_bid {
@@ -2045,7 +2071,7 @@
             )<span class="question-mark">?</span>;
 
             <span class="comment">// record maker &amp; taker volume
-            </span>record_volume_by_trader_index(dynamic, other_trader_index, quote_atoms_traded);
+            </span>record_volume_by_trader_index(dynamic, maker_trader_index, quote_atoms_traded);
             record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded);
 
             emit_stack(FillLog {
@@ -2064,7 +2090,7 @@
 
             <span class="kw">if </span>did_fully_match_resting_order {
                 <span class="comment">// Get paid for removing a global order.
-                </span><span class="kw">if </span>get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index)
+                </span><span class="kw">if </span>get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index)
                     .get_value()
                     .get_order_type()
                     == OrderType::Global
@@ -2077,14 +2103,23 @@
                     remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, <span class="kw-2">&amp;</span>maker)<span class="question-mark">?</span>;
                 }
 
-                <span class="kw">let </span>next_order_index: DataIndex =
-                    get_next_candidate_match_index(fixed, dynamic, current_order_index, is_bid);
-                remove_order_from_tree_and_free(fixed, dynamic, current_order_index, !is_bid)<span class="question-mark">?</span>;
+                <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    is_bid,
+                );
+                remove_order_from_tree_and_free(
+                    fixed,
+                    dynamic,
+                    current_maker_order_index,
+                    !is_bid,
+                )<span class="question-mark">?</span>;
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)<span class="question-mark">?</span>;
-                current_order_index = next_order_index;
+                current_maker_order_index = next_maker_order_index;
             } <span class="kw">else </span>{
                 <span class="kw">let </span>other_order: <span class="kw-2">&amp;mut </span>RestingOrder =
-                    get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_order_index)
+                    get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index)
                         .get_mut_value();
                 other_order.reduce(base_atoms_traded)<span class="question-mark">?</span>;
                 remaining_base_atoms = BaseAtoms::ZERO;
@@ -2434,20 +2469,20 @@
 <span class="kw">fn </span>get_next_candidate_match_index(
     fixed: <span class="kw-2">&amp;</span>MarketFixed,
     dynamic: <span class="kw-2">&amp;</span>[u8],
-    current_order_index: DataIndex,
+    current_maker_order_index: DataIndex,
     is_bid: bool,
 ) -&gt; DataIndex {
     <span class="kw">if </span>is_bid {
         <span class="kw">let </span>tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         <span class="kw">let </span>next_order_index: DataIndex =
-            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_order_index);
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_maker_order_index);
         next_order_index
     } <span class="kw">else </span>{
         <span class="kw">let </span>tree: BooksideReadOnly =
             BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         <span class="kw">let </span>next_order_index: DataIndex =
-            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_order_index);
+            tree.get_next_lower_index::&lt;RestingOrder&gt;(current_maker_order_index);
         next_order_index
     }
 }
@@ -2466,19 +2501,19 @@
     order_to_remove_index: DataIndex,
     global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
 ) -&gt; ProgramResult {
-    <span class="kw">let </span>other_order: <span class="kw-2">&amp;</span>RestingOrder =
+    <span class="kw">let </span>resting_order_to_remove: <span class="kw-2">&amp;</span>RestingOrder =
         get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, order_to_remove_index).get_value();
-    <span class="kw">let </span>other_is_bid: bool = other_order.get_is_bid();
+    <span class="kw">let </span>order_to_remove_is_bid: bool = resting_order_to_remove.get_is_bid();
 
     <span class="comment">// Global order balances are accounted for on the global accounts, not on the market.
-    </span><span class="kw">if </span>other_order.is_global() {
-        <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>other_is_bid {
+    </span><span class="kw">if </span>resting_order_to_remove.is_global() {
+        <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>order_to_remove_is_bid {
             <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
         };
         <span class="kw">let </span>maker: <span class="kw-2">&amp;</span>Pubkey =
-            <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, other_order.get_trader_index())
+            <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, resting_order_to_remove.get_trader_index())
                 .get_value()
                 .trader;
         remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, maker)<span class="question-mark">?</span>;
@@ -2487,23 +2522,28 @@
         // ask. If the resting order is bid, multiply by price and round
         // in favor of the taker which here means up. The maker places
         // the minimum number of atoms required.
-        </span><span class="kw">let </span>amount_atoms_to_return: u64 = <span class="kw">if </span>other_is_bid {
-            other_order
+        </span><span class="kw">let </span>amount_atoms_to_return: u64 = <span class="kw">if </span>order_to_remove_is_bid {
+            resting_order_to_remove
                 .get_price()
-                .checked_quote_for_base(other_order.get_num_base_atoms(), <span class="bool-val">true</span>)<span class="question-mark">?
+                .checked_quote_for_base(resting_order_to_remove.get_num_base_atoms(), <span class="bool-val">true</span>)<span class="question-mark">?
                 </span>.as_u64()
         } <span class="kw">else </span>{
-            other_order.get_num_base_atoms().as_u64()
+            resting_order_to_remove.get_num_base_atoms().as_u64()
         };
         update_balance(
             dynamic,
-            other_order.get_trader_index(),
-            !other_is_bid,
+            resting_order_to_remove.get_trader_index(),
+            !order_to_remove_is_bid,
             <span class="bool-val">true</span>,
             amount_atoms_to_return,
         )<span class="question-mark">?</span>;
     }
-    remove_order_from_tree_and_free(fixed, dynamic, order_to_remove_index, other_is_bid)<span class="question-mark">?</span>;
+    remove_order_from_tree_and_free(
+        fixed,
+        dynamic,
+        order_to_remove_index,
+        order_to_remove_is_bid,
+    )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

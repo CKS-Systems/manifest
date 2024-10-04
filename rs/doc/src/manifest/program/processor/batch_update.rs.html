@@ -314,6 +314,9 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::RefMut, mem::size_of};
 
 <span class="kw">use crate</span>::{
@@ -442,6 +445,8 @@
 <span class="attr">#[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 </span><span class="kw">pub enum </span>MarketDataTreeNodeType {
+    <span class="comment">// 0 is reserved because zeroed byte arrays should be empty.
+    </span>Empty = <span class="number">0</span>,
     <span class="attr">#[default]
     </span>ClaimedSeat = <span class="number">1</span>,
     RestingOrder = <span class="number">2</span>,
@@ -480,7 +485,8 @@
                 dynamic_account.get_trader_index(payer.key)
             }
             <span class="prelude-val">Some</span>(hinted_index) =&gt; {
-                <span class="macro">require!</span>(
+                <span class="comment">// TODO: Make a helper function for verify_hint
+                </span><span class="macro">require!</span>(
                     hinted_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
                     ManifestError::WrongIndexHintParams,
                     <span class="string">"Invalid trader hint index {}"</span>,
@@ -506,16 +512,16 @@
         };
 
         <span class="kw">let </span><span class="kw-2">mut </span>dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-        <span class="kw">for </span>cancel <span class="kw">in </span>cancels {
+        <span class="kw">for </span>cancel_order_params <span class="kw">in </span>cancels {
             <span class="comment">// Hinted is preferred because that is O(1) to find and O(log n) to
             // remove. Without the hint, we lookup by order_sequence_number and
             // that is O(n) lookup and O(log n) delete.
-            </span><span class="kw">match </span>cancel.order_index_hint() {
+            </span><span class="kw">match </span>cancel_order_params.order_index_hint() {
                 <span class="prelude-val">None </span>=&gt; {
                     <span class="comment">// Cancels must succeed otherwise we fail the tx.
                     </span>dynamic_account.cancel_order(
                         trader_index,
-                        cancel.order_sequence_number(),
+                        cancel_order_params.order_sequence_number(),
                         <span class="kw-2">&amp;</span>global_trade_accounts_opts,
                     )<span class="question-mark">?</span>;
                 }
@@ -549,7 +555,7 @@
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
                     <span class="macro">require!</span>(
-                        cancel.order_sequence_number() == order.get_sequence_number(),
+                        cancel_order_params.order_sequence_number() == order.get_sequence_number(),
                         ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint sequence number index {}"</span>,
                         hinted_cancel_index,
@@ -565,7 +571,7 @@
             emit_stack(CancelOrderLog {
                 market: <span class="kw-2">*</span>market.key,
                 trader: <span class="kw-2">*</span>payer.key,
-                order_sequence_number: cancel.order_sequence_number(),
+                order_sequence_number: cancel_order_params.order_sequence_number(),
             })<span class="question-mark">?</span>;
         }
         trader_index
@@ -573,12 +579,12 @@
 
     <span class="comment">// Result is a vector of (order_sequence_number, data_index)
     </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;(u64, DataIndex)&gt; = Vec::with_capacity(orders.len());
-    <span class="kw">for </span>place_order <span class="kw">in </span>orders {
+    <span class="kw">for </span>place_order_params <span class="kw">in </span>orders {
         {
-            <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
-            <span class="kw">let </span>price: QuoteAtomsPerBaseAtom = place_order.try_price()<span class="question-mark">?</span>;
-            <span class="kw">let </span>order_type: OrderType = place_order.order_type();
-            <span class="kw">let </span>last_valid_slot: u32 = place_order.last_valid_slot();
+            <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(place_order_params.base_atoms());
+            <span class="kw">let </span>price: QuoteAtomsPerBaseAtom = place_order_params.try_price()<span class="question-mark">?</span>;
+            <span class="kw">let </span>order_type: OrderType = place_order_params.order_type();
+            <span class="kw">let </span>last_valid_slot: u32 = place_order_params.last_valid_slot();
 
             <span class="comment">// Need to reborrow every iteration so we can borrow later for expanding.
             </span><span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>market.try_borrow_mut_data()<span class="question-mark">?</span>;
@@ -590,7 +596,7 @@
                     trader_index,
                     num_base_atoms: base_atoms,
                     price,
-                    is_bid: place_order.is_bid(),
+                    is_bid: place_order_params.is_bid(),
                     last_valid_slot,
                     order_type,
                     global_trade_accounts_opts: <span class="kw-2">&amp;</span>global_trade_accounts_opts,
@@ -609,7 +615,7 @@
                 base_atoms,
                 price,
                 order_type,
-                is_bid: PodBool::from(place_order.is_bid()),
+                is_bid: PodBool::from(place_order_params.is_bid()),
                 _padding: [<span class="number">0</span>; <span class="number">6</span>],
                 order_sequence_number,
                 order_index,
