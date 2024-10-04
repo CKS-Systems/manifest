@@ -56,7 +56,7 @@ pub(crate) fn process_withdraw(
     } = WithdrawParams::try_from_slice(data)?;
     // Does not lookup trader index hint when not provided because we dont
     // actually need a claimed seat on wrapper level to deposit/withdraw.
-    
+
     // Call the withdraw CPI
     invoke(
         &withdraw_instruction(
