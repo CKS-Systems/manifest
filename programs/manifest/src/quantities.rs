@@ -318,14 +318,14 @@ impl QuoteAtomsPerBaseAtom {
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
-    ) -> Result<Self, PriceConversionError> {
+    ) -> Result<Self, ManifestError> {
         if exponent > Self::MAX_EXP {
             trace!("invalid exponent {exponent} > 8 would truncate",);
-            return Err(PriceConversionError(0x1));
+            return Err(ManifestError::PriceConversionError.into());
         }
         if exponent < Self::MIN_EXP {
             trace!("invalid exponent {exponent} < -18 would truncate",);
-            return Err(PriceConversionError(0x2));
+            return Err(ManifestError::PriceConversionError.into());
         }
         Ok(Self::from_mantissa_and_exponent_(mantissa, exponent))
     }
@@ -359,7 +359,7 @@ impl QuoteAtomsPerBaseAtom {
         if base_atoms <= ATOM_LIMIT {
             Ok(BaseAtoms::new(base_atoms as u64))
         } else {
-            Err(PriceConversionError(0x5).into())
+            return Err(ManifestError::PriceConversionError.into());
         }
     }
 
@@ -372,7 +372,7 @@ impl QuoteAtomsPerBaseAtom {
         let inner: u128 = u64_slice_to_u128(self.inner);
         let product: u128 = inner
             .checked_mul(base_atoms.inner as u128)
-            .ok_or(PriceConversionError(0x8))?;
+            .ok_or(ManifestError::PriceConversionError)?;
         let quote_atoms = if round_up {
             product.div_ceil(D18)
         } else {
@@ -381,7 +381,7 @@ impl QuoteAtomsPerBaseAtom {
         if quote_atoms <= ATOM_LIMIT {
             Ok(quote_atoms)
         } else {
-            Err(PriceConversionError(0x9).into())
+            Err(ManifestError::PriceConversionError.into())
         }
     }
 
@@ -393,25 +393,6 @@ impl QuoteAtomsPerBaseAtom {
     ) -> Result<QuoteAtoms, ProgramError> {
         self.checked_quote_for_base_(other, round_up)
             .map(|r| QuoteAtoms::new(r as u64))
-    }
-
-    #[inline(always)]
-    pub fn checked_effective_price(
-        self,
-        num_base_atoms: BaseAtoms,
-        is_bid: bool,
-    ) -> Result<QuoteAtomsPerBaseAtom, ProgramError> {
-        if BaseAtoms::ZERO == num_base_atoms {
-            return Ok(self);
-        }
-        let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let quote_matched_d18 = quote_matched_atoms.wrapping_mul(D18);
-        // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d18.div(num_base_atoms.inner as u128);
-        Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(inner),
-        })
     }
 }
 
@@ -455,17 +436,6 @@ impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
     }
 }
 
-#[derive(Debug)]
-pub struct PriceConversionError(u32);
-
-const PRICE_CONVERSION_ERROR_BASE: u32 = 100;
-
-impl From<PriceConversionError> for ProgramError {
-    fn from(value: PriceConversionError) -> Self {
-        ProgramError::Custom(value.0 + PRICE_CONVERSION_ERROR_BASE)
-    }
-}
-
 #[inline(always)]
 fn encode_mantissa_and_exponent(value: f64) -> (u32, i8) {
     let mut exponent: i8 = 0;
@@ -490,24 +460,24 @@ fn calculate_mantissa(value: f64, exp: i8) -> f64 {
 }
 
 impl TryFrom<f64> for QuoteAtomsPerBaseAtom {
-    type Error = PriceConversionError;
+    type Error = ManifestError;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         if value.is_infinite() {
             trace!("infinite can not be expressed as fixed point decimal");
-            return Err(PriceConversionError(0xC));
+            return Err(ManifestError::PriceConversionError);
         }
         if value.is_nan() {
             trace!("nan can not be expressed as fixed point decimal");
-            return Err(PriceConversionError(0xD));
+            return Err(ManifestError::PriceConversionError);
         }
         if value.is_sign_negative() {
             trace!("price {value} can not be negative");
-            return Err(PriceConversionError(0xE));
+            return Err(ManifestError::PriceConversionError);
         }
         if calculate_mantissa(value, Self::MAX_EXP) > u32::MAX as f64 {
             trace!("price {value} is too large");
-            return Err(PriceConversionError(0xF));
+            return Err(ManifestError::PriceConversionError);
         }
 
         let (mantissa, exponent) = encode_mantissa_and_exponent(value);
@@ -565,6 +535,13 @@ fn test_checked_sub() {
 }
 
 #[test]
+fn test_sub_assign() {
+    let mut base_atoms_2: BaseAtoms = BaseAtoms::new(2);
+    base_atoms_2 -= BaseAtoms::new(1);
+    assert_eq!(base_atoms_2, BaseAtoms::new(1));
+}
+
+#[test]
 fn test_overflowing_add() {
     let base_atoms: BaseAtoms = BaseAtoms::new(u64::MAX);
     let (sum, overflow_detected) = base_atoms.overflowing_add(base_atoms);
@@ -580,6 +557,38 @@ fn test_wrapping_add() {
     let sum = base_atoms.wrapping_add(base_atoms);
     let expected = base_atoms - BaseAtoms::ONE;
     assert_eq!(sum, expected);
+}
+
+#[test]
+fn test_checked_base_for_quote_edge_cases() {
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(0, 0);
+    assert_eq!(
+        quote_atoms_per_base_atom
+            .checked_base_for_quote(QuoteAtoms::new(1), false)
+            .unwrap(),
+        BaseAtoms::new(0)
+    );
+
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, -18);
+    assert!(quote_atoms_per_base_atom
+        .checked_base_for_quote(QuoteAtoms::new(u64::MAX), false)
+        .is_err(),);
+}
+
+#[test]
+fn test_checked_quote_for_base_edge_cases() {
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, 10);
+    assert!(quote_atoms_per_base_atom
+        .checked_quote_for_base(BaseAtoms::new(u64::MAX), false)
+        .is_err(),);
+}
+
+#[test]
+fn test_quote_atoms_per_base_atom_edge_case() {
+    assert!(QuoteAtomsPerBaseAtom::try_from(f64::NAN).is_err());
 }
 
 #[test]
@@ -654,10 +663,6 @@ fn test_alignment() {
     let mut t = AlignmentTest::default();
     t.price = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, 0);
     let mut s = t.clone();
-    t.price = s
-        .price
-        .checked_effective_price(BaseAtoms::new(u32::MAX as u64), true)
-        .unwrap();
     let q = t
         .price
         .checked_base_for_quote(QuoteAtoms::new(u32::MAX as u64), true)

@@ -3,7 +3,7 @@ use std::{cell::RefMut, mem::size_of};
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
     program::ManifestError,
-    quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
         claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
@@ -78,7 +78,7 @@ impl PlaceOrderParams {
         self.base_atoms
     }
 
-    pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
+    pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, ManifestError> {
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
             self.price_mantissa,
             self.price_exponent,

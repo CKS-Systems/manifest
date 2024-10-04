@@ -48,6 +48,8 @@ pub enum ManifestError {
     InvalidEvict = 20,
     #[error("Tried to clean order that was not eligible to be cleaned")]
     InvalidClean = 21,
+    #[error("Error in converting price")]
+    PriceConversionError = 22,
 }
 
 impl From<ManifestError> for ProgramError {
