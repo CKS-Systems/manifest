@@ -1,7 +1,12 @@
 use std::cell::RefMut;
 
 use crate::{
-    global_vault_seeds_with_bump, logs::{emit_stack, GlobalCleanupLog}, program::{get_mut_dynamic_account, ManifestError}, quantities::{GlobalAtoms, WrapperU64}, require, validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram}
+    global_vault_seeds_with_bump,
+    logs::{emit_stack, GlobalCleanupLog},
+    program::{get_mut_dynamic_account, ManifestError},
+    quantities::{GlobalAtoms, WrapperU64},
+    require,
+    validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
 };
 use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
