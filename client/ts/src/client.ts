@@ -137,6 +137,7 @@ export class ManifestClient {
    * @param connection Connection
    * @param marketPk PublicKey of the market
    * @param payerKeypair Keypair of the trader
+   * @param wrapperProgram PublicKey of wrapper program to use if payer doesn't have a userWrapper
    *
    * @returns ManifestClient
    */
