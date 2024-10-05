@@ -825,7 +825,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     } else {
                         &global_trade_accounts_opts[1]
                     };
-                    remove_from_global(&global_trade_accounts_opt, &maker)?;
+                    remove_from_global(&global_trade_accounts_opt)?;
                 }
 
                 let next_maker_order_index: DataIndex = get_next_candidate_match_index(
@@ -1029,10 +1029,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            let trader: &Pubkey = &get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
-                .get_value()
-                .trader;
-            remove_from_global(&global_trade_accounts_opt, trader)?
+            remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1237,11 +1234,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        let maker: &Pubkey =
-            &get_helper::<RBNode<ClaimedSeat>>(dynamic, resting_order_to_remove.get_trader_index())
-                .get_value()
-                .trader;
-        remove_from_global(&global_trade_accounts_opt, maker)?;
+        remove_from_global(&global_trade_accounts_opt)?;
     } else {
         // Return the exact number of atoms if the resting order is an
         // ask. If the resting order is bid, multiply by price and round
