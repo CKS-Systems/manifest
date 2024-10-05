@@ -579,10 +579,10 @@ fn test_checked_base_for_quote_edge_cases() {
 
 #[test]
 fn test_checked_quote_for_base_edge_cases() {
-    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
-        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, 5);
+    // edge case is where u64MAX * 10**18  < product < u128MAX
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom::MAX;
     assert!(quote_atoms_per_base_atom
-        .checked_quote_for_base(BaseAtoms::new(u64::MAX), false)
+        .checked_quote_for_base(BaseAtoms::new(u64::MAX - 1), false)
         .is_err(),);
 }
 
