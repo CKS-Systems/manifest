@@ -330,24 +330,6 @@
           "docs": [
             "Quote mint, only inlcuded if base is Token22, otherwise not required"
           ]
-        },
-        {
-          "name": "global",
-          "isMut": true,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Global account"
-          ]
-        },
-        {
-          "name": "globalVault",
-          "isMut": true,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Global vault"
-          ]
         }
       ],
       "args": [
@@ -647,7 +629,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -712,7 +694,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -992,11 +974,15 @@
             "type": "bool"
           },
           {
+            "name": "isMakerGlobal",
+            "type": "bool"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                15
+                14
               ]
             }
           }
@@ -1367,25 +1353,6 @@
       }
     },
     {
-      "name": "BatchUpdateReturn",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "orders",
-            "type": {
-              "vec": {
-                "tuple": [
-                  "u64",
-                  "u32"
-                ]
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "DepositParams",
       "type": {
         "kind": "struct",
@@ -1634,11 +1601,13 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "creator",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1657,11 +1626,13 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1680,19 +1651,23 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "mint",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "amountAtoms",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1711,19 +1686,23 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "mint",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "amountAtoms",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1742,54 +1721,73 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "maker",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "taker",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "price",
           "type": {
             "defined": "QuoteAtomsPerBaseAtom"
-          }
+          },
+          "index": false
         },
         {
           "name": "baseAtoms",
           "type": {
             "defined": "BaseAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "quoteAtoms",
           "type": {
             "defined": "QuoteAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "makerSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "takerSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "takerIsBuy",
-          "type": "bool"
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
+        },
+        {
+          "name": "isMakerGlobal",
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
         },
         {
           "name": "padding",
           "type": {
             "array": [
               "u8",
-              15
+              14
             ]
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -1808,45 +1806,56 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "price",
           "type": {
             "defined": "QuoteAtomsPerBaseAtom"
-          }
+          },
+          "index": false
         },
         {
           "name": "baseAtoms",
           "type": {
             "defined": "BaseAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "orderSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "orderIndex",
-          "type": "u32"
+          "type": "u32",
+          "index": false
         },
         {
           "name": "lastValidSlot",
-          "type": "u32"
+          "type": "u32",
+          "index": false
         },
         {
           "name": "orderType",
           "type": {
             "defined": "OrderType"
-          }
+          },
+          "index": false
         },
         {
           "name": "isBid",
-          "type": "bool"
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
         },
         {
           "name": "padding",
@@ -1855,7 +1864,8 @@
               "u8",
               6
             ]
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -1874,15 +1884,18 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "orderSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1901,11 +1914,13 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "creator",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1924,11 +1939,13 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1947,15 +1964,18 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1974,17 +1994,20 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "globalAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -2003,17 +2026,20 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "globalAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -2032,23 +2058,27 @@
       "fields": [
         {
           "name": "evictor",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "evictee",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "evictorAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "evicteeAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     },

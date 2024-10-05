@@ -1,7 +1,22 @@
 {
     "name": "@cks-systems/manifest-sdk",
-    "version": "0.1.0",
+    "version": "0.1.53",
+    "files": [
+        "dist/",
+        "README.md",
+        "client/ts/src"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "description": "TypeScript SDK for Manifest",
+    "keywords": [
+        "manifest",
+        "solana",
+        "defi",
+        "dex",
+        "clob"
+    ],
     "author": "CKS Systems",
     "repository": "https://github.com/CKS-Systems/manifest",
     "main": "./dist/cjs/index.js",
@@ -13,6 +28,8 @@
     },
     "license": "MIT",
     "scripts": {
+        "prepublishOnly": "cp README.md README.back.md && cp ./client/ts/README.md README.md",
+        "postpublish": "mv README.back.md README.md",
         "build": "rimraf dist && yarn build:browser && yarn build:node && yarn build:types",
         "build:node": "tsc -p tsconfig.cjs.json --noEmit false",
         "build:browser": "tsc -p tsconfig.esm.json --noEmit false",
@@ -34,9 +51,12 @@
         "bn.js": "^5.2.1",
         "borsh": "^0.7.0",
         "bs58": "^6.0.0",
+        "express": "^4.21.0",
+        "express-prom-bundle": "^7.0.0",
         "js-sha256": "^0.11.0",
         "keccak256": "^1.0.6",
         "percentile": "^1.6.0",
+        "prom-client": "^15.1.3",
         "rimraf": "^5.0.10",
         "typedoc": "^0.26.3",
         "ws": "^8.18.0",
