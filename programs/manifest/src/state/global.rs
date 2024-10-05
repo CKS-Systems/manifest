@@ -637,7 +637,8 @@ mod test {
         let global_deposit1: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
         let mut global_deposit2: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
         global_deposit2.balance_atoms = GlobalAtoms::new(1);
-        assert!(global_deposit1 < global_deposit2);
+        // Reversed order than expected because Hypertrees give max pointer, but we want a min balance.
+        assert!(global_deposit1 > global_deposit2);
         assert!(global_deposit1 != global_deposit2);
     }
 }
