@@ -2097,23 +2097,27 @@
       "fields": [
         {
           "name": "cleaner",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "maker",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "amountDesired",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "amountDeposited",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     }
