@@ -645,7 +645,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // inside the matching rather than skipping the matching altogether
             // because post only orders should fail, not produce a crossed book.
             trace!(
-                "match {} {order_type:?} {price:?} with {other_order:?}",
+                "match {} {order_type:?} {price:?} with {maker_order:?}",
                 if is_bid { "bid" } else { "ask" }
             );
             assert_can_take(order_type)?;
