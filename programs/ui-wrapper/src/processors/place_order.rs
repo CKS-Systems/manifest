@@ -156,7 +156,7 @@ pub(crate) fn process_place_order(
                 deposit_amount_atoms,
                 trader_token_account.key,
                 *token_program.key,
-                None,
+                Some(trader_index),
             ),
             &[
                 manifest_program.info.clone(),
