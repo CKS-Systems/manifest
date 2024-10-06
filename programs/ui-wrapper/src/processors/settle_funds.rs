@@ -124,7 +124,7 @@ pub(crate) fn process_settle_funds(
             base_balance.as_u64(),
             trader_token_account_base.key,
             *token_program_base.key,
-            Some(trader_index)
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -146,7 +146,7 @@ pub(crate) fn process_settle_funds(
             quote_balance.as_u64(),
             trader_token_account_quote.key,
             *token_program_quote.key,
-            Some(trader_index)
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
