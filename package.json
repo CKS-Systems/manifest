@@ -1,6 +1,11 @@
 {
     "name": "@cks-systems/manifest-sdk",
-    "version": "0.1.4",
+    "version": "0.1.55",
+    "files": [
+        "dist/",
+        "README.md",
+        "client/ts/src"
+    ],
     "publishConfig": {
         "access": "public"
     },
@@ -18,8 +23,19 @@
     "module": "./dist/esm/index.js",
     "types": "./dist/types/src/index.d.ts",
     "exports": {
-        "require": "./dist/cjs/index.js",
-        "import": "./dist/esm/index.js"
+        ".": {
+            "require": "./dist/cjs/index.js",
+            "import": "./dist/esm/index.js"
+        },
+        "./fill-feed": {
+            "require": "./dist/cjs/fillFeed.js",
+            "import": "./dist/esm/fillFeed.js"
+        }
+    },
+    "typesVersions": {
+        "*": {
+            "fill-feed": ["./dist/types/src/fillFeed.d.ts"]
+        }
     },
     "license": "MIT",
     "scripts": {

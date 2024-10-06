@@ -8,7 +8,7 @@ If you intend to run `rando-bot`, make sure to set the env vars in `.env`. use `
 
 **IMPORTANT NOTE** `.env` and `.env.local` are two different files with different environment variables.
 
-You must set `NEXT_PUBLIC_RPC_URL` and `NEXT_PUBLIC_READ_ONLY` in `.env.local` before running. You can choose between different clusters by supplying different values for this environment variable.
+You must set `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_READ_ONLY`, and `NEXT_PUBLIC_FEED_URL` in `.env.local` before running. You can choose between different clusters by supplying different values for this environment variable.
 
 - `.env` is only used with scripts.
 - `.env.local` is used for running the ui
