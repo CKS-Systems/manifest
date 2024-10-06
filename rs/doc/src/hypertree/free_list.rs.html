@@ -93,9 +93,14 @@
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 
-<span class="kw">use crate</span>::{get_mut_helper, DataIndex, Get};
+<span class="kw">use crate</span>::{get_mut_helper, DataIndex, Get, NIL};
 
 <span class="comment">// FreeList is a linked list that keeps track of all the available nodes that
 // can be filled with ClaimedSeats and RestingOrders.
@@ -120,6 +125,11 @@
 }
 <span class="kw">unsafe impl</span>&lt;T: Pod&gt; Pod <span class="kw">for </span>FreeListNode&lt;T&gt; {}
 <span class="kw">impl</span>&lt;T: Pod&gt; Get <span class="kw">for </span>FreeListNode&lt;T&gt; {}
+<span class="kw">impl</span>&lt;T: Pod&gt; FreeListNode&lt;T&gt; {
+    <span class="kw">pub fn </span>has_next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.next_index != NIL
+    }
+}
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: Pod&gt; FreeList&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Create a new free list. Assumes that the data within data is already a well

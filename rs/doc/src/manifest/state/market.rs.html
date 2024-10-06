@@ -1273,11 +1273,22 @@
 <a href="#1271" id="1271">1271</a>
 <a href="#1272" id="1272">1272</a>
 <a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a>
+<a href="#1281" id="1281">1281</a>
+<a href="#1282" id="1282">1282</a>
+<a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
-    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
+    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
+    RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 <span class="kw">use </span>static_assertions::const_assert_eq;
@@ -1555,6 +1566,17 @@
     <span class="kw">pub fn </span>get_quote_mint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Pubkey {
         <span class="kw">let </span>DynamicAccount { fixed, .. } = <span class="self">self</span>.borrow_market();
         fixed.get_quote_mint()
+    }
+
+    <span class="kw">pub fn </span>has_two_free_blocks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic, .. } = <span class="self">self</span>.borrow_market();
+        <span class="kw">let </span>free_list_head_index: DataIndex = fixed.free_list_head_index;
+        <span class="kw">if </span>free_list_head_index == NIL {
+            <span class="kw">return </span><span class="bool-val">false</span>;
+        }
+        <span class="kw">let </span>free_list_head: <span class="kw-2">&amp;</span>FreeListNode&lt;MarketUnusedFreeListPadding&gt; =
+            get_helper::&lt;FreeListNode&lt;MarketUnusedFreeListPadding&gt;&gt;(dynamic, free_list_head_index);
+        free_list_head.has_next()
     }
 
     <span class="comment">// TODO: adapt to new rounding
