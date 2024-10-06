@@ -53,6 +53,28 @@ pub enum ManifestWrapperInstruction {
     PlaceOrder = 2,
 
     /// Edit order, deposits additional funds needed. TODO: Not implemented yet
+    /// programs/ui-wrapper/src/TODO: document return data
+    /// TODO: Remove the unneeded global accounts on the bookside that I am placing on.
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(2, writable, name = "trader_token_account", desc = "Trader token account")]
+    #[account(3, writable, name = "market", desc = "Account holding all market state")]
+    #[account(4, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market_address, mint_address]")]
+    #[account(5, writable, name = "mint", desc = "Mint of trader token account")]
+    #[account(6, name = "system_program", desc = "System program")]
+    #[account(7, name = "token_program", desc = "Token program owning trader token account")]
+    #[account(8, name = "manifest_program", desc = "Manifest program")]
+    #[account(9, writable, signer, name = "payer", desc = "Payer of rent and gas")]
+    #[account(10, name = "base_mint", desc = "Base mint")]
+    #[account(11, writable, name = "base_global", desc = "Base global account")]
+    #[account(12, writable, name = "base_global_vault", desc = "Base global vault")]
+    #[account(13, writable, name = "base_market_vault", desc = "Base market vault")]
+    #[account(14, writable, name = "base_token_program", desc = "Base token program")]
+    #[account(15, name = "quote_mint", desc = "Quote mint")]
+    #[account(16, writable, name = "quote_global", desc = "Quote global account")]
+    #[account(17, writable, name = "quote_global_vault", desc = "Quote global vault")]
+    #[account(18, writable, name = "quote_market_vault", desc = "Quote market vault")]
+    #[account(19, writable, name = "quote_token_program", desc = "Quote token program")]
     EditOrder = 3,
 
     /// Cancel order, no funds are transferred, but token accounts are passed
