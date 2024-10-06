@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728254828874,
+  "lastUpdate": 1728254890632,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -4881,6 +4881,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6239,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1703e1494d97d636fec839a053d1ba1fe6be2f61",
+          "message": "only expand if needed in ui wrapper place order (#134)\n\n* only expand if needed in ui wrapper place order\r\n\r\n* check for 2 free blocks\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-07T01:23:08+03:00",
+          "tree_id": "ffd38fd7d423dd05973920204567894a5f1151c5",
+          "url": "https://github.com/CKS-Systems/manifest/commit/1703e1494d97d636fec839a053d1ba1fe6be2f61"
+        },
+        "date": 1728254889722,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3514,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5596,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6244,
             "unit": "CU",
             "range": "",
             "extra": ""
