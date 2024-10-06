@@ -102,6 +102,53 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Manifest is a limit order book exchange on the Solana blockchain.
 //!
 
@@ -141,7 +188,54 @@
     auditors: <span class="string">""
 </span>}
 
-<span class="macro">declare_id!</span>(<span class="string">"MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"</span>);
+<span class="comment">// Overview of some economic disincentive security assumptions. There are
+// multiple ways to spam and cause hassle for honest traders. The strategy to
+// combat the different ways largely relies on economic assumptions that by
+// making it prohibitively expensive to grief honest traders.
+//
+// Denial of service through many small orders.
+// Because each regular order requires funds to be placed on the market as well
+// as possibly rent to expand an account, an attacker would have some associated
+// cost. Particularly important is the cost of growing the market. If this
+// happens, honest actors should simply create a new market and the rent that
+// the attacker posted is irretrievable, thus making the attack only a temporary
+// nuissance. If the market is full and no new seats can be claimed, the same
+// mitigation applies.
+//
+// CU exhaustion
+// Clients are expected to manage CU estimates on their own. There should not be
+// a way to make a stuck market because an honest actor can reduce their size
+// and take orders in their way. The gas cost to place the orders is nearly the
+// same as to match through them, and the cleaner gets the reward of plus EV
+// trades.
+//
+// Global order spam
+// If a bad actor were to place many orders that were not backed across many
+// markets, there is an added gas as well as input accounts cost for honest
+// actors cancelling or matching them. To combat this, there is a gas prepayment
+// of 5_000 lamports per order. Because of this, if there is ever multiple
+// unbacked or expired global orders, it is now profitable for a 3rd party to
+// run a cleanup job and claim the gas prepayment.
+//
+// Global seat squatting
+// Because global accounts cannot be thrown away and started anew like markets,
+// there needs to be a gating to who can use the bytes in the account. Also,
+// there is a good reason to keep the account size small as it costs more CU to
+// allow large accounts. To address this, there is a cap on the number of
+// traders who can have a seat on a global account. To prevent squatting and
+// guarantee that they are actually used, there is a mechanism for eviction. To
+// evict someone and free up a seat, the evictor needs to deposit more than the
+// lowest depositor to evict them. The evictee gets their tokens back, but their
+// global orders are now unbacked and could have their gas prepayment claimed.
+// This is a risk that global traders take when they leave themselves vulnerable
+// to be evicted by keeping a low balance. There is a concern of a flash loan
+// being able to evict many seats in one transaction. This however is protected
+// by solana account limits because each evictee gets their tokens withdrawn, so
+// an account is needed per eviction, and that will quickly run into the solana
+// transaction limit before an attacker is able to clear a substantial number of
+// seats in one transaction.
+
+</span><span class="macro">declare_id!</span>(<span class="string">"MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"</span>);
 
 <span class="attr">#[cfg(not(feature = <span class="string">"no-entrypoint"</span>))]
 </span><span class="macro">solana_program::entrypoint!</span>(process_instruction);
