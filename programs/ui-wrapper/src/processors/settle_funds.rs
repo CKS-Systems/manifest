@@ -12,7 +12,7 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
@@ -115,46 +115,50 @@ pub(crate) fn process_settle_funds(
     drop(wrapper_data);
 
     // settle base
-    invoke(
-        &withdraw_instruction(
-            market.key,
-            owner.key,
-            mint_base.key,
-            base_balance.as_u64(),
-            trader_token_account_base.key,
-            *token_program_base.key,
-        ),
-        &[
-            market.info.clone(),
-            owner.info.clone(),
-            mint_base.clone(),
-            trader_token_account_base.clone(),
-            vault_base.clone(),
-            token_program_base.clone(),
-            manifest_program.info.clone(),
-        ],
-    )?;
+    let ix: Instruction = withdraw_instruction(
+        market.key,
+        owner.key,
+        mint_base.key,
+        base_balance.as_u64(),
+        trader_token_account_base.key,
+        *token_program_base.key,
+    );
+    let account_infos = [
+        market.info.clone(),
+        owner.info.clone(),
+        mint_base.clone(),
+        trader_token_account_base.clone(),
+        vault_base.clone(),
+        token_program_base.clone(),
+        manifest_program.info.clone(),
+    ];
+    #[cfg(target_os = "solana")]
+    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+    #[cfg(not(target_os = "solana"))]
+    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
     // settle quote
-    invoke(
-        &withdraw_instruction(
-            market.key,
-            owner.key,
-            mint_quote.key,
-            quote_balance.as_u64(),
-            trader_token_account_quote.key,
-            *token_program_quote.key,
-        ),
-        &[
-            market.info.clone(),
-            owner.info.clone(),
-            mint_quote.clone(),
-            trader_token_account_quote.clone(),
-            vault_quote.clone(),
-            token_program_quote.clone(),
-            manifest_program.info.clone(),
-        ],
-    )?;
+    let ix: Instruction = withdraw_instruction(
+        market.key,
+        owner.key,
+        mint_quote.key,
+        quote_balance.as_u64(),
+        trader_token_account_quote.key,
+        *token_program_quote.key,
+    );
+    let account_infos: [AccountInfo<'_>; 7] = [
+        market.info.clone(),
+        owner.info.clone(),
+        mint_quote.clone(),
+        trader_token_account_quote.clone(),
+        vault_quote.clone(),
+        token_program_quote.clone(),
+        manifest_program.info.clone(),
+    ];
+    #[cfg(target_os = "solana")]
+    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+    #[cfg(not(target_os = "solana"))]
+    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
     // pay fees
 
@@ -172,22 +176,24 @@ pub(crate) fn process_settle_funds(
             fee_atoms as u64
         };
 
-        invoke(
-            &spl_token::instruction::transfer(
-                token_program_quote.key,
-                trader_token_account_quote.key,
-                platform_token_account.key,
-                owner.key,
-                &[],
-                platform_fee_atoms,
-            )?,
-            &[
-                token_program_quote.clone(),
-                trader_token_account_quote.clone(),
-                platform_token_account.clone(),
-                owner.info.clone(),
-            ],
+        let ix: Instruction = spl_token::instruction::transfer(
+            token_program_quote.key,
+            trader_token_account_quote.key,
+            platform_token_account.key,
+            owner.key,
+            &[],
+            platform_fee_atoms,
         )?;
+        let account_infos: [AccountInfo<'_>; 4] = [
+            token_program_quote.clone(),
+            trader_token_account_quote.clone(),
+            platform_token_account.clone(),
+            owner.info.clone(),
+        ];
+        #[cfg(target_os = "solana")]
+        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+        #[cfg(not(target_os = "solana"))]
+        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
         emit_stack(PlatformFeeLog {
             market: *market.key,
@@ -200,22 +206,24 @@ pub(crate) fn process_settle_funds(
             // saturating_sub not needed, but doesn't hurt
             let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms);
 
-            invoke(
-                &spl_token::instruction::transfer(
-                    token_program_quote.key,
-                    trader_token_account_quote.key,
-                    referrer_token_account.key,
-                    owner.key,
-                    &[],
-                    referrer_fee_atoms,
-                )?,
-                &[
-                    token_program_quote.clone(),
-                    trader_token_account_quote.clone(),
-                    referrer_token_account.clone(),
-                    owner.info.clone(),
-                ],
+            let ix: Instruction = spl_token::instruction::transfer(
+                token_program_quote.key,
+                trader_token_account_quote.key,
+                referrer_token_account.key,
+                owner.key,
+                &[],
+                referrer_fee_atoms,
             )?;
+            let account_infos: [AccountInfo<'_>; 4] = [
+                token_program_quote.clone(),
+                trader_token_account_quote.clone(),
+                referrer_token_account.clone(),
+                owner.info.clone(),
+            ];
+            #[cfg(target_os = "solana")]
+            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+            #[cfg(not(target_os = "solana"))]
+            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
             emit_stack(ReferrerFeeLog {
                 market: *market.key,

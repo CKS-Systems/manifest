@@ -17,7 +17,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
@@ -95,30 +95,32 @@ pub(crate) fn process_cancel_order(
     trace!("cancel index:{wrapper_index} order:{open_order:?} cpi:{core_cancel:?}");
     drop(wrapper_data);
 
-    invoke(
-        &batch_update_instruction(
-            market.key,
-            owner.key,
-            Some(trader_index),
-            vec![core_cancel],
-            vec![],
-            None,
-            None,
-            None,
-            None,
-        ),
-        &[
-            owner.info.clone(),
-            system_program.info.clone(),
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            trader_token_account.clone(),
-            vault.clone(),
-            token_program.clone(),
-            mint.clone(),
-        ],
-    )?;
+    let ix: Instruction = batch_update_instruction(
+        market.key,
+        owner.key,
+        Some(trader_index),
+        vec![core_cancel],
+        vec![],
+        None,
+        None,
+        None,
+        None,
+    );
+    let account_infos: [AccountInfo<'_>; 9] = [
+        owner.info.clone(),
+        system_program.info.clone(),
+        manifest_program.info.clone(),
+        owner.info.clone(),
+        market.info.clone(),
+        trader_token_account.clone(),
+        vault.clone(),
+        token_program.clone(),
+        mint.clone(),
+    ];
+    #[cfg(target_os = "solana")]
+    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+    #[cfg(not(target_os = "solana"))]
+    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
     // Process the order result
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();

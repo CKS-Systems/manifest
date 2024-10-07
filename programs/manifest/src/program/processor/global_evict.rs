@@ -2,7 +2,7 @@ use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
 };
 
 use crate::{
@@ -139,42 +139,46 @@ pub(crate) fn process_global_evict(
 
         // Do the token transfer
         if *global_vault.owner == spl_token_2022::id() {
-            invoke(
-                &spl_token_2022::instruction::transfer_checked(
-                    token_program.key,
-                    trader_token.key,
-                    mint.info.key,
-                    global_vault.key,
-                    payer.key,
-                    &[],
-                    amount_atoms,
-                    mint.mint.decimals,
-                )?,
-                &[
-                    token_program.as_ref().clone(),
-                    trader_token.as_ref().clone(),
-                    mint.as_ref().clone(),
-                    global_vault.as_ref().clone(),
-                    payer.as_ref().clone(),
-                ],
+            let ix: Instruction = spl_token_2022::instruction::transfer_checked(
+                token_program.key,
+                trader_token.key,
+                mint.info.key,
+                global_vault.key,
+                payer.key,
+                &[],
+                amount_atoms,
+                mint.mint.decimals,
             )?;
+            let account_infos: [AccountInfo<'_>; 5] = [
+                token_program.as_ref().clone(),
+                trader_token.as_ref().clone(),
+                mint.as_ref().clone(),
+                global_vault.as_ref().clone(),
+                payer.as_ref().clone(),
+            ];
+            #[cfg(target_os = "solana")]
+            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+            #[cfg(not(target_os = "solana"))]
+            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
         } else {
-            invoke(
-                &spl_token::instruction::transfer(
-                    token_program.key,
-                    trader_token.key,
-                    global_vault.key,
-                    payer.key,
-                    &[],
-                    amount_atoms,
-                )?,
-                &[
-                    token_program.as_ref().clone(),
-                    trader_token.as_ref().clone(),
-                    global_vault.as_ref().clone(),
-                    payer.as_ref().clone(),
-                ],
+            let ix: Instruction = spl_token::instruction::transfer(
+                token_program.key,
+                trader_token.key,
+                global_vault.key,
+                payer.key,
+                &[],
+                amount_atoms,
             )?;
+            let account_infos: [AccountInfo<'_>; 4] = [
+                token_program.as_ref().clone(),
+                trader_token.as_ref().clone(),
+                global_vault.as_ref().clone(),
+                payer.as_ref().clone(),
+            ];
+            #[cfg(target_os = "solana")]
+            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+            #[cfg(not(target_os = "solana"))]
+            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
         }
 
         emit_stack(GlobalDepositLog {

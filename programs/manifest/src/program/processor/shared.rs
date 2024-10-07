@@ -12,7 +12,7 @@ use crate::{
 use bytemuck::Pod;
 use hypertree::{get_helper, get_mut_helper, trace, Get};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, rent::Rent,
     system_instruction, sysvar::Sysvar,
 };
 
@@ -79,14 +79,17 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
         lamports_diff,
         expandable_account.key
     );
-    invoke(
-        &system_instruction::transfer(payer.key, expandable_account.key, lamports_diff),
-        &[
-            payer.clone(),
-            expandable_account.clone(),
-            system_program.clone(),
-        ],
-    )?;
+    let ix: Instruction =
+        system_instruction::transfer(payer.key, expandable_account.key, lamports_diff);
+    let account_infos = [
+        payer.clone(),
+        expandable_account.clone(),
+        system_program.clone(),
+    ];
+    #[cfg(target_os = "solana")]
+    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+    #[cfg(not(target_os = "solana"))]
+    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
     trace!(
         "expand_dynamic-> realloc {} {:?}",
@@ -95,7 +98,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     );
     #[cfg(feature = "fuzz")]
     {
-        invoke(
+        solana_program::program::invoke(
             &system_instruction::allocate(expandable_account.key, new_size as u64),
             &[expandable_account.clone(), system_program.clone()],
         )?;

@@ -11,7 +11,7 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     pubkey::Pubkey,
 };
 
@@ -52,25 +52,27 @@ pub(crate) fn process_withdraw(
     // Params are a direct pass through.
     let WithdrawParams { amount_atoms } = WithdrawParams::try_from_slice(data)?;
     // Call the withdraw CPI
-    invoke(
-        &withdraw_instruction(
-            market.key,
-            owner.key,
-            &mint,
-            amount_atoms,
-            trader_token_account.key,
-            spl_token::id(),
-        ),
-        &[
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            trader_token_account.clone(),
-            vault.clone(),
-            token_program.info.clone(),
-            mint_account_info.info.clone(),
-        ],
-    )?;
+    let ix: Instruction = withdraw_instruction(
+        market.key,
+        owner.key,
+        &mint,
+        amount_atoms,
+        trader_token_account.key,
+        spl_token::id(),
+    );
+    let account_infos: [AccountInfo<'_>; 7] = [
+        manifest_program.info.clone(),
+        owner.info.clone(),
+        market.info.clone(),
+        trader_token_account.clone(),
+        vault.clone(),
+        token_program.info.clone(),
+        mint_account_info.info.clone(),
+    ];
+    #[cfg(target_os = "solana")]
+    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+    #[cfg(not(target_os = "solana"))]
+    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
     // Sync
     sync(&wrapper_state, &market)?;

@@ -10,8 +10,8 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
+    program_pack::Pack, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{
@@ -115,35 +115,39 @@ pub(crate) fn process_create_market(
                 seeds,
             )?;
             if is_mint_22 {
-                invoke(
-                    &spl_token_2022::instruction::initialize_account3(
-                        &token_program_for_mint,
-                        token_account.key,
-                        mint.key,
-                        token_account.key,
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
-                        token_program_22.as_ref().clone(),
-                    ],
+                let ix: Instruction = spl_token_2022::instruction::initialize_account3(
+                    &token_program_for_mint,
+                    token_account.key,
+                    mint.key,
+                    token_account.key,
                 )?;
+                let account_infos: [AccountInfo<'_>; 4] = [
+                    payer.as_ref().clone(),
+                    token_account.clone(),
+                    mint.clone(),
+                    token_program_22.as_ref().clone(),
+                ];
+                #[cfg(target_os = "solana")]
+                solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+                #[cfg(not(target_os = "solana"))]
+                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
             } else {
-                invoke(
-                    &spl_token::instruction::initialize_account3(
-                        &token_program_for_mint,
-                        token_account.key,
-                        mint.key,
-                        token_account.key,
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
-                        token_program.as_ref().clone(),
-                    ],
+                let ix: Instruction = spl_token::instruction::initialize_account3(
+                    &token_program_for_mint,
+                    token_account.key,
+                    mint.key,
+                    token_account.key,
                 )?;
+                let account_infos: [AccountInfo<'_>; 4] = [
+                    payer.as_ref().clone(),
+                    token_account.clone(),
+                    mint.clone(),
+                    token_program.as_ref().clone(),
+                ];
+                #[cfg(target_os = "solana")]
+                solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+                #[cfg(not(target_os = "solana"))]
+                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
             }
         }
 

@@ -8,8 +8,8 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
+    program_pack::Pack, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 pub(crate) fn process_global_create(
@@ -85,35 +85,39 @@ pub(crate) fn process_global_create(
                 global_vault_seeds,
             )?;
             if is_mint_22 {
-                invoke(
-                    &spl_token_2022::instruction::initialize_account3(
-                        &spl_token_2022::id(),
-                        global_vault.as_ref().key,
-                        global_mint.info.key,
-                        global_vault.as_ref().key,
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        global_vault.as_ref().clone(),
-                        global_mint.as_ref().clone(),
-                        token_program.as_ref().clone(),
-                    ],
+                let ix: Instruction = spl_token_2022::instruction::initialize_account3(
+                    &spl_token_2022::id(),
+                    global_vault.as_ref().key,
+                    global_mint.info.key,
+                    global_vault.as_ref().key,
                 )?;
+                let account_infos: [AccountInfo<'_>; 4] = [
+                    payer.as_ref().clone(),
+                    global_vault.as_ref().clone(),
+                    global_mint.as_ref().clone(),
+                    token_program.as_ref().clone(),
+                ];
+                #[cfg(target_os = "solana")]
+                solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+                #[cfg(not(target_os = "solana"))]
+                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
             } else {
-                invoke(
-                    &spl_token::instruction::initialize_account3(
-                        &spl_token::id(),
-                        global_vault.as_ref().key,
-                        global_mint.info.key,
-                        global_vault.as_ref().key,
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        global_vault.as_ref().clone(),
-                        global_mint.as_ref().clone(),
-                        token_program.as_ref().clone(),
-                    ],
+                let ix: Instruction = spl_token::instruction::initialize_account3(
+                    &spl_token::id(),
+                    global_vault.as_ref().key,
+                    global_mint.info.key,
+                    global_vault.as_ref().key,
                 )?;
+                let account_infos: [AccountInfo<'_>; 4] = [
+                    payer.as_ref().clone(),
+                    global_vault.as_ref().clone(),
+                    global_mint.as_ref().clone(),
+                    token_program.as_ref().clone(),
+                ];
+                #[cfg(target_os = "solana")]
+                solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+                #[cfg(not(target_os = "solana"))]
+                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
             }
         }
 

@@ -22,7 +22,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
-    program::{get_return_data, invoke},
+    program::get_return_data,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
@@ -228,7 +228,14 @@ fn execute_cpi(
         .concat(),
     };
 
-    invoke(&ix, &accounts[1..])
+    #[cfg(target_os = "solana")]
+    {
+        solana_invoke::invoke_unchecked(&ix, &accounts[1..])
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        solana_program::program::invoke_unchecked(&ix, &accounts[1..])
+    }
 }
 
 fn process_cancels(

@@ -7,7 +7,7 @@ use crate::{
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
 };
 
 use super::shared::get_mut_dynamic_account;
@@ -48,54 +48,58 @@ pub(crate) fn process_deposit(
         &trader_token.try_borrow_data()?[0..32] == dynamic_account.get_base_mint().as_ref();
 
     if *vault.owner == spl_token_2022::id() {
-        invoke(
-            &spl_token_2022::instruction::transfer_checked(
-                token_program.key,
-                trader_token.key,
-                if is_base {
-                    dynamic_account.fixed.get_base_mint()
-                } else {
-                    dynamic_account.get_quote_mint()
-                },
-                vault.key,
-                payer.key,
-                &[],
-                amount_atoms,
-                if is_base {
-                    dynamic_account.fixed.get_base_mint_decimals()
-                } else {
-                    dynamic_account.fixed.get_quote_mint_decimals()
-                },
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                trader_token.as_ref().clone(),
-                mint.as_ref().clone(),
-                vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
+        let ix: Instruction = spl_token_2022::instruction::transfer_checked(
+            token_program.key,
+            trader_token.key,
+            if is_base {
+                dynamic_account.fixed.get_base_mint()
+            } else {
+                dynamic_account.get_quote_mint()
+            },
+            vault.key,
+            payer.key,
+            &[],
+            amount_atoms,
+            if is_base {
+                dynamic_account.fixed.get_base_mint_decimals()
+            } else {
+                dynamic_account.fixed.get_quote_mint_decimals()
+            },
         )?;
+        let account_infos: [AccountInfo<'_>; 5] = [
+            token_program.as_ref().clone(),
+            trader_token.as_ref().clone(),
+            mint.as_ref().clone(),
+            vault.as_ref().clone(),
+            payer.as_ref().clone(),
+        ];
+        #[cfg(target_os = "solana")]
+        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+        #[cfg(not(target_os = "solana"))]
+        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
         // TODO: Check the actual amount received and use that as the
         // amount_atoms, rather than what the user said because of transfer
         // fees.
     } else {
-        invoke(
-            &spl_token::instruction::transfer(
-                token_program.key,
-                trader_token.key,
-                vault.key,
-                payer.key,
-                &[],
-                amount_atoms,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                trader_token.as_ref().clone(),
-                vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
+        let ix: Instruction = spl_token::instruction::transfer(
+            token_program.key,
+            trader_token.key,
+            vault.key,
+            payer.key,
+            &[],
+            amount_atoms,
         )?;
+        let account_infos: [AccountInfo<'_>; 4] = [
+            token_program.as_ref().clone(),
+            trader_token.as_ref().clone(),
+            vault.as_ref().clone(),
+            payer.as_ref().clone(),
+        ];
+        #[cfg(target_os = "solana")]
+        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+        #[cfg(not(target_os = "solana"))]
+        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
     }
 
     dynamic_account.deposit(payer.key, amount_atoms, is_base)?;

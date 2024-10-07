@@ -24,7 +24,7 @@ use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_instruction,
@@ -74,14 +74,17 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         let new_minimum_balance: u64 = rent.minimum_balance(new_size);
         let lamports_diff: u64 = new_minimum_balance.saturating_sub(wrapper_state.lamports());
 
-        invoke(
-            &system_instruction::transfer(payer.key, wrapper_state.key, lamports_diff),
-            &[
-                payer.info.clone(),
-                wrapper_state.clone(),
-                system_program.info.clone(),
-            ],
-        )?;
+        let ix: Instruction =
+            system_instruction::transfer(payer.key, wrapper_state.key, lamports_diff);
+        let account_infos: [AccountInfo<'info>; 3] = [
+            payer.info.clone(),
+            wrapper_state.clone(),
+            system_program.info.clone(),
+        ];
+        #[cfg(target_os = "solana")]
+        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
+        #[cfg(not(target_os = "solana"))]
+        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
         trace!(
             "expand_if_needed -> realloc {} {:?}",
@@ -90,7 +93,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         );
         #[cfg(feature = "fuzz")]
         {
-            invoke(
+            solana_program::program::invoke_unchecked(
                 &system_instruction::allocate(wrapper_state.key, new_size as u64),
                 &[wrapper_state.clone(), system_program.info.clone()],
             )?;
