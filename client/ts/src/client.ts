@@ -258,14 +258,14 @@ export class ManifestClient {
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
-   * @param payerKeypair Keypair of the trader
+   * @param trader PublicKey of the trader
    *
    * @returns Promise<SetupData>
    */
   public static async getSetupIxs(
     connection: Connection,
     marketPk: PublicKey,
-    payerPub: PublicKey,
+    trader: PublicKey,
   ): Promise<SetupData> {
     const setupData: SetupData = {
       setupNeeded: true,
@@ -274,7 +274,7 @@ export class ManifestClient {
     };
     const userWrapper = await ManifestClient.fetchFirstUserWrapper(
       connection,
-      payerPub,
+      trader,
     );
     if (!userWrapper) {
       const wrapperKeypair: Keypair = Keypair.generate();
@@ -282,7 +282,7 @@ export class ManifestClient {
 
       const createAccountIx: TransactionInstruction =
         SystemProgram.createAccount({
-          fromPubkey: payerPub,
+          fromPubkey: trader,
           newAccountPubkey: wrapperKeypair.publicKey,
           space: FIXED_WRAPPER_HEADER_SIZE,
           lamports: await connection.getMinimumBalanceForRentExemption(
@@ -294,14 +294,14 @@ export class ManifestClient {
 
       const createWrapperIx: TransactionInstruction =
         createCreateWrapperInstruction({
-          owner: payerPub,
+          owner: trader,
           wrapperState: wrapperKeypair.publicKey,
         });
       setupData.instructions.push(createWrapperIx);
 
       const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
         manifestProgram: MANIFEST_PROGRAM_ID,
-        owner: payerPub,
+        owner: trader,
         market: marketPk,
         wrapperState: wrapperKeypair.publicKey,
       });
@@ -326,7 +326,7 @@ export class ManifestClient {
     // There is a wrapper, but need to claim a seat.
     const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
       manifestProgram: MANIFEST_PROGRAM_ID,
-      owner: payerPub,
+      owner: trader,
       market: marketPk,
       wrapperState: userWrapper.pubkey,
     });
@@ -334,26 +334,28 @@ export class ManifestClient {
 
     return setupData;
   }
-
+  
+  // TODO: Make a version that does not require a trader with a wrapper for use
+  // in cases where we just want to see the orderbook.
   /**
    * Create a new client. throws if setup ixs are needed. Call ManifestClient.getSetupIxs to check if ixs are needed.
    * This is the way to create a client without directly passing in `Keypair` types (for example when building a UI).
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
-   * @param payerKeypair Keypair of the trader
+   * @param trader PublicKey of the trader
    *
    * @returns ManifestClient
    */
   public static async getClientForMarketNoPrivateKey(
     connection: Connection,
     marketPk: PublicKey,
-    payerPub: PublicKey,
+    trader: PublicKey,
   ): Promise<ManifestClient> {
     const { setupNeeded } = await this.getSetupIxs(
       connection,
       marketPk,
-      payerPub,
+      trader,
     );
     if (setupNeeded) {
       throw new Error('setup ixs need to be executed first');
@@ -370,7 +372,7 @@ export class ManifestClient {
 
     const userWrapper = await ManifestClient.fetchFirstUserWrapper(
       connection,
-      payerPub,
+      trader,
     );
 
     if (!userWrapper) {
@@ -388,7 +390,7 @@ export class ManifestClient {
       connection,
       wrapper,
       marketObject,
-      payerPub,
+      trader,
       baseMint,
       quoteMint,
     );
