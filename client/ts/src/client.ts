@@ -334,7 +334,7 @@ export class ManifestClient {
 
     return setupData;
   }
-  
+
   // TODO: Make a version that does not require a trader with a wrapper for use
   // in cases where we just want to see the orderbook.
   /**
