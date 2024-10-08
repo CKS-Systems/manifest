@@ -3,7 +3,7 @@ use std::{cell::Ref, mem::size_of};
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_helper, DataIndex, RBNode};
 use manifest::{
-    program::deposit_instruction,
+    program::{deposit_instruction, invoke},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
@@ -12,7 +12,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     pubkey::Pubkey,
 };
 

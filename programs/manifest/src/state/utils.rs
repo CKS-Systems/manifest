@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, invoke, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -127,7 +127,7 @@ pub(crate) fn try_to_add_to_global(
     // Done here instead of inside the object because the borrow checker needs
     // to get the data on global which it cannot while there is a mut self
     // reference.
-    solana_program::program::invoke(
+    invoke(
         &solana_program::system_instruction::transfer(
             &gas_payer_opt.as_ref().unwrap().info.key,
             &global.key,

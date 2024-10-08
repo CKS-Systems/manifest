@@ -12,7 +12,7 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        get_dynamic_account, get_mut_dynamic_account, ManifestInstruction,
+        get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType},
@@ -22,7 +22,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
-    program::{get_return_data, invoke},
+    program::get_return_data,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,

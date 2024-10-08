@@ -8,7 +8,7 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::CancelOrderParams, batch_update_instruction, get_dynamic_account,
-        get_mut_dynamic_account,
+        get_mut_dynamic_account, invoke,
     },
     state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed},
     validation::{ManifestAccountInfo, Program, Signer},
@@ -17,7 +17,6 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
     entrypoint::ProgramResult,
-    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,

@@ -2,14 +2,15 @@ use std::mem::size_of;
 
 use crate::{
     logs::{emit_stack, GlobalCreateLog},
+    program::invoke,
     state::GlobalFixed,
     utils::create_account,
     validation::{get_global_address, get_global_vault_address, loaders::GlobalCreateContext},
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
+    rent::Rent, sysvar::Sysvar,
 };
 
 pub(crate) fn process_global_create(
