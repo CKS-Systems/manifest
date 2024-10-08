@@ -10,9 +10,9 @@ import * as beet from '@metaplex-foundation/beet';
 import * as beetSolana from '@metaplex-foundation/beet-solana';
 export type GlobalTrader = {
   trader: web3.PublicKey;
-  unclaimedGasDeposits: number;
   depositIndex: number;
-  padding: beet.bignum;
+  padding: number;
+  padding2: beet.bignum;
 };
 
 /**
@@ -22,9 +22,9 @@ export type GlobalTrader = {
 export const globalTraderBeet = new beet.BeetArgsStruct<GlobalTrader>(
   [
     ['trader', beetSolana.publicKey],
-    ['unclaimedGasDeposits', beet.u32],
     ['depositIndex', beet.u32],
-    ['padding', beet.u64],
+    ['padding', beet.u32],
+    ['padding2', beet.u64],
   ],
   'GlobalTrader',
 );
