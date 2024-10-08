@@ -7,6 +7,7 @@ export * from './FillLog';
 export * from './GlobalAddTraderLog';
 export * from './GlobalAtoms';
 export * from './GlobalClaimSeatLog';
+export * from './GlobalCleanupLog';
 export * from './GlobalCreateLog';
 export * from './GlobalDepositLog';
 export * from './GlobalEvictLog';
@@ -29,6 +30,7 @@ import { GlobalClaimSeatLog } from './GlobalClaimSeatLog';
 import { GlobalDepositLog } from './GlobalDepositLog';
 import { GlobalWithdrawLog } from './GlobalWithdrawLog';
 import { GlobalEvictLog } from './GlobalEvictLog';
+import { GlobalCleanupLog } from './GlobalCleanupLog';
 import { QuoteAtoms } from './QuoteAtoms';
 import { BaseAtoms } from './BaseAtoms';
 import { GlobalAtoms } from './GlobalAtoms';
@@ -48,6 +50,7 @@ export const accountProviders = {
   GlobalDepositLog,
   GlobalWithdrawLog,
   GlobalEvictLog,
+  GlobalCleanupLog,
   QuoteAtoms,
   BaseAtoms,
   GlobalAtoms,

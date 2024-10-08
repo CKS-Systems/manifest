@@ -1205,6 +1205,34 @@
       }
     },
     {
+      "name": "GlobalCleanupLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "cleaner",
+            "type": "publicKey"
+          },
+          {
+            "name": "maker",
+            "type": "publicKey"
+          },
+          {
+            "name": "amountDesired",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          },
+          {
+            "name": "amountDeposited",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "QuoteAtoms",
       "type": {
         "kind": "struct",
@@ -2071,6 +2099,45 @@
         },
         {
           "name": "evicteeAtoms",
+          "type": {
+            "defined": "GlobalAtoms"
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "GlobalCleanupLog",
+      "discriminator": [
+        193,
+        249,
+        115,
+        186,
+        42,
+        126,
+        196,
+        82
+      ],
+      "fields": [
+        {
+          "name": "cleaner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "maker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amountDesired",
+          "type": {
+            "defined": "GlobalAtoms"
+          },
+          "index": false
+        },
+        {
+          "name": "amountDeposited",
           "type": {
             "defined": "GlobalAtoms"
           },
