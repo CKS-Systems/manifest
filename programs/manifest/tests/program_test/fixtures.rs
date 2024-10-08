@@ -378,6 +378,7 @@ impl TestFixture {
             num_atoms,
             &trader_token_account,
             spl_token::id(),
+            None,
         );
 
         send_tx_with_retry(
@@ -449,6 +450,7 @@ impl TestFixture {
             num_atoms,
             &trader_token_account,
             spl_token::id(),
+            None,
         );
         send_tx_with_retry(
             Rc::clone(&self.context),

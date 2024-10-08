@@ -82,6 +82,7 @@ pub(crate) fn process_settle_funds(
     let market_info: &mut MarketInfo =
         get_mut_helper::<RBNode<MarketInfo>>(&mut wrapper.dynamic, market_info_index)
             .get_mut_value();
+    let trader_index: DataIndex = market_info.trader_index;
 
     let WrapperSettleFundsParams {
         fee_mantissa,
@@ -123,6 +124,7 @@ pub(crate) fn process_settle_funds(
             base_balance.as_u64(),
             trader_token_account_base.key,
             *token_program_base.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -144,6 +146,7 @@ pub(crate) fn process_settle_funds(
             quote_balance.as_u64(),
             trader_token_account_quote.key,
             *token_program_quote.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),

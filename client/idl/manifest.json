@@ -176,6 +176,12 @@
           "type": {
             "defined": "DepositParams"
           }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
+          }
         }
       ],
       "discriminant": {
@@ -240,6 +246,12 @@
           "name": "params",
           "type": {
             "defined": "WithdrawParams"
+          }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
           }
         }
       ],
@@ -1332,6 +1344,12 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           }
         ]
       }
@@ -1416,6 +1434,12 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           }
         ]
       }

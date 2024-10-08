@@ -123,6 +123,12 @@ function modifyIdlCore(programName) {
               defined: 'DepositParams',
             },
           });
+          instruction.args.push({
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
+          });
           break;
         }
         case 'Withdraw': {
@@ -132,23 +138,11 @@ function modifyIdlCore(programName) {
               defined: 'WithdrawParams',
             },
           });
-          break;
-        }
-        case 'PlaceOrder': {
           instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'PlaceOrderParams',
-            },
-          });
-          break;
-        }
-        case 'CancelOrder': {
-          instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'CancelOrderParams',
-            },
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           });
           break;
         }
@@ -308,7 +302,7 @@ function modifyIdlCore(programName) {
     }
   } else if (programName == 'wrapper') {
     idl.types.push({
-      name: 'DepositParams',
+      name: 'WrapperDepositParams',
       type: {
         kind: 'struct',
         fields: [
@@ -320,7 +314,7 @@ function modifyIdlCore(programName) {
       },
     });
     idl.types.push({
-      name: 'WithdrawParams',
+      name: 'WrapperWithdrawParams',
       type: {
         kind: 'struct',
         fields: [
@@ -376,7 +370,7 @@ function modifyIdlCore(programName) {
           instruction.args.push({
             name: 'params',
             type: {
-              defined: 'DepositParams',
+              defined: 'WrapperDepositParams',
             },
           });
           break;
@@ -385,7 +379,7 @@ function modifyIdlCore(programName) {
           instruction.args.push({
             name: 'params',
             type: {
-              defined: 'WithdrawParams',
+              defined: 'WrapperWithdrawParams',
             },
           });
           break;

@@ -159,6 +159,7 @@ async fn token22_base() -> anyhow::Result<()> {
         1_000_000_000,
         &spl_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     let deposit_usdc_ix: Instruction = deposit_instruction(
         &market_keypair.pubkey(),
@@ -167,6 +168,7 @@ async fn token22_base() -> anyhow::Result<()> {
         1_000_000_000,
         &usdc_token_account_keypair.pubkey(),
         spl_token::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
@@ -184,6 +186,7 @@ async fn token22_base() -> anyhow::Result<()> {
         1_000,
         &spl_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     let withdraw_usdc_ix: Instruction = withdraw_instruction(
         &market_keypair.pubkey(),
@@ -192,6 +195,7 @@ async fn token22_base() -> anyhow::Result<()> {
         1_000,
         &usdc_token_account_keypair.pubkey(),
         spl_token::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
@@ -423,6 +427,7 @@ async fn token22_quote() -> anyhow::Result<()> {
         1_000_000_000,
         &spl_token_account_keypair.pubkey(),
         spl_token::id(),
+        None,
     );
     let deposit_usdc_ix: Instruction = deposit_instruction(
         &market_keypair.pubkey(),
@@ -431,6 +436,7 @@ async fn token22_quote() -> anyhow::Result<()> {
         1_000_000_000,
         &usdc_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
@@ -448,6 +454,7 @@ async fn token22_quote() -> anyhow::Result<()> {
         1_000,
         &spl_token_account_keypair.pubkey(),
         spl_token::id(),
+        None,
     );
     let withdraw_usdc_ix: Instruction = withdraw_instruction(
         &market_keypair.pubkey(),
@@ -456,6 +463,7 @@ async fn token22_quote() -> anyhow::Result<()> {
         1_000,
         &usdc_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
@@ -694,6 +702,7 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
         1_000_000_000,
         &spl_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
