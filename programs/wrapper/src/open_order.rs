@@ -4,13 +4,14 @@ use manifest::{
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
     state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
 };
+use shank::ShankType;
 use static_assertions::const_assert_eq;
 use std::{cmp::Ordering, mem::size_of};
 
 use crate::processors::shared::WRAPPER_BLOCK_PAYLOAD_SIZE;
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct WrapperOpenOrder {
     price: QuoteAtomsPerBaseAtom,
     client_order_id: u64,
