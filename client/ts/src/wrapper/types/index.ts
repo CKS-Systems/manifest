@@ -1,4 +1,3 @@
-export * from './DepositParams';
 export * from './MarketInfo';
 export * from './OrderType';
 export * from './WrapperBatchUpdateParams';
