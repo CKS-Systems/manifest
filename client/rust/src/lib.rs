@@ -224,7 +224,7 @@ mod test {
         },
     };
     use solana_sdk::{account::Account, account_info::AccountInfo};
-    use spl_token::state::Mint;
+    use spl_token_2022::state::Mint;
     use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
 
     #[test]

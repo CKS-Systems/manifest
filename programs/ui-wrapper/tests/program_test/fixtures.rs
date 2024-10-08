@@ -16,7 +16,7 @@ use solana_sdk::{
     signature::Keypair, signer::Signer, system_instruction::create_account,
     transaction::Transaction,
 };
-use spl_token::state::Mint;
+use spl_token_2022::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
     instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
