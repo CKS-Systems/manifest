@@ -1962,7 +1962,7 @@
             // inside the matching rather than skipping the matching altogether
             // because post only orders should fail, not produce a crossed book.
             </span><span class="macro">trace!</span>(
-                <span class="string">"match {} {order_type:?} {price:?} with {other_order:?}"</span>,
+                <span class="string">"match {} {order_type:?} {price:?} with {maker_order:?}"</span>,
                 <span class="kw">if </span>is_bid { <span class="string">"bid" </span>} <span class="kw">else </span>{ <span class="string">"ask" </span>}
             );
             assert_can_take(order_type)<span class="question-mark">?</span>;
@@ -2160,10 +2160,10 @@
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)<span class="question-mark">?</span>;
                 current_maker_order_index = next_maker_order_index;
             } <span class="kw">else </span>{
-                <span class="kw">let </span>other_order: <span class="kw-2">&amp;mut </span>RestingOrder =
+                <span class="kw">let </span>maker_order: <span class="kw-2">&amp;mut </span>RestingOrder =
                     get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index)
                         .get_mut_value();
-                other_order.reduce(base_atoms_traded)<span class="question-mark">?</span>;
+                maker_order.reduce(base_atoms_traded)<span class="question-mark">?</span>;
                 remaining_base_atoms = BaseAtoms::ZERO;
                 <span class="kw">break</span>;
             }
