@@ -4,17 +4,26 @@ use std::{
 };
 
 use crate::{
+    program::ManifestError,
+    require,
     state::{
-        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, GLOBAL_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed,
+        MarketFixed, MarketRefMut, GLOBAL_BLOCK_SIZE,
     },
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
-use hypertree::{get_helper, get_mut_helper, trace, Get};
+use hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
-    system_instruction, sysvar::Sysvar,
+    account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    program::invoke,
+    rent::Rent,
+    system_instruction,
+    sysvar::{slot_history::ProgramError, Sysvar},
 };
+
+use super::batch_update::MarketDataTreeNodeType;
 
 pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
@@ -156,4 +165,50 @@ pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
         dynamic: (dynamic_data).to_vec(),
     };
     dynamic_account
+}
+
+// TODO: Make dynamic_account immutable here
+pub(crate) fn get_trader_index_with_hint(
+    trader_index_hint: Option<DataIndex>,
+    dynamic_account: &mut MarketRefMut,
+    payer: &Signer,
+) -> Result<DataIndex, ProgramError> {
+    let trader_index: DataIndex = match trader_index_hint {
+        None => dynamic_account.get_trader_index(payer.key),
+        Some(hinted_index) => {
+            verify_trader_index_hint(hinted_index, &dynamic_account, &payer)?;
+            hinted_index
+        }
+    };
+    Ok(trader_index)
+}
+
+fn verify_trader_index_hint(
+    hinted_index: DataIndex,
+    dynamic_account: &MarketRefMut,
+    payer: &Signer,
+) -> ProgramResult {
+    require!(
+        hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
+        ManifestError::WrongIndexHintParams,
+        "Invalid trader hint index {} did not align",
+        hinted_index,
+    )?;
+    require!(
+        get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
+            .get_payload_type()
+            == MarketDataTreeNodeType::ClaimedSeat as u8,
+        ManifestError::WrongIndexHintParams,
+        "Invalid trader hint index {} is not a ClaimedSeat",
+        hinted_index,
+    )?;
+    require!(
+        payer
+            .key
+            .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
+        ManifestError::WrongIndexHintParams,
+        "Invalid trader hint index {} did not match payer",
+        hinted_index
+    )?;
+    Ok(())
 }

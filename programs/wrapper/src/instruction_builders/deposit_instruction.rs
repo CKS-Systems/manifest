@@ -1,6 +1,6 @@
-use crate::ManifestWrapperInstruction;
+use crate::{processors::deposit::WrapperDepositParams, ManifestWrapperInstruction};
 use borsh::BorshSerialize;
-use manifest::{program::deposit::DepositParams, validation::get_vault_address};
+use manifest::validation::get_vault_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -30,7 +30,9 @@ pub fn deposit_instruction(
         ],
         data: [
             ManifestWrapperInstruction::Deposit.to_vec(),
-            DepositParams::new(amount_atoms).try_to_vec().unwrap(),
+            WrapperDepositParams::new(amount_atoms)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     }
