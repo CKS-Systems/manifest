@@ -461,7 +461,7 @@ export class Market {
               publicKey: claimedSeatInternal.trader,
               baseBalance: claimedSeatInternal.baseWithdrawableBalance,
               quoteBalance: claimedSeatInternal.quoteWithdrawableBalance,
-            }
+            };
           })
         : [];
 
