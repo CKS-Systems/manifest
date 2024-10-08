@@ -54,7 +54,7 @@ pub fn order_type_can_take(order_type: OrderType) -> bool {
 }
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct RestingOrder {
     price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,

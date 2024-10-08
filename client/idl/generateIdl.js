@@ -106,6 +106,29 @@ function modifyIdlCore(programName) {
       }
     }
 
+    for (const idlType of idl.types) {
+      if (idlType.type && idlType.type.fields) {
+        idlType.type.fields = idlType.type.fields.map((field) => {
+          if (field.type.defined == 'PodBool') {
+            field.type = 'bool';
+          }
+          if (field.type.defined == 'BaseAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'GlobalAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
+            field.type = 'u128';
+          }
+          return field;
+        });
+      }
+    }
+
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
         case 'CreateMarket': {
@@ -243,11 +266,24 @@ function modifyIdlCore(programName) {
       },
     });
 
+    // TODO: Make a helper for this that is shared
     for (const idlType of idl.types) {
       if (idlType.type && idlType.type.fields) {
         idlType.type.fields = idlType.type.fields.map((field) => {
           if (field.type.defined == 'PodBool') {
             field.type = 'bool';
+          }
+          if (field.type.defined == 'BaseAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'GlobalAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
+            field.type = 'u128';
           }
           return field;
         });
@@ -351,6 +387,18 @@ function modifyIdlCore(programName) {
         idlType.type.fields = idlType.type.fields.map((field) => {
           if (field.type.defined == 'PodBool') {
             field.type = 'bool';
+          }
+          if (field.type.defined == 'BaseAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'GlobalAtoms') {
+            field.type = 'u64';
+          }
+          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
+            field.type = 'u128';
           }
           return field;
         });
