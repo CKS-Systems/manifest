@@ -277,10 +277,18 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
+    logs::{emit_stack, GlobalCleanupLog},
     program::{get_mut_dynamic_account, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
@@ -480,6 +488,7 @@
         global,
         mint_opt,
         global_vault_opt,
+        gas_receiver_opt,
         market_vault_opt,
         token_program_opt,
         ..
@@ -491,8 +500,13 @@
     <span class="kw">let </span>num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader);
     <span class="kw">if </span>desired_global_atoms &gt; num_deposited_atoms {
-        <span class="comment">// TODO: Emit a log for global order that could not be matched against being cleaned.
-        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+        emit_stack(GlobalCleanupLog {
+            cleaner: <span class="kw-2">*</span>gas_receiver_opt.as_ref().unwrap().key,
+            maker: <span class="kw-2">*</span>resting_order_trader,
+            amount_desired: desired_global_atoms,
+            amount_deposited: num_deposited_atoms,
+        })<span class="question-mark">?</span>;
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
     }
     <span class="comment">// TODO: Allow matching against a global that can only partially fill the order.
 
