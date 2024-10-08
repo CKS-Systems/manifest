@@ -12,7 +12,7 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        get_dynamic_account, get_mut_dynamic_account, ManifestInstruction,
+        get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType},
@@ -22,7 +22,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
-    program::{get_return_data, invoke},
+    program::get_return_data,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
@@ -86,20 +86,17 @@ pub struct WrapperBatchUpdateParams {
     pub cancels: Vec<WrapperCancelOrderParams>,
     pub cancel_all: bool,
     pub orders: Vec<WrapperPlaceOrderParams>,
-    pub trader_index_hint: Option<DataIndex>,
 }
 impl WrapperBatchUpdateParams {
     pub fn new(
         cancels: Vec<WrapperCancelOrderParams>,
         cancel_all: bool,
         orders: Vec<WrapperPlaceOrderParams>,
-        trader_index_hint: Option<DataIndex>,
     ) -> Self {
         WrapperBatchUpdateParams {
             cancels,
             cancel_all,
             orders,
-            trader_index_hint,
         }
     }
 }
@@ -374,7 +371,6 @@ pub(crate) fn process_batch_update(
         orders,
         cancel_all,
         cancels,
-        ..
     } = WrapperBatchUpdateParams::try_from_slice(data)?;
 
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;

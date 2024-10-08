@@ -4,7 +4,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_mut_helper, DataIndex, RBNode};
 use manifest::{
     logs::emit_stack,
-    program::{get_mut_dynamic_account, withdraw_instruction},
+    program::{get_mut_dynamic_account, invoke, withdraw_instruction},
     quantities::{QuoteAtoms, WrapperU64},
     state::{DynamicAccount, MarketFixed},
     validation::{ManifestAccountInfo, Program, Signer},
@@ -12,7 +12,6 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
@@ -82,6 +81,7 @@ pub(crate) fn process_settle_funds(
     let market_info: &mut MarketInfo =
         get_mut_helper::<RBNode<MarketInfo>>(&mut wrapper.dynamic, market_info_index)
             .get_mut_value();
+    let trader_index: DataIndex = market_info.trader_index;
 
     let WrapperSettleFundsParams {
         fee_mantissa,
@@ -123,6 +123,7 @@ pub(crate) fn process_settle_funds(
             base_balance.as_u64(),
             trader_token_account_base.key,
             *token_program_base.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -144,6 +145,7 @@ pub(crate) fn process_settle_funds(
             quote_balance.as_u64(),
             trader_token_account_quote.key,
             *token_program_quote.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -157,7 +159,6 @@ pub(crate) fn process_settle_funds(
     )?;
 
     // pay fees
-
     if *vault_quote.owner == spl_token_2022::id() {
         unimplemented!("token2022 not yet supported")
         // TODO: make sure to use least amount of transfers possible to avoid transfer fee

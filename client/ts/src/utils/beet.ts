@@ -28,6 +28,7 @@ export const publicKeyBeet = new BeetArgsStruct<PubkeyWrapper>(
   'PubkeyWrapper',
 );
 
+// TODO: Use the shanked version of all these
 /**
  * RestingOrder deserializer.
  *

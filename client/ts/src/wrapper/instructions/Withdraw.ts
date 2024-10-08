@@ -8,7 +8,10 @@
 import * as splToken from '@solana/spl-token';
 import * as beet from '@metaplex-foundation/beet';
 import * as web3 from '@solana/web3.js';
-import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams';
+import {
+  WrapperWithdrawParams,
+  wrapperWithdrawParamsBeet,
+} from '../types/WrapperWithdrawParams';
 
 /**
  * @category Instructions
@@ -16,7 +19,7 @@ import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams';
  * @category generated
  */
 export type WithdrawInstructionArgs = {
-  params: WithdrawParams;
+  params: WrapperWithdrawParams;
 };
 /**
  * @category Instructions
@@ -30,7 +33,7 @@ export const WithdrawStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', withdrawParamsBeet],
+    ['params', wrapperWithdrawParamsBeet],
   ],
   'WithdrawInstructionArgs',
 );

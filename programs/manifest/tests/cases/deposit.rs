@@ -60,6 +60,7 @@ async fn deposit_fail_insufficient_funds_test() -> anyhow::Result<()> {
             1,
             &user_token_account,
             spl_token::id(),
+            None,
         )],
         Some(payer),
         &[payer_keypair],
@@ -104,6 +105,7 @@ async fn deposit_fail_incorrect_mint_test() -> anyhow::Result<()> {
             SOL_UNIT_SIZE,
             &user_token_account,
             spl_token::id(),
+            None,
         )],
         Some(payer),
         &[payer_keypair],
@@ -134,7 +136,9 @@ async fn global_deposit_fail_incorrect_vault_test() -> anyhow::Result<()> {
         ],
         data: [
             ManifestInstruction::Deposit.to_vec(),
-            DepositParams::new(SOL_UNIT_SIZE).try_to_vec().unwrap(),
+            DepositParams::new(SOL_UNIT_SIZE, None)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     };

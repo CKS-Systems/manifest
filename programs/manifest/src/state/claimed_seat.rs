@@ -2,6 +2,7 @@ use std::mem::size_of;
 
 use crate::quantities::{BaseAtoms, QuoteAtoms};
 use bytemuck::{Pod, Zeroable};
+use shank::ShankType;
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 use std::cmp::Ordering;
@@ -9,7 +10,7 @@ use std::cmp::Ordering;
 use super::constants::CLAIMED_SEAT_SIZE;
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct ClaimedSeat {
     pub trader: Pubkey,
     // Balances are withdrawable on the exchange. They do not include funds in

@@ -1,6 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, NIL};
 use manifest::quantities::{BaseAtoms, QuoteAtoms};
+use shank::ShankType;
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 use std::{cmp::Ordering, mem::size_of};
@@ -8,7 +9,7 @@ use std::{cmp::Ordering, mem::size_of};
 use crate::processors::shared::WRAPPER_BLOCK_PAYLOAD_SIZE;
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct MarketInfo {
     /// Pubkey for the market
     pub market: Pubkey,

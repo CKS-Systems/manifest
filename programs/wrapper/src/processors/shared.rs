@@ -14,7 +14,7 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::get_dynamic_account,
+    program::{get_dynamic_account, invoke},
     quantities::BaseAtoms,
     require,
     state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
@@ -24,7 +24,6 @@ use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
     entrypoint::ProgramResult,
-    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_instruction,
@@ -90,7 +89,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         );
         #[cfg(feature = "fuzz")]
         {
-            invoke(
+            solana_program::program::invoke(
                 &system_instruction::allocate(wrapper_state.key, new_size as u64),
                 &[wrapper_state.clone(), system_program.info.clone()],
             )?;

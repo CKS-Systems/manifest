@@ -10,7 +10,7 @@ use hypertree::{
 use manifest::{
     program::{
         claim_seat_instruction, expand_market_instruction, get_dynamic_account,
-        get_mut_dynamic_account,
+        get_mut_dynamic_account, invoke,
     },
     state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, MarketRefMut},
     validation::ManifestAccountInfo,
@@ -21,7 +21,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     pubkey::Pubkey,
     system_program,
 };

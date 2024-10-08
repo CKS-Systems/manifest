@@ -1,8 +1,9 @@
-use std::cell::Ref;
+use std::{cell::Ref, mem::size_of};
 
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::{get_helper, DataIndex, RBNode};
 use manifest::{
-    program::{withdraw::WithdrawParams, withdraw_instruction},
+    program::{invoke, withdraw_instruction},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo},
 };
@@ -11,11 +12,25 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     pubkey::Pubkey,
 };
 
-use super::shared::{check_signer, sync, WrapperStateAccountInfo};
+use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
+
+use super::shared::{
+    check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo,
+};
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct WrapperWithdrawParams {
+    pub amount_atoms: u64,
+}
+
+impl WrapperWithdrawParams {
+    pub fn new(amount_atoms: u64) -> Self {
+        WrapperWithdrawParams { amount_atoms }
+    }
+}
 
 pub(crate) fn process_withdraw(
     _program_id: &Pubkey,
@@ -50,7 +65,19 @@ pub(crate) fn process_withdraw(
     drop(market_fixed);
 
     // Params are a direct pass through.
-    let WithdrawParams { amount_atoms } = WithdrawParams::try_from_slice(data)?;
+    let WrapperWithdrawParams { amount_atoms } = WrapperWithdrawParams::try_from_slice(data)?;
+
+    // TODO: Make a helper for get_trader_index_hint_for_market
+    let market_info_index: DataIndex =
+        get_market_info_index_for_market(&wrapper_state, market.info.key);
+    let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
+    let (_fixed_data, wrapper_dynamic_data) =
+        wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
+    let market_info: MarketInfo =
+        *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
+    let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
+    drop(wrapper_data);
+
     // Call the withdraw CPI
     invoke(
         &withdraw_instruction(
@@ -59,7 +86,9 @@ pub(crate) fn process_withdraw(
             &mint,
             amount_atoms,
             trader_token_account.key,
+            // TODO: Support token 22
             spl_token::id(),
+            trader_index_hint,
         ),
         &[
             manifest_program.info.clone(),
