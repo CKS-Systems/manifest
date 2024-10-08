@@ -2,12 +2,12 @@ use std::{cell::RefMut, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
-    program::ManifestError,
+    program::{get_trader_index_with_hint, ManifestError},
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
-        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
-        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        utils::get_now_slot, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
+        RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -158,39 +158,10 @@ pub(crate) fn process_batch_update(
 
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-        let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
-        let trader_index: DataIndex = match trader_index_hint {
-            None => {
-                let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-                dynamic_account.get_trader_index(payer.key)
-            }
-            Some(hinted_index) => {
-                // TODO: Make a helper function for verify_hint
-                require!(
-                    hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-                    ManifestError::WrongIndexHintParams,
-                    "Invalid trader hint index {}",
-                    hinted_index,
-                )?;
-                require!(
-                    get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
-                        .get_payload_type()
-                        == MarketDataTreeNodeType::ClaimedSeat as u8,
-                    ManifestError::WrongIndexHintParams,
-                    "Invalid trader hint index {}",
-                    hinted_index,
-                )?;
-                require!(
-                    payer
-                        .key
-                        .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
-                    ManifestError::WrongIndexHintParams,
-                    "Invalid trader hint",
-                )?;
-                hinted_index
-            }
-        };
+        let trader_index: DataIndex =
+            get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
 
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         for cancel_order_params in cancels {

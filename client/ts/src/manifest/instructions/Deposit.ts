@@ -17,13 +17,14 @@ import { DepositParams, depositParamsBeet } from '../types/DepositParams';
  */
 export type DepositInstructionArgs = {
   params: DepositParams;
+  traderIndexHint: beet.COption<number>;
 };
 /**
  * @category Instructions
  * @category Deposit
  * @category generated
  */
-export const DepositStruct = new beet.BeetArgsStruct<
+export const DepositStruct = new beet.FixableBeetArgsStruct<
   DepositInstructionArgs & {
     instructionDiscriminator: number;
   }
@@ -31,6 +32,7 @@ export const DepositStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.u8],
     ['params', depositParamsBeet],
+    ['traderIndexHint', beet.coption(beet.u32)],
   ],
   'DepositInstructionArgs',
 );

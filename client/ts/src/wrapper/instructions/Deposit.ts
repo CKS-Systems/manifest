@@ -8,7 +8,10 @@
 import * as splToken from '@solana/spl-token';
 import * as beet from '@metaplex-foundation/beet';
 import * as web3 from '@solana/web3.js';
-import { DepositParams, depositParamsBeet } from '../types/DepositParams';
+import {
+  WrapperDepositParams,
+  wrapperDepositParamsBeet,
+} from '../types/WrapperDepositParams';
 
 /**
  * @category Instructions
@@ -16,7 +19,7 @@ import { DepositParams, depositParamsBeet } from '../types/DepositParams';
  * @category generated
  */
 export type DepositInstructionArgs = {
-  params: DepositParams;
+  params: WrapperDepositParams;
 };
 /**
  * @category Instructions
@@ -30,7 +33,7 @@ export const DepositStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', depositParamsBeet],
+    ['params', wrapperDepositParamsBeet],
   ],
   'DepositInstructionArgs',
 );
