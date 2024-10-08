@@ -109,7 +109,7 @@ pub(crate) fn process_deposit(
     }
 
     let trader_index: DataIndex =
-        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+        get_trader_index_with_hint(trader_index_hint, &dynamic_account, &payer)?;
     dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)?;
 
     emit_stack(DepositLog {
