@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728335642931,
+  "lastUpdate": 1728414466550,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5203,6 +5203,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6066,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "892d8c5f29e26d4bb46b07b828e023296cc3633c",
+          "message": "Add shanking for types (#148)\n\n* Add shanking for types\r\n\r\n* fix index",
+          "timestamp": "2024-10-08T14:42:34-04:00",
+          "tree_id": "6e58e123ee8055e4023e20321225d5f05669a2af",
+          "url": "https://github.com/CKS-Systems/manifest/commit/892d8c5f29e26d4bb46b07b828e023296cc3633c"
+        },
+        "date": 1728414465551,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3494,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5568,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6055,
             "unit": "CU",
             "range": "",
             "extra": ""
