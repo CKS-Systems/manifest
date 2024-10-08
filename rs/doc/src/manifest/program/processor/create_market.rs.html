@@ -176,6 +176,21 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, mem::size_of};
 
 <span class="kw">use crate</span>::{
@@ -194,9 +209,10 @@
 <span class="kw">use </span>spl_token_2022::{
     extension::{
         mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
-        transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
+        BaseStateWithExtensions, ExtensionType, PodStateWithExtensions, StateWithExtensions,
     },
-    state::Mint,
+    pod::PodMint,
+    state::{Account, Mint},
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_create_market(
@@ -250,13 +266,6 @@
                     </span>);
                 }
             }
-
-            <span class="comment">// Transfer fees make the amounts on withdraw and deposit not match what is expected.
-            </span><span class="macro">require!</span>(
-                pool_mint.get_extension::&lt;TransferFeeConfig&gt;().is_err(),
-                ManifestError::InvalidMint,
-                <span class="string">"Transfer fee mints are not allowed"</span>,
-            )<span class="question-mark">?</span>;
         }
     }
 
@@ -276,23 +285,33 @@
             };
 
             <span class="kw">let </span>(_vault_key, bump) = get_vault_address(market.key, mint.key);
-            <span class="kw">let </span>space: usize = spl_token::state::Account::LEN;
             <span class="kw">let </span>seeds: Vec&lt;Vec&lt;u8&gt;&gt; = <span class="macro">vec!</span>[
                 <span class="string">b"vault"</span>.to_vec(),
                 market.key.as_ref().to_vec(),
                 mint.key.as_ref().to_vec(),
                 <span class="macro">vec!</span>[bump],
             ];
-            create_account(
-                payer.as_ref(),
-                token_account,
-                system_program.as_ref(),
-                <span class="kw-2">&amp;</span>token_program_for_mint,
-                <span class="kw-2">&amp;</span>rent,
-                space <span class="kw">as </span>u64,
-                seeds,
-            )<span class="question-mark">?</span>;
+
             <span class="kw">if </span>is_mint_22 {
+                <span class="kw">let </span>mint_data: Ref&lt;<span class="lifetime">'_</span>, <span class="kw-2">&amp;mut </span>[u8]&gt; = mint.data.borrow();
+                <span class="kw">let </span>mint_with_extension: PodStateWithExtensions&lt;<span class="lifetime">'_</span>, PodMint&gt; =
+                    PodStateWithExtensions::&lt;PodMint&gt;::unpack(<span class="kw-2">&amp;</span>mint_data).unwrap();
+                <span class="kw">let </span>mint_extensions: Vec&lt;ExtensionType&gt; =
+                    mint_with_extension.get_extension_types()<span class="question-mark">?</span>;
+                <span class="kw">let </span>required_extensions: Vec&lt;ExtensionType&gt; =
+                    ExtensionType::get_required_init_account_extensions(<span class="kw-2">&amp;</span>mint_extensions);
+                <span class="kw">let </span>space: usize =
+                    ExtensionType::try_calculate_account_len::&lt;Account&gt;(<span class="kw-2">&amp;</span>required_extensions)<span class="question-mark">?</span>;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    <span class="kw-2">&amp;</span>token_program_for_mint,
+                    <span class="kw-2">&amp;</span>rent,
+                    space <span class="kw">as </span>u64,
+                    seeds,
+                )<span class="question-mark">?</span>;
+
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token_2022::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>token_program_for_mint,
@@ -308,6 +327,17 @@
                     ],
                 )<span class="question-mark">?</span>;
             } <span class="kw">else </span>{
+                <span class="kw">let </span>space: usize = spl_token::state::Account::LEN;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    <span class="kw-2">&amp;</span>token_program_for_mint,
+                    <span class="kw-2">&amp;</span>rent,
+                    space <span class="kw">as </span>u64,
+                    seeds,
+                )<span class="question-mark">?</span>;
+
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>token_program_for_mint,

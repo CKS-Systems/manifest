@@ -115,6 +115,10 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -147,6 +151,8 @@
 ) -&gt; ProgramResult {
     <span class="kw">let </span>deposit_context: DepositContext = DepositContext::load(accounts)<span class="question-mark">?</span>;
     <span class="kw">let </span>DepositParams { amount_atoms } = DepositParams::try_from_slice(data)<span class="question-mark">?</span>;
+    <span class="comment">// Due to transfer fees, this might not be what you expect.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>deposited_amount_atoms: u64 = amount_atoms;
 
     <span class="kw">let </span>DepositContext {
         market,
@@ -165,6 +171,7 @@
         <span class="kw-2">&amp;</span>trader_token.try_borrow_data()<span class="question-mark">?</span>[<span class="number">0</span>..<span class="number">32</span>] == dynamic_account.get_base_mint().as_ref();
 
     <span class="kw">if </span><span class="kw-2">*</span>vault.owner == spl_token_2022::id() {
+        <span class="kw">let </span>before_vault_balance_atoms: u64 = vault.get_balance_atoms();
         invoke(
             <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
                 token_program.key,
@@ -193,10 +200,11 @@
             ],
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// TODO: Check the actual amount received and use that as the
-        // amount_atoms, rather than what the user said because of transfer
-        // fees.
-    </span>} <span class="kw">else </span>{
+        <span class="kw">let </span>after_vault_balance_atoms: u64 = vault.get_balance_atoms();
+        deposited_amount_atoms = after_vault_balance_atoms
+            .checked_sub(before_vault_balance_atoms)
+            .unwrap();
+    } <span class="kw">else </span>{
         invoke(
             <span class="kw-2">&amp;</span>spl_token::instruction::transfer(
                 token_program.key,
@@ -215,7 +223,7 @@
         )<span class="question-mark">?</span>;
     }
 
-    dynamic_account.deposit(payer.key, amount_atoms, is_base)<span class="question-mark">?</span>;
+    dynamic_account.deposit(payer.key, deposited_amount_atoms, is_base)<span class="question-mark">?</span>;
 
     emit_stack(DepositLog {
         market: <span class="kw-2">*</span>market.key,
@@ -225,7 +233,7 @@
         } <span class="kw">else </span>{
             <span class="kw-2">*</span>dynamic_account.get_quote_mint()
         },
-        amount_atoms,
+        amount_atoms: deposited_amount_atoms,
     })<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())

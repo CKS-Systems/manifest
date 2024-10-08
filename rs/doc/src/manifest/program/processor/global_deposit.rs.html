@@ -98,6 +98,10 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
@@ -131,6 +135,8 @@
 ) -&gt; ProgramResult {
     <span class="kw">let </span>global_deposit_context: GlobalDepositContext = GlobalDepositContext::load(accounts)<span class="question-mark">?</span>;
     <span class="kw">let </span>GlobalDepositParams { amount_atoms } = GlobalDepositParams::try_from_slice(data)<span class="question-mark">?</span>;
+    <span class="comment">// Due to transfer fees, this might not be what you expect.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>deposited_amount_atoms: u64 = amount_atoms;
 
     <span class="kw">let </span>GlobalDepositContext {
         payer,
@@ -147,6 +153,7 @@
 
     <span class="comment">// Do the token transfer
     </span><span class="kw">if </span><span class="kw-2">*</span>global_vault.owner == spl_token_2022::id() {
+        <span class="kw">let </span>before_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         invoke(
             <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
                 token_program.key,
@@ -166,10 +173,11 @@
                 payer.as_ref().clone(),
             ],
         )<span class="question-mark">?</span>;
-        <span class="comment">// TODO: Check the actual amount received and use that as the
-        // amount_atoms, rather than what the user said because of transfer
-        // fees.
-    </span>} <span class="kw">else </span>{
+        <span class="kw">let </span>after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
+        deposited_amount_atoms = after_vault_balance_atoms
+            .checked_sub(before_vault_balance_atoms)
+            .unwrap();
+    } <span class="kw">else </span>{
         invoke(
             <span class="kw-2">&amp;</span>spl_token::instruction::transfer(
                 token_program.key,
@@ -191,7 +199,7 @@
     emit_stack(GlobalDepositLog {
         global: <span class="kw-2">*</span>global.key,
         trader: <span class="kw-2">*</span>payer.key,
-        global_atoms: GlobalAtoms::new(amount_atoms),
+        global_atoms: GlobalAtoms::new(deposited_amount_atoms),
     })<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())

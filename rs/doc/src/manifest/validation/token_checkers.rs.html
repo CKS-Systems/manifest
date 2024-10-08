@@ -140,12 +140,19 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::require;
-<span class="kw">use </span>solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+<span class="kw">use </span>solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+<span class="kw">use </span>spl_token_2022::{
+    check_spl_token_program_account, extension::StateWithExtensions, state::Mint,
 };
-<span class="kw">use </span>spl_token::state::Mint;
-<span class="kw">use </span>spl_token_2022::check_spl_token_program_account;
 <span class="kw">use </span>std::ops::Deref;
 
 <span class="attr">#[derive(Clone)]
@@ -157,7 +164,8 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub fn </span>new(info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;, ProgramError&gt; {
         check_spl_token_program_account(info.owner)<span class="question-mark">?</span>;
-        <span class="kw">let </span>mint: Mint = Mint::unpack(<span class="kw-2">&amp;</span>info.try_borrow_data()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>mint: Mint = StateWithExtensions::&lt;Mint&gt;::unpack(<span class="kw-2">&amp;</span>info.data.borrow())<span class="question-mark">?</span>.base;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ mint, info })
     }
@@ -196,6 +204,14 @@
     <span class="kw">pub fn </span>get_owner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pubkey {
         Pubkey::new_from_array(
             <span class="self">self</span>.info.try_borrow_data().unwrap()[<span class="number">32</span>..<span class="number">64</span>]
+                .try_into()
+                .unwrap(),
+        )
+    }
+
+    <span class="kw">pub fn </span>get_balance_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        u64::from_le_bytes(
+            <span class="self">self</span>.info.try_borrow_data().unwrap()[<span class="number">64</span>..<span class="number">72</span>]
                 .try_into()
                 .unwrap(),
         )
