@@ -158,7 +158,7 @@
         {
           "name": "params",
           "type": {
-            "defined": "DepositParams"
+            "defined": "WrapperDepositParams"
           }
         }
       ],
@@ -239,7 +239,7 @@
         {
           "name": "params",
           "type": {
-            "defined": "WithdrawParams"
+            "defined": "WrapperWithdrawParams"
           }
         }
       ],
@@ -477,18 +477,12 @@
                 "defined": "WrapperPlaceOrderParams"
               }
             }
-          },
-          {
-            "name": "traderIndexHint",
-            "type": {
-              "option": "u32"
-            }
           }
         ]
       }
     },
     {
-      "name": "DepositParams",
+      "name": "WrapperDepositParams",
       "type": {
         "kind": "struct",
         "fields": [
@@ -500,7 +494,31 @@
       }
     },
     {
-      "name": "WithdrawParams",
+      "name": "WrapperWithdrawParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperDepositParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountAtoms",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperWithdrawParams",
       "type": {
         "kind": "struct",
         "fields": [

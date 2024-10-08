@@ -106,6 +106,7 @@ async fn withdraw_fail_incorrect_mint_test() -> anyhow::Result<()> {
         SOL_UNIT_SIZE,
         &user_token_account,
         spl_token::id(),
+        None,
     );
     let mut context: std::cell::RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
 
@@ -147,7 +148,9 @@ async fn withdraw_fail_incorrect_vault_test() -> anyhow::Result<()> {
         ],
         data: [
             ManifestInstruction::Withdraw.to_vec(),
-            WithdrawParams::new(SOL_UNIT_SIZE).try_to_vec().unwrap(),
+            WithdrawParams::new(SOL_UNIT_SIZE, None)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     };

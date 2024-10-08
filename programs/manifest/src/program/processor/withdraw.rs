@@ -8,18 +8,25 @@ use crate::{
     validation::loaders::WithdrawContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::DataIndex;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
 };
 
+use super::get_trader_index_with_hint;
+
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct WithdrawParams {
     pub amount_atoms: u64,
+    pub trader_index_hint: Option<DataIndex>,
 }
 
 impl WithdrawParams {
-    pub fn new(amount_atoms: u64) -> Self {
-        WithdrawParams { amount_atoms }
+    pub fn new(amount_atoms: u64, trader_index_hint: Option<DataIndex>) -> Self {
+        WithdrawParams {
+            amount_atoms,
+            trader_index_hint,
+        }
     }
 }
 
@@ -29,7 +36,10 @@ pub(crate) fn process_withdraw(
     data: &[u8],
 ) -> ProgramResult {
     let withdraw_context: WithdrawContext = WithdrawContext::load(accounts)?;
-    let WithdrawParams { amount_atoms } = WithdrawParams::try_from_slice(data)?;
+    let WithdrawParams {
+        amount_atoms,
+        trader_index_hint,
+    } = WithdrawParams::try_from_slice(data)?;
 
     let WithdrawContext {
         market,
@@ -107,7 +117,9 @@ pub(crate) fn process_withdraw(
         )?;
     }
 
-    dynamic_account.withdraw(payer.key, amount_atoms, is_base)?;
+    let trader_index: DataIndex =
+        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+    dynamic_account.withdraw(trader_index, amount_atoms, is_base)?;
 
     emit_stack(WithdrawLog {
         market: *market.key,

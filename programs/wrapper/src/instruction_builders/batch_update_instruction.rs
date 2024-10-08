@@ -5,7 +5,6 @@ use crate::{
     },
 };
 use borsh::BorshSerialize;
-use hypertree::DataIndex;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -19,7 +18,6 @@ pub fn batch_update_instruction(
     cancels: Vec<WrapperCancelOrderParams>,
     cancel_all: bool,
     orders: Vec<WrapperPlaceOrderParams>,
-    trader_index_hint: Option<DataIndex>,
 ) -> Instruction {
     Instruction {
         program_id: crate::id(),
@@ -32,7 +30,7 @@ pub fn batch_update_instruction(
         ],
         data: [
             ManifestWrapperInstruction::BatchUpdate.to_vec(),
-            WrapperBatchUpdateParams::new(cancels, cancel_all, orders, trader_index_hint)
+            WrapperBatchUpdateParams::new(cancels, cancel_all, orders)
                 .try_to_vec()
                 .unwrap(),
         ]
