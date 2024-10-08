@@ -289,7 +289,7 @@
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, invoke, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -413,7 +413,7 @@
     // Done here instead of inside the object because the borrow checker needs
     // to get the data on global which it cannot while there is a mut self
     // reference.
-    </span>solana_program::program::invoke(
+    </span>invoke(
         <span class="kw-2">&amp;</span>solana_program::system_instruction::transfer(
             <span class="kw-2">&amp;</span>gas_payer_opt.as_ref().unwrap().info.key,
             <span class="kw-2">&amp;</span>global.key,

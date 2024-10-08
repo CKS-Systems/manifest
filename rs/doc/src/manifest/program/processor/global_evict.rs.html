@@ -191,9 +191,7 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
-<span class="kw">use </span>solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
-};
+<span class="kw">use </span>solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
@@ -205,6 +203,8 @@
     validation::{get_global_vault_address, loaders::GlobalEvictContext},
 };
 <span class="kw">use </span>solana_program::program::invoke_signed;
+
+<span class="kw">use </span><span class="kw">super</span>::invoke;
 
 <span class="attr">#[derive(BorshDeserialize, BorshSerialize)]
 </span><span class="kw">pub struct </span>GlobalEvictParams {

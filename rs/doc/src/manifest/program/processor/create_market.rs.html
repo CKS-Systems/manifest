@@ -189,13 +189,11 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, mem::size_of};
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, ManifestError},
+    program::{expand_market_if_needed, invoke, ManifestError},
     require,
     state::MarketFixed,
     utils::create_account,
@@ -203,8 +201,8 @@
 };
 <span class="kw">use </span>hypertree::{get_mut_helper, trace};
 <span class="kw">use </span>solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
+    rent::Rent, sysvar::Sysvar,
 };
 <span class="kw">use </span>spl_token_2022::{
     extension::{
@@ -311,7 +309,6 @@
                     space <span class="kw">as </span>u64,
                     seeds,
                 )<span class="question-mark">?</span>;
-
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token_2022::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>token_program_for_mint,
@@ -337,7 +334,6 @@
                     space <span class="kw">as </span>u64,
                     seeds,
                 )<span class="question-mark">?</span>;
-
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>token_program_for_mint,

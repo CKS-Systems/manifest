@@ -214,6 +214,17 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     cell::{Ref, RefMut},
     mem::size_of,
@@ -233,7 +244,7 @@
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     rent::Rent,
     system_instruction,
     sysvar::{slot_history::ProgramError, Sysvar},
@@ -320,7 +331,7 @@
     );
     <span class="attr">#[cfg(feature = <span class="string">"fuzz"</span>)]
     </span>{
-        invoke(
+        solana_program::program::invoke(
             <span class="kw-2">&amp;</span>system_instruction::allocate(expandable_account.key, new_size <span class="kw">as </span>u64),
             <span class="kw-2">&amp;</span>[expandable_account.clone(), system_program.clone()],
         )<span class="question-mark">?</span>;
@@ -427,5 +438,16 @@
         hinted_index
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub fn </span>invoke(ix: <span class="kw-2">&amp;</span>Instruction, account_infos: <span class="kw-2">&amp;</span>[AccountInfo&lt;<span class="lifetime">'_</span>&gt;]) -&gt; ProgramResult {
+    <span class="attr">#[cfg(target_os = <span class="string">"solana"</span>)]
+    </span>{
+        solana_invoke::invoke_unchecked(ix, account_infos)
+    }
+    <span class="attr">#[cfg(not(target_os = <span class="string">"solana"</span>))]
+    </span>{
+        solana_program::program::invoke(ix, account_infos)
+    }
 }
 </code></pre></div></section></main></body></html>
