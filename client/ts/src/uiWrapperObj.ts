@@ -18,7 +18,7 @@ import {
   PROGRAM_ID,
   SettleFundsInstructionArgs,
 } from './ui_wrapper';
-import { marketInfoBeet, uiOpenOrderBeet } from './utils/beet';
+import { uiOpenOrderBeet } from './utils/beet';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
   FIXED_WRAPPER_HEADER_SIZE,
@@ -38,6 +38,7 @@ import {
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
+import { MarketInfo, marketInfoBeet } from './wrapper/types';
 
 /**
  * All data stored on a wrapper account.
@@ -325,7 +326,7 @@ export class UiWrapper {
     const _padding = data.readUInt32LE(offset);
     offset += 12;
 
-    const marketInfos: MarketInfoRaw[] =
+    const marketInfos: MarketInfo[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -335,8 +336,8 @@ export class UiWrapper {
         : [];
 
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
-      (marketInfoRaw: MarketInfoRaw) => {
-        const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
+      (marketInfoRaw: MarketInfo) => {
+        const rootIndex: number = marketInfoRaw.ordersRootIndex;
         const parsedOpenOrders: UIOpenOrderInternal[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
@@ -358,8 +359,8 @@ export class UiWrapper {
 
         return {
           market: marketInfoRaw.market,
-          baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
-          quoteBalanceAtoms: marketInfoRaw.quoteBalanceAtoms,
+          baseBalanceAtoms: marketInfoRaw.baseBalance,
+          quoteBalanceAtoms: marketInfoRaw.quoteBalance,
           orders: parsedOpenOrdersWithPrice,
           lastUpdatedSlot: marketInfoRaw.lastUpdatedSlot,
         };

@@ -7,28 +7,19 @@ import {
   SystemProgram,
 } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
-import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
+import { claimedSeatBeet, publicKeyBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
-import { createCreateMarketInstruction, PROGRAM_ID } from './manifest';
+import {
+  createCreateMarketInstruction,
+  PROGRAM_ID,
+  restingOrderBeet,
+  RestingOrder as RestingOrderInternal,
+} from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
-
-/**
- * Internal use only. Needed because shank doesnt handle f64 and because the
- * client doesnt need to know about padding.
- */
-export type RestingOrderInternal = {
-  traderIndex: bignum;
-  numBaseAtoms: bignum;
-  lastValidSlot: bignum;
-  sequenceNumber: bignum;
-  // Deserializes to UInt8Array, but we then convert it to number.
-  price: bignum;
-  padding: bignum[]; // 22 bytes
-};
 
 /**
  * RestingOrder on the market.
