@@ -17,6 +17,7 @@ use hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    instruction::Instruction,
     rent::Rent,
     system_instruction,
     sysvar::{slot_history::ProgramError, Sysvar},

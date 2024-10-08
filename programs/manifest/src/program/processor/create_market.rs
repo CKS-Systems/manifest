@@ -10,8 +10,8 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
-    rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
+    program_pack::Pack, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{
@@ -140,6 +140,16 @@ pub(crate) fn process_create_market(
                     token_account.key,
                     mint.key,
                     token_account.key,
+                )?;
+                let space: usize = spl_token::state::Account::LEN;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    seeds,
                 )?;
                 let account_infos: [AccountInfo<'_>; 4] = [
                     payer.as_ref().clone(),
