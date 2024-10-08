@@ -834,6 +834,7 @@
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
 <a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>jupiter_amm_interface::{
     AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
@@ -1126,10 +1127,10 @@
         market_value.claim_seat(<span class="kw-2">&amp;</span>trader_key).unwrap();
         <span class="kw">let </span>trader_index: DataIndex = market_value.get_trader_index(<span class="kw-2">&amp;</span>trader_key);
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
             .unwrap();
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
             .unwrap();
 
         <span class="comment">// Bid for 10 SOL
@@ -1289,10 +1290,10 @@
         market_value.claim_seat(<span class="kw-2">&amp;</span>trader_key).unwrap();
         <span class="kw">let </span>trader_index: DataIndex = market_value.get_trader_index(<span class="kw-2">&amp;</span>trader_key);
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
             .unwrap();
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
             .unwrap();
 
         <span class="comment">// Bid for 10 SOL
@@ -1534,11 +1535,12 @@
             executable: <span class="bool-val">false</span>,
         };
 
+        <span class="kw">let </span>trader_index: DataIndex = market_value.get_trader_index(<span class="kw-2">&amp;</span>trader_key);
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">true</span>)
             .unwrap();
         market_value
-            .deposit(<span class="kw-2">&amp;</span>trader_key, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
+            .deposit(trader_index, <span class="number">1_000_000_000_000</span>, <span class="bool-val">false</span>)
             .unwrap();
 
         <span class="comment">// Bid for 10 SOL

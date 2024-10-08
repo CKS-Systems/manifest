@@ -509,7 +509,7 @@
 
     <span class="comment">// this is a virtual credit to ensure matching always proceeds
     // net token transfers will be handled later
-    </span>dynamic_account.deposit(payer.key, in_atoms, is_base_in)<span class="question-mark">?</span>;
+    </span>dynamic_account.deposit(trader_index, in_atoms, is_base_in)<span class="question-mark">?</span>;
 
     <span class="comment">// 4 cases:
     // 1. Exact in base. Simplest case, just use the base atoms given.
@@ -817,8 +817,8 @@
         <span class="comment">// Withdraw in case there already was a seat so it doesnt mess with their
         // balances. Need to withdraw base and quote in case the order wasnt fully
         // filled.
-        </span>dynamic_account.withdraw(payer.key, extra_base_atoms.as_u64(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-        dynamic_account.withdraw(payer.key, extra_quote_atoms.as_u64(), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        </span>dynamic_account.withdraw(trader_index, extra_base_atoms.as_u64(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+        dynamic_account.withdraw(trader_index, extra_quote_atoms.as_u64(), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
     }
 
     emit_stack(PlaceOrderLog {

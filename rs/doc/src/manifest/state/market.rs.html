@@ -1284,6 +1284,16 @@
 <a href="#1282" id="1282">1282</a>
 <a href="#1283" id="1283">1283</a>
 <a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
@@ -1823,7 +1833,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="comment">// Uses mut instead of immutable because of trait issues.
+    <span class="comment">// TODO: Fix this. Uses mut instead of immutable because of trait issues.
     </span><span class="kw">pub fn </span>get_trader_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; DataIndex {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
@@ -1834,7 +1844,10 @@
         trader_index
     }
 
-    <span class="kw">pub fn </span>release_seat(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
+    <span class="comment">// Only used when temporarily claiming for swap and we dont have the system
+    // program to expand. Otherwise, there is no reason to ever give up your
+    // seat.
+    </span><span class="kw">pub fn </span>release_seat(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
         <span class="kw">let </span>trader_seat_index: DataIndex = <span class="self">self</span>.get_trader_index(trader);
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
@@ -1852,8 +1865,12 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>deposit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey, amount_atoms: u64, is_base: bool) -&gt; ProgramResult {
-        <span class="kw">let </span>trader_index: DataIndex = <span class="self">self</span>.get_trader_index(trader);
+    <span class="kw">pub fn </span>deposit(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -&gt; ProgramResult {
         <span class="macro">require!</span>(
             trader_index != NIL,
             ManifestError::InvalidDepositAccounts,
@@ -1865,9 +1882,12 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>withdraw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey, amount_atoms: u64, is_base: bool) -&gt; ProgramResult {
-        <span class="kw">let </span>trader_index: DataIndex = <span class="self">self</span>.get_trader_index(trader);
-
+    <span class="kw">pub fn </span>withdraw(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_mut();
         update_balance(dynamic, trader_index, is_base, <span class="bool-val">false</span>, amount_atoms)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())

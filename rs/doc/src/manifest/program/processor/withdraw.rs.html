@@ -124,6 +124,18 @@
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -134,18 +146,25 @@
     validation::loaders::WithdrawContext,
 };
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
+<span class="kw">use </span>hypertree::DataIndex;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
 };
 
+<span class="kw">use </span><span class="kw">super</span>::get_trader_index_with_hint;
+
 <span class="attr">#[derive(BorshDeserialize, BorshSerialize)]
 </span><span class="kw">pub struct </span>WithdrawParams {
     <span class="kw">pub </span>amount_atoms: u64,
+    <span class="kw">pub </span>trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
 }
 
 <span class="kw">impl </span>WithdrawParams {
-    <span class="kw">pub fn </span>new(amount_atoms: u64) -&gt; <span class="self">Self </span>{
-        WithdrawParams { amount_atoms }
+    <span class="kw">pub fn </span>new(amount_atoms: u64, trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;) -&gt; <span class="self">Self </span>{
+        WithdrawParams {
+            amount_atoms,
+            trader_index_hint,
+        }
     }
 }
 
@@ -155,7 +174,10 @@
     data: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; ProgramResult {
     <span class="kw">let </span>withdraw_context: WithdrawContext = WithdrawContext::load(accounts)<span class="question-mark">?</span>;
-    <span class="kw">let </span>WithdrawParams { amount_atoms } = WithdrawParams::try_from_slice(data)<span class="question-mark">?</span>;
+    <span class="kw">let </span>WithdrawParams {
+        amount_atoms,
+        trader_index_hint,
+    } = WithdrawParams::try_from_slice(data)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>WithdrawContext {
         market,
@@ -233,7 +255,9 @@
         )<span class="question-mark">?</span>;
     }
 
-    dynamic_account.withdraw(payer.key, amount_atoms, is_base)<span class="question-mark">?</span>;
+    <span class="kw">let </span>trader_index: DataIndex =
+        get_trader_index_with_hint(trader_index_hint, <span class="kw-2">&amp;mut </span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
+    dynamic_account.withdraw(trader_index, amount_atoms, is_base)<span class="question-mark">?</span>;
 
     emit_stack(WithdrawLog {
         market: <span class="kw-2">*</span>market.key,

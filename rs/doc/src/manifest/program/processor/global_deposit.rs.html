@@ -102,6 +102,7 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
@@ -120,7 +121,8 @@
 <span class="attr">#[derive(BorshDeserialize, BorshSerialize)]
 </span><span class="kw">pub struct </span>GlobalDepositParams {
     <span class="kw">pub </span>amount_atoms: u64,
-}
+    <span class="comment">// TODO: Use trader_index_hint. Should not be very impactful, but for consistency.
+</span>}
 
 <span class="kw">impl </span>GlobalDepositParams {
     <span class="kw">pub fn </span>new(amount_atoms: u64) -&gt; <span class="self">Self </span>{

@@ -119,6 +119,16 @@
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -127,20 +137,25 @@
     validation::loaders::DepositContext,
 };
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
+<span class="kw">use </span>hypertree::DataIndex;
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
 };
 
-<span class="kw">use </span><span class="kw">super</span>::shared::get_mut_dynamic_account;
+<span class="kw">use super</span>::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
 
 <span class="attr">#[derive(BorshDeserialize, BorshSerialize)]
 </span><span class="kw">pub struct </span>DepositParams {
     <span class="kw">pub </span>amount_atoms: u64,
+    <span class="kw">pub </span>trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
 }
 
 <span class="kw">impl </span>DepositParams {
-    <span class="kw">pub fn </span>new(amount_atoms: u64) -&gt; <span class="self">Self </span>{
-        DepositParams { amount_atoms }
+    <span class="kw">pub fn </span>new(amount_atoms: u64, trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;) -&gt; <span class="self">Self </span>{
+        DepositParams {
+            amount_atoms,
+            trader_index_hint,
+        }
     }
 }
 
@@ -150,7 +165,10 @@
     data: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; ProgramResult {
     <span class="kw">let </span>deposit_context: DepositContext = DepositContext::load(accounts)<span class="question-mark">?</span>;
-    <span class="kw">let </span>DepositParams { amount_atoms } = DepositParams::try_from_slice(data)<span class="question-mark">?</span>;
+    <span class="kw">let </span>DepositParams {
+        amount_atoms,
+        trader_index_hint,
+    } = DepositParams::try_from_slice(data)<span class="question-mark">?</span>;
     <span class="comment">// Due to transfer fees, this might not be what you expect.
     </span><span class="kw">let </span><span class="kw-2">mut </span>deposited_amount_atoms: u64 = amount_atoms;
 
@@ -223,7 +241,9 @@
         )<span class="question-mark">?</span>;
     }
 
-    dynamic_account.deposit(payer.key, deposited_amount_atoms, is_base)<span class="question-mark">?</span>;
+    <span class="kw">let </span>trader_index: DataIndex =
+        get_trader_index_with_hint(trader_index_hint, <span class="kw-2">&amp;mut </span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
+    dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)<span class="question-mark">?</span>;
 
     emit_stack(DepositLog {
         market: <span class="kw-2">*</span>market.key,

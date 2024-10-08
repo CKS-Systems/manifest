@@ -159,23 +159,87 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     cell::{Ref, RefMut},
     mem::size_of,
 };
 
 <span class="kw">use crate</span>::{
+    program::ManifestError,
+    require,
     state::{
-        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, GLOBAL_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed,
+        MarketFixed, MarketRefMut, GLOBAL_BLOCK_SIZE,
     },
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 <span class="kw">use </span>bytemuck::Pod;
-<span class="kw">use </span>hypertree::{get_helper, get_mut_helper, trace, Get};
+<span class="kw">use </span>hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
 <span class="kw">use </span>solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
-    system_instruction, sysvar::Sysvar,
+    account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    program::invoke,
+    rent::Rent,
+    system_instruction,
+    sysvar::{slot_history::ProgramError, Sysvar},
 };
+
+<span class="kw">use </span><span class="kw">super</span>::batch_update::MarketDataTreeNodeType;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>expand_market_if_needed&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, T: ManifestAccount + Pod + Clone&gt;(
     payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
@@ -317,5 +381,51 @@
         dynamic: (dynamic_data).to_vec(),
     };
     dynamic_account
+}
+
+<span class="comment">// TODO: Make dynamic_account immutable here
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_trader_index_with_hint(
+    trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
+    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    payer: <span class="kw-2">&amp;</span>Signer,
+) -&gt; <span class="prelude-ty">Result</span>&lt;DataIndex, ProgramError&gt; {
+    <span class="kw">let </span>trader_index: DataIndex = <span class="kw">match </span>trader_index_hint {
+        <span class="prelude-val">None </span>=&gt; dynamic_account.get_trader_index(payer.key),
+        <span class="prelude-val">Some</span>(hinted_index) =&gt; {
+            verify_trader_index_hint(hinted_index, <span class="kw-2">&amp;</span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
+            hinted_index
+        }
+    };
+    <span class="prelude-val">Ok</span>(trader_index)
+}
+
+<span class="kw">fn </span>verify_trader_index_hint(
+    hinted_index: DataIndex,
+    dynamic_account: <span class="kw-2">&amp;</span>MarketRefMut,
+    payer: <span class="kw-2">&amp;</span>Signer,
+) -&gt; ProgramResult {
+    <span class="macro">require!</span>(
+        hinted_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
+        ManifestError::WrongIndexHintParams,
+        <span class="string">"Invalid trader hint index {} did not align"</span>,
+        hinted_index,
+    )<span class="question-mark">?</span>;
+    <span class="macro">require!</span>(
+        get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(<span class="kw-2">&amp;</span>dynamic_account.dynamic, hinted_index)
+            .get_payload_type()
+            == MarketDataTreeNodeType::ClaimedSeat <span class="kw">as </span>u8,
+        ManifestError::WrongIndexHintParams,
+        <span class="string">"Invalid trader hint index {} is not a ClaimedSeat"</span>,
+        hinted_index,
+    )<span class="question-mark">?</span>;
+    <span class="macro">require!</span>(
+        payer
+            .key
+            .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
+        ManifestError::WrongIndexHintParams,
+        <span class="string">"Invalid trader hint index {} did not match payer"</span>,
+        hinted_index
+    )<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>
