@@ -666,7 +666,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // inside the matching rather than skipping the matching altogether
             // because post only orders should fail, not produce a crossed book.
             trace!(
-                "match {} {order_type:?} {price:?} with {other_order:?}",
+                "match {} {order_type:?} {price:?} with {maker_order:?}",
                 if is_bid { "bid" } else { "ask" }
             );
             assert_can_take(order_type)?;
@@ -864,10 +864,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_maker_order_index = next_maker_order_index;
             } else {
-                let other_order: &mut RestingOrder =
+                let maker_order: &mut RestingOrder =
                     get_mut_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index)
                         .get_mut_value();
-                other_order.reduce(base_atoms_traded)?;
+                maker_order.reduce(base_atoms_traded)?;
                 remaining_base_atoms = BaseAtoms::ZERO;
                 break;
             }
