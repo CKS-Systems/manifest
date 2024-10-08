@@ -18,7 +18,6 @@ import {
   PROGRAM_ID,
   SettleFundsInstructionArgs,
 } from './ui_wrapper';
-import { uiOpenOrderBeet } from './utils/beet';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
   FIXED_WRAPPER_HEADER_SIZE,

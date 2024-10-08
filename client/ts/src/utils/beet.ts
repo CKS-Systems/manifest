@@ -1,4 +1,3 @@
-import { ClaimedSeat } from '../market';
 import {
   BeetArgsStruct,
   fixedSizeUint8Array,
@@ -10,7 +9,6 @@ import {
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { OpenOrderInternal } from '../wrapperObj';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
-import { GlobalDeposit } from '../global';
 import { UIOpenOrderInternal } from '../uiWrapperObj';
 import { PublicKey } from '@solana/web3.js';
 
@@ -24,20 +22,6 @@ type PubkeyWrapper = {
 export const publicKeyBeet = new BeetArgsStruct<PubkeyWrapper>(
   [['publicKey', beetPublicKey]],
   'PubkeyWrapper',
-);
-
-/**
- * ClaimedSeat deserializer.
- *
- * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/claimed_seat.rs
- */
-export const claimedSeatBeet = new BeetArgsStruct<ClaimedSeat>(
-  [
-    ['publicKey', beetPublicKey],
-    ['baseBalance', u64],
-    ['quoteBalance', u64],
-  ],
-  'claimedSeat',
 );
 
 /**
@@ -94,17 +78,4 @@ export const uiOpenOrderBeet = new BeetArgsStruct<UIOpenOrderInternal>(
     ['padding', uniformFixedSizeArray(u8, 30)],
   ],
   'OpenOrder',
-);
-
-/**
- * GlobalSeat deserializer.
- *
- * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/global.rs
- */
-export const globalDepositBeet = new BeetArgsStruct<GlobalDeposit>(
-  [
-    ['trader', beetPublicKey],
-    ['balanceAtoms', u64],
-  ],
-  'globalDeposit',
 );

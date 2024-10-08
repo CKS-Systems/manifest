@@ -7,12 +7,14 @@ import {
   SystemProgram,
 } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
-import { claimedSeatBeet, publicKeyBeet } from './utils/beet';
+import { publicKeyBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
 import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
 import {
+  claimedSeatBeet,
+  ClaimedSeat as ClaimedSeatInternal,
   createCreateMarketInstruction,
   PROGRAM_ID,
   restingOrderBeet,
@@ -448,13 +450,19 @@ export class Market {
           })
         : [];
 
-    const claimedSeats =
+    const claimedSeats: ClaimedSeat[] =
       claimedSeatsRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             claimedSeatsRootIndex,
             claimedSeatBeet,
-          )
+          ).map((claimedSeatInternal: ClaimedSeatInternal) => {
+            return {
+              publicKey: claimedSeatInternal.trader,
+              baseBalance: claimedSeatInternal.baseWithdrawableBalance,
+              quoteBalance: claimedSeatInternal.quoteWithdrawableBalance,
+            }
+          })
         : [];
 
     return {

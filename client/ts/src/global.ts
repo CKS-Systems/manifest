@@ -5,7 +5,7 @@ import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { toNum } from './utils/numbers';
 import { FIXED_GLOBAL_HEADER_SIZE, NIL } from './constants';
 import { getMint } from '@solana/spl-token';
-import { globalDepositBeet } from './utils/beet';
+import { globalDepositBeet } from './manifest/types';
 
 export type GlobalDeposit = {
   trader: PublicKey;
@@ -167,7 +167,7 @@ export class Global {
     const numSeatsClaimed = data.readUInt16LE(offset);
     offset += 2;
 
-    const globalDeposits =
+    const globalDeposits: GlobalDeposit[] =
       globalAmountsRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_GLOBAL_HEADER_SIZE),
