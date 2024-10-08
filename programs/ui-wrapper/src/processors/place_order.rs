@@ -170,7 +170,7 @@ pub(crate) fn process_place_order(
         #[cfg(target_os = "solana")]
         solana_invoke::invoke_unchecked(&ix, &account_infos)?;
         #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+        solana_program::program::invoke(&ix, &account_infos)?;
     }
 
     // Call expand so claim seat has enough free space and owner doesn't get
@@ -191,7 +191,7 @@ pub(crate) fn process_place_order(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
         }
     }
 
@@ -240,7 +240,7 @@ pub(crate) fn process_place_order(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // Process the order result
 

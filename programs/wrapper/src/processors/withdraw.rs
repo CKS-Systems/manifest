@@ -102,7 +102,7 @@ pub(crate) fn process_withdraw(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // Sync
     sync(&wrapper_state, &market)?;

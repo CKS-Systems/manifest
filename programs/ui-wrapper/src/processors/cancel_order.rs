@@ -120,7 +120,7 @@ pub(crate) fn process_cancel_order(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // Process the order result
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();

@@ -84,7 +84,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         #[cfg(target_os = "solana")]
         solana_invoke::invoke_unchecked(&ix, &account_infos)?;
         #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+        solana_program::program::invoke(&ix, &account_infos)?;
 
         trace!(
             "expand_if_needed -> realloc {} {:?}",
@@ -93,7 +93,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         );
         #[cfg(feature = "fuzz")]
         {
-            solana_program::program::invoke_unchecked(
+            solana_program::program::invoke(
                 &system_instruction::allocate(wrapper_state.key, new_size as u64),
                 &[wrapper_state.clone(), system_program.info.clone()],
             )?;

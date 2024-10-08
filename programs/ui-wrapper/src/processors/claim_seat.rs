@@ -73,7 +73,7 @@ pub(crate) fn process_claim_seat(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
 
             // Call the ClaimSeat CPI
             let ix: Instruction = claim_seat_instruction(market.key, owner.key);
@@ -86,7 +86,7 @@ pub(crate) fn process_claim_seat(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
 
             // fetch newly assigned trader index after claiming core seat
             let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;

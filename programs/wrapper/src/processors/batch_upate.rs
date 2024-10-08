@@ -231,7 +231,7 @@ fn execute_cpi(
     }
     #[cfg(not(target_os = "solana"))]
     {
-        solana_program::program::invoke_unchecked(&ix, &accounts[1..])
+        solana_program::program::invoke(&ix, &accounts[1..])
     }
 }
 

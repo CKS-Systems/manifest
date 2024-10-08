@@ -98,7 +98,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     trace!(
         "expand_dynamic-> realloc {} {:?}",

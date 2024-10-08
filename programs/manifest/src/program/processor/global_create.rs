@@ -100,7 +100,7 @@ pub(crate) fn process_global_create(
                 #[cfg(target_os = "solana")]
                 solana_invoke::invoke_unchecked(&ix, &account_infos)?;
                 #[cfg(not(target_os = "solana"))]
-                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+                solana_program::program::invoke(&ix, &account_infos)?;
             } else {
                 let ix: Instruction = spl_token::instruction::initialize_account3(
                     &spl_token::id(),
@@ -117,7 +117,7 @@ pub(crate) fn process_global_create(
                 #[cfg(target_os = "solana")]
                 solana_invoke::invoke_unchecked(&ix, &account_infos)?;
                 #[cfg(not(target_os = "solana"))]
-                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+                solana_program::program::invoke(&ix, &account_infos)?;
             }
         }
 

@@ -137,7 +137,7 @@ pub(crate) fn process_settle_funds(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // settle quote
     let ix: Instruction = withdraw_instruction(
@@ -161,7 +161,7 @@ pub(crate) fn process_settle_funds(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // pay fees
     if *vault_quote.owner == spl_token_2022::id() {
@@ -195,7 +195,7 @@ pub(crate) fn process_settle_funds(
         #[cfg(target_os = "solana")]
         solana_invoke::invoke_unchecked(&ix, &account_infos)?;
         #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+        solana_program::program::invoke(&ix, &account_infos)?;
 
         emit_stack(PlatformFeeLog {
             market: *market.key,
@@ -225,7 +225,7 @@ pub(crate) fn process_settle_funds(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
 
             emit_stack(ReferrerFeeLog {
                 market: *market.key,

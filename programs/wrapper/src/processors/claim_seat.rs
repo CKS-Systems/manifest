@@ -52,7 +52,7 @@ pub(crate) fn process_claim_seat(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // Call the ClaimSeat CPI
     let ix: Instruction = claim_seat_instruction(market.key, owner.key);
@@ -65,7 +65,7 @@ pub(crate) fn process_claim_seat(
     #[cfg(target_os = "solana")]
     solana_invoke::invoke_unchecked(&ix, &account_infos)?;
     #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+    solana_program::program::invoke(&ix, &account_infos)?;
 
     // Insert the seat into the wrapper state
     expand_wrapper_if_needed(&wrapper_state, &owner, &system_program)?;

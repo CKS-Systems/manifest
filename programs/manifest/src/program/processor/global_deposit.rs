@@ -71,7 +71,7 @@ pub(crate) fn process_global_deposit(
         #[cfg(target_os = "solana")]
         solana_invoke::invoke_unchecked(&ix, &account_infos)?;
         #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+        solana_program::program::invoke(&ix, &account_infos)?;
 
         let after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         deposited_amount_atoms = after_vault_balance_atoms
@@ -95,7 +95,7 @@ pub(crate) fn process_global_deposit(
         #[cfg(target_os = "solana")]
         solana_invoke::invoke_unchecked(&ix, &account_infos)?;
         #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+        solana_program::program::invoke(&ix, &account_infos)?;
     }
 
     emit_stack(GlobalDepositLog {

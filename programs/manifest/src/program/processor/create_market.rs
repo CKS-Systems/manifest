@@ -133,7 +133,7 @@ pub(crate) fn process_create_market(
                 #[cfg(target_os = "solana")]
                 solana_invoke::invoke_unchecked(&ix, &account_infos)?;
                 #[cfg(not(target_os = "solana"))]
-                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+                solana_program::program::invoke(&ix, &account_infos)?;
             } else {
                 let ix: Instruction = spl_token::instruction::initialize_account3(
                     &token_program_for_mint,
@@ -160,7 +160,7 @@ pub(crate) fn process_create_market(
                 #[cfg(target_os = "solana")]
                 solana_invoke::invoke_unchecked(&ix, &account_infos)?;
                 #[cfg(not(target_os = "solana"))]
-                solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+                solana_program::program::invoke(&ix, &account_infos)?;
             }
         }
 

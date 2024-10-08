@@ -226,7 +226,7 @@ pub(crate) fn process_swap(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
         } else {
             let ix: Instruction = spl_token::instruction::transfer(
                 token_program_base.key,
@@ -245,7 +245,7 @@ pub(crate) fn process_swap(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
         }
 
         // Give all but what started there.
@@ -325,7 +325,7 @@ pub(crate) fn process_swap(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
         } else {
             let ix: Instruction = spl_token::instruction::transfer(
                 token_program_quote.key,
@@ -344,7 +344,7 @@ pub(crate) fn process_swap(
             #[cfg(target_os = "solana")]
             solana_invoke::invoke_unchecked(&ix, &account_infos)?;
             #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke_unchecked(&ix, &account_infos)?;
+            solana_program::program::invoke(&ix, &account_infos)?;
         }
 
         // Give all but what started there.
