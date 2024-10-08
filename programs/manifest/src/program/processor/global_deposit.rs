@@ -16,6 +16,7 @@ use crate::{
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
     pub amount_atoms: u64,
+    // TODO: Use trader_index_hint. Should not be very impactful, but for consistency.
 }
 
 impl GlobalDepositParams {

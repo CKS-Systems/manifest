@@ -86,20 +86,17 @@ pub struct WrapperBatchUpdateParams {
     pub cancels: Vec<WrapperCancelOrderParams>,
     pub cancel_all: bool,
     pub orders: Vec<WrapperPlaceOrderParams>,
-    pub trader_index_hint: Option<DataIndex>,
 }
 impl WrapperBatchUpdateParams {
     pub fn new(
         cancels: Vec<WrapperCancelOrderParams>,
         cancel_all: bool,
         orders: Vec<WrapperPlaceOrderParams>,
-        trader_index_hint: Option<DataIndex>,
     ) -> Self {
         WrapperBatchUpdateParams {
             cancels,
             cancel_all,
             orders,
-            trader_index_hint,
         }
     }
 }
@@ -381,7 +378,6 @@ pub(crate) fn process_batch_update(
         orders,
         cancel_all,
         cancels,
-        ..
     } = WrapperBatchUpdateParams::try_from_slice(data)?;
 
     let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;

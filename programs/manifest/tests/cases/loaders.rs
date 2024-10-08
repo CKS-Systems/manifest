@@ -152,7 +152,9 @@ async fn deposit_fail_missing_signer() -> anyhow::Result<()> {
         ],
         data: [
             ManifestInstruction::Deposit.to_vec(),
-            DepositParams::new(SOL_UNIT_SIZE).try_to_vec().unwrap(),
+            DepositParams::new(SOL_UNIT_SIZE, None)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     };

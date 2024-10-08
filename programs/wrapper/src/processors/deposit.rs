@@ -1,8 +1,9 @@
-use std::cell::Ref;
+use std::{cell::Ref, mem::size_of};
 
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::{get_helper, DataIndex, RBNode};
 use manifest::{
-    program::{deposit::DepositParams, deposit_instruction},
+    program::deposit_instruction,
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
@@ -15,7 +16,22 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use super::shared::{check_signer, sync, WrapperStateAccountInfo};
+use crate::{market_info::MarketInfo, wrapper_state::ManifestWrapperStateFixed};
+
+use super::shared::{
+    check_signer, get_market_info_index_for_market, sync, WrapperStateAccountInfo,
+};
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct WrapperDepositParams {
+    pub amount_atoms: u64,
+}
+
+impl WrapperDepositParams {
+    pub fn new(amount_atoms: u64) -> Self {
+        WrapperDepositParams { amount_atoms }
+    }
+}
 
 pub(crate) fn process_deposit(
     _program_id: &Pubkey,
@@ -48,8 +64,18 @@ pub(crate) fn process_deposit(
     };
     drop(market_fixed);
 
-    // Params are a direct pass through.
-    let DepositParams { amount_atoms } = DepositParams::try_from_slice(data)?;
+    let WrapperDepositParams { amount_atoms } = WrapperDepositParams::try_from_slice(data)?;
+
+    let market_info_index: DataIndex =
+        get_market_info_index_for_market(&wrapper_state, market.info.key);
+    let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
+    let (_fixed_data, wrapper_dynamic_data) =
+        wrapper_data.split_at(size_of::<ManifestWrapperStateFixed>());
+    let market_info: MarketInfo =
+        *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
+    let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
+    drop(wrapper_data);
+
     // Call the deposit CPI
     let ix: Instruction = deposit_instruction(
         market.key,
@@ -58,6 +84,7 @@ pub(crate) fn process_deposit(
         amount_atoms,
         trader_token_account.key,
         *token_program.key,
+        trader_index_hint,
     );
     let account_infos: [AccountInfo<'_>; 7] = [
         manifest_program.info.clone(),
