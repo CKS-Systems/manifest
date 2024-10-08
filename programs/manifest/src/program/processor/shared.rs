@@ -220,6 +220,6 @@ pub fn invoke(ix: &Instruction, account_infos: &[AccountInfo<'_>]) -> ProgramRes
     }
     #[cfg(not(target_os = "solana"))]
     {
-        solana_program::program::invoke_unchecked(ix, account_infos)
+        solana_program::program::invoke(ix, account_infos)
     }
 }
