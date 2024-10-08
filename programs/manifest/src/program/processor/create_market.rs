@@ -16,9 +16,10 @@ use solana_program::{
 use spl_token_2022::{
     extension::{
         mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
-        transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
+        BaseStateWithExtensions, ExtensionType, PodStateWithExtensions, StateWithExtensions,
     },
-    state::Mint,
+    pod::PodMint,
+    state::{Account, Mint},
 };
 
 pub(crate) fn process_create_market(
@@ -72,13 +73,6 @@ pub(crate) fn process_create_market(
                     );
                 }
             }
-
-            // Transfer fees make the amounts on withdraw and deposit not match what is expected.
-            require!(
-                pool_mint.get_extension::<TransferFeeConfig>().is_err(),
-                ManifestError::InvalidMint,
-                "Transfer fee mints are not allowed",
-            )?;
         }
     }
 
@@ -98,23 +92,32 @@ pub(crate) fn process_create_market(
             };
 
             let (_vault_key, bump) = get_vault_address(market.key, mint.key);
-            let space: usize = spl_token::state::Account::LEN;
             let seeds: Vec<Vec<u8>> = vec![
                 b"vault".to_vec(),
                 market.key.as_ref().to_vec(),
                 mint.key.as_ref().to_vec(),
                 vec![bump],
             ];
-            create_account(
-                payer.as_ref(),
-                token_account,
-                system_program.as_ref(),
-                &token_program_for_mint,
-                &rent,
-                space as u64,
-                seeds,
-            )?;
+
             if is_mint_22 {
+                let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+                let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
+                    PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
+                let mint_extensions: Vec<ExtensionType> =
+                    mint_with_extension.get_extension_types()?;
+                let required_extensions: Vec<ExtensionType> =
+                    ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                let space: usize =
+                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)?;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    seeds,
+                )?;
                 let ix: Instruction = spl_token_2022::instruction::initialize_account3(
                     &token_program_for_mint,
                     token_account.key,

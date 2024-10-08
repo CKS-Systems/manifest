@@ -31,6 +31,8 @@ pub(crate) fn process_global_deposit(
 ) -> ProgramResult {
     let global_deposit_context: GlobalDepositContext = GlobalDepositContext::load(accounts)?;
     let GlobalDepositParams { amount_atoms } = GlobalDepositParams::try_from_slice(data)?;
+    // Due to transfer fees, this might not be what you expect.
+    let mut deposited_amount_atoms: u64 = amount_atoms;
 
     let GlobalDepositContext {
         payer,
@@ -47,6 +49,7 @@ pub(crate) fn process_global_deposit(
 
     // Do the token transfer
     if *global_vault.owner == spl_token_2022::id() {
+        let before_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         let ix: Instruction = spl_token_2022::instruction::transfer_checked(
             token_program.key,
             trader_token_account.key,
@@ -69,9 +72,10 @@ pub(crate) fn process_global_deposit(
         #[cfg(not(target_os = "solana"))]
         solana_program::program::invoke_unchecked(&ix, &account_infos)?;
 
-        // TODO: Check the actual amount received and use that as the
-        // amount_atoms, rather than what the user said because of transfer
-        // fees.
+        let after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
+        deposited_amount_atoms = after_vault_balance_atoms
+            .checked_sub(before_vault_balance_atoms)
+            .unwrap();
     } else {
         let ix: Instruction = spl_token::instruction::transfer(
             token_program.key,
@@ -96,7 +100,7 @@ pub(crate) fn process_global_deposit(
     emit_stack(GlobalDepositLog {
         global: *global.key,
         trader: *payer.key,
-        global_atoms: GlobalAtoms::new(amount_atoms),
+        global_atoms: GlobalAtoms::new(deposited_amount_atoms),
     })?;
 
     Ok(())
