@@ -191,7 +191,7 @@ fn verify_trader_index_hint(
     require!(
         hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
         ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {}",
+        "Invalid trader hint index {} did not align",
         hinted_index,
     )?;
     require!(
@@ -199,7 +199,7 @@ fn verify_trader_index_hint(
             .get_payload_type()
             == MarketDataTreeNodeType::ClaimedSeat as u8,
         ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {}",
+        "Invalid trader hint index {} is not a ClaimedSeat",
         hinted_index,
     )?;
     require!(
@@ -207,7 +207,8 @@ fn verify_trader_index_hint(
             .key
             .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
         ManifestError::WrongIndexHintParams,
-        "Invalid trader hint",
+        "Invalid trader hint index {} did not match payer",
+        hinted_index
     )?;
     Ok(())
 }
