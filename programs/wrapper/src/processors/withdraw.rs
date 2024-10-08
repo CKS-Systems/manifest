@@ -5,7 +5,7 @@ use hypertree::{get_helper, DataIndex, RBNode};
 use manifest::{
     program::{invoke, withdraw_instruction},
     state::MarketFixed,
-    validation::{ManifestAccountInfo, MintAccountInfo},
+    validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
 
 use manifest::validation::{Program, Signer};
@@ -45,7 +45,7 @@ pub(crate) fn process_withdraw(
         ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
     let trader_token_account: &AccountInfo = next_account_info(account_iter)?;
     let vault: &AccountInfo = next_account_info(account_iter)?;
-    let token_program: Program = Program::new(next_account_info(account_iter)?, &spl_token::id())?;
+    let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
@@ -86,8 +86,7 @@ pub(crate) fn process_withdraw(
             &mint,
             amount_atoms,
             trader_token_account.key,
-            // TODO: Support token 22
-            spl_token::id(),
+            *token_program.key,
             trader_index_hint,
         ),
         &[
