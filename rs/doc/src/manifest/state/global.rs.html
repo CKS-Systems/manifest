@@ -687,6 +687,7 @@
 <a href="#685" id="685">685</a>
 <a href="#686" id="686">686</a>
 <a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -700,6 +701,7 @@
     get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
+<span class="kw">use </span>shank::ShankType;
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 <span class="kw">use </span>static_assertions::const_assert_eq;
 
@@ -719,7 +721,7 @@
 };
 
 <span class="attr">#[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>GlobalFixed {
     <span class="doccomment">/// Discriminant for identifying this type of account.
     </span><span class="kw">pub </span>discriminant: u64,
@@ -782,7 +784,7 @@
 <span class="comment">// Does not need to align to word boundaries because does not deserialize.
 
 </span><span class="attr">#[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>GlobalTrader {
     <span class="doccomment">/// Trader who controls this global trader.
     </span>trader: Pubkey,
@@ -821,7 +823,7 @@
 }
 
 <span class="attr">#[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>GlobalDeposit {
     <span class="doccomment">/// Trader who controls this global trader.
     </span>trader: Pubkey,

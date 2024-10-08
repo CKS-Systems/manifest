@@ -1294,12 +1294,14 @@
 <a href="#1292" id="1292">1292</a>
 <a href="#1293" id="1293">1293</a>
 <a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
     HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
     RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
+<span class="kw">use </span>shank::ShankType;
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 <span class="kw">use </span>static_assertions::const_assert_eq;
 <span class="kw">use </span>std::mem::size_of;
@@ -1363,7 +1365,7 @@
 <span class="comment">// Does not need to align to word boundaries because does not deserialize.
 
 </span><span class="attr">#[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>MarketFixed {
     <span class="doccomment">/// Discriminant for identifying this type of account.
     </span><span class="kw">pub </span>discriminant: u64,

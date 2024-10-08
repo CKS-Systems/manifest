@@ -75,10 +75,12 @@
 <a href="#73" id="73">73</a>
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span><span class="kw">crate</span>::quantities::{BaseAtoms, QuoteAtoms};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
+<span class="kw">use </span>shank::ShankType;
 <span class="kw">use </span>solana_program::pubkey::Pubkey;
 <span class="kw">use </span>static_assertions::const_assert_eq;
 <span class="kw">use </span>std::cmp::Ordering;
@@ -86,7 +88,7 @@
 <span class="kw">use </span><span class="kw">super</span>::constants::CLAIMED_SEAT_SIZE;
 
 <span class="attr">#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>ClaimedSeat {
     <span class="kw">pub </span>trader: Pubkey,
     <span class="comment">// Balances are withdrawable on the exchange. They do not include funds in

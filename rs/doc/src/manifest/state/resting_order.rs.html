@@ -329,7 +329,7 @@
 }
 
 <span class="attr">#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 </span><span class="kw">pub struct </span>RestingOrder {
     price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,
