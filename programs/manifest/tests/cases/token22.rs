@@ -702,6 +702,7 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
         1_000_000_000,
         &spl_token_account_keypair.pubkey(),
         spl_token_2022::id(),
+        None,
     );
     send_tx_with_retry(
         Rc::clone(&context),
