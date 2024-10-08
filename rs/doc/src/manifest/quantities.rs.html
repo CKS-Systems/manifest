@@ -693,6 +693,16 @@
 <a href="#691" id="691">691</a>
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -1089,25 +1099,6 @@
         <span class="self">self</span>.checked_quote_for_base_(other, round_up)
             .map(|r| QuoteAtoms::new(r <span class="kw">as </span>u64))
     }
-
-    <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>checked_effective_price(
-        <span class="self">self</span>,
-        num_base_atoms: BaseAtoms,
-        is_bid: bool,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtomsPerBaseAtom, ProgramError&gt; {
-        <span class="kw">if </span>BaseAtoms::ZERO == num_base_atoms {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>);
-        }
-        <span class="kw">let </span>quote_matched_atoms = <span class="self">self</span>.checked_quote_for_base_(num_base_atoms, !is_bid)<span class="question-mark">?</span>;
-        <span class="comment">// this doesn't need a check, will never overflow: u64::MAX * D18 &lt; u128::MAX
-        </span><span class="kw">let </span>quote_matched_d18 = quote_matched_atoms.wrapping_mul(D18);
-        <span class="comment">// no special case rounding needed because effective price is just a value used to compare for order
-        </span><span class="kw">let </span>inner = quote_matched_d18.div(num_base_atoms.inner <span class="kw">as </span>u128);
-        <span class="prelude-val">Ok</span>(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(inner),
-        })
-    }
 }
 
 <span class="kw">impl </span>Ord <span class="kw">for </span>QuoteAtomsPerBaseAtom {
@@ -1278,6 +1269,38 @@
 }
 
 <span class="attr">#[test]
+</span><span class="kw">fn </span>test_checked_base_for_quote_edge_cases() {
+    <span class="kw">let </span>quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(<span class="number">0</span>, <span class="number">0</span>);
+    <span class="macro">assert_eq!</span>(
+        quote_atoms_per_base_atom
+            .checked_base_for_quote(QuoteAtoms::new(<span class="number">1</span>), <span class="bool-val">false</span>)
+            .unwrap(),
+        BaseAtoms::new(<span class="number">0</span>)
+    );
+
+    <span class="kw">let </span>quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(<span class="number">1</span>, -<span class="number">18</span>);
+    <span class="macro">assert!</span>(quote_atoms_per_base_atom
+        .checked_base_for_quote(QuoteAtoms::new(u64::MAX), <span class="bool-val">false</span>)
+        .is_err(),);
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>test_checked_quote_for_base_edge_cases() {
+    <span class="comment">// edge case is where u64MAX * 10**18  &lt; product &lt; u128MAX
+    </span><span class="kw">let </span>quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom::MAX;
+    <span class="macro">assert!</span>(quote_atoms_per_base_atom
+        .checked_quote_for_base(BaseAtoms::new(u64::MAX - <span class="number">1</span>), <span class="bool-val">false</span>)
+        .is_err(),);
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>test_quote_atoms_per_base_atom_edge_case() {
+    <span class="macro">assert!</span>(QuoteAtomsPerBaseAtom::try_from(f64::NAN).is_err());
+}
+
+<span class="attr">#[test]
 </span><span class="kw">fn </span>test_multiply_macro() {
     <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(<span class="number">5</span>);
     <span class="kw">let </span>quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
@@ -1349,10 +1372,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>t = AlignmentTest::default();
     t.price = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, <span class="number">0</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>s = t.clone();
-    t.price = s
-        .price
-        .checked_effective_price(BaseAtoms::new(u32::MAX <span class="kw">as </span>u64), <span class="bool-val">true</span>)
-        .unwrap();
+    t.price = s.price.clone();
     <span class="kw">let </span>q = t
         .price
         .checked_base_for_quote(QuoteAtoms::new(u32::MAX <span class="kw">as </span>u64), <span class="bool-val">true</span>)
