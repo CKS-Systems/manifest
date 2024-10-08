@@ -308,20 +308,30 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             self.get_bids()
         };
 
-        let mut total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
+        let mut total_matched_quote_atoms: QuoteAtoms = QuoteAtoms::ZERO;
         let mut remaining_base_atoms: BaseAtoms = limit_base_atoms;
         for (_, resting_order) in book.iter::<RestingOrder>() {
+            // skip expired orders
             if resting_order.is_expired(now_slot) {
                 continue;
             }
             let matched_price: QuoteAtomsPerBaseAtom = resting_order.get_price();
+
+            // Either fill the entire resting order, or only the
+            // remaining_base_atoms, in which case, this is the last iteration
             let matched_base_atoms: BaseAtoms =
                 resting_order.get_num_base_atoms().min(remaining_base_atoms);
+            let did_fully_match_resting_order: bool =
+                remaining_base_atoms >= resting_order.get_num_base_atoms();
 
-            // Rounds down on bid because this is assumed to fully fill which means taker rounding.
-            let matched_quote_atoms: QuoteAtoms =
-                matched_price.checked_quote_for_base(matched_base_atoms, !is_bid)?;
+            // Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
+            let matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
+                matched_base_atoms,
+                is_bid != did_fully_match_resting_order,
+            )?;
 
+            // skip unbacked global orders
             if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
@@ -331,20 +341,23 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             ) {
                 continue;
             }
-            total_quote_atoms_matched =
-                total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
-            if matched_base_atoms == remaining_base_atoms {
+
+            total_matched_quote_atoms =
+                total_matched_quote_atoms.checked_add(matched_quote_atoms)?;
+
+            if !did_fully_match_resting_order {
                 break;
             }
 
+            // prepare for next iteration
             remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)?;
-
-            if remaining_base_atoms == BaseAtoms::ZERO {
-                break;
-            }
         }
 
-        return Ok(total_quote_atoms_matched);
+        // Note that when there are not enough orders on the market to use up or
+        // to receive the desired number of base atoms, this returns just the
+        // full amount on the bookside without differentiating that return.
+
+        return Ok(total_matched_quote_atoms);
     }
 
     /// How many base atoms you get when you trade in limit_quote_atoms.
@@ -366,6 +379,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         let mut remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
 
         for (_, resting_order) in book.iter::<RestingOrder>() {
+            // skip expired orders
             if resting_order.is_expired(now_slot) {
                 continue;
             }
@@ -380,6 +394,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             // base atoms to exhaust 100 quote atoms at that price.
             let base_atoms_limit: BaseAtoms =
                 matched_price.checked_base_for_quote(remaining_quote_atoms, !is_bid)?;
+
             // Either fill the entire resting order, or only the
             // base_atoms_limit, in which case, this is the last iteration.
             let matched_base_atoms: BaseAtoms =
@@ -387,15 +402,14 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             let did_fully_match_resting_order: bool =
                 base_atoms_limit >= resting_order.get_num_base_atoms();
 
-            // Number of quote atoms matched exactly. Always round in taker favor
-            // here because we already know that taker did not finish on the last
-            // order, so fully exhausted it and thus are rounding in taker
-            // favor.
+            // Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
             let matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
                 matched_base_atoms,
                 is_bid != did_fully_match_resting_order,
             )?;
 
+            // skip unbacked global orders
             if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
@@ -408,11 +422,14 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
 
             total_matched_base_atoms = total_matched_base_atoms.checked_add(matched_base_atoms)?;
 
-            if matched_base_atoms == base_atoms_limit {
+            if !did_fully_match_resting_order {
                 break;
             }
 
+            // prepare for next iteration
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)?;
+
+            // we can match exactly in base atoms but also deplete all quote atoms at the same time
             if remaining_quote_atoms == QuoteAtoms::ZERO {
                 break;
             }
