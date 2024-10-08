@@ -1,8 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
-    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
+    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
+    RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
@@ -280,6 +280,17 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
     pub fn get_quote_mint(&self) -> &Pubkey {
         let DynamicAccount { fixed, .. } = self.borrow_market();
         fixed.get_quote_mint()
+    }
+
+    pub fn has_two_free_blocks(&self) -> bool {
+        let DynamicAccount { fixed, dynamic, .. } = self.borrow_market();
+        let free_list_head_index: DataIndex = fixed.free_list_head_index;
+        if free_list_head_index == NIL {
+            return false;
+        }
+        let free_list_head: &FreeListNode<MarketUnusedFreeListPadding> =
+            get_helper::<FreeListNode<MarketUnusedFreeListPadding>>(dynamic, free_list_head_index);
+        free_list_head.has_next()
     }
 
     pub fn impact_quote_atoms(
