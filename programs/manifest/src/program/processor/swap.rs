@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
-    program::ManifestError,
+    program::{invoke, ManifestError},
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -15,10 +15,7 @@ use crate::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{trace, DataIndex, NIL};
 use solana_program::{
-    account_info::AccountInfo,
-    entrypoint::ProgramResult,
-    program::{invoke, invoke_signed},
-    pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
 };
 
 use super::shared::get_mut_dynamic_account;

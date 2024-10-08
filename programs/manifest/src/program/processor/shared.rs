@@ -17,7 +17,7 @@ use hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     rent::Rent,
     system_instruction,
     sysvar::{slot_history::ProgramError, Sysvar},
@@ -104,7 +104,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     );
     #[cfg(feature = "fuzz")]
     {
-        invoke(
+        solana_program::program::invoke(
             &system_instruction::allocate(expandable_account.key, new_size as u64),
             &[expandable_account.clone(), system_program.clone()],
         )?;
@@ -211,4 +211,15 @@ fn verify_trader_index_hint(
         hinted_index
     )?;
     Ok(())
+}
+
+pub fn invoke(ix: &Instruction, account_infos: &[AccountInfo<'_>]) -> ProgramResult {
+    #[cfg(target_os = "solana")]
+    {
+        solana_invoke::invoke_unchecked(ix, account_infos)
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        solana_program::program::invoke(ix, account_infos)
+    }
 }

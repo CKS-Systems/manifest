@@ -1,9 +1,7 @@
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 use crate::{
     logs::{emit_stack, GlobalDepositLog},
@@ -12,6 +10,8 @@ use crate::{
     state::GlobalRefMut,
     validation::loaders::GlobalDepositContext,
 };
+
+use super::invoke;
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
@@ -70,6 +70,7 @@ pub(crate) fn process_global_deposit(
                 payer.as_ref().clone(),
             ],
         )?;
+
         let after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         deposited_amount_atoms = after_vault_balance_atoms
             .checked_sub(before_vault_balance_atoms)
