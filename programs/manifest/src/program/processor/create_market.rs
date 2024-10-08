@@ -10,8 +10,8 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
+    rent::Rent, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{
