@@ -38,6 +38,7 @@ import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
 import { MarketInfo, marketInfoBeet } from './wrapper/types';
+import { uiOpenOrderBeet } from './utils/beet';
 
 /**
  * All data stored on a wrapper account.
