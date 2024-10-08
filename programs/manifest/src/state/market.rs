@@ -331,7 +331,8 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 is_bid != did_fully_match_resting_order,
             )?;
 
-            // skip unbacked global orders
+            // Skip unbacked global orders or all global orders if global accounts
+            // are not supplied.
             if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
@@ -409,7 +410,8 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 is_bid != did_fully_match_resting_order,
             )?;
 
-            // skip unbacked global orders
+            // Skip unbacked global orders or all global orders if global accounts
+            // are not supplied.
             if self.is_unbacked_global_order(
                 &resting_order,
                 is_bid,
