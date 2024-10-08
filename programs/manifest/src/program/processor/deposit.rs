@@ -6,20 +6,25 @@ use crate::{
     validation::loaders::DepositContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+use hypertree::DataIndex;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
 };
 
-use super::shared::get_mut_dynamic_account;
+use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DepositParams {
     pub amount_atoms: u64,
+    pub trader_index_hint: Option<DataIndex>,
 }
 
 impl DepositParams {
-    pub fn new(amount_atoms: u64) -> Self {
-        DepositParams { amount_atoms }
+    pub fn new(amount_atoms: u64, trader_index_hint: Option<DataIndex>) -> Self {
+        DepositParams {
+            amount_atoms,
+            trader_index_hint,
+        }
     }
 }
 
@@ -29,7 +34,12 @@ pub(crate) fn process_deposit(
     data: &[u8],
 ) -> ProgramResult {
     let deposit_context: DepositContext = DepositContext::load(accounts)?;
-    let DepositParams { amount_atoms } = DepositParams::try_from_slice(data)?;
+    let DepositParams {
+        amount_atoms,
+        trader_index_hint,
+    } = DepositParams::try_from_slice(data)?;
+    // Due to transfer fees, this might not be what you expect.
+    let mut deposited_amount_atoms: u64 = amount_atoms;
 
     let DepositContext {
         market,
@@ -48,6 +58,7 @@ pub(crate) fn process_deposit(
         &trader_token.try_borrow_data()?[0..32] == dynamic_account.get_base_mint().as_ref();
 
     if *vault.owner == spl_token_2022::id() {
+        let before_vault_balance_atoms: u64 = vault.get_balance_atoms();
         invoke(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,
@@ -76,9 +87,10 @@ pub(crate) fn process_deposit(
             ],
         )?;
 
-        // TODO: Check the actual amount received and use that as the
-        // amount_atoms, rather than what the user said because of transfer
-        // fees.
+        let after_vault_balance_atoms: u64 = vault.get_balance_atoms();
+        deposited_amount_atoms = after_vault_balance_atoms
+            .checked_sub(before_vault_balance_atoms)
+            .unwrap();
     } else {
         invoke(
             &spl_token::instruction::transfer(
@@ -98,7 +110,9 @@ pub(crate) fn process_deposit(
         )?;
     }
 
-    dynamic_account.deposit(payer.key, amount_atoms, is_base)?;
+    let trader_index: DataIndex =
+        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+    dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)?;
 
     emit_stack(DepositLog {
         market: *market.key,
@@ -108,7 +122,7 @@ pub(crate) fn process_deposit(
         } else {
             *dynamic_account.get_quote_mint()
         },
-        amount_atoms,
+        amount_atoms: deposited_amount_atoms,
     })?;
 
     Ok(())

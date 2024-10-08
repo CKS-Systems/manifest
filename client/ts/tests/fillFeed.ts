@@ -4,7 +4,7 @@ import { createMarket } from './createMarket';
 import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
-import { FillFeed } from '../src';
+import { FillFeed } from '../src/fillFeed';
 import { placeOrder } from './placeOrder';
 import WebSocket from 'ws';
 

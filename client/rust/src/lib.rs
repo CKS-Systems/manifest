@@ -224,7 +224,7 @@ mod test {
         },
     };
     use solana_sdk::{account::Account, account_info::AccountInfo};
-    use spl_token::state::Mint;
+    use spl_token_2022::state::Mint;
     use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
 
     #[test]
@@ -290,10 +290,10 @@ mod test {
         market_value.claim_seat(&trader_key).unwrap();
         let trader_index: DataIndex = market_value.get_trader_index(&trader_key);
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, true)
+            .deposit(trader_index, 1_000_000_000_000, true)
             .unwrap();
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, false)
+            .deposit(trader_index, 1_000_000_000_000, false)
             .unwrap();
 
         // Bid for 10 SOL
@@ -453,10 +453,10 @@ mod test {
         market_value.claim_seat(&trader_key).unwrap();
         let trader_index: DataIndex = market_value.get_trader_index(&trader_key);
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, true)
+            .deposit(trader_index, 1_000_000_000_000, true)
             .unwrap();
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, false)
+            .deposit(trader_index, 1_000_000_000_000, false)
             .unwrap();
 
         // Bid for 10 SOL
@@ -698,11 +698,12 @@ mod test {
             executable: false,
         };
 
+        let trader_index: DataIndex = market_value.get_trader_index(&trader_key);
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, true)
+            .deposit(trader_index, 1_000_000_000_000, true)
             .unwrap();
         market_value
-            .deposit(&trader_key, 1_000_000_000_000, false)
+            .deposit(trader_index, 1_000_000_000_000, false)
             .unwrap();
 
         // Bid for 10 SOL

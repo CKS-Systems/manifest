@@ -5,7 +5,7 @@
   "scripts": {
     "preinstall": "cd ../ && yarn build",
     "dev": "next dev",
-    "build": "cd ../ && yarn build && cd ./debug-ui && next build",
+    "build": "next build",
     "start": "next start",
     "start:feed": "tsx scripts/start-fill-feed.ts",
     "run:pk-solflare-to-phantom": "tsx scripts/pk-solflare-to-phantom.ts",

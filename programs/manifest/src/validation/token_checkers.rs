@@ -1,9 +1,8 @@
 use crate::require;
-use solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use spl_token_2022::{
+    check_spl_token_program_account, extension::StateWithExtensions, state::Mint,
 };
-use spl_token::state::Mint;
-use spl_token_2022::check_spl_token_program_account;
 use std::ops::Deref;
 
 #[derive(Clone)]
@@ -15,7 +14,8 @@ pub struct MintAccountInfo<'a, 'info> {
 impl<'a, 'info> MintAccountInfo<'a, 'info> {
     pub fn new(info: &'a AccountInfo<'info>) -> Result<MintAccountInfo<'a, 'info>, ProgramError> {
         check_spl_token_program_account(info.owner)?;
-        let mint: Mint = Mint::unpack(&info.try_borrow_data()?)?;
+
+        let mint: Mint = StateWithExtensions::<Mint>::unpack(&info.data.borrow())?.base;
 
         Ok(Self { mint, info })
     }
@@ -54,6 +54,14 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
     pub fn get_owner(&self) -> Pubkey {
         Pubkey::new_from_array(
             self.info.try_borrow_data().unwrap()[32..64]
+                .try_into()
+                .unwrap(),
+        )
+    }
+
+    pub fn get_balance_atoms(&self) -> u64 {
+        u64::from_le_bytes(
+            self.info.try_borrow_data().unwrap()[64..72]
                 .try_into()
                 .unwrap(),
         )

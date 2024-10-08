@@ -26,7 +26,7 @@ use solana_sdk::{
     program_pack::Pack, signature::Keypair, signer::Signer, system_instruction::create_account,
     transaction::Transaction,
 };
-use spl_token::state::Mint;
+use spl_token_2022::state::Mint;
 use std::rc::Rc;
 
 #[derive(PartialEq)]
@@ -378,6 +378,7 @@ impl TestFixture {
             num_atoms,
             &trader_token_account,
             spl_token::id(),
+            None,
         );
 
         send_tx_with_retry(
@@ -449,6 +450,7 @@ impl TestFixture {
             num_atoms,
             &trader_token_account,
             spl_token::id(),
+            None,
         );
         send_tx_with_retry(
             Rc::clone(&self.context),

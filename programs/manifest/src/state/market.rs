@@ -1,8 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, Get, HyperTreeReadOperations,
-    HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool, RBNode, RedBlackTree,
-    RedBlackTreeReadOnly, NIL,
+    get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
+    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
+    RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
@@ -282,6 +282,17 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         fixed.get_quote_mint()
     }
 
+    pub fn has_two_free_blocks(&self) -> bool {
+        let DynamicAccount { fixed, dynamic, .. } = self.borrow_market();
+        let free_list_head_index: DataIndex = fixed.free_list_head_index;
+        if free_list_head_index == NIL {
+            return false;
+        }
+        let free_list_head: &FreeListNode<MarketUnusedFreeListPadding> =
+            get_helper::<FreeListNode<MarketUnusedFreeListPadding>>(dynamic, free_list_head_index);
+        free_list_head.has_next()
+    }
+
     // TODO: adapt to new rounding
     pub fn impact_quote_atoms(
         &self,
@@ -526,7 +537,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    // Uses mut instead of immutable because of trait issues.
+    // TODO: Fix this. Uses mut instead of immutable because of trait issues.
     pub fn get_trader_index(&mut self, trader: &Pubkey) -> DataIndex {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
@@ -537,6 +548,9 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         trader_index
     }
 
+    // Only used when temporarily claiming for swap and we dont have the system
+    // program to expand. Otherwise, there is no reason to ever give up your
+    // seat.
     pub fn release_seat(&mut self, trader: &Pubkey) -> ProgramResult {
         let trader_seat_index: DataIndex = self.get_trader_index(trader);
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
@@ -555,8 +569,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    pub fn deposit(&mut self, trader: &Pubkey, amount_atoms: u64, is_base: bool) -> ProgramResult {
-        let trader_index: DataIndex = self.get_trader_index(trader);
+    pub fn deposit(
+        &mut self,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -> ProgramResult {
         require!(
             trader_index != NIL,
             ManifestError::InvalidDepositAccounts,
@@ -568,9 +586,12 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    pub fn withdraw(&mut self, trader: &Pubkey, amount_atoms: u64, is_base: bool) -> ProgramResult {
-        let trader_index: DataIndex = self.get_trader_index(trader);
-
+    pub fn withdraw(
+        &mut self,
+        trader_index: DataIndex,
+        amount_atoms: u64,
+        is_base: bool,
+    ) -> ProgramResult {
         let DynamicAccount { dynamic, .. } = self.borrow_mut();
         update_balance(dynamic, trader_index, is_base, false, amount_atoms)?;
         Ok(())
@@ -843,10 +864,10 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)?;
                 current_maker_order_index = next_maker_order_index;
             } else {
-                let other_order: &mut RestingOrder =
+                let maker_order: &mut RestingOrder =
                     get_mut_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index)
                         .get_mut_value();
-                other_order.reduce(base_atoms_traded)?;
+                maker_order.reduce(base_atoms_traded)?;
                 remaining_base_atoms = BaseAtoms::ZERO;
                 break;
             }

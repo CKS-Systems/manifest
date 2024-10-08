@@ -89,7 +89,7 @@ pub(crate) fn process_swap(
 
     // this is a virtual credit to ensure matching always proceeds
     // net token transfers will be handled later
-    dynamic_account.deposit(payer.key, in_atoms, is_base_in)?;
+    dynamic_account.deposit(trader_index, in_atoms, is_base_in)?;
 
     // 4 cases:
     // 1. Exact in base. Simplest case, just use the base atoms given.
@@ -397,8 +397,8 @@ pub(crate) fn process_swap(
         // Withdraw in case there already was a seat so it doesnt mess with their
         // balances. Need to withdraw base and quote in case the order wasnt fully
         // filled.
-        dynamic_account.withdraw(payer.key, extra_base_atoms.as_u64(), true)?;
-        dynamic_account.withdraw(payer.key, extra_quote_atoms.as_u64(), false)?;
+        dynamic_account.withdraw(trader_index, extra_base_atoms.as_u64(), true)?;
+        dynamic_account.withdraw(trader_index, extra_quote_atoms.as_u64(), false)?;
     }
 
     emit_stack(PlaceOrderLog {
