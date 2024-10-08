@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
-    program::ManifestError,
+    program::{invoke, ManifestError},
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -15,8 +15,7 @@ use crate::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{trace, DataIndex, NIL};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
-    program::invoke_signed, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
 };
 
 use super::shared::get_mut_dynamic_account;
@@ -206,46 +205,42 @@ pub(crate) fn process_swap(
         let initial_credit_base_atoms: BaseAtoms = BaseAtoms::new(in_atoms);
 
         if *token_program_base.key == spl_token_2022::id() {
-            let ix: Instruction = spl_token_2022::instruction::transfer_checked(
-                token_program_base.key,
-                trader_base_account.key,
-                dynamic_account.fixed.get_base_mint(),
-                base_vault.key,
-                payer.key,
-                &[],
-                (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
-                dynamic_account.fixed.get_base_mint_decimals(),
+            invoke(
+                &spl_token_2022::instruction::transfer_checked(
+                    token_program_base.key,
+                    trader_base_account.key,
+                    dynamic_account.fixed.get_base_mint(),
+                    base_vault.key,
+                    payer.key,
+                    &[],
+                    (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
+                    dynamic_account.fixed.get_base_mint_decimals(),
+                )?,
+                &[
+                    token_program_base.as_ref().clone(),
+                    trader_base_account.as_ref().clone(),
+                    base_vault.as_ref().clone(),
+                    base_mint.unwrap().as_ref().clone(),
+                    payer.as_ref().clone(),
+                ],
             )?;
-            let account_infos: [AccountInfo<'_>; 5] = [
-                token_program_base.as_ref().clone(),
-                trader_base_account.as_ref().clone(),
-                base_vault.as_ref().clone(),
-                base_mint.unwrap().as_ref().clone(),
-                payer.as_ref().clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
         } else {
-            let ix: Instruction = spl_token::instruction::transfer(
-                token_program_base.key,
-                trader_base_account.key,
-                base_vault.key,
-                payer.key,
-                &[],
-                (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
+            invoke(
+                &spl_token::instruction::transfer(
+                    token_program_base.key,
+                    trader_base_account.key,
+                    base_vault.key,
+                    payer.key,
+                    &[],
+                    (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
+                )?,
+                &[
+                    token_program_base.as_ref().clone(),
+                    trader_base_account.as_ref().clone(),
+                    base_vault.as_ref().clone(),
+                    payer.as_ref().clone(),
+                ],
             )?;
-            let account_infos: [AccountInfo<'_>; 4] = [
-                token_program_base.as_ref().clone(),
-                trader_base_account.as_ref().clone(),
-                base_vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
         }
 
         // Give all but what started there.
@@ -305,46 +300,42 @@ pub(crate) fn process_swap(
         // unused amount.
         let initial_credit_quote_atoms: QuoteAtoms = QuoteAtoms::new(in_atoms);
         if *token_program_quote.key == spl_token_2022::id() {
-            let ix: Instruction = spl_token_2022::instruction::transfer_checked(
-                token_program_quote.key,
-                trader_quote_account.key,
-                dynamic_account.fixed.get_quote_mint(),
-                quote_vault.key,
-                payer.key,
-                &[],
-                (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
-                dynamic_account.fixed.get_quote_mint_decimals(),
+            invoke(
+                &spl_token_2022::instruction::transfer_checked(
+                    token_program_quote.key,
+                    trader_quote_account.key,
+                    dynamic_account.fixed.get_quote_mint(),
+                    quote_vault.key,
+                    payer.key,
+                    &[],
+                    (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
+                    dynamic_account.fixed.get_quote_mint_decimals(),
+                )?,
+                &[
+                    token_program_quote.as_ref().clone(),
+                    trader_quote_account.as_ref().clone(),
+                    quote_mint.unwrap().as_ref().clone(),
+                    quote_vault.as_ref().clone(),
+                    payer.as_ref().clone(),
+                ],
             )?;
-            let account_infos: [AccountInfo<'_>; 5] = [
-                token_program_quote.as_ref().clone(),
-                trader_quote_account.as_ref().clone(),
-                quote_mint.unwrap().as_ref().clone(),
-                quote_vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
         } else {
-            let ix: Instruction = spl_token::instruction::transfer(
-                token_program_quote.key,
-                trader_quote_account.key,
-                quote_vault.key,
-                payer.key,
-                &[],
-                (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
+            invoke(
+                &spl_token::instruction::transfer(
+                    token_program_quote.key,
+                    trader_quote_account.key,
+                    quote_vault.key,
+                    payer.key,
+                    &[],
+                    (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
+                )?,
+                &[
+                    token_program_quote.as_ref().clone(),
+                    trader_quote_account.as_ref().clone(),
+                    quote_vault.as_ref().clone(),
+                    payer.as_ref().clone(),
+                ],
             )?;
-            let account_infos: [AccountInfo<'_>; 4] = [
-                token_program_quote.as_ref().clone(),
-                trader_quote_account.as_ref().clone(),
-                quote_vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
         }
 
         // Give all but what started there.

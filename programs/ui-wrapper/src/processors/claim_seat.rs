@@ -10,7 +10,7 @@ use hypertree::{
 use manifest::{
     program::{
         claim_seat_instruction, expand_market_instruction, get_dynamic_account,
-        get_mut_dynamic_account,
+        get_mut_dynamic_account, invoke,
     },
     state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, MarketRefMut},
     validation::ManifestAccountInfo,
@@ -21,7 +21,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::Instruction,
     pubkey::Pubkey,
     system_program,
 };
@@ -63,30 +62,26 @@ pub(crate) fn process_claim_seat(
             // Need to intialize a new seat on core
             // Call expand so claim seat has enough free space
             // and owner doesn't get charged rent
-            let ix: Instruction = expand_market_instruction(market.key, payer.key);
-            let account_infos: [AccountInfo<'_>; 4] = [
-                manifest_program.info.clone(),
-                payer.info.clone(),
-                market.info.clone(),
-                system_program.info.clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
+            invoke(
+                &expand_market_instruction(market.key, payer.key),
+                &[
+                    manifest_program.info.clone(),
+                    payer.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
 
             // Call the ClaimSeat CPI
-            let ix: Instruction = claim_seat_instruction(market.key, owner.key);
-            let account_infos: [AccountInfo<'_>; 4] = [
-                manifest_program.info.clone(),
-                owner.info.clone(),
-                market.info.clone(),
-                system_program.info.clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
+            invoke(
+                &claim_seat_instruction(market.key, owner.key),
+                &[
+                    manifest_program.info.clone(),
+                    owner.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
 
             // fetch newly assigned trader index after claiming core seat
             let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;

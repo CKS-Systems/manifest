@@ -12,7 +12,7 @@ use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, PlaceOrderParams},
         batch_update_instruction, deposit_instruction, expand_market_instruction,
-        get_dynamic_account, get_mut_dynamic_account,
+        get_dynamic_account, get_mut_dynamic_account, invoke,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -21,7 +21,6 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::Instruction,
     program::get_return_data,
     pubkey::Pubkey,
     system_program,
@@ -149,28 +148,26 @@ pub(crate) fn process_place_order(
 
     trace!("deposit amount:{deposit_amount_atoms} mint:{:?}", mint.key);
     if deposit_amount_atoms > 0 {
-        let ix = deposit_instruction(
-            market.key,
-            owner.key,
-            mint.key,
-            deposit_amount_atoms,
-            trader_token_account.key,
-            *token_program.key,
-            Some(trader_index),
-        );
-        let account_infos = [
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            trader_token_account.clone(),
-            vault.clone(),
-            token_program.clone(),
-            mint.clone(),
-        ];
-        #[cfg(target_os = "solana")]
-        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-        #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke(&ix, &account_infos)?;
+        invoke(
+            &deposit_instruction(
+                market.key,
+                owner.key,
+                mint.key,
+                deposit_amount_atoms,
+                trader_token_account.key,
+                *token_program.key,
+                Some(trader_index),
+            ),
+            &[
+                manifest_program.info.clone(),
+                owner.info.clone(),
+                market.info.clone(),
+                trader_token_account.clone(),
+                vault.clone(),
+                token_program.clone(),
+                mint.clone(),
+            ],
+        )?;
     }
 
     // Call expand so claim seat has enough free space and owner doesn't get
@@ -181,17 +178,15 @@ pub(crate) fn process_place_order(
         let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
         let dynamic_account: MarketRef = get_dynamic_account(&market_data);
         if dynamic_account.has_two_free_blocks() {
-            let ix: Instruction = expand_market_instruction(market.key, payer.key);
-            let account_infos: [AccountInfo<'_>; 4] = [
-                manifest_program.info.clone(),
-                payer.info.clone(),
-                market.info.clone(),
-                system_program.info.clone(),
-            ];
-            #[cfg(target_os = "solana")]
-            solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-            #[cfg(not(target_os = "solana"))]
-            solana_program::program::invoke(&ix, &account_infos)?;
+            invoke(
+                &expand_market_instruction(market.key, payer.key),
+                &[
+                    manifest_program.info.clone(),
+                    payer.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
         }
     }
 
@@ -206,41 +201,39 @@ pub(crate) fn process_place_order(
 
     trace!("cpi place {core_place:?}");
 
-    let ix: Instruction = batch_update_instruction(
-        market.key,
-        owner.key,
-        Some(trader_index),
-        vec![],
-        vec![core_place],
-        Some(base_mint_key),
-        None,
-        Some(quote_mint_key),
-        None,
-    );
-    let account_infos: [AccountInfo<'_>; 18] = [
-        system_program.info.clone(),
-        manifest_program.info.clone(),
-        owner.info.clone(),
-        market.info.clone(),
-        trader_token_account.clone(),
-        vault.clone(),
-        token_program.clone(),
-        mint.clone(),
-        base_mint.clone(),
-        base_global.clone(),
-        base_global_vault.clone(),
-        base_market_vault.clone(),
-        base_token_program.clone(),
-        quote_mint.clone(),
-        quote_global.clone(),
-        quote_global_vault.clone(),
-        quote_market_vault.clone(),
-        quote_token_program.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &batch_update_instruction(
+            market.key,
+            owner.key,
+            Some(trader_index),
+            vec![],
+            vec![core_place],
+            Some(base_mint_key),
+            None,
+            Some(quote_mint_key),
+            None,
+        ),
+        &[
+            system_program.info.clone(),
+            manifest_program.info.clone(),
+            owner.info.clone(),
+            market.info.clone(),
+            trader_token_account.clone(),
+            vault.clone(),
+            token_program.clone(),
+            mint.clone(),
+            base_mint.clone(),
+            base_global.clone(),
+            base_global_vault.clone(),
+            base_market_vault.clone(),
+            base_token_program.clone(),
+            quote_mint.clone(),
+            quote_global.clone(),
+            quote_global_vault.clone(),
+            quote_market_vault.clone(),
+            quote_token_program.clone(),
+        ],
+    )?;
 
     // Process the order result
 

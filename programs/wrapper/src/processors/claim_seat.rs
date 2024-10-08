@@ -4,7 +4,7 @@ use hypertree::{
     get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations, HyperTreeWriteOperations, NIL,
 };
 use manifest::{
-    program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account},
+    program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account, invoke},
     state::{MarketFixed, MarketRefMut},
     validation::ManifestAccountInfo,
 };
@@ -14,7 +14,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::Instruction,
     pubkey::Pubkey,
     system_program,
 };
@@ -42,30 +41,26 @@ pub(crate) fn process_claim_seat(
     check_signer(&wrapper_state, owner.key);
 
     // Call the Expand CPI
-    let ix: Instruction = expand_market_instruction(market.key, owner.key);
-    let account_infos: [AccountInfo<'_>; 4] = [
-        manifest_program.info.clone(),
-        owner.info.clone(),
-        market.info.clone(),
-        system_program.info.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &expand_market_instruction(market.key, owner.key),
+        &[
+            manifest_program.info.clone(),
+            owner.info.clone(),
+            market.info.clone(),
+            system_program.info.clone(),
+        ],
+    )?;
 
     // Call the ClaimSeat CPI
-    let ix: Instruction = claim_seat_instruction(market.key, owner.key);
-    let account_infos: [AccountInfo<'_>; 4] = [
-        manifest_program.info.clone(),
-        owner.info.clone(),
-        market.info.clone(),
-        system_program.info.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &claim_seat_instruction(market.key, owner.key),
+        &[
+            manifest_program.info.clone(),
+            owner.info.clone(),
+            market.info.clone(),
+            system_program.info.clone(),
+        ],
+    )?;
 
     // Insert the seat into the wrapper state
     expand_wrapper_if_needed(&wrapper_state, &owner, &system_program)?;

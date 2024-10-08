@@ -2,7 +2,7 @@ use std::cell::RefMut;
 
 use crate::{
     global_vault_seeds_with_bump,
-    program::{get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, invoke, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -11,8 +11,7 @@ use hypertree::{DataIndex, NIL};
 #[cfg(not(feature = "no-clock"))]
 use solana_program::sysvar::Sysvar;
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
-    program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+    entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
 };
 
 use super::{
@@ -127,19 +126,17 @@ pub(crate) fn try_to_add_to_global(
     // Done here instead of inside the object because the borrow checker needs
     // to get the data on global which it cannot while there is a mut self
     // reference.
-    let ix: Instruction = solana_program::system_instruction::transfer(
-        &gas_payer_opt.as_ref().unwrap().info.key,
-        &global.key,
-        GAS_DEPOSIT_LAMPORTS,
-    );
-    let account_infos: [AccountInfo<'_>; 2] = [
-        gas_payer_opt.as_ref().unwrap().info.clone(),
-        global.info.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &solana_program::system_instruction::transfer(
+            &gas_payer_opt.as_ref().unwrap().info.key,
+            &global.key,
+            GAS_DEPOSIT_LAMPORTS,
+        ),
+        &[
+            gas_payer_opt.as_ref().unwrap().info.clone(),
+            global.info.clone(),
+        ],
+    )?;
 
     Ok(())
 }

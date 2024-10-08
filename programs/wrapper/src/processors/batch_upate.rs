@@ -12,7 +12,7 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, CancelOrderParams, PlaceOrderParams},
-        get_dynamic_account, get_mut_dynamic_account, ManifestInstruction,
+        get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, OrderType},
@@ -225,14 +225,7 @@ fn execute_cpi(
         .concat(),
     };
 
-    #[cfg(target_os = "solana")]
-    {
-        solana_invoke::invoke_unchecked(&ix, &accounts[1..])
-    }
-    #[cfg(not(target_os = "solana"))]
-    {
-        solana_program::program::invoke(&ix, &accounts[1..])
-    }
+    invoke(&ix, &accounts[1..])
 }
 
 fn process_cancels(

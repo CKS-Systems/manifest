@@ -14,7 +14,7 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::get_dynamic_account,
+    program::{get_dynamic_account, invoke},
     quantities::BaseAtoms,
     require,
     state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
@@ -24,7 +24,6 @@ use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
     entrypoint::ProgramResult,
-    instruction::Instruction,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_instruction,
@@ -74,17 +73,14 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         let new_minimum_balance: u64 = rent.minimum_balance(new_size);
         let lamports_diff: u64 = new_minimum_balance.saturating_sub(wrapper_state.lamports());
 
-        let ix: Instruction =
-            system_instruction::transfer(payer.key, wrapper_state.key, lamports_diff);
-        let account_infos: [AccountInfo<'info>; 3] = [
-            payer.info.clone(),
-            wrapper_state.clone(),
-            system_program.info.clone(),
-        ];
-        #[cfg(target_os = "solana")]
-        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-        #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke(&ix, &account_infos)?;
+        invoke(
+            &system_instruction::transfer(payer.key, wrapper_state.key, lamports_diff),
+            &[
+                payer.info.clone(),
+                wrapper_state.clone(),
+                system_program.info.clone(),
+            ],
+        )?;
 
         trace!(
             "expand_if_needed -> realloc {} {:?}",

@@ -7,11 +7,9 @@ use crate::{
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::DataIndex;
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
-use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
+use super::{get_trader_index_with_hint, invoke, shared::get_mut_dynamic_account};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DepositParams {
@@ -59,59 +57,55 @@ pub(crate) fn process_deposit(
 
     if *vault.owner == spl_token_2022::id() {
         let before_vault_balance_atoms: u64 = vault.get_balance_atoms();
-        let ix: Instruction = spl_token_2022::instruction::transfer_checked(
-            token_program.key,
-            trader_token.key,
-            if is_base {
-                dynamic_account.fixed.get_base_mint()
-            } else {
-                dynamic_account.get_quote_mint()
-            },
-            vault.key,
-            payer.key,
-            &[],
-            amount_atoms,
-            if is_base {
-                dynamic_account.fixed.get_base_mint_decimals()
-            } else {
-                dynamic_account.fixed.get_quote_mint_decimals()
-            },
+        invoke(
+            &spl_token_2022::instruction::transfer_checked(
+                token_program.key,
+                trader_token.key,
+                if is_base {
+                    dynamic_account.fixed.get_base_mint()
+                } else {
+                    dynamic_account.get_quote_mint()
+                },
+                vault.key,
+                payer.key,
+                &[],
+                amount_atoms,
+                if is_base {
+                    dynamic_account.fixed.get_base_mint_decimals()
+                } else {
+                    dynamic_account.fixed.get_quote_mint_decimals()
+                },
+            )?,
+            &[
+                token_program.as_ref().clone(),
+                trader_token.as_ref().clone(),
+                mint.as_ref().clone(),
+                vault.as_ref().clone(),
+                payer.as_ref().clone(),
+            ],
         )?;
-        let account_infos: [AccountInfo<'_>; 5] = [
-            token_program.as_ref().clone(),
-            trader_token.as_ref().clone(),
-            mint.as_ref().clone(),
-            vault.as_ref().clone(),
-            payer.as_ref().clone(),
-        ];
-        #[cfg(target_os = "solana")]
-        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-        #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke(&ix, &account_infos)?;
 
         let after_vault_balance_atoms: u64 = vault.get_balance_atoms();
         deposited_amount_atoms = after_vault_balance_atoms
             .checked_sub(before_vault_balance_atoms)
             .unwrap();
     } else {
-        let ix: Instruction = spl_token::instruction::transfer(
-            token_program.key,
-            trader_token.key,
-            vault.key,
-            payer.key,
-            &[],
-            amount_atoms,
+        invoke(
+            &spl_token::instruction::transfer(
+                token_program.key,
+                trader_token.key,
+                vault.key,
+                payer.key,
+                &[],
+                amount_atoms,
+            )?,
+            &[
+                token_program.as_ref().clone(),
+                trader_token.as_ref().clone(),
+                vault.as_ref().clone(),
+                payer.as_ref().clone(),
+            ],
         )?;
-        let account_infos: [AccountInfo<'_>; 4] = [
-            token_program.as_ref().clone(),
-            trader_token.as_ref().clone(),
-            vault.as_ref().clone(),
-            payer.as_ref().clone(),
-        ];
-        #[cfg(target_os = "solana")]
-        solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-        #[cfg(not(target_os = "solana"))]
-        solana_program::program::invoke(&ix, &account_infos)?;
     }
 
     let trader_index: DataIndex =

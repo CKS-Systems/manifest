@@ -88,17 +88,14 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
         lamports_diff,
         expandable_account.key
     );
-    let ix: Instruction =
-        system_instruction::transfer(payer.key, expandable_account.key, lamports_diff);
-    let account_infos = [
-        payer.clone(),
-        expandable_account.clone(),
-        system_program.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &system_instruction::transfer(payer.key, expandable_account.key, lamports_diff),
+        &[
+            payer.clone(),
+            expandable_account.clone(),
+            system_program.clone(),
+        ],
+    )?;
 
     trace!(
         "expand_dynamic-> realloc {} {:?}",
@@ -214,4 +211,15 @@ fn verify_trader_index_hint(
         hinted_index
     )?;
     Ok(())
+}
+
+pub fn invoke(ix: &Instruction, account_infos: &[AccountInfo<'_>]) -> ProgramResult {
+    #[cfg(target_os = "solana")]
+    {
+        solana_invoke::invoke_unchecked(ix, account_infos)
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        solana_program::program::invoke_unchecked(ix, account_infos)
+    }
 }

@@ -3,7 +3,7 @@ use std::{cell::Ref, mem::size_of};
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_helper, DataIndex, RBNode};
 use manifest::{
-    program::deposit_instruction,
+    program::{deposit_instruction, invoke},
     state::MarketFixed,
     validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
@@ -12,7 +12,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    instruction::Instruction,
     pubkey::Pubkey,
 };
 
@@ -77,28 +76,26 @@ pub(crate) fn process_deposit(
     drop(wrapper_data);
 
     // Call the deposit CPI
-    let ix: Instruction = deposit_instruction(
-        market.key,
-        owner.key,
-        mint,
-        amount_atoms,
-        trader_token_account.key,
-        *token_program.key,
-        trader_index_hint,
-    );
-    let account_infos: [AccountInfo<'_>; 7] = [
-        manifest_program.info.clone(),
-        owner.info.clone(),
-        market.info.clone(),
-        trader_token_account.clone(),
-        vault.clone(),
-        token_program.info.clone(),
-        mint_account_info.info.clone(),
-    ];
-    #[cfg(target_os = "solana")]
-    solana_invoke::invoke_unchecked(&ix, &account_infos)?;
-    #[cfg(not(target_os = "solana"))]
-    solana_program::program::invoke(&ix, &account_infos)?;
+    invoke(
+        &deposit_instruction(
+            market.key,
+            owner.key,
+            mint,
+            amount_atoms,
+            trader_token_account.key,
+            *token_program.key,
+            trader_index_hint,
+        ),
+        &[
+            manifest_program.info.clone(),
+            owner.info.clone(),
+            market.info.clone(),
+            trader_token_account.clone(),
+            vault.clone(),
+            token_program.info.clone(),
+            mint_account_info.info.clone(),
+        ],
+    )?;
 
     sync(&wrapper_state, &market)?;
 
