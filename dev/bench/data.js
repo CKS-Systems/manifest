@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728459398657,
+  "lastUpdate": 1728459416101,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5533,6 +5533,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6041,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9cd6482dc18431e81799e4b4918b64efc900c68f",
+          "message": "Remove todo that were left behind in merges (#162)\n\nremove todo that were left behind in merges",
+          "timestamp": "2024-10-09T10:11:11+03:00",
+          "tree_id": "63cdbdc8b2e7cc37a6340762f0e933fb1b64315f",
+          "url": "https://github.com/CKS-Systems/manifest/commit/9cd6482dc18431e81799e4b4918b64efc900c68f"
+        },
+        "date": 1728459414434,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3487,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5553,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6060,
             "unit": "CU",
             "range": "",
             "extra": ""
