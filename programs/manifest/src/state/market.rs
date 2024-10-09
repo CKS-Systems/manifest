@@ -1267,7 +1267,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        
+
         remove_from_global(&global_trade_accounts_opt)?;
     } else {
         // Return the exact number of atoms if the resting order is an
