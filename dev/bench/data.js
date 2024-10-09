@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728513859433,
+  "lastUpdate": 1728514163891,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5665,6 +5665,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6061,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "181e63ab24505e1ee56dd4da9d0a20692510b739",
+          "message": "Do not crash when global accounts are not needed (#168)\n\n* Do not crash when global accounts are not needed\r\n* more tests\r\n* remove global in jup\r\n\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-10T01:24:45+03:00",
+          "tree_id": "433a600162f1f0edfba531d98f639e14269cd79c",
+          "url": "https://github.com/CKS-Systems/manifest/commit/181e63ab24505e1ee56dd4da9d0a20692510b739"
+        },
+        "date": 1728514162904,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3492,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5563,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6103,
             "unit": "CU",
             "range": "",
             "extra": ""
