@@ -394,10 +394,10 @@
     dynamic_account
 }
 
-<span class="comment">// TODO: Make dynamic_account immutable here
+<span class="comment">// Uses a MarketRefMut instead of a MarketRef because callers will have mutable data.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_trader_index_with_hint(
     trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
-    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    dynamic_account: <span class="kw-2">&amp;</span>MarketRefMut,
     payer: <span class="kw-2">&amp;</span>Signer,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;DataIndex, ProgramError&gt; {
     <span class="kw">let </span>trader_index: DataIndex = <span class="kw">match </span>trader_index_hint {

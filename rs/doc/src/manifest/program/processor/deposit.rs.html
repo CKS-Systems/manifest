@@ -238,7 +238,7 @@
     }
 
     <span class="kw">let </span>trader_index: DataIndex =
-        get_trader_index_with_hint(trader_index_hint, <span class="kw-2">&amp;mut </span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
+        get_trader_index_with_hint(trader_index_hint, <span class="kw-2">&amp;</span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
     dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)<span class="question-mark">?</span>;
 
     emit_stack(DepositLog {

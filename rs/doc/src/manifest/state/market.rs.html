@@ -1288,6 +1288,7 @@
 <a href="#1286" id="1286">1286</a>
 <a href="#1287" id="1287">1287</a>
 <a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
@@ -1781,12 +1782,24 @@
             fixed.get_asks_best_index(),
         )
     }
+
+    <span class="kw">pub fn </span>get_trader_index(<span class="kw-2">&amp;</span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; DataIndex {
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_market();
+
+        <span class="kw">let </span>claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        <span class="kw">let </span>trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(<span class="kw-2">&amp;</span>ClaimedSeat::new_empty(<span class="kw-2">*</span>trader));
+        trader_index
+    }
 }
 
 <span class="comment">// This generic impl covers MarketRef, MarketRefMut and other
 // DynamicAccount variants that allow write access.
-</span><span class="kw">impl</span>&lt;Fixed: DerefOrBorrowMut&lt;MarketFixed&gt;, Dynamic: DerefOrBorrowMut&lt;[u8]&gt;&gt;
-    DynamicAccount&lt;Fixed, Dynamic&gt;
+</span><span class="kw">impl</span>&lt;
+        Fixed: DerefOrBorrowMut&lt;MarketFixed&gt; + DerefOrBorrow&lt;MarketFixed&gt;,
+        Dynamic: DerefOrBorrowMut&lt;[u8]&gt; + DerefOrBorrow&lt;[u8]&gt;,
+    &gt; DynamicAccount&lt;Fixed, Dynamic&gt;
 {
     <span class="kw">fn </span>borrow_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; MarketRefMut {
         MarketRefMut {
@@ -1826,17 +1839,6 @@
         get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, free_address)
             .set_payload_type(MarketDataTreeNodeType::ClaimedSeat <span class="kw">as </span>u8);
         <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="comment">// TODO: Fix this. Uses mut instead of immutable because of trait issues.
-    </span><span class="kw">pub fn </span>get_trader_index(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; DataIndex {
-        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
-
-        <span class="kw">let </span>claimed_seats_tree: ClaimedSeatTreeReadOnly =
-            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
-        <span class="kw">let </span>trader_index: DataIndex =
-            claimed_seats_tree.lookup_index(<span class="kw-2">&amp;</span>ClaimedSeat::new_empty(<span class="kw-2">*</span>trader));
-        trader_index
     }
 
     <span class="comment">// Only used when temporarily claiming for swap and we dont have the system
