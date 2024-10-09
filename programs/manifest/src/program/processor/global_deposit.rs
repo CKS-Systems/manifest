@@ -16,7 +16,6 @@ use super::invoke;
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
     pub amount_atoms: u64,
-    
     // No trader index hint because global account is small so there is not much
     // benefit from hinted indices, unlike the market which can get large. Also,
     // seats are not permanent like on a market due to eviction, so it is more
