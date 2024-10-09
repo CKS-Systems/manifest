@@ -430,7 +430,11 @@ export class ManifestClient {
    */
   public async reload(): Promise<void> {
     await Promise.all([
-      () => { if (this.wrapper) { return this.wrapper.reload(this.connection); } },
+      () => {
+        if (this.wrapper) {
+          return this.wrapper.reload(this.connection);
+        }
+      },
       this.market.reload(this.connection),
     ]);
   }
@@ -894,7 +898,7 @@ export class ManifestClient {
   /**
    * CreateGlobal instruction. Creates the global account. Should only be called
    * once ever for a mint. Static because it does not require a wrapper.
-   * 
+   *
    * @param payer PublicKey of the rent payer
    * @param mint PublicKey of the globalMint
    *
@@ -917,7 +921,7 @@ export class ManifestClient {
   /**
    * CreateGlobalAddTrader instruction. Adds a new trader to the global account.
    * Static because it does not require a wrapper.
-   * 
+   *
    * @param payer PublicKey of the trader
    * @param globalMint PublicKey of the globalMint
    *
