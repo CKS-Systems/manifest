@@ -1015,3 +1015,153 @@ async fn maintenance_clean() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn global_clean_expired_without_global() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                100,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.advance_time_seconds(1_000).await;
+
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    // Succeeds but does not result in a match because expired. Did not include global.
+    test_fixture
+        .batch_update_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                9,
+                -1,
+                false,
+                OrderType::ImmediateOrCancel,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // Remove unbacked global order.
+    assert_eq!(orders.len(), 0, "Order still on orderbook");
+
+    // No trade happened.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        0
+    );
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.payer()),
+        1_000_000
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_stop_without_global() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    // Succeeds but does not result in a match because expired. Did not include global.
+    test_fixture
+        .batch_update_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                9,
+                -1,
+                false,
+                OrderType::ImmediateOrCancel,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // Did not remove the global order.
+    assert_eq!(orders.len(), 1, "Order removed orderbook");
+
+    // No trade happened.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        0
+    );
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.payer()),
+        1_000_000
+    );
+
+    Ok(())
+}
