@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728459416101,
+  "lastUpdate": 1728513859433,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5599,6 +5599,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6060,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6ba7d9cac6bc9d392fdd313afccad3fc2bb6d94",
+          "message": "Comments on why there is no hint for global deposit and withdraw (#165)\n\n* comments on why there is no hint for global deposit and withdraw\r\n\r\n* fmt",
+          "timestamp": "2024-10-10T01:19:45+03:00",
+          "tree_id": "edeb2e2de00e892f70b7b2de51b8036e928b640b",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e6ba7d9cac6bc9d392fdd313afccad3fc2bb6d94"
+        },
+        "date": 1728513858424,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3494,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5565,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6061,
             "unit": "CU",
             "range": "",
             "extra": ""
