@@ -1288,13 +1288,6 @@
 <a href="#1286" id="1286">1286</a>
 <a href="#1287" id="1287">1287</a>
 <a href="#1288" id="1288">1288</a>
-<a href="#1289" id="1289">1289</a>
-<a href="#1290" id="1290">1290</a>
-<a href="#1291" id="1291">1291</a>
-<a href="#1292" id="1292">1292</a>
-<a href="#1293" id="1293">1293</a>
-<a href="#1294" id="1294">1294</a>
-<a href="#1295" id="1295">1295</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
@@ -2144,7 +2137,7 @@
                     } <span class="kw">else </span>{
                         <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
                     };
-                    remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, <span class="kw-2">&amp;</span>maker)<span class="question-mark">?</span>;
+                    remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?</span>;
                 }
 
                 <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
@@ -2348,10 +2341,7 @@
             } <span class="kw">else </span>{
                 <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
             };
-            <span class="kw">let </span>trader: <span class="kw-2">&amp;</span>Pubkey = <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index)
-                .get_value()
-                .trader;
-            remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, trader)<span class="question-mark">?
+            remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?
         </span>} <span class="kw">else </span>{
             update_balance(dynamic, trader_index, !is_bid, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
         }
@@ -2556,11 +2546,7 @@
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
         };
-        <span class="kw">let </span>maker: <span class="kw-2">&amp;</span>Pubkey =
-            <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, resting_order_to_remove.get_trader_index())
-                .get_value()
-                .trader;
-        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt, maker)<span class="question-mark">?</span>;
+        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
         <span class="comment">// Return the exact number of atoms if the resting order is an
         // ask. If the resting order is bid, multiply by price and round
