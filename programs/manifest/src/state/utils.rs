@@ -43,11 +43,11 @@ pub(crate) fn get_now_slot() -> u32 {
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
 ) -> ProgramResult {
-    require!(
-        global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
-        "Missing global accounts when cancelling a global",
-    )?;
+    if global_trade_accounts_opt.is_some() {
+        // Payer is forfeiting the right to claim the gas prepayment. This
+        // results in a stranded gas prepayment on the global account.
+        return Ok(());
+    }
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,

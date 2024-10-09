@@ -709,6 +709,16 @@ impl<
                 } else {
                     &global_trade_accounts_opts[1]
                 };
+                // When the global account is not included, a taker order can
+                // halt here, but a possible maker order will need to crash
+                // since that would result in a crossed book.
+                if global_trade_accounts_opt.is_none() {
+                    if order_type_can_rest(order_type) {
+                        return Err(ManifestError::MissingGlobal.into());
+                    } else {
+                        break;
+                    }
+                }
                 let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
@@ -1257,6 +1267,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
+        
         remove_from_global(&global_trade_accounts_opt)?;
     } else {
         // Return the exact number of atoms if the resting order is an
