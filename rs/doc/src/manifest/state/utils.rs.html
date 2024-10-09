@@ -275,6 +275,9 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -320,11 +323,11 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_from_global(
     global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;,
 ) -&gt; ProgramResult {
-    <span class="macro">require!</span>(
-        global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
-        <span class="string">"Missing global accounts when cancelling a global"</span>,
-    )<span class="question-mark">?</span>;
+    <span class="kw">if </span>global_trade_accounts_opt.is_none() {
+        <span class="comment">// Payer is forfeiting the right to claim the gas prepayment. This
+        // results in a stranded gas prepayment on the global account.
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
+    }
     <span class="kw">let </span>global_trade_accounts: <span class="kw-2">&amp;</span>GlobalTradeAccounts = <span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap();
     <span class="kw">let </span>GlobalTradeAccounts {
         global,
@@ -444,6 +447,9 @@
     resting_order_trader: <span class="kw-2">&amp;</span>Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -&gt; bool {
+    <span class="kw">if </span>global_trade_accounts_opt.is_none() {
+        <span class="kw">return </span><span class="bool-val">false</span>;
+    }
     <span class="kw">let </span>global_trade_accounts: <span class="kw-2">&amp;</span>GlobalTradeAccounts = <span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap();
     <span class="kw">let </span>GlobalTradeAccounts { global, .. } = global_trade_accounts;
 

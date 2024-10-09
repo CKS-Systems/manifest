@@ -1289,6 +1289,93 @@
 <a href="#1287" id="1287">1287</a>
 <a href="#1288" id="1288">1288</a>
 <a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
+<a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
+<a href="#1302" id="1302">1302</a>
+<a href="#1303" id="1303">1303</a>
+<a href="#1304" id="1304">1304</a>
+<a href="#1305" id="1305">1305</a>
+<a href="#1306" id="1306">1306</a>
+<a href="#1307" id="1307">1307</a>
+<a href="#1308" id="1308">1308</a>
+<a href="#1309" id="1309">1309</a>
+<a href="#1310" id="1310">1310</a>
+<a href="#1311" id="1311">1311</a>
+<a href="#1312" id="1312">1312</a>
+<a href="#1313" id="1313">1313</a>
+<a href="#1314" id="1314">1314</a>
+<a href="#1315" id="1315">1315</a>
+<a href="#1316" id="1316">1316</a>
+<a href="#1317" id="1317">1317</a>
+<a href="#1318" id="1318">1318</a>
+<a href="#1319" id="1319">1319</a>
+<a href="#1320" id="1320">1320</a>
+<a href="#1321" id="1321">1321</a>
+<a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
+<a href="#1337" id="1337">1337</a>
+<a href="#1338" id="1338">1338</a>
+<a href="#1339" id="1339">1339</a>
+<a href="#1340" id="1340">1340</a>
+<a href="#1341" id="1341">1341</a>
+<a href="#1342" id="1342">1342</a>
+<a href="#1343" id="1343">1343</a>
+<a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
+<a href="#1360" id="1360">1360</a>
+<a href="#1361" id="1361">1361</a>
+<a href="#1362" id="1362">1362</a>
+<a href="#1363" id="1363">1363</a>
+<a href="#1364" id="1364">1364</a>
+<a href="#1365" id="1365">1365</a>
+<a href="#1366" id="1366">1366</a>
+<a href="#1367" id="1367">1367</a>
+<a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
     get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
@@ -1585,49 +1672,75 @@
         free_list_head.has_next()
     }
 
-    <span class="comment">// TODO: adapt to new rounding
-    </span><span class="kw">pub fn </span>impact_quote_atoms(
+    <span class="kw">pub fn </span>impact_quote_atoms(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
-        _global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtoms, ProgramError&gt; {
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
 
-        <span class="kw">let </span>book = <span class="kw">if </span>is_bid {
+        <span class="kw">let </span>book: BooksideReadOnly = <span class="kw">if </span>is_bid {
             <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
             <span class="self">self</span>.get_bids()
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
-        <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms = limit_base_atoms;
+        <span class="kw">let </span><span class="kw-2">mut </span>total_matched_quote_atoms: QuoteAtoms = QuoteAtoms::ZERO;
+        <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = limit_base_atoms;
         <span class="kw">for </span>(<span class="kw">_</span>, resting_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
-            <span class="kw">if </span>resting_order.is_expired(now_slot) {
+            <span class="comment">// Skip expired orders
+            </span><span class="kw">if </span>resting_order.is_expired(now_slot) {
                 <span class="kw">continue</span>;
             }
-            <span class="kw">let </span>matched_price = resting_order.get_price();
-            <span class="kw">let </span>matched_base_atoms = resting_order.get_num_base_atoms().min(remaining_base_atoms);
-            <span class="kw">let </span>matched_quote_atoms =
-                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)<span class="question-mark">?</span>;
+            <span class="kw">let </span>matched_price: QuoteAtomsPerBaseAtom = resting_order.get_price();
 
-            <span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
-                <span class="comment">// TODO: Check if the order is backed
-            </span>}
-            total_quote_atoms_matched =
-                total_quote_atoms_matched.checked_add(matched_quote_atoms)<span class="question-mark">?</span>;
-            <span class="kw">if </span>matched_base_atoms == remaining_base_atoms {
+            <span class="comment">// Either fill the entire resting order, or only the
+            // remaining_base_atoms, in which case, this is the last iteration
+            </span><span class="kw">let </span>matched_base_atoms: BaseAtoms =
+                resting_order.get_num_base_atoms().min(remaining_base_atoms);
+            <span class="kw">let </span>did_fully_match_resting_order: bool =
+                remaining_base_atoms &gt;= resting_order.get_num_base_atoms();
+
+            <span class="comment">// Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
+            </span><span class="kw">let </span>matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
+                matched_base_atoms,
+                is_bid != did_fully_match_resting_order,
+            )<span class="question-mark">?</span>;
+
+            <span class="comment">// Stop walking if missing the needed global account.
+            </span><span class="kw">if </span><span class="self">self</span>.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
                 <span class="kw">break</span>;
             }
 
-            remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)<span class="question-mark">?</span>;
+            <span class="comment">// Skip unbacked global orders.
+            </span><span class="kw">if </span><span class="self">self</span>.is_unbacked_global_order(
+                <span class="kw-2">&amp;</span>resting_order,
+                is_bid,
+                global_trade_accounts_opts,
+                matched_base_atoms,
+                matched_quote_atoms,
+            ) {
+                <span class="kw">continue</span>;
+            }
 
-            <span class="kw">if </span>remaining_base_atoms == BaseAtoms::ZERO {
+            total_matched_quote_atoms =
+                total_matched_quote_atoms.checked_add(matched_quote_atoms)<span class="question-mark">?</span>;
+
+            <span class="kw">if </span>!did_fully_match_resting_order {
                 <span class="kw">break</span>;
             }
+
+            <span class="comment">// prepare for next iteration
+            </span>remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)<span class="question-mark">?</span>;
         }
 
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(total_quote_atoms_matched);
+        <span class="comment">// Note that when there are not enough orders on the market to use up or
+        // to receive the desired number of base atoms, this returns just the
+        // full amount on the bookside without differentiating that return.
+
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(total_matched_quote_atoms);
     }
 
     <span class="doccomment">/// How many base atoms you get when you trade in limit_quote_atoms.
@@ -1649,7 +1762,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
 
         <span class="kw">for </span>(<span class="kw">_</span>, resting_order) <span class="kw">in </span>book.iter::&lt;RestingOrder&gt;() {
-            <span class="kw">if </span>resting_order.is_expired(now_slot) {
+            <span class="comment">// Skip expired orders.
+            </span><span class="kw">if </span>resting_order.is_expired(now_slot) {
                 <span class="kw">continue</span>;
             }
 
@@ -1669,50 +1783,40 @@
                 resting_order.get_num_base_atoms().min(base_atoms_limit);
             <span class="kw">let </span>did_fully_match_resting_order: bool =
                 base_atoms_limit &gt;= resting_order.get_num_base_atoms();
-
-            <span class="comment">// Number of quote atoms matched exactly. Always round in taker favor
-            // here because we already know that taker did not finish on the last
-            // order, so fully exhausted it and thus are rounding in taker
-            // favor.
+            <span class="comment">// Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
             </span><span class="kw">let </span>matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
                 matched_base_atoms,
                 is_bid != did_fully_match_resting_order,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// TODO: Clean this up into a separate function.
-            </span><span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
-                <span class="comment">// If global accounts are needed but not present, then this will
-                // crash. This is an intentional product decision. Would be
-                // valid to walk past, but we have chosen to give no fill rather
-                // than worse price if the taker takes the shortcut of not
-                // including global account.
-                </span><span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
-                    <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
-                } <span class="kw">else </span>{
-                    <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
-                };
-                <span class="kw">let </span>has_enough_tokens: bool = can_back_order(
-                    global_trade_accounts_opt,
-                    <span class="self">self</span>.get_trader_key_by_index(resting_order.get_trader_index()),
-                    GlobalAtoms::new(<span class="kw">if </span>is_bid {
-                        matched_base_atoms.as_u64()
-                    } <span class="kw">else </span>{
-                        matched_quote_atoms.as_u64()
-                    }),
-                );
-                <span class="kw">if </span>!has_enough_tokens {
-                    <span class="kw">continue</span>;
-                }
+            <span class="comment">// Stop walking if missing the needed global account.
+            </span><span class="kw">if </span><span class="self">self</span>.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
+                <span class="kw">break</span>;
+            }
+
+            <span class="comment">// Skip unbacked global orders.
+            </span><span class="kw">if </span><span class="self">self</span>.is_unbacked_global_order(
+                <span class="kw-2">&amp;</span>resting_order,
+                is_bid,
+                global_trade_accounts_opts,
+                matched_base_atoms,
+                matched_quote_atoms,
+            ) {
+                <span class="kw">continue</span>;
             }
 
             total_matched_base_atoms = total_matched_base_atoms.checked_add(matched_base_atoms)<span class="question-mark">?</span>;
 
-            <span class="kw">if </span>matched_base_atoms == base_atoms_limit {
+            <span class="kw">if </span>!did_fully_match_resting_order {
                 <span class="kw">break</span>;
             }
 
-            remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)<span class="question-mark">?</span>;
-            <span class="kw">if </span>remaining_quote_atoms == QuoteAtoms::ZERO {
+            <span class="comment">// Prepare for next iteration
+            </span>remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)<span class="question-mark">?</span>;
+
+            <span class="comment">// we can match exactly in base atoms but also deplete all quote atoms at the same time
+            </span><span class="kw">if </span>remaining_quote_atoms == QuoteAtoms::ZERO {
                 <span class="kw">break</span>;
             }
         }
@@ -1781,6 +1885,65 @@
             fixed.get_asks_root_index(),
             fixed.get_asks_best_index(),
         )
+    }
+
+    <span class="kw">fn </span>is_missing_global_account(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        resting_order: <span class="kw-2">&amp;</span>RestingOrder,
+        is_bid: bool,
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+    ) -&gt; bool {
+        <span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
+            <span class="comment">// If global accounts are needed but not present, then this will
+            // crash. This is an intentional product decision. Would be
+            // valid to walk past, but we have chosen to give no fill rather
+            // than worse price if the taker takes the shortcut of not
+            // including global account.
+            </span><span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
+            } <span class="kw">else </span>{
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
+            };
+            <span class="kw">if </span>global_trade_accounts_opt.is_none() {
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
+        }
+        <span class="kw">return </span><span class="bool-val">false</span>;
+    }
+
+    <span class="kw">fn </span>is_unbacked_global_order(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        resting_order: <span class="kw-2">&amp;</span>RestingOrder,
+        is_bid: bool,
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+        matched_base_atoms: BaseAtoms,
+        matched_quote_atoms: QuoteAtoms,
+    ) -&gt; bool {
+        <span class="kw">if </span>resting_order.get_order_type() == OrderType::Global {
+            <span class="comment">// If global accounts are needed but not present, then this will
+            // crash. This is an intentional product decision. Would be
+            // valid to walk past, but we have chosen to give no fill rather
+            // than worse price if the taker takes the shortcut of not
+            // including global account.
+            </span><span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
+            } <span class="kw">else </span>{
+                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
+            };
+            <span class="kw">let </span>has_enough_tokens: bool = can_back_order(
+                global_trade_accounts_opt,
+                <span class="self">self</span>.get_trader_key_by_index(resting_order.get_trader_index()),
+                GlobalAtoms::new(<span class="kw">if </span>is_bid {
+                    matched_base_atoms.as_u64()
+                } <span class="kw">else </span>{
+                    matched_quote_atoms.as_u64()
+                }),
+            );
+            <span class="kw">if </span>!has_enough_tokens {
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
+        }
+        <span class="kw">return </span><span class="bool-val">false</span>;
     }
 
     <span class="kw">pub fn </span>get_trader_index(<span class="kw-2">&amp;</span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; DataIndex {
@@ -2000,6 +2163,16 @@
                 } <span class="kw">else </span>{
                     <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
                 };
+                <span class="comment">// When the global account is not included, a taker order can
+                // halt here, but a possible maker order will need to crash
+                // since that would result in a crossed book.
+                </span><span class="kw">if </span>global_trade_accounts_opt.is_none() {
+                    <span class="kw">if </span>order_type_can_rest(order_type) {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(ManifestError::MissingGlobal.into());
+                    } <span class="kw">else </span>{
+                        <span class="kw">break</span>;
+                    }
+                }
                 <span class="kw">let </span>has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     <span class="kw-2">&amp;</span>maker,
@@ -2548,6 +2721,7 @@
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
         };
+
         remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
         <span class="comment">// Return the exact number of atoms if the resting order is an
