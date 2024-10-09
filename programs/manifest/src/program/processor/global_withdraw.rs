@@ -17,6 +17,10 @@ use crate::{
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalWithdrawParams {
     pub amount_atoms: u64,
+    // No trader index hint because global account is small so there is not much
+    // benefit from hinted indices, unlike the market which can get large. Also,
+    // seats are not permanent like on a market due to eviction, so it is more
+    // likely that a client could send a bad request. Just look it up for them.
 }
 
 impl GlobalWithdrawParams {
