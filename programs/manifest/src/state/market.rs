@@ -400,6 +400,10 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 } else {
                     &global_trade_accounts_opts[1]
                 };
+                // If global account was not included, stop walking the orderbook.
+                if global_trade_accounts_opt.is_none() {
+                    break;
+                }
                 let has_enough_tokens: bool = can_back_order(
                     global_trade_accounts_opt,
                     self.get_trader_key_by_index(resting_order.get_trader_index()),
