@@ -1,11 +1,14 @@
-use std::{cell::RefMut, mem::size_of};
+use std::{
+    cell::{Ref, RefMut},
+    mem::size_of,
+};
 
 use hypertree::{
     get_mut_helper, DataIndex, FreeList, HyperTreeReadOperations, HyperTreeWriteOperations, NIL,
 };
 use manifest::{
-    program::{claim_seat_instruction, expand_market_instruction, get_mut_dynamic_account, invoke},
-    state::{MarketFixed, MarketRefMut},
+    program::{claim_seat_instruction, expand_market_instruction, get_dynamic_account, invoke},
+    state::{MarketFixed, MarketRef},
     validation::ManifestAccountInfo,
 };
 
@@ -73,8 +76,8 @@ pub(crate) fn process_claim_seat(
     let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
 
     // Get the free block and setup the new MarketInfo there
-    let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-    let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+    let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+    let dynamic_account: MarketRef = get_dynamic_account(market_data);
     let trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
     let market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
 

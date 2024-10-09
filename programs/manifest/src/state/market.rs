@@ -491,12 +491,24 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             fixed.get_asks_best_index(),
         )
     }
+
+    pub fn get_trader_index(&self, trader: &Pubkey) -> DataIndex {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+
+        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        let trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
+        trader_index
+    }
 }
 
 // This generic impl covers MarketRef, MarketRefMut and other
 // DynamicAccount variants that allow write access.
-impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
-    DynamicAccount<Fixed, Dynamic>
+impl<
+        Fixed: DerefOrBorrowMut<MarketFixed> + DerefOrBorrow<MarketFixed>,
+        Dynamic: DerefOrBorrowMut<[u8]> + DerefOrBorrow<[u8]>,
+    > DynamicAccount<Fixed, Dynamic>
 {
     fn borrow_mut(&mut self) -> MarketRefMut {
         MarketRefMut {
@@ -536,17 +548,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, free_address)
             .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
         Ok(())
-    }
-
-    // TODO: Fix this. Uses mut instead of immutable because of trait issues.
-    pub fn get_trader_index(&mut self, trader: &Pubkey) -> DataIndex {
-        let DynamicAccount { fixed, dynamic } = self.borrow_mut();
-
-        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
-            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
-        let trader_index: DataIndex =
-            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
-        trader_index
     }
 
     // Only used when temporarily claiming for swap and we dont have the system

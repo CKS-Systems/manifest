@@ -167,10 +167,10 @@ pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
     dynamic_account
 }
 
-// TODO: Make dynamic_account immutable here
+// Uses a MarketRefMut instead of a MarketRef because callers will have mutable data.
 pub(crate) fn get_trader_index_with_hint(
     trader_index_hint: Option<DataIndex>,
-    dynamic_account: &mut MarketRefMut,
+    dynamic_account: &MarketRefMut,
     payer: &Signer,
 ) -> Result<DataIndex, ProgramError> {
     let trader_index: DataIndex = match trader_index_hint {
