@@ -294,49 +294,75 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         free_list_head.has_next()
     }
 
-    // TODO: adapt to new rounding
     pub fn impact_quote_atoms(
         &self,
         is_bid: bool,
         limit_base_atoms: BaseAtoms,
-        _global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<QuoteAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
 
-        let book = if is_bid {
+        let book: BooksideReadOnly = if is_bid {
             self.get_asks()
         } else {
             self.get_bids()
         };
 
-        let mut total_quote_atoms_matched: QuoteAtoms = QuoteAtoms::ZERO;
-        let mut remaining_base_atoms = limit_base_atoms;
+        let mut total_matched_quote_atoms: QuoteAtoms = QuoteAtoms::ZERO;
+        let mut remaining_base_atoms: BaseAtoms = limit_base_atoms;
         for (_, resting_order) in book.iter::<RestingOrder>() {
+            // Skip expired orders
             if resting_order.is_expired(now_slot) {
                 continue;
             }
-            let matched_price = resting_order.get_price();
-            let matched_base_atoms = resting_order.get_num_base_atoms().min(remaining_base_atoms);
-            let matched_quote_atoms =
-                matched_price.checked_quote_for_base(matched_base_atoms, is_bid)?;
+            let matched_price: QuoteAtomsPerBaseAtom = resting_order.get_price();
 
-            if resting_order.get_order_type() == OrderType::Global {
-                // TODO: Check if the order is backed
-            }
-            total_quote_atoms_matched =
-                total_quote_atoms_matched.checked_add(matched_quote_atoms)?;
-            if matched_base_atoms == remaining_base_atoms {
+            // Either fill the entire resting order, or only the
+            // remaining_base_atoms, in which case, this is the last iteration
+            let matched_base_atoms: BaseAtoms =
+                resting_order.get_num_base_atoms().min(remaining_base_atoms);
+            let did_fully_match_resting_order: bool =
+                remaining_base_atoms >= resting_order.get_num_base_atoms();
+
+            // Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
+            let matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
+                matched_base_atoms,
+                is_bid != did_fully_match_resting_order,
+            )?;
+
+            // Stop walking if missing the needed global account.
+            if self.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
                 break;
             }
 
+            // Skip unbacked global orders.
+            if self.is_unbacked_global_order(
+                &resting_order,
+                is_bid,
+                global_trade_accounts_opts,
+                matched_base_atoms,
+                matched_quote_atoms,
+            ) {
+                continue;
+            }
+
+            total_matched_quote_atoms =
+                total_matched_quote_atoms.checked_add(matched_quote_atoms)?;
+
+            if !did_fully_match_resting_order {
+                break;
+            }
+
+            // prepare for next iteration
             remaining_base_atoms = remaining_base_atoms.checked_sub(matched_base_atoms)?;
-
-            if remaining_base_atoms == BaseAtoms::ZERO {
-                break;
-            }
         }
 
-        return Ok(total_quote_atoms_matched);
+        // Note that when there are not enough orders on the market to use up or
+        // to receive the desired number of base atoms, this returns just the
+        // full amount on the bookside without differentiating that return.
+
+        return Ok(total_matched_quote_atoms);
     }
 
     /// How many base atoms you get when you trade in limit_quote_atoms.
@@ -358,6 +384,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         let mut remaining_quote_atoms: QuoteAtoms = limit_quote_atoms;
 
         for (_, resting_order) in book.iter::<RestingOrder>() {
+            // Skip expired orders.
             if resting_order.is_expired(now_slot) {
                 continue;
             }
@@ -378,49 +405,39 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
                 resting_order.get_num_base_atoms().min(base_atoms_limit);
             let did_fully_match_resting_order: bool =
                 base_atoms_limit >= resting_order.get_num_base_atoms();
-
-            // Number of quote atoms matched exactly. Always round in taker favor
-            // here because we already know that taker did not finish on the last
-            // order, so fully exhausted it and thus are rounding in taker
-            // favor.
+            // Number of quote atoms matched exactly. Round in taker favor if
+            // fully matching.
             let matched_quote_atoms: QuoteAtoms = matched_price.checked_quote_for_base(
                 matched_base_atoms,
                 is_bid != did_fully_match_resting_order,
             )?;
 
-            // TODO: Clean this up into a separate function.
-            if resting_order.get_order_type() == OrderType::Global {
-                // If global accounts are needed but not present, then this will
-                // crash. This is an intentional product decision. Would be
-                // valid to walk past, but we have chosen to give no fill rather
-                // than worse price if the taker takes the shortcut of not
-                // including global account.
-                let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                    &global_trade_accounts_opts[0]
-                } else {
-                    &global_trade_accounts_opts[1]
-                };
-                let has_enough_tokens: bool = can_back_order(
-                    global_trade_accounts_opt,
-                    self.get_trader_key_by_index(resting_order.get_trader_index()),
-                    GlobalAtoms::new(if is_bid {
-                        matched_base_atoms.as_u64()
-                    } else {
-                        matched_quote_atoms.as_u64()
-                    }),
-                );
-                if !has_enough_tokens {
-                    continue;
-                }
+            // Stop walking if missing the needed global account.
+            if self.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
+                break;
+            }
+
+            // Skip unbacked global orders.
+            if self.is_unbacked_global_order(
+                &resting_order,
+                is_bid,
+                global_trade_accounts_opts,
+                matched_base_atoms,
+                matched_quote_atoms,
+            ) {
+                continue;
             }
 
             total_matched_base_atoms = total_matched_base_atoms.checked_add(matched_base_atoms)?;
 
-            if matched_base_atoms == base_atoms_limit {
+            if !did_fully_match_resting_order {
                 break;
             }
 
+            // Prepare for next iteration
             remaining_quote_atoms = remaining_quote_atoms.checked_sub(matched_quote_atoms)?;
+
+            // we can match exactly in base atoms but also deplete all quote atoms at the same time
             if remaining_quote_atoms == QuoteAtoms::ZERO {
                 break;
             }
@@ -490,6 +507,65 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             fixed.get_asks_root_index(),
             fixed.get_asks_best_index(),
         )
+    }
+
+    fn is_missing_global_account(
+        &self,
+        resting_order: &RestingOrder,
+        is_bid: bool,
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+    ) -> bool {
+        if resting_order.get_order_type() == OrderType::Global {
+            // If global accounts are needed but not present, then this will
+            // crash. This is an intentional product decision. Would be
+            // valid to walk past, but we have chosen to give no fill rather
+            // than worse price if the taker takes the shortcut of not
+            // including global account.
+            let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                &global_trade_accounts_opts[0]
+            } else {
+                &global_trade_accounts_opts[1]
+            };
+            if global_trade_accounts_opt.is_none() {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn is_unbacked_global_order(
+        &self,
+        resting_order: &RestingOrder,
+        is_bid: bool,
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+        matched_base_atoms: BaseAtoms,
+        matched_quote_atoms: QuoteAtoms,
+    ) -> bool {
+        if resting_order.get_order_type() == OrderType::Global {
+            // If global accounts are needed but not present, then this will
+            // crash. This is an intentional product decision. Would be
+            // valid to walk past, but we have chosen to give no fill rather
+            // than worse price if the taker takes the shortcut of not
+            // including global account.
+            let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
+                &global_trade_accounts_opts[0]
+            } else {
+                &global_trade_accounts_opts[1]
+            };
+            let has_enough_tokens: bool = can_back_order(
+                global_trade_accounts_opt,
+                self.get_trader_key_by_index(resting_order.get_trader_index()),
+                GlobalAtoms::new(if is_bid {
+                    matched_base_atoms.as_u64()
+                } else {
+                    matched_quote_atoms.as_u64()
+                }),
+            );
+            if !has_enough_tokens {
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn get_trader_index(&self, trader: &Pubkey) -> DataIndex {
@@ -709,6 +785,16 @@ impl<
                 } else {
                     &global_trade_accounts_opts[1]
                 };
+                // When the global account is not included, a taker order can
+                // halt here, but a possible maker order will need to crash
+                // since that would result in a crossed book.
+                if global_trade_accounts_opt.is_none() {
+                    if order_type_can_rest(order_type) {
+                        return Err(ManifestError::MissingGlobal.into());
+                    } else {
+                        break;
+                    }
+                }
                 let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
@@ -1257,6 +1343,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
+
         remove_from_global(&global_trade_accounts_opt)?;
     } else {
         // Return the exact number of atoms if the resting order is an
