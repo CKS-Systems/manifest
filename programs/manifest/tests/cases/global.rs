@@ -1165,3 +1165,51 @@ async fn global_stop_without_global() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn global_crash_without_global() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture.global_add_trader().await?;
+    test_fixture.global_deposit(1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                1,
+                0,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    assert!(
+        test_fixture
+            .batch_update_for_keypair(
+                None,
+                vec![],
+                vec![PlaceOrderParams::new(
+                    100,
+                    9,
+                    -1,
+                    false,
+                    OrderType::Limit,
+                    NO_EXPIRATION_LAST_VALID_SLOT,
+                )],
+                &test_fixture.payer_keypair().insecure_clone(),
+            )
+            .await
+            .is_err(),
+        "Walked past a global without global account and left crossed book"
+    );
+
+    Ok(())
+}
