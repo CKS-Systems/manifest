@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728417547692,
+  "lastUpdate": 1728459259463,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5401,6 +5401,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6039,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aa23c67d300d0fb71f5e904b19684408f1870bb1",
+          "message": "Remove dead code in global (#152)\n\n* remove dead code in global\r\n* comment\r\n* regen\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-09T10:09:15+03:00",
+          "tree_id": "e1b1cc5e4d5ab05b1bca1bc1106b5e41fcd5c6ef",
+          "url": "https://github.com/CKS-Systems/manifest/commit/aa23c67d300d0fb71f5e904b19684408f1870bb1"
+        },
+        "date": 1728459258363,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3506,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5553,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6056,
             "unit": "CU",
             "range": "",
             "extra": ""
