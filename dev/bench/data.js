@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728459259463,
+  "lastUpdate": 1728459398657,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5467,6 +5467,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6056,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d907ef5e02934931fd5fb73a0bf3445ba6893090",
+          "message": "reduce need for mutability on some dynamic functions (#163)\n\n* reduce need for mutability on some dynamic functions\r\n\r\n* comment",
+          "timestamp": "2024-10-09T10:12:07+03:00",
+          "tree_id": "d38d031a733bbda34b5ddf42bf6137702c16be30",
+          "url": "https://github.com/CKS-Systems/manifest/commit/d907ef5e02934931fd5fb73a0bf3445ba6893090"
+        },
+        "date": 1728459396708,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3496,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5559,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6041,
             "unit": "CU",
             "range": "",
             "extra": ""
