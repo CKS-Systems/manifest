@@ -1567,15 +1567,15 @@
             "type": "publicKey"
           },
           {
-            "name": "unclaimedGasDeposits",
-            "type": "u32"
-          },
-          {
             "name": "depositIndex",
             "type": "u32"
           },
           {
             "name": "padding",
+            "type": "u32"
+          },
+          {
+            "name": "padding2",
             "type": "u64"
           }
         ]

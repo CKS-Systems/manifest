@@ -537,12 +537,24 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         }
         return false;
     }
+
+    pub fn get_trader_index(&self, trader: &Pubkey) -> DataIndex {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+
+        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
+            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
+        let trader_index: DataIndex =
+            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
+        trader_index
+    }
 }
 
 // This generic impl covers MarketRef, MarketRefMut and other
 // DynamicAccount variants that allow write access.
-impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
-    DynamicAccount<Fixed, Dynamic>
+impl<
+        Fixed: DerefOrBorrowMut<MarketFixed> + DerefOrBorrow<MarketFixed>,
+        Dynamic: DerefOrBorrowMut<[u8]> + DerefOrBorrow<[u8]>,
+    > DynamicAccount<Fixed, Dynamic>
 {
     fn borrow_mut(&mut self) -> MarketRefMut {
         MarketRefMut {
@@ -582,17 +594,6 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, free_address)
             .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
         Ok(())
-    }
-
-    // TODO: Fix this. Uses mut instead of immutable because of trait issues.
-    pub fn get_trader_index(&mut self, trader: &Pubkey) -> DataIndex {
-        let DynamicAccount { fixed, dynamic } = self.borrow_mut();
-
-        let claimed_seats_tree: ClaimedSeatTreeReadOnly =
-            ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
-        let trader_index: DataIndex =
-            claimed_seats_tree.lookup_index(&ClaimedSeat::new_empty(*trader));
-        trader_index
     }
 
     // Only used when temporarily claiming for swap and we dont have the system
@@ -893,7 +894,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                     } else {
                         &global_trade_accounts_opts[1]
                     };
-                    remove_from_global(&global_trade_accounts_opt, &maker)?;
+                    remove_from_global(&global_trade_accounts_opt)?;
                 }
 
                 let next_maker_order_index: DataIndex = get_next_candidate_match_index(
@@ -1097,10 +1098,7 @@ impl<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             } else {
                 &global_trade_accounts_opts[0]
             };
-            let trader: &Pubkey = &get_helper::<RBNode<ClaimedSeat>>(dynamic, trader_index)
-                .get_value()
-                .trader;
-            remove_from_global(&global_trade_accounts_opt, trader)?
+            remove_from_global(&global_trade_accounts_opt)?
         } else {
             update_balance(dynamic, trader_index, !is_bid, true, amount_atoms)?;
         }
@@ -1305,11 +1303,7 @@ fn remove_and_update_balances(
         } else {
             &global_trade_accounts_opts[0]
         };
-        let maker: &Pubkey =
-            &get_helper::<RBNode<ClaimedSeat>>(dynamic, resting_order_to_remove.get_trader_index())
-                .get_value()
-                .trader;
-        remove_from_global(&global_trade_accounts_opt, maker)?;
+        remove_from_global(&global_trade_accounts_opt)?;
     } else {
         // Return the exact number of atoms if the resting order is an
         // ask. If the resting order is bid, multiply by price and round

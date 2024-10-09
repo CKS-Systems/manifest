@@ -573,7 +573,6 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
     let usdc_mint_f: MintFixture =
         MintFixture::new_with_version(Rc::clone(&context), Some(6), false).await;
 
-    // TODO: Use xfer fee extension
     let spl_mint_keypair: Keypair = Keypair::new();
     let extension_types: Vec<spl_token_2022::extension::ExtensionType> =
         vec![spl_token_2022::extension::ExtensionType::TransferFeeConfig];
@@ -712,7 +711,6 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
     )
     .await?;
 
-    // TODO: Check that the balance on the seat reflects the xfer fee
     let market_account: solana_sdk::account::Account = context
         .borrow_mut()
         .banks_client
