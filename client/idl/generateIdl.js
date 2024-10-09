@@ -106,28 +106,7 @@ function modifyIdlCore(programName) {
       }
     }
 
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.type.defined == 'PodBool') {
-            field.type = 'bool';
-          }
-          if (field.type.defined == 'BaseAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'GlobalAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
-            field.type = 'u128';
-          }
-          return field;
-        });
-      }
-    }
+    updateIdlTypes(idl);
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
@@ -266,29 +245,7 @@ function modifyIdlCore(programName) {
       },
     });
 
-    // TODO: Make a helper for this that is shared
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.type.defined == 'PodBool') {
-            field.type = 'bool';
-          }
-          if (field.type.defined == 'BaseAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'GlobalAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
-            field.type = 'u128';
-          }
-          return field;
-        });
-      }
-    }
+    updateIdlTypes(idl);
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
@@ -382,28 +339,7 @@ function modifyIdlCore(programName) {
       },
     });
 
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.type.defined == 'PodBool') {
-            field.type = 'bool';
-          }
-          if (field.type.defined == 'BaseAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'GlobalAtoms') {
-            field.type = 'u64';
-          }
-          if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
-            field.type = 'u128';
-          }
-          return field;
-        });
-      }
-    }
+    updateIdlTypes(idl);
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
@@ -492,6 +428,31 @@ function findAndReplaceRecursively(target, find, replaceWith) {
     carry[key] = findAndReplaceRecursively(val, find, replaceWith);
     return carry;
   }, {});
+}
+
+function updateIdlTypes(idl) {
+  for (const idlType of idl.types) {
+    if (idlType.type && idlType.type.fields) {
+      idlType.type.fields = idlType.type.fields.map((field) => {
+        if (field.type.defined == 'PodBool') {
+          field.type = 'bool';
+        }
+        if (field.type.defined == 'BaseAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'QuoteAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'GlobalAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
+          field.type = 'u128';
+        }
+        return field;
+      });
+    }
+  }
 }
 
 main().catch((err) => {
