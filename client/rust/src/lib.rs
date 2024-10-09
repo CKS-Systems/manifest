@@ -214,9 +214,8 @@ mod test {
     use manifest::{
         quantities::BaseAtoms,
         state::{
-            constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs,
-            OrderType, MARKET_BLOCK_SIZE,
-            MARKET_FIXED_SIZE,
+            constants::NO_EXPIRATION_LAST_VALID_SLOT, AddOrderToMarketArgs, OrderType,
+            MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE,
         },
         validation::MintAccountInfo,
     };
@@ -557,5 +556,4 @@ mod test {
         assert!(!manifest_market.unidirectional());
         assert_eq!(manifest_market.program_dependencies().len(), 0);
     }
-
 }
