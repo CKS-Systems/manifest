@@ -211,14 +211,14 @@
         invoke_signed(
             <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
                 token_program.key,
-                trader_token.key,
+                vault.key,
                 <span class="kw">if </span>is_base {
                     dynamic_account.fixed.get_base_mint()
                 } <span class="kw">else </span>{
                     dynamic_account.get_quote_mint()
                 },
+                trader_token.key,
                 vault.key,
-                payer.key,
                 <span class="kw-2">&amp;</span>[],
                 amount_atoms,
                 <span class="kw">if </span>is_base {
