@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728593287715,
+  "lastUpdate": 1728593351164,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5993,6 +5993,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6038,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "714be51160ab7849affcac7c555327cf53acb926",
+          "message": "Remove tail recursion in red black tree (#174)\n\n* remove tail recursion in red black tree\r\n\r\n* Unwrap more\r\n\r\n* do not recurse",
+          "timestamp": "2024-10-10T16:24:11-04:00",
+          "tree_id": "7209d3e4c0d84ac906c447325a37cf4f27c94072",
+          "url": "https://github.com/CKS-Systems/manifest/commit/714be51160ab7849affcac7c555327cf53acb926"
+        },
+        "date": 1728593349157,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3500,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5582,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6087,
             "unit": "CU",
             "range": "",
             "extra": ""
