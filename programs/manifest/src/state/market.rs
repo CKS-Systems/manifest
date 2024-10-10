@@ -912,6 +912,8 @@ impl<
                 market,
                 maker,
                 taker,
+                base_mint: fixed.base_mint,
+                quote_mint: fixed.quote_mint,
                 base_atoms: base_atoms_traded,
                 quote_atoms: quote_atoms_traded,
                 price: matched_price,

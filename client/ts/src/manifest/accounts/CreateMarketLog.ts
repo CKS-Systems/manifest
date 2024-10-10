@@ -17,6 +17,8 @@ import * as beet from '@metaplex-foundation/beet';
 export type CreateMarketLogArgs = {
   market: web3.PublicKey;
   creator: web3.PublicKey;
+  baseMint: web3.PublicKey;
+  quoteMint: web3.PublicKey;
 };
 /**
  * Holds the data for the {@link CreateMarketLog} Account and provides de/serialization
@@ -29,13 +31,20 @@ export class CreateMarketLog implements CreateMarketLogArgs {
   private constructor(
     readonly market: web3.PublicKey,
     readonly creator: web3.PublicKey,
+    readonly baseMint: web3.PublicKey,
+    readonly quoteMint: web3.PublicKey,
   ) {}
 
   /**
    * Creates a {@link CreateMarketLog} instance from the provided args.
    */
   static fromArgs(args: CreateMarketLogArgs) {
-    return new CreateMarketLog(args.market, args.creator);
+    return new CreateMarketLog(
+      args.market,
+      args.creator,
+      args.baseMint,
+      args.quoteMint,
+    );
   }
 
   /**
@@ -140,6 +149,8 @@ export class CreateMarketLog implements CreateMarketLogArgs {
     return {
       market: this.market.toBase58(),
       creator: this.creator.toBase58(),
+      baseMint: this.baseMint.toBase58(),
+      quoteMint: this.quoteMint.toBase58(),
     };
   }
 }
@@ -155,6 +166,8 @@ export const createMarketLogBeet = new beet.BeetStruct<
   [
     ['market', beetSolana.publicKey],
     ['creator', beetSolana.publicKey],
+    ['baseMint', beetSolana.publicKey],
+    ['quoteMint', beetSolana.publicKey],
   ],
   CreateMarketLog.fromArgs,
   'CreateMarketLog',

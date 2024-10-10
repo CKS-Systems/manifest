@@ -34,6 +34,8 @@ pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramEr
 pub struct CreateMarketLog {
     pub market: Pubkey,
     pub creator: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
 }
 
 #[repr(C)]
@@ -67,6 +69,8 @@ pub struct FillLog {
     pub market: Pubkey,
     pub maker: Pubkey,
     pub taker: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
     pub price: QuoteAtomsPerBaseAtom,
     pub base_atoms: BaseAtoms,
     pub quote_atoms: QuoteAtoms,
