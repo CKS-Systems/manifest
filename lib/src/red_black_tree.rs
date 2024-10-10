@@ -1316,8 +1316,6 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             self.set_color::<V>(uncle_index, Color::Black);
             self.set_color::<V>(grandparent_index, Color::Red);
 
-            // Recurse
-            self.insert_fix(grandparent_index);
             return grandparent_index;
         }
 
