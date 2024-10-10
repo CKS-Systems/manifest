@@ -2338,6 +2338,25 @@
 <a href="#2336" id="2336">2336</a>
 <a href="#2337" id="2337">2337</a>
 <a href="#2338" id="2338">2338</a>
+<a href="#2339" id="2339">2339</a>
+<a href="#2340" id="2340">2340</a>
+<a href="#2341" id="2341">2341</a>
+<a href="#2342" id="2342">2342</a>
+<a href="#2343" id="2343">2343</a>
+<a href="#2344" id="2344">2344</a>
+<a href="#2345" id="2345">2345</a>
+<a href="#2346" id="2346">2346</a>
+<a href="#2347" id="2347">2347</a>
+<a href="#2348" id="2348">2348</a>
+<a href="#2349" id="2349">2349</a>
+<a href="#2350" id="2350">2350</a>
+<a href="#2351" id="2351">2351</a>
+<a href="#2352" id="2352">2352</a>
+<a href="#2353" id="2353">2353</a>
+<a href="#2354" id="2354">2354</a>
+<a href="#2355" id="2355">2355</a>
+<a href="#2356" id="2356">2356</a>
+<a href="#2357" id="2357">2357</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -3362,8 +3381,17 @@
         <span class="kw">if </span><span class="self">self</span>.max_index != NIL &amp;&amp; <span class="kw-2">*</span>get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data, <span class="self">self</span>.max_index) &lt; new_node {
             <span class="self">self</span>.max_index = index;
         }
+
         <span class="self">self</span>.insert_node_no_fix(new_node, index);
-        <span class="self">self</span>.insert_fix(index);
+
+        <span class="comment">// Avoid recursion by doing a loop here.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>node_to_fix: DataIndex = index;
+        <span class="kw">loop </span>{
+            node_to_fix = <span class="self">self</span>.insert_fix(node_to_fix);
+            <span class="kw">if </span>node_to_fix == NIL {
+                <span class="kw">break</span>;
+            }
+        }
 
         <span class="attr">#[cfg(test)]
         </span><span class="self">self</span>.verify_rb_tree::&lt;V&gt;()
@@ -3420,7 +3448,15 @@
         </span><span class="kw">let </span>child_index: DataIndex = <span class="self">self</span>.get_child_index::&lt;V&gt;(index);
         <span class="kw">let </span>parent_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(index);
         <span class="self">self</span>.update_parent_child::&lt;V&gt;(index);
-        <span class="self">self</span>.remove_fix(child_index, parent_index);
+
+        <span class="comment">// Avoid recursion by doing a loop here.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>nodes_to_fix: (DataIndex, DataIndex) = (child_index, parent_index);
+        <span class="kw">loop </span>{
+            nodes_to_fix = <span class="self">self</span>.remove_fix(nodes_to_fix.<span class="number">0</span>, nodes_to_fix.<span class="number">1</span>);
+            <span class="kw">if </span>nodes_to_fix.<span class="number">0 </span>== NIL &amp;&amp; nodes_to_fix.<span class="number">1 </span>== NIL {
+                <span class="kw">break</span>;
+            }
+        }
     }
 }
 
@@ -3445,13 +3481,17 @@
         <span class="self">self</span>.remove_by_index(index);
     }
 
-    <span class="kw">fn </span>remove_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, current_index: DataIndex, parent_index: DataIndex) {
+    <span class="kw">fn </span>remove_fix(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        current_index: DataIndex,
+        parent_index: DataIndex,
+    ) -&gt; (DataIndex, DataIndex) {
         <span class="comment">// Current is double black. It could be NIL if we just deleted a leaf,
         // so we need the parent to know where in the tree we are.
 
         // If we get to the root, then we are done.
         </span><span class="kw">if </span><span class="self">self</span>.root_index == current_index {
-            <span class="kw">return</span>;
+            <span class="kw">return </span>(NIL, NIL);
         }
 
         <span class="kw">let </span>sibling_index: DataIndex = <span class="self">self</span>.get_sibling_index::&lt;V&gt;(current_index, parent_index);
@@ -3474,7 +3514,7 @@
                 <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, sibling_color);
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, parent_color);
                 <span class="self">self</span>.rotate_right::&lt;V&gt;(parent_index);
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(NIL, NIL);
             }
             <span class="comment">// ii left right
             </span><span class="kw">if </span><span class="self">self</span>.get_color::&lt;V&gt;(sibling_right_child_index) == Color::Red
@@ -3485,7 +3525,7 @@
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
                 <span class="self">self</span>.rotate_left::&lt;V&gt;(sibling_index);
                 <span class="self">self</span>.rotate_right::&lt;V&gt;(parent_index);
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(NIL, NIL);
             }
             <span class="comment">// iii right right
             </span><span class="kw">if </span><span class="self">self</span>.get_color::&lt;V&gt;(sibling_right_child_index) == Color::Red
@@ -3495,7 +3535,7 @@
                 <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, sibling_color);
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, parent_color);
                 <span class="self">self</span>.rotate_left::&lt;V&gt;(parent_index);
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(NIL, NIL);
             }
             <span class="comment">// iv right left
             </span><span class="kw">if </span><span class="self">self</span>.get_color::&lt;V&gt;(sibling_left_child_index) == Color::Red
@@ -3506,7 +3546,7 @@
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
                 <span class="self">self</span>.rotate_right::&lt;V&gt;(sibling_index);
                 <span class="self">self</span>.rotate_left::&lt;V&gt;(parent_index);
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(NIL, NIL);
             }
             <span class="macro">unreachable!</span>();
         }
@@ -3516,12 +3556,10 @@
         </span><span class="kw">if </span>sibling_color == Color::Black {
             <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Red);
             <span class="kw">if </span>parent_color == Color::Black {
-                <span class="comment">// Recurse on the parent
-                </span><span class="self">self</span>.remove_fix(parent_index, <span class="self">self</span>.get_parent_index::&lt;V&gt;(parent_index));
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(parent_index, <span class="self">self</span>.get_parent_index::&lt;V&gt;(parent_index));
             } <span class="kw">else </span>{
                 <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Black);
-                <span class="kw">return</span>;
+                <span class="kw">return </span>(NIL, NIL);
             }
         }
 
@@ -3531,13 +3569,14 @@
             <span class="self">self</span>.rotate_right::&lt;V&gt;(parent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Red);
             <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
-            <span class="self">self</span>.remove_fix(current_index, parent_index);
+            <span class="kw">return </span>(current_index, parent_index);
         } <span class="kw">else if </span><span class="self">self</span>.is_right_child::&lt;V&gt;(sibling_index) {
             <span class="self">self</span>.rotate_left::&lt;V&gt;(parent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Red);
             <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
-            <span class="self">self</span>.remove_fix(current_index, parent_index);
+            <span class="kw">return </span>(current_index, parent_index);
         }
+        <span class="kw">return </span>(NIL, NIL);
     }
 
     <span class="doccomment">/// Insert a node into the subtree without fixing. This node could be a leaf
@@ -3598,10 +3637,10 @@
         }
     }
 
-    <span class="kw">fn </span>insert_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index_to_fix: DataIndex) {
+    <span class="kw">fn </span>insert_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index_to_fix: DataIndex) -&gt; DataIndex {
         <span class="kw">if </span><span class="self">self</span>.root_index == index_to_fix {
             <span class="self">self</span>.set_color::&lt;V&gt;(index_to_fix, Color::Black);
-            <span class="kw">return</span>;
+            <span class="kw">return </span>NIL;
         }
 
         <span class="comment">// Check the color of the parent. If it is black, then nothing left to do.
@@ -3609,7 +3648,7 @@
         <span class="kw">let </span>parent_color: Color = <span class="self">self</span>.get_color::&lt;V&gt;(parent_index);
 
         <span class="kw">if </span>parent_color == Color::Black {
-            <span class="kw">return</span>;
+            <span class="kw">return </span>NIL;
         }
 
         <span class="kw">let </span>grandparent_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(parent_index);
@@ -3636,9 +3675,7 @@
             <span class="self">self</span>.set_color::&lt;V&gt;(uncle_index, Color::Black);
             <span class="self">self</span>.set_color::&lt;V&gt;(grandparent_index, Color::Red);
 
-            <span class="comment">// Recurse
-            </span><span class="self">self</span>.insert_fix(grandparent_index);
-            <span class="kw">return</span>;
+            <span class="kw">return </span>grandparent_index;
         }
 
         <span class="kw">let </span>grandparent_color: Color = <span class="self">self</span>.get_color::&lt;V&gt;(grandparent_index);
@@ -3650,7 +3687,7 @@
 
         <span class="kw">if </span>grandparent_index == NIL &amp;&amp; parent_color == Color::Red {
             <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Black);
-            <span class="kw">return</span>;
+            <span class="kw">return </span>NIL;
         }
 
         <span class="comment">// Case II: Uncle is black, left left
@@ -3680,6 +3717,7 @@
             <span class="self">self</span>.set_color::&lt;V&gt;(index_to_fix, grandparent_color);
             <span class="self">self</span>.set_color::&lt;V&gt;(grandparent_index, index_to_fix_color);
         }
+        NIL
     }
 }
 
