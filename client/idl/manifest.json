@@ -870,6 +870,14 @@
           {
             "name": "creator",
             "type": "publicKey"
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
           }
         ]
       }
@@ -953,6 +961,14 @@
           },
           {
             "name": "taker",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
             "type": "publicKey"
           },
           {
@@ -1919,6 +1935,16 @@
           "name": "creator",
           "type": "publicKey",
           "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -2042,6 +2068,16 @@
         },
         {
           "name": "taker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
           "type": "publicKey",
           "index": false
         },

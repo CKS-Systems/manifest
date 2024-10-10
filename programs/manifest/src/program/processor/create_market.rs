@@ -179,6 +179,8 @@ pub(crate) fn process_create_market(
         emit_stack(CreateMarketLog {
             market: *market.key,
             creator: *payer.key,
+            base_mint: *base_mint.info.key,
+            quote_mint: *quote_mint.info.key,
         })?;
     }
 
