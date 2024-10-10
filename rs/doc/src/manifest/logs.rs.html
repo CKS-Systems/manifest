@@ -253,6 +253,10 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -289,6 +293,8 @@
 </span><span class="kw">pub struct </span>CreateMarketLog {
     <span class="kw">pub </span>market: Pubkey,
     <span class="kw">pub </span>creator: Pubkey,
+    <span class="kw">pub </span>base_mint: Pubkey,
+    <span class="kw">pub </span>quote_mint: Pubkey,
 }
 
 <span class="attr">#[repr(C)]
@@ -322,6 +328,8 @@
     <span class="kw">pub </span>market: Pubkey,
     <span class="kw">pub </span>maker: Pubkey,
     <span class="kw">pub </span>taker: Pubkey,
+    <span class="kw">pub </span>base_mint: Pubkey,
+    <span class="kw">pub </span>quote_mint: Pubkey,
     <span class="kw">pub </span>price: QuoteAtomsPerBaseAtom,
     <span class="kw">pub </span>base_atoms: BaseAtoms,
     <span class="kw">pub </span>quote_atoms: QuoteAtoms,

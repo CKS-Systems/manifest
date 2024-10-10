@@ -189,6 +189,8 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, mem::size_of};
 
 <span class="kw">use crate</span>::{
@@ -370,6 +372,8 @@
         emit_stack(CreateMarketLog {
             market: <span class="kw-2">*</span>market.key,
             creator: <span class="kw-2">*</span>payer.key,
+            base_mint: <span class="kw-2">*</span>base_mint.info.key,
+            quote_mint: <span class="kw-2">*</span>quote_mint.info.key,
         })<span class="question-mark">?</span>;
     }
 
