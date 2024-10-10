@@ -1022,8 +1022,18 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         if self.max_index != NIL && *get_helper::<RBNode<V>>(self.data, self.max_index) < new_node {
             self.max_index = index;
         }
+
         self.insert_node_no_fix(new_node, index);
-        self.insert_fix(index);
+
+        // Avoid recursion by doing a loop here.
+        let mut node_to_fix: DataIndex = index;
+        loop {
+            let fix_result: Option<DataIndex> = self.insert_fix(node_to_fix);
+            if fix_result.is_none() {
+                break;
+            }
+            node_to_fix = fix_result.unwrap();
+        }
 
         #[cfg(test)]
         self.verify_rb_tree::<V>()
@@ -1080,7 +1090,17 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         let child_index: DataIndex = self.get_child_index::<V>(index);
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         self.update_parent_child::<V>(index);
-        self.remove_fix(child_index, parent_index);
+
+        // Avoid recursion by doing a loop here.
+        let mut nodes_to_fix: (DataIndex, DataIndex) = (child_index, parent_index);
+        loop {
+            let fix_result: Option<(DataIndex, DataIndex)> =
+                self.remove_fix(nodes_to_fix.0, nodes_to_fix.1);
+            if fix_result.is_none() {
+                break;
+            }
+            nodes_to_fix = fix_result.unwrap();
+        }
     }
 }
 
@@ -1105,13 +1125,17 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.remove_by_index(index);
     }
 
-    fn remove_fix(&mut self, current_index: DataIndex, parent_index: DataIndex) {
+    fn remove_fix(
+        &mut self,
+        current_index: DataIndex,
+        parent_index: DataIndex,
+    ) -> Option<(DataIndex, DataIndex)> {
         // Current is double black. It could be NIL if we just deleted a leaf,
         // so we need the parent to know where in the tree we are.
 
         // If we get to the root, then we are done.
         if self.root_index == current_index {
-            return;
+            return None;
         }
 
         let sibling_index: DataIndex = self.get_sibling_index::<V>(current_index, parent_index);
@@ -1134,7 +1158,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
                 self.set_color::<V>(parent_index, sibling_color);
                 self.set_color::<V>(sibling_index, parent_color);
                 self.rotate_right::<V>(parent_index);
-                return;
+                return None;
             }
             // ii left right
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
@@ -1145,7 +1169,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_left::<V>(sibling_index);
                 self.rotate_right::<V>(parent_index);
-                return;
+                return None;
             }
             // iii right right
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
@@ -1155,7 +1179,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
                 self.set_color::<V>(parent_index, sibling_color);
                 self.set_color::<V>(sibling_index, parent_color);
                 self.rotate_left::<V>(parent_index);
-                return;
+                return None;
             }
             // iv right left
             if self.get_color::<V>(sibling_left_child_index) == Color::Red
@@ -1166,7 +1190,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_right::<V>(sibling_index);
                 self.rotate_left::<V>(parent_index);
-                return;
+                return None;
             }
             unreachable!();
         }
@@ -1176,12 +1200,10 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         if sibling_color == Color::Black {
             self.set_color::<V>(sibling_index, Color::Red);
             if parent_color == Color::Black {
-                // Recurse on the parent
-                self.remove_fix(parent_index, self.get_parent_index::<V>(parent_index));
-                return;
+                return Some((parent_index, self.get_parent_index::<V>(parent_index)));
             } else {
                 self.set_color::<V>(parent_index, Color::Black);
-                return;
+                return None;
             }
         }
 
@@ -1191,13 +1213,14 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             self.rotate_right::<V>(parent_index);
             self.set_color::<V>(parent_index, Color::Red);
             self.set_color::<V>(sibling_index, Color::Black);
-            self.remove_fix(current_index, parent_index);
+            return Some((current_index, parent_index));
         } else if self.is_right_child::<V>(sibling_index) {
             self.rotate_left::<V>(parent_index);
             self.set_color::<V>(parent_index, Color::Red);
             self.set_color::<V>(sibling_index, Color::Black);
-            self.remove_fix(current_index, parent_index);
+            return Some((current_index, parent_index));
         }
+        return None;
     }
 
     /// Insert a node into the subtree without fixing. This node could be a leaf
@@ -1258,10 +1281,10 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
     }
 
-    fn insert_fix(&mut self, index_to_fix: DataIndex) {
+    fn insert_fix(&mut self, index_to_fix: DataIndex) -> Option<DataIndex> {
         if self.root_index == index_to_fix {
             self.set_color::<V>(index_to_fix, Color::Black);
-            return;
+            return None;
         }
 
         // Check the color of the parent. If it is black, then nothing left to do.
@@ -1269,7 +1292,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         let parent_color: Color = self.get_color::<V>(parent_index);
 
         if parent_color == Color::Black {
-            return;
+            return None;
         }
 
         let grandparent_index: DataIndex = self.get_parent_index::<V>(parent_index);
@@ -1298,7 +1321,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
 
             // Recurse
             self.insert_fix(grandparent_index);
-            return;
+            return Some(grandparent_index);
         }
 
         let grandparent_color: Color = self.get_color::<V>(grandparent_index);
@@ -1310,7 +1333,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
 
         if grandparent_index == NIL && parent_color == Color::Red {
             self.set_color::<V>(parent_index, Color::Black);
-            return;
+            return None;
         }
 
         // Case II: Uncle is black, left left
@@ -1340,6 +1363,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             self.set_color::<V>(index_to_fix, grandparent_color);
             self.set_color::<V>(grandparent_index, index_to_fix_color);
         }
+        None
     }
 }
 
