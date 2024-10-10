@@ -73,14 +73,14 @@ pub(crate) fn process_withdraw(
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,
-                trader_token.key,
+                vault.key,
                 if is_base {
                     dynamic_account.fixed.get_base_mint()
                 } else {
                     dynamic_account.get_quote_mint()
                 },
+                trader_token.key,
                 vault.key,
-                payer.key,
                 &[],
                 amount_atoms,
                 if is_base {
