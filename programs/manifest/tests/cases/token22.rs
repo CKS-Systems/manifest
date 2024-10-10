@@ -214,7 +214,7 @@ async fn token22_base() -> anyhow::Result<()> {
             .unwrap();
 
         let market: manifest::state::MarketValue =
-        manifest::program::get_dynamic_value(market_account.data.as_slice());
+            manifest::program::get_dynamic_value(market_account.data.as_slice());
         let balance = market.get_trader_balance(&payer);
         assert_eq!(balance.0.as_u64(), 999999000);
     }
