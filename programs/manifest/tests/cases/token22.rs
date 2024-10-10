@@ -204,6 +204,20 @@ async fn token22_base() -> anyhow::Result<()> {
         &[&payer_keypair.insecure_clone()],
     )
     .await?;
+    {
+        let market_account: solana_sdk::account::Account = context
+            .borrow_mut()
+            .banks_client
+            .get_account(market_keypair.pubkey())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let market: manifest::state::MarketValue =
+        manifest::program::get_dynamic_value(market_account.data.as_slice());
+        let balance = market.get_trader_balance(&payer);
+        assert_eq!(balance.0.as_u64(), 999999000);
+    }
 
     // Place orders on both sides to
     let place_order_ix: Instruction = batch_update_instruction(
