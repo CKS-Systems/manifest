@@ -59,7 +59,7 @@ async function testVolume(): Promise<void> {
   // Test loading successfully.
   const wrapper: Wrapper = await Wrapper.loadFromAddress({
     connection,
-    address: client.wrapper.address,
+    address: client.wrapper!.address,
   });
   const marketInfoParsed: MarketInfoParsed =
     wrapper.marketInfoForMarket(marketAddress)!;

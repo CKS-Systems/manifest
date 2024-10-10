@@ -65,9 +65,9 @@ export class ManifestClient {
 
   private constructor(
     public connection: Connection,
-    public wrapper: Wrapper,
+    public wrapper: Wrapper | null,
     public market: Market,
-    private payer: PublicKey,
+    private payer: PublicKey | null,
     private baseMint: Mint,
     private quoteMint: Mint,
   ) {
@@ -335,8 +335,6 @@ export class ManifestClient {
     return setupData;
   }
 
-  // TODO: Make a version that does not require a trader with a wrapper for use
-  // in cases where we just want to see the orderbook.
   /**
    * Create a new client. throws if setup ixs are needed. Call ManifestClient.getSetupIxs to check if ixs are needed.
    * This is the way to create a client without directly passing in `Keypair` types (for example when building a UI).
@@ -397,11 +395,46 @@ export class ManifestClient {
   }
 
   /**
+   * Create a new client that is read only. Cannot send transactions or generate instructions.
+   *
+   * @param connection Connection
+   * @param marketPk PublicKey of the market
+   *
+   * @returns ManifestClient
+   */
+  public static async getClientReadOnly(
+    connection: Connection,
+    marketPk: PublicKey,
+  ): Promise<ManifestClient> {
+    const marketObject: Market = await Market.loadFromAddress({
+      connection: connection,
+      address: marketPk,
+    });
+    const baseMintPk: PublicKey = marketObject.baseMint();
+    const quoteMintPk: PublicKey = marketObject.quoteMint();
+    const baseMint: Mint = await getMint(connection, baseMintPk);
+    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+
+    return new ManifestClient(
+      connection,
+      null,
+      marketObject,
+      null,
+      baseMint,
+      quoteMint,
+    );
+  }
+
+  /**
    * Reload the market and wrapper objects.
    */
   public async reload(): Promise<void> {
     await Promise.all([
-      this.wrapper.reload(this.connection),
+      () => {
+        if (this.wrapper) {
+          return this.wrapper.reload(this.connection);
+        }
+      },
       this.market.reload(this.connection),
     ]);
   }
@@ -450,6 +483,9 @@ export class ManifestClient {
     mint: PublicKey,
     amountTokens: number,
   ): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
       mint,
@@ -497,6 +533,9 @@ export class ManifestClient {
     mint: PublicKey,
     amountTokens: number,
   ): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
       mint,
@@ -536,6 +575,9 @@ export class ManifestClient {
    * @returns TransactionInstruction[]
    */
   public withdrawAllIx(): TransactionInstruction[] {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     const withdrawInstructions: TransactionInstruction[] = [];
 
     const baseBalance = this.market.getWithdrawableBalanceTokens(
@@ -580,6 +622,9 @@ export class ManifestClient {
   public placeOrderIx(
     params: WrapperPlaceOrderParamsExternal,
   ): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -703,6 +748,9 @@ export class ManifestClient {
   public cancelOrderIx(
     params: WrapperCancelOrderParams,
   ): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -733,6 +781,9 @@ export class ManifestClient {
     cancelParams: WrapperCancelOrderParams[],
     cancelAll: boolean,
   ): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -758,6 +809,9 @@ export class ManifestClient {
    * @returns TransactionInstruction
    */
   public cancelAllIx(): TransactionInstruction {
+    if (!this.wrapper || !this.payer) {
+      throw new Error('Read only');
+    }
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -842,7 +896,31 @@ export class ManifestClient {
   }
 
   /**
-   * CreateGlobalAddTrader instruction. Adds a new trader to the global account
+   * CreateGlobal instruction. Creates the global account. Should only be called
+   * once ever for a mint. Static because it does not require a wrapper.
+   *
+   * @param payer PublicKey of the rent payer
+   * @param mint PublicKey of the globalMint
+   *
+   * @returns TransactionInstruction
+   */
+  public static createGlobalIx(
+    payer: PublicKey,
+    mint: PublicKey,
+  ): TransactionInstruction {
+    const global: PublicKey = getGlobalAddress(mint);
+    const globalVault: PublicKey = getGlobalVaultAddress(mint);
+    return createGlobalCreateInstruction({
+      payer,
+      global,
+      mint,
+      globalVault,
+    });
+  }
+
+  /**
+   * CreateGlobalAddTrader instruction. Adds a new trader to the global account.
+   * Static because it does not require a wrapper.
    *
    * @param payer PublicKey of the trader
    * @param globalMint PublicKey of the globalMint
@@ -861,7 +939,7 @@ export class ManifestClient {
   }
 
   /**
-   * Global deposit instruction
+   * Global deposit instruction. Static because it does not require a wrapper.
    *
    * @param connection Connection to pull mint info
    * @param payer PublicKey of the trader
@@ -905,7 +983,7 @@ export class ManifestClient {
   }
 
   /**
-   * Global withdraw instruction
+   * Global withdraw instruction. Static because it does not require a wrapper.
    *
    * @param connection Connection to pull mint info
    * @param payer PublicKey of the trader
