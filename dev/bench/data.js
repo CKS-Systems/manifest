@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728514163891,
+  "lastUpdate": 1728527800687,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -5731,6 +5731,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6103,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b236a57ac122025d04f9c59332f4b7bdf09c076",
+          "message": "refactor to remove need for dropping in wrapper (#170)",
+          "timestamp": "2024-10-09T22:11:42-04:00",
+          "tree_id": "021aa109f9594873f608bddce98604dbf4ddcf4f",
+          "url": "https://github.com/CKS-Systems/manifest/commit/9b236a57ac122025d04f9c59332f4b7bdf09c076"
+        },
+        "date": 1728527798906,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3493,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5563,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6036,
             "unit": "CU",
             "range": "",
             "extra": ""
