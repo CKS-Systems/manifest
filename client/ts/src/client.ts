@@ -714,10 +714,10 @@ export class ManifestClient {
     );
 
     const global: PublicKey = getGlobalAddress(
-      params.isBaseIn ? this.quoteMint.address : this.baseMint.address
+      params.isBaseIn ? this.quoteMint.address : this.baseMint.address,
     );
     const globalVault: PublicKey = getGlobalVaultAddress(
-      params.isBaseIn ? this.quoteMint.address : this.baseMint.address
+      params.isBaseIn ? this.quoteMint.address : this.baseMint.address,
     );
 
     // Assumes just normal token program for now.

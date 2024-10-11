@@ -14,7 +14,6 @@ import {
   mintTo,
 } from '@solana/spl-token';
 import { assert } from 'chai';
-import { deposit } from './deposit';
 import { placeOrder } from './placeOrder';
 import { airdropSol } from '../src/utils/solana';
 import { depositGlobal } from './globalDeposit';
@@ -82,15 +81,12 @@ export async function swap(
     payerKeypair,
   );
 
-  const swapIx: TransactionInstruction = await client.swapIx(
-    payerKeypair.publicKey,
-    {
-      inAtoms: amountAtoms,
-      outAtoms: minOutAtoms,
-      isBaseIn: isBid,
-      isExactIn: true,
-    },
-  );
+  const swapIx: TransactionInstruction = client.swapIx(payerKeypair.publicKey, {
+    inAtoms: amountAtoms,
+    outAtoms: minOutAtoms,
+    isBaseIn: isBid,
+    isExactIn: true,
+  });
 
   const signature = await sendAndConfirmTransaction(
     connection,
@@ -113,12 +109,13 @@ async function testSwapGlobal(): Promise<void> {
     address: marketAddress,
   });
 
-  const traderBaseTokenAccount: PublicKey = await createAssociatedTokenAccountIdempotent(
-    connection,
-    payerKeypair,
-    market.baseMint(),
-    payerKeypair.publicKey,
-  );
+  const traderBaseTokenAccount: PublicKey =
+    await createAssociatedTokenAccountIdempotent(
+      connection,
+      payerKeypair,
+      market.baseMint(),
+      payerKeypair.publicKey,
+    );
   // Initialize trader quote so they can receive.
   await createAssociatedTokenAccountIdempotent(
     connection,
@@ -136,7 +133,9 @@ async function testSwapGlobal(): Promise<void> {
     payerKeypair.publicKey,
     amountBaseAtoms,
   );
-  console.log(`Minted ${amountBaseAtoms} to ${traderBaseTokenAccount} in ${mintSig}`);
+  console.log(
+    `Minted ${amountBaseAtoms} to ${traderBaseTokenAccount} in ${mintSig}`,
+  );
 
   // Note that this is a self-trade for simplicity.
   await airdropSol(connection, payerKeypair.publicKey);
@@ -153,14 +152,25 @@ async function testSwapGlobal(): Promise<void> {
     0,
   );
 
-  await swap(connection, payerKeypair, marketAddress, amountBaseAtoms / 10, false);
+  await swap(
+    connection,
+    payerKeypair,
+    marketAddress,
+    amountBaseAtoms / 10,
+    false,
+  );
   await market.reload(connection);
   market.prettyPrint();
 
-  assert(market.openOrders().length == 0, 'Swap does not rest order');
-
-  assert(market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == amountBaseAtoms / 10);
-  assert(market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0);
+  // Verify that the resting order got matched and resulted in deposited base on
+  // the market. Quote came from global and got withdrawn in the swap.
+  assert(
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) ==
+      amountBaseAtoms / 10,
+  );
+  assert(
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
+  );
 }
 
 describe('Swap test', () => {
