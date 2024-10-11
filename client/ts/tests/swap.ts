@@ -154,13 +154,7 @@ async function testSwapGlobal(): Promise<void> {
     NO_EXPIRATION_LAST_VALID_SLOT,
   );
 
-  await swap(
-    connection,
-    payerKeypair,
-    marketAddress,
-    amountBaseAtoms,
-    false,
-  );
+  await swap(connection, payerKeypair, marketAddress, amountBaseAtoms, false);
   await market.reload(connection);
   market.prettyPrint();
 
@@ -195,7 +189,10 @@ async function testSwapGlobal(): Promise<void> {
     baseBalance == 0,
     `Expected wallet base ${0} actual base ${baseBalance}`,
   );
-  assert(quoteBalance == 25, `Expected  quote ${25} actual quote ${quoteBalance}`);
+  assert(
+    quoteBalance == 25,
+    `Expected  quote ${25} actual quote ${quoteBalance}`,
+  );
 }
 
 describe('Swap test', () => {
