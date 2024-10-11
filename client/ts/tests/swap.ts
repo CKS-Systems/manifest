@@ -165,13 +165,13 @@ async function testSwapGlobal(): Promise<void> {
   // Verify that the resting order got matched and resulted in deposited base on
   // the market. Quote came from global and got withdrawn in the swap.
   assert(
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
+    `Expected quote ${0} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
+  );
+  assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) ==
       5 * 10 ** market.quoteDecimals(),
     `Expected base ${5 * 10 ** market.baseDecimals()} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
-  );
-  assert(
-    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
-    `Expected quote ${0} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
   );
 }
 
