@@ -3,6 +3,7 @@
 
 pub mod instruction;
 pub mod instruction_builders;
+pub mod loader;
 pub mod market_info;
 pub mod open_order;
 pub mod processors;

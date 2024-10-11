@@ -1,11 +1,11 @@
 use std::{
     cell::{Ref, RefMut},
     mem::size_of,
-    ops::Deref,
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_state::ManifestWrapperStateFixed,
+    loader::WrapperStateAccountInfo, market_info::MarketInfo, open_order::WrapperOpenOrder,
+    wrapper_state::ManifestWrapperStateFixed,
 };
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
@@ -16,7 +16,6 @@ use hypertree::{
 use manifest::{
     program::{get_dynamic_account, invoke},
     quantities::BaseAtoms,
-    require,
     state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
     validation::{ManifestAccountInfo, Program, Signer},
 };
@@ -30,6 +29,11 @@ use solana_program::{
     sysvar::{rent::Rent, Sysvar},
 };
 use static_assertions::const_assert_eq;
+
+pub type MarketInfosTree<'a> = RedBlackTree<'a, MarketInfo>;
+pub type MarketInfosTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, MarketInfo>;
+pub type OpenOrdersTree<'a> = RedBlackTree<'a, WrapperOpenOrder>;
+pub type OpenOrdersTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, WrapperOpenOrder>;
 
 pub const WRAPPER_BLOCK_PAYLOAD_SIZE: usize = 80;
 pub const BLOCK_HEADER_SIZE: usize = 16;
@@ -126,15 +130,6 @@ fn does_need_expand(wrapper_state: &WrapperStateAccountInfo) -> bool {
 
     let wrapper_fixed: &ManifestWrapperStateFixed = get_helper(fixed_data, 0);
     wrapper_fixed.free_list_head_index == NIL
-}
-
-pub(crate) fn check_signer(wrapper_state: &WrapperStateAccountInfo, owner_key: &Pubkey) {
-    let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data().unwrap();
-    let (header_bytes, _wrapper_dynamic_data) =
-        wrapper_data.split_at_mut(size_of::<ManifestWrapperStateFixed>());
-    let header: &ManifestWrapperStateFixed =
-        get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-    assert_eq!(header.trader, *owner_key);
 }
 
 pub(crate) fn sync(
@@ -279,78 +274,4 @@ pub(crate) fn get_trader_index_hint_for_market(
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
     let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
     Ok(trader_index_hint)
-}
-
-/// Validation for wrapper account
-#[derive(Clone)]
-pub struct WrapperStateAccountInfo<'a, 'info> {
-    pub(crate) info: &'a AccountInfo<'info>,
-}
-pub type MarketInfosTree<'a> = RedBlackTree<'a, MarketInfo>;
-pub type MarketInfosTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, MarketInfo>;
-pub type OpenOrdersTree<'a> = RedBlackTree<'a, WrapperOpenOrder>;
-pub type OpenOrdersTreeReadOnly<'a> = RedBlackTreeReadOnly<'a, WrapperOpenOrder>;
-
-pub const WRAPPER_STATE_DISCRIMINANT: u64 = 1;
-
-impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
-    #[inline(always)]
-    fn _new_unchecked(
-        info: &'a AccountInfo<'info>,
-    ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        require!(
-            info.owner == &crate::ID,
-            ProgramError::IllegalOwner,
-            "Wrapper must be owned by the program",
-        )?;
-        Ok(Self { info })
-    }
-
-    pub fn new(
-        info: &'a AccountInfo<'info>,
-    ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        let wrapper_state: WrapperStateAccountInfo<'a, 'info> = Self::_new_unchecked(info)?;
-
-        let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
-        let header: &ManifestWrapperStateFixed =
-            get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-
-        require!(
-            header.discriminant == WRAPPER_STATE_DISCRIMINANT,
-            ProgramError::InvalidAccountData,
-            "Invalid wrapper state discriminant",
-        )?;
-
-        Ok(wrapper_state)
-    }
-
-    pub fn new_init(
-        info: &'a AccountInfo<'info>,
-    ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
-        let header: &ManifestWrapperStateFixed =
-            get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
-        require!(
-            info.owner == &crate::ID,
-            ProgramError::IllegalOwner,
-            "Market must be owned by the Manifest program",
-        )?;
-        // On initialization, the discriminant is not set yet.
-        require!(
-            header.discriminant == 0,
-            ProgramError::InvalidAccountData,
-            "Expected uninitialized market with discriminant 0",
-        )?;
-        Ok(Self { info })
-    }
-}
-
-impl<'a, 'info> Deref for WrapperStateAccountInfo<'a, 'info> {
-    type Target = AccountInfo<'info>;
-
-    fn deref(&self) -> &Self::Target {
-        self.info
-    }
 }
