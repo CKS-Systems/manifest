@@ -185,9 +185,10 @@ async function testSwapGlobal(): Promise<void> {
       ),
     )
   ).value.uiAmount!;
+  // Because of the self trade, it resets the wallet to pre-trade amount.
   assert(
-    baseBalance == 0,
-    `Expected wallet base ${0} actual base ${baseBalance}`,
+    baseBalance == 1,
+    `Expected wallet base ${1} actual base ${baseBalance}`,
   );
   assert(
     quoteBalance == 25,
