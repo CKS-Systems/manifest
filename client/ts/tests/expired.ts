@@ -1,8 +1,4 @@
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-} from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { OrderType } from '../src/manifest/types';
 import { createMarket } from './createMarket';
 import { deposit } from './deposit';
@@ -33,7 +29,7 @@ async function testExpiredOrder(): Promise<void> {
     false,
     OrderType.Limit,
     0,
-    await connection.getSlot() + 20,
+    (await connection.getSlot()) + 20,
   );
 
   await market.reload(connection);
@@ -42,7 +38,7 @@ async function testExpiredOrder(): Promise<void> {
   assert(market.asks().length == 1, 'place ask did not work');
 
   // 20 slots should pass in 20 seconds.
-  await new Promise(f => setTimeout(f, 20_000));
+  await new Promise((f) => setTimeout(f, 20_000));
   await market.reload(connection);
   market.prettyPrint();
   assert(market.asks().length == 0, 'order still there when should be expired');
