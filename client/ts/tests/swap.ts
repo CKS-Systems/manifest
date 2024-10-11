@@ -98,7 +98,7 @@ export async function swap(
   console.log(`Placed order in ${signature}`);
 }
 
-async function testSwapGlobal(): Promise<void> {
+async function _testSwapGlobal(): Promise<void> {
   const connection: Connection = new Connection(
     'http://127.0.0.1:8899',
     'confirmed',
