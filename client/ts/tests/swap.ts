@@ -166,8 +166,8 @@ async function testSwapGlobal(): Promise<void> {
   // the market. Quote came from global and got withdrawn in the swap.
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) ==
-      5 * 10**market.quoteDecimals(),
-    `Expected quote ${ 5 * 10**market.quoteDecimals() } actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`
+      5 * 10 ** market.quoteDecimals(),
+    `Expected quote ${5 * 10 ** market.quoteDecimals()} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
   );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
