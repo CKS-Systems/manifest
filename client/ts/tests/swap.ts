@@ -164,26 +164,37 @@ async function testSwapGlobal(): Promise<void> {
   market.prettyPrint();
 
   // Verify that the resting order got matched and resulted in deposited base on
-  // the market. Quote came from global and got withdrawn in the swap.
+  // the market. Quote came from global and got withdrawn in the swap. Because
+  // it is a self-trade, it resets to zero, so we need to check the wallet.
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     `Expected quote ${0} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
   );
   assert(
-    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) ==
-      0,
+    market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
     `Expected base ${0} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
   );
-  const baseBalance: number = (await connection.getTokenAccountBalance(await getAssociatedTokenAddress(market.baseMint(), payerKeypair.publicKey))).value.uiAmount!;
-  const quoteBalance: number = (await connection.getTokenAccountBalance(await getAssociatedTokenAddress(market.quoteMint(), payerKeypair.publicKey))).value.uiAmount!;
+  const baseBalance: number = (
+    await connection.getTokenAccountBalance(
+      await getAssociatedTokenAddress(
+        market.baseMint(),
+        payerKeypair.publicKey,
+      ),
+    )
+  ).value.uiAmount!;
+  const quoteBalance: number = (
+    await connection.getTokenAccountBalance(
+      await getAssociatedTokenAddress(
+        market.quoteMint(),
+        payerKeypair.publicKey,
+      ),
+    )
+  ).value.uiAmount!;
   assert(
     baseBalance == 0,
     `Expected wallet base ${0} actual base ${baseBalance}`,
   );
-  assert(
-    quoteBalance == 0,
-    `Expected  quote ${0} actual quote${quoteBalance}`,
-  );
+  assert(quoteBalance == 0, `Expected  quote ${0} actual quote${quoteBalance}`);
 }
 
 describe('Swap test', () => {
