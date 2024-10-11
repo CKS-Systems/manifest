@@ -46,6 +46,8 @@ export const SwapStruct = new beet.BeetArgsStruct<
  * @property [] baseMint
  * @property [] tokenProgramQuote
  * @property [] quoteMint
+ * @property [_writable_] global (optional)
+ * @property [_writable_] globalVault (optional)
  * @category Instructions
  * @category Swap
  * @category generated
@@ -61,12 +63,19 @@ export type SwapInstructionAccounts = {
   baseMint: web3.PublicKey;
   tokenProgramQuote: web3.PublicKey;
   quoteMint: web3.PublicKey;
+  global?: web3.PublicKey;
+  globalVault?: web3.PublicKey;
 };
 
 export const swapInstructionDiscriminator = 4;
 
 /**
  * Creates a _Swap_ instruction.
+ *
+ * Optional accounts that are not provided will be omitted from the accounts
+ * array passed with the instruction.
+ * An optional account that is set cannot follow an optional account that is unset.
+ * Otherwise an Error is raised.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
@@ -136,6 +145,26 @@ export function createSwapInstruction(
       isSigner: false,
     },
   ];
+
+  if (accounts.global != null) {
+    keys.push({
+      pubkey: accounts.global,
+      isWritable: true,
+      isSigner: false,
+    });
+  }
+  if (accounts.globalVault != null) {
+    if (accounts.global == null) {
+      throw new Error(
+        "When providing 'globalVault' then 'accounts.global' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
+      pubkey: accounts.globalVault,
+      isWritable: true,
+      isSigner: false,
+    });
+  }
 
   const ix = new web3.TransactionInstruction({
     programId,

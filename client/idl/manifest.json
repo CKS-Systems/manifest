@@ -342,6 +342,24 @@
           "docs": [
             "Quote mint, only inlcuded if base is Token22, otherwise not required"
           ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
+          ]
         }
       ],
       "args": [
