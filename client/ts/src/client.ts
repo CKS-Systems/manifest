@@ -712,8 +712,19 @@ export class ManifestClient {
       this.market.address,
       this.quoteMint.address,
     );
+
+    const global: PublicKey = getGlobalAddress(
+      params.isBaseIn ? this.quoteMint.address : this.baseMint.address
+    );
+    const globalVault: PublicKey = getGlobalVaultAddress(
+      params.isBaseIn ? this.quoteMint.address : this.baseMint.address
+    );
+
     // Assumes just normal token program for now.
     // No Token22 support here in sdk yet.
+    // No support for the case where global are not needed. That is an
+    // optimization that needs to be made when looking at the orderbook and
+    // deciding if it is worthwhile to lock the accounts.
     return createSwapInstruction(
       {
         payer,
@@ -730,6 +741,8 @@ export class ManifestClient {
           ? TOKEN_2022_PROGRAM_ID
           : TOKEN_PROGRAM_ID,
         quoteMint: this.quoteMint.address,
+        global,
+        globalVault,
       },
       {
         params,

@@ -46,6 +46,7 @@ export async function createGlobal(
   tokenMint: PublicKey,
 ): Promise<void> {
   console.log(`Cluster is ${await getClusterFromConnection(connection)}`);
+  await airdropSol(connection, payerKeypair.publicKey);
 
   const createGlobalIx = await ManifestClient['createGlobalCreateIx'](
     connection,
