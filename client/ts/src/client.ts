@@ -721,7 +721,9 @@ export class ManifestClient {
     );
 
     // Assumes just normal token program for now.
-    // No Token22 support here in sdk yet.
+    // No Token22 support here in sdk yet, but includes programs and mints as
+    // though it was.
+
     // No support for the case where global are not needed. That is an
     // optimization that needs to be made when looking at the orderbook and
     // deciding if it is worthwhile to lock the accounts.
