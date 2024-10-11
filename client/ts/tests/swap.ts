@@ -11,6 +11,7 @@ import { createMarket } from './createMarket';
 import { Market } from '../src/market';
 import {
   createAssociatedTokenAccountIdempotent,
+  getAssociatedTokenAddress,
   mintTo,
 } from '@solana/spl-token';
 import { assert } from 'chai';
@@ -170,8 +171,18 @@ async function testSwapGlobal(): Promise<void> {
   );
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) ==
-      5 * 10 ** market.quoteDecimals(),
-    `Expected base ${5 * 10 ** market.baseDecimals()} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
+      0,
+    `Expected base ${0} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
+  );
+  const baseBalance: number = (await connection.getTokenAccountBalance(await getAssociatedTokenAddress(market.baseMint(), payerKeypair.publicKey))).value.uiAmount!;
+  const quoteBalance: number = (await connection.getTokenAccountBalance(await getAssociatedTokenAddress(market.quoteMint(), payerKeypair.publicKey))).value.uiAmount!;
+  assert(
+    baseBalance == 0,
+    `Expected wallet base ${0} actual base ${baseBalance}`,
+  );
+  assert(
+    quoteBalance == 0,
+    `Expected  quote ${0} actual quote${quoteBalance}`,
   );
 }
 
