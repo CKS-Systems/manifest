@@ -9,7 +9,6 @@ use hypertree::get_helper;
 use manifest::require;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
-/// Validation for wrapper account
 #[derive(Clone)]
 pub struct WrapperStateAccountInfo<'a, 'info> {
     pub(crate) info: &'a AccountInfo<'info>,
