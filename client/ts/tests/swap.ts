@@ -20,6 +20,7 @@ import { airdropSol } from '../src/utils/solana';
 import { depositGlobal } from './globalDeposit';
 import { createGlobal } from './createGlobal';
 import { OrderType } from '../src';
+import { NO_EXPIRATION_LAST_VALID_SLOT } from '../src/constants';
 
 async function testSwap(): Promise<void> {
   const connection: Connection = new Connection(
@@ -148,16 +149,16 @@ async function testSwapGlobal(): Promise<void> {
     marketAddress,
     5,
     5,
-    false,
+    true,
     OrderType.Global,
-    0,
+    NO_EXPIRATION_LAST_VALID_SLOT,
   );
 
   await swap(
     connection,
     payerKeypair,
     marketAddress,
-    amountBaseAtoms / 10,
+    amountBaseAtoms,
     false,
   );
   await market.reload(connection);
@@ -194,7 +195,7 @@ async function testSwapGlobal(): Promise<void> {
     baseBalance == 0,
     `Expected wallet base ${0} actual base ${baseBalance}`,
   );
-  assert(quoteBalance == 0, `Expected  quote ${0} actual quote${quoteBalance}`);
+  assert(quoteBalance == 25, `Expected  quote ${25} actual quote ${quoteBalance}`);
 }
 
 describe('Swap test', () => {
