@@ -444,7 +444,7 @@ async function createMarket(
     ),
     programId: PROGRAM_ID,
   });
-  const createMarketIx = ManifestClient.createMarketIx(
+  const createMarketIx = ManifestClient['createMarketIx'](
     keypair.publicKey,
     baseMint,
     quoteMint,

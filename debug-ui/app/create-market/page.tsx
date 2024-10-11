@@ -176,7 +176,7 @@ const CreateMarket = (): ReactElement => {
       },
     );
 
-    const createMarketIx = ManifestClient.createMarketIx(
+    const createMarketIx = ManifestClient['createMarketIx'](
       signerPub,
       basePub,
       quotePub,

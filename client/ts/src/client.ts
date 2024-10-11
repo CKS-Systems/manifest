@@ -450,7 +450,7 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction
    */
-  public static createMarketIx(
+  private static createMarketIx(
     payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
