@@ -325,7 +325,7 @@
           "isSigner": false,
           "isOptional": true,
           "docs": [
-            "Base mint, only inlcuded if base is Token22, otherwise not required"
+            "Base mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
@@ -343,7 +343,7 @@
           "isSigner": false,
           "isOptional": true,
           "docs": [
-            "Quote mint, only inlcuded if base is Token22, otherwise not required"
+            "Quote mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
