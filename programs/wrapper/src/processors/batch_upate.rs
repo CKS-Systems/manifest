@@ -159,26 +159,28 @@ fn prepare_orders(
                 // if they do not have the funds on the exchange that the orders
                 // require.
                 let mut num_base_atoms: u64 = order.base_atoms;
-                if order.is_bid {
-                    let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-                        order.price_mantissa,
-                        order.price_exponent,
-                    )
-                    .unwrap();
-                    let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
-                        .checked_mul(price, true)
+                if order.order_type != OrderType::Global {
+                    if order.is_bid {
+                        let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+                            order.price_mantissa,
+                            order.price_exponent,
+                        )
                         .unwrap();
-                    if desired > *remaining_quote_atoms {
-                        num_base_atoms = 0;
+                        let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
+                            .checked_mul(price, true)
+                            .unwrap();
+                        if desired > *remaining_quote_atoms {
+                            num_base_atoms = 0;
+                        } else {
+                            *remaining_quote_atoms -= desired;
+                        }
                     } else {
-                        *remaining_quote_atoms -= desired;
-                    }
-                } else {
-                    let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
-                    if desired > *remaining_base_atoms {
-                        num_base_atoms = 0;
-                    } else {
-                        *remaining_base_atoms -= desired;
+                        let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
+                        if desired > *remaining_base_atoms {
+                            num_base_atoms = 0;
+                        } else {
+                            *remaining_base_atoms -= desired;
+                        }
                     }
                 }
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(

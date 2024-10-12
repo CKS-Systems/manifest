@@ -323,14 +323,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Base mint, only inlcuded if base is Token22, otherwise not required"
+            "Base mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
           "name": "tokenProgramQuote",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22) quote. Optional. Only include if different from base"
           ]
@@ -339,8 +341,27 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Quote mint, only inlcuded if base is Token22, otherwise not required"
+            "Quote mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
           ]
         }
       ],

@@ -51,11 +51,11 @@ pub enum ManifestInstruction {
     #[account(4, writable, name = "base_vault", desc = "Base vault PDA, seeds are [b'vault', market_address, base_mint]")]
     #[account(5, writable, name = "quote_vault", desc = "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]")]
     #[account(6, name = "token_program_base", desc = "Token program(22) base")]
-    #[account(7, name = "base_mint", desc = "Base mint, only inlcuded if base is Token22, otherwise not required")]
-    #[account(8, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
-    #[account(9, name = "quote_mint", desc = "Quote mint, only inlcuded if base is Token22, otherwise not required")]
-    // #[account(10, writable, optional, name = "global", desc = "Global account")]
-    // #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
+    #[account(7, optional, name = "base_mint", desc = "Base mint, only included if base is Token22, otherwise not required")]
+    #[account(8, optional, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
+    #[account(9, optional, name = "quote_mint", desc = "Quote mint, only included if base is Token22, otherwise not required")]
+    #[account(10, writable, optional, name = "global", desc = "Global account")]
+    #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
     Swap = 4,
 
     /// Expand a market.

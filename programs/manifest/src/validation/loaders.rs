@@ -342,57 +342,64 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         }
 
         if current_account_info_or.is_ok() {
-            let global: ManifestAccountInfo<'a, 'info, GlobalFixed> =
-                ManifestAccountInfo::<GlobalFixed>::new(current_account_info_or?)?;
-            let global_data: Ref<&mut [u8]> = global.data.borrow();
-            let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
-            let global_mint_key: &Pubkey = global_fixed.get_mint();
-            let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
+            let current_account_info: &AccountInfo<'info> = current_account_info_or?;
 
-            let global_vault: TokenAccountInfo<'a, 'info> =
-                TokenAccountInfo::new_with_owner_and_key(
-                    next_account_info(account_iter)?,
-                    global_mint_key,
-                    &expected_global_vault_address,
-                    &expected_global_vault_address,
-                )?;
+            // It is possible that the global account does not exist. Do not
+            // throw an error. This will happen when users just blindly include
+            // global accounts that have not been initialized.
+            if !current_account_info.data_is_empty() {
+                let global: ManifestAccountInfo<'a, 'info, GlobalFixed> =
+                    ManifestAccountInfo::<GlobalFixed>::new(current_account_info)?;
+                let global_data: Ref<&mut [u8]> = global.data.borrow();
+                let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+                let global_mint_key: &Pubkey = global_fixed.get_mint();
+                let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
-            let index: usize = if *global_mint_key == base_mint_key {
-                0
-            } else {
-                require!(
-                    quote_mint_key == *global_mint_key,
-                    ManifestError::MissingGlobal,
-                    "Unexpected global accounts",
-                )?;
-                1
-            };
+                let global_vault: TokenAccountInfo<'a, 'info> =
+                    TokenAccountInfo::new_with_owner_and_key(
+                        next_account_info(account_iter)?,
+                        global_mint_key,
+                        &expected_global_vault_address,
+                        &expected_global_vault_address,
+                    )?;
 
-            drop(global_data);
-            global_trade_accounts_opts[index] = Some(GlobalTradeAccounts {
-                mint_opt: if index == 0 {
-                    base_mint.clone()
+                let index: usize = if *global_mint_key == base_mint_key {
+                    0
                 } else {
-                    quote_mint.clone()
-                },
-                global,
-                global_vault_opt: Some(global_vault),
-                market_vault_opt: if index == 0 {
-                    Some(base_vault.clone())
-                } else {
-                    Some(quote_vault.clone())
-                },
-                token_program_opt: if index == 0 {
-                    Some(token_program_base.clone())
-                } else {
-                    Some(token_program_quote.clone())
-                },
-                gas_payer_opt: None,
-                gas_receiver_opt: Some(payer.clone()),
-                market: *market.info.key,
-                // System program not included because does not rest an order.
-                system_program: None,
-            });
+                    require!(
+                        quote_mint_key == *global_mint_key,
+                        ManifestError::MissingGlobal,
+                        "Unexpected global accounts",
+                    )?;
+                    1
+                };
+
+                drop(global_data);
+                global_trade_accounts_opts[index] = Some(GlobalTradeAccounts {
+                    mint_opt: if index == 0 {
+                        base_mint.clone()
+                    } else {
+                        quote_mint.clone()
+                    },
+                    global,
+                    global_vault_opt: Some(global_vault),
+                    market_vault_opt: if index == 0 {
+                        Some(base_vault.clone())
+                    } else {
+                        Some(quote_vault.clone())
+                    },
+                    token_program_opt: if index == 0 {
+                        Some(token_program_base.clone())
+                    } else {
+                        Some(token_program_quote.clone())
+                    },
+                    gas_payer_opt: None,
+                    gas_receiver_opt: Some(payer.clone()),
+                    market: *market.info.key,
+                    // System program not included because does not rest an order.
+                    system_program: None,
+                });
+            }
         }
 
         Ok(Self {
