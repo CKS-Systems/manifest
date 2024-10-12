@@ -910,10 +910,10 @@ export class ManifestClient {
     // TODO: include globals for this
     const baseGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
       return !placeParams.isBid && placeParams.orderType == OrderType.Global;
-    })
+    });
     const quoteGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
       return placeParams.isBid && placeParams.orderType == OrderType.Global;
-    })
+    });
     if (!baseGlobalRequired && !quoteGlobalRequired) {
       return createBatchUpdateInstruction(
         {
