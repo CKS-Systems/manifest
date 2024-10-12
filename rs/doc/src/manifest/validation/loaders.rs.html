@@ -773,6 +773,13 @@
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -1117,57 +1124,64 @@
         }
 
         <span class="kw">if </span>current_account_info_or.is_ok() {
-            <span class="kw">let </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt; =
-                ManifestAccountInfo::&lt;GlobalFixed&gt;::new(current_account_info_or<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-            <span class="kw">let </span>global_data: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = global.data.borrow();
-            <span class="kw">let </span>global_fixed: <span class="kw-2">&amp;</span>GlobalFixed = get_helper::&lt;GlobalFixed&gt;(<span class="kw-2">&amp;</span>global_data, <span class="number">0_u32</span>);
-            <span class="kw">let </span>global_mint_key: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_mint();
-            <span class="kw">let </span>expected_global_vault_address: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_vault();
+            <span class="kw">let </span>current_account_info: <span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt; = current_account_info_or<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
-                TokenAccountInfo::new_with_owner_and_key(
-                    next_account_info(account_iter)<span class="question-mark">?</span>,
-                    global_mint_key,
-                    <span class="kw-2">&amp;</span>expected_global_vault_address,
-                    <span class="kw-2">&amp;</span>expected_global_vault_address,
-                )<span class="question-mark">?</span>;
+            <span class="comment">// It is possible that the global account does not exist. Do not
+            // throw an error. This will happen when users just blindly include
+            // global accounts that have not been initialized.
+            </span><span class="kw">if </span>!current_account_info.data_is_empty() {
+                <span class="kw">let </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt; =
+                    ManifestAccountInfo::&lt;GlobalFixed&gt;::new(current_account_info)<span class="question-mark">?</span>;
+                <span class="kw">let </span>global_data: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = global.data.borrow();
+                <span class="kw">let </span>global_fixed: <span class="kw-2">&amp;</span>GlobalFixed = get_helper::&lt;GlobalFixed&gt;(<span class="kw-2">&amp;</span>global_data, <span class="number">0_u32</span>);
+                <span class="kw">let </span>global_mint_key: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_mint();
+                <span class="kw">let </span>expected_global_vault_address: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_vault();
 
-            <span class="kw">let </span>index: usize = <span class="kw">if </span><span class="kw-2">*</span>global_mint_key == base_mint_key {
-                <span class="number">0
-            </span>} <span class="kw">else </span>{
-                <span class="macro">require!</span>(
-                    quote_mint_key == <span class="kw-2">*</span>global_mint_key,
-                    ManifestError::MissingGlobal,
-                    <span class="string">"Unexpected global accounts"</span>,
-                )<span class="question-mark">?</span>;
-                <span class="number">1
-            </span>};
+                <span class="kw">let </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
+                    TokenAccountInfo::new_with_owner_and_key(
+                        next_account_info(account_iter)<span class="question-mark">?</span>,
+                        global_mint_key,
+                        <span class="kw-2">&amp;</span>expected_global_vault_address,
+                        <span class="kw-2">&amp;</span>expected_global_vault_address,
+                    )<span class="question-mark">?</span>;
 
-            drop(global_data);
-            global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
-                mint_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
-                    base_mint.clone()
-                } <span class="kw">else </span>{
-                    quote_mint.clone()
-                },
-                global,
-                global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
-                market_vault_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
-                    <span class="prelude-val">Some</span>(base_vault.clone())
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Some</span>(quote_vault.clone())
-                },
-                token_program_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
-                    <span class="prelude-val">Some</span>(token_program_base.clone())
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Some</span>(token_program_quote.clone())
-                },
-                gas_payer_opt: <span class="prelude-val">None</span>,
-                gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
-                market: <span class="kw-2">*</span>market.info.key,
-                <span class="comment">// System program not included because does not rest an order.
-                </span>system_program: <span class="prelude-val">None</span>,
-            });
+                <span class="kw">let </span>index: usize = <span class="kw">if </span><span class="kw-2">*</span>global_mint_key == base_mint_key {
+                    <span class="number">0
+                </span>} <span class="kw">else </span>{
+                    <span class="macro">require!</span>(
+                        quote_mint_key == <span class="kw-2">*</span>global_mint_key,
+                        ManifestError::MissingGlobal,
+                        <span class="string">"Unexpected global accounts"</span>,
+                    )<span class="question-mark">?</span>;
+                    <span class="number">1
+                </span>};
+
+                drop(global_data);
+                global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
+                    mint_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
+                        base_mint.clone()
+                    } <span class="kw">else </span>{
+                        quote_mint.clone()
+                    },
+                    global,
+                    global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
+                    market_vault_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
+                        <span class="prelude-val">Some</span>(base_vault.clone())
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">Some</span>(quote_vault.clone())
+                    },
+                    token_program_opt: <span class="kw">if </span>index == <span class="number">0 </span>{
+                        <span class="prelude-val">Some</span>(token_program_base.clone())
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">Some</span>(token_program_quote.clone())
+                    },
+                    gas_payer_opt: <span class="prelude-val">None</span>,
+                    gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
+                    market: <span class="kw-2">*</span>market.info.key,
+                    <span class="comment">// System program not included because does not rest an order.
+                    </span>system_program: <span class="prelude-val">None</span>,
+                });
+            }
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
