@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728593351164,
+  "lastUpdate": 1728704043779,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6059,6 +6059,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6087,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "694fc0af4763f27b47ce29c5bb2db937bea5cfc5",
+          "message": "Add optional fields for globals in idl and sdk for swap (#176)\n\n* Add global as optional to swap\r\n\r\n* add test for swap global\r\n\r\n* fmt\r\n\r\n* update idl\r\n\r\n* optional init global in swap\r\n\r\n* fix test\r\n\r\n* fmt\r\n\r\n* fix expectations\r\n\r\n* flip test\r\n\r\n* update wallet expectations\r\n\r\n* fmt\r\n\r\n* balances\r\n\r\n* fmt\r\n\r\n* fix amount\r\n\r\n* Update program\r\n\r\n* lint",
+          "timestamp": "2024-10-11T23:09:22-04:00",
+          "tree_id": "16c6236f4448e9377b28ef29e90a3692360bfe7c",
+          "url": "https://github.com/CKS-Systems/manifest/commit/694fc0af4763f27b47ce29c5bb2db937bea5cfc5"
+        },
+        "date": 1728704042749,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3512,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5595,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6112,
             "unit": "CU",
             "range": "",
             "extra": ""
