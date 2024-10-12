@@ -119,7 +119,7 @@ pub struct MarketFixed {
     /// be maintained. It does not secure any value in manifest.
     /// Use at your own risk.
     quote_volume: QuoteAtoms,
-    
+
     // The following are informational only. All this information is redundant
     // and could be computed with other information on the market.
     // Total base withdrawable.
@@ -163,7 +163,7 @@ const_assert_eq!(
     8 +   // quote_withdrawable
     8 +   // base_in_asks
     8 +   // quote_in_bids
-    32    // padding3
+    32 // padding3
 );
 const_assert_eq!(size_of::<MarketFixed>(), MARKET_FIXED_SIZE);
 const_assert_eq!(size_of::<MarketFixed>() % 8, 0);
@@ -253,39 +253,64 @@ impl MarketFixed {
     pub fn has_free_block(&self) -> bool {
         self.free_list_head_index != NIL
     }
-    pub fn update_withdrawable_balance(&mut self, is_base: bool, is_increase: bool, amount_atoms: u64) -> ProgramResult {
+    pub fn update_withdrawable_balance(
+        &mut self,
+        is_base: bool,
+        is_increase: bool,
+        amount_atoms: u64,
+    ) -> ProgramResult {
         if is_base {
             if is_increase {
-                self.base_withdrawable = self.base_withdrawable.checked_add(BaseAtoms::new(amount_atoms))?;
+                self.base_withdrawable = self
+                    .base_withdrawable
+                    .checked_add(BaseAtoms::new(amount_atoms))?;
             } else {
-                self.base_withdrawable = self.base_withdrawable.checked_sub(BaseAtoms::new(amount_atoms))?;
+                self.base_withdrawable = self
+                    .base_withdrawable
+                    .checked_sub(BaseAtoms::new(amount_atoms))?;
             }
         } else {
             if is_increase {
-                self.quote_withdrawable = self.quote_withdrawable.checked_add(QuoteAtoms::new(amount_atoms))?;
+                self.quote_withdrawable = self
+                    .quote_withdrawable
+                    .checked_add(QuoteAtoms::new(amount_atoms))?;
             } else {
-                self.quote_withdrawable = self.quote_withdrawable.checked_sub(QuoteAtoms::new(amount_atoms))?;
+                self.quote_withdrawable = self
+                    .quote_withdrawable
+                    .checked_sub(QuoteAtoms::new(amount_atoms))?;
             }
         }
         Ok(())
     }
-    pub fn update_orders_balance(&mut self, is_base: bool, is_increase: bool, amount_atoms: u64) -> ProgramResult {
+    pub fn update_orders_balance(
+        &mut self,
+        is_base: bool,
+        is_increase: bool,
+        amount_atoms: u64,
+    ) -> ProgramResult {
         if is_base {
             if is_increase {
-                self.base_in_asks = self.base_in_asks.checked_add(BaseAtoms::new(amount_atoms))?;
+                self.base_in_asks = self
+                    .base_in_asks
+                    .checked_add(BaseAtoms::new(amount_atoms))?;
             } else {
-                self.base_in_asks = self.base_in_asks.checked_sub(BaseAtoms::new(amount_atoms))?;
+                self.base_in_asks = self
+                    .base_in_asks
+                    .checked_sub(BaseAtoms::new(amount_atoms))?;
             }
         } else {
             if is_increase {
-                self.quote_in_bids = self.quote_in_bids.checked_add(QuoteAtoms::new(amount_atoms))?;
+                self.quote_in_bids = self
+                    .quote_in_bids
+                    .checked_add(QuoteAtoms::new(amount_atoms))?;
             } else {
-                self.quote_in_bids = self.quote_in_bids.checked_sub(QuoteAtoms::new(amount_atoms))?;
+                self.quote_in_bids = self
+                    .quote_in_bids
+                    .checked_sub(QuoteAtoms::new(amount_atoms))?;
             }
         }
         Ok(())
     }
-    // TODO: Make a fn for update_withdrawable_balance
 }
 
 impl ManifestAccount for MarketFixed {
@@ -909,58 +934,54 @@ impl<
                             .checked_sub(base_atoms_traded)?,
                         true,
                     )?;
-                    ////////// TODO
-                update_balance(
-                    dynamic,
-                    maker_trader_index,
-                    is_bid,
-                    true,
-                    (previous_maker_quote_atoms_allocated
-                        .checked_sub(new_maker_quote_atoms_allocated)?
-                        .checked_sub(quote_atoms_traded)?)
-                    .as_u64(),
-                )?;
+                let amount_atoms: u64 = (previous_maker_quote_atoms_allocated
+                    .checked_sub(new_maker_quote_atoms_allocated)?
+                    .checked_sub(quote_atoms_traded)?)
+                .as_u64();
+
+                fixed.update_withdrawable_balance(false, true, amount_atoms)?;
+                fixed.update_orders_balance(false, false, amount_atoms)?;
+
+                update_balance(dynamic, maker_trader_index, false, true, amount_atoms)?;
             }
 
-            ////// TODO
             // Increase maker from the matched amount in the trade.
+            let maker_received_atoms: u64 = if is_bid {
+                quote_atoms_traded.into()
+            } else {
+                base_atoms_traded.into()
+            };
+            fixed.update_withdrawable_balance(!is_bid, true, maker_received_atoms)?;
+            fixed.update_orders_balance(!is_bid, false, maker_received_atoms)?;
             update_balance(
                 dynamic,
                 maker_trader_index,
                 !is_bid,
                 true,
-                if is_bid {
-                    quote_atoms_traded.into()
-                } else {
-                    base_atoms_traded.into()
-                },
-            )?;
-            // Decrease taker
-            update_balance(
-                dynamic,
-                trader_index,
-                !is_bid,
-                false,
-                if is_bid {
-                    quote_atoms_traded.into()
-                } else {
-                    base_atoms_traded.into()
-                },
-            )?;
-            // Increase taker
-            update_balance(
-                dynamic,
-                trader_index,
-                is_bid,
-                true,
-                if is_bid {
-                    base_atoms_traded.into()
-                } else {
-                    quote_atoms_traded.into()
-                },
+                maker_received_atoms,
             )?;
 
-            // record maker & taker volume
+            // Decrease taker
+            let taker_spent_atoms: u64 = if is_bid {
+                quote_atoms_traded.into()
+            } else {
+                base_atoms_traded.into()
+            };
+            fixed.update_withdrawable_balance(!is_bid, false, taker_spent_atoms)?;
+            // The order never rests, so no need to add to orders balance.
+            update_balance(dynamic, trader_index, !is_bid, false, taker_spent_atoms)?;
+
+            // Increase taker
+            let taker_received_atoms: u64 = if is_bid {
+                base_atoms_traded.into()
+            } else {
+                quote_atoms_traded.into()
+            };
+            fixed.update_withdrawable_balance(is_bid, true, taker_received_atoms)?;
+            // The order never rests, so no need to take from orders balance.
+            update_balance(dynamic, trader_index, is_bid, true, taker_received_atoms)?;
+
+            // Record maker & taker volume.
             record_volume_by_trader_index(dynamic, maker_trader_index, quote_atoms_traded);
             record_volume_by_trader_index(dynamic, trader_index, quote_atoms_traded);
 
@@ -1106,13 +1127,7 @@ impl<
             fixed.update_withdrawable_balance(!is_bid, false, amount_atoms)?;
             fixed.update_orders_balance(!is_bid, true, amount_atoms)?;
 
-            update_balance(
-                dynamic,
-                trader_index,
-                !is_bid,
-                false,
-                amount_atoms,
-            )?;
+            update_balance(dynamic, trader_index, !is_bid, false, amount_atoms)?;
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, &resting_order);
 
@@ -1160,10 +1175,7 @@ impl<
             }
             if index_to_remove != NIL {
                 // Cancel order by index will update balances.
-                self.cancel_order_by_index(
-                    index_to_remove,
-                    global_trade_accounts_opts,
-                )?;
+                self.cancel_order_by_index(index_to_remove, global_trade_accounts_opts)?;
                 return Ok(());
             }
         }
@@ -1179,12 +1191,7 @@ impl<
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
-        remove_and_update_balances(
-            fixed,
-            dynamic,
-            order_index,
-            global_trade_accounts_opts,
-        )?;
+        remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)?;
 
         Ok(())
     }
@@ -1401,8 +1408,8 @@ fn remove_and_update_balances(
             resting_order_to_remove.get_num_base_atoms().as_u64()
         };
 
-        fixed.update_withdrawable_balance(!order_to_remove_is_bid, false, amount_atoms_to_return)?;
-        fixed.update_orders_balance(!order_to_remove_is_bid, true, amount_atoms_to_return)?;
+        fixed.update_withdrawable_balance(!order_to_remove_is_bid, true, amount_atoms_to_return)?;
+        fixed.update_orders_balance(!order_to_remove_is_bid, false, amount_atoms_to_return)?;
 
         update_balance(
             dynamic,

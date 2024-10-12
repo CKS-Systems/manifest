@@ -210,10 +210,8 @@ pub(crate) fn process_batch_update(
                         "Invalid cancel hint sequence number index {}",
                         hinted_cancel_index,
                     )?;
-                    dynamic_account.cancel_order_by_index(
-                        hinted_cancel_index,
-                        &global_trade_accounts_opts,
-                    )?;
+                    dynamic_account
+                        .cancel_order_by_index(hinted_cancel_index, &global_trade_accounts_opts)?;
                 }
             };
 

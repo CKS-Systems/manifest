@@ -131,10 +131,7 @@ pub(crate) fn process_global_clean(
     // Should drop global, but cancel_order_by_index actually does not need to
     // borrow in this case.
 
-    market_dynamic_account.cancel_order_by_index(
-        order_index,
-        &global_trade_accounts,
-    )?;
+    market_dynamic_account.cancel_order_by_index(order_index, &global_trade_accounts)?;
 
     // The global account itself only accounting on remove_order is that it
     // tracks unclaimed gas deposits for informational purposes and this is
