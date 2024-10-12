@@ -377,6 +377,24 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'BatchUpdateBaseGlobal': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperBatchUpdateParams',
+            },
+          });
+          break;
+        }
+        case 'BatchUpdateQuoteGlobal': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperBatchUpdateParams',
+            },
+          });
+          break;
+        }
         case 'Expand': {
           break;
         }

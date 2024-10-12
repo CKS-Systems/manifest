@@ -41,16 +41,16 @@ export const BatchUpdateStruct = new beet.FixableBeetArgsStruct<
  *
  * @property [_writable_, **signer**] payer
  * @property [_writable_] market
- * @property [] baseMint
- * @property [_writable_] baseGlobal
- * @property [] baseGlobalVault
- * @property [] baseMarketVault
- * @property [] baseTokenProgram
- * @property [] quoteMint
- * @property [_writable_] quoteGlobal
- * @property [] quoteGlobalVault
- * @property [] quoteMarketVault
- * @property [] quoteTokenProgram
+ * @property [] baseMint (optional)
+ * @property [_writable_] baseGlobal (optional)
+ * @property [] baseGlobalVault (optional)
+ * @property [] baseMarketVault (optional)
+ * @property [] baseTokenProgram (optional)
+ * @property [] quoteMint (optional)
+ * @property [_writable_] quoteGlobal (optional)
+ * @property [] quoteGlobalVault (optional)
+ * @property [] quoteMarketVault (optional)
+ * @property [] quoteTokenProgram (optional)
  * @category Instructions
  * @category BatchUpdate
  * @category generated
@@ -59,22 +59,27 @@ export type BatchUpdateInstructionAccounts = {
   payer: web3.PublicKey;
   market: web3.PublicKey;
   systemProgram?: web3.PublicKey;
-  baseMint: web3.PublicKey;
-  baseGlobal: web3.PublicKey;
-  baseGlobalVault: web3.PublicKey;
-  baseMarketVault: web3.PublicKey;
-  baseTokenProgram: web3.PublicKey;
-  quoteMint: web3.PublicKey;
-  quoteGlobal: web3.PublicKey;
-  quoteGlobalVault: web3.PublicKey;
-  quoteMarketVault: web3.PublicKey;
-  quoteTokenProgram: web3.PublicKey;
+  baseMint?: web3.PublicKey;
+  baseGlobal?: web3.PublicKey;
+  baseGlobalVault?: web3.PublicKey;
+  baseMarketVault?: web3.PublicKey;
+  baseTokenProgram?: web3.PublicKey;
+  quoteMint?: web3.PublicKey;
+  quoteGlobal?: web3.PublicKey;
+  quoteGlobalVault?: web3.PublicKey;
+  quoteMarketVault?: web3.PublicKey;
+  quoteTokenProgram?: web3.PublicKey;
 };
 
 export const batchUpdateInstructionDiscriminator = 6;
 
 /**
  * Creates a _BatchUpdate_ instruction.
+ *
+ * Optional accounts that are not provided will be omitted from the accounts
+ * array passed with the instruction.
+ * An optional account that is set cannot follow an optional account that is unset.
+ * Otherwise an Error is raised.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
@@ -108,57 +113,172 @@ export function createBatchUpdateInstruction(
       isWritable: false,
       isSigner: false,
     },
-    {
+  ];
+
+  if (accounts.baseMint != null) {
+    keys.push({
       pubkey: accounts.baseMint,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.baseGlobal != null) {
+    if (accounts.baseMint == null) {
+      throw new Error(
+        "When providing 'baseGlobal' then 'accounts.baseMint' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.baseGlobal,
       isWritable: true,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.baseGlobalVault != null) {
+    if (accounts.baseMint == null || accounts.baseGlobal == null) {
+      throw new Error(
+        "When providing 'baseGlobalVault' then 'accounts.baseMint', 'accounts.baseGlobal' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.baseGlobalVault,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.baseMarketVault != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null
+    ) {
+      throw new Error(
+        "When providing 'baseMarketVault' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.baseMarketVault,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.baseTokenProgram != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null
+    ) {
+      throw new Error(
+        "When providing 'baseTokenProgram' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.baseTokenProgram,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteMint != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null ||
+      accounts.baseTokenProgram == null
+    ) {
+      throw new Error(
+        "When providing 'quoteMint' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault', 'accounts.baseTokenProgram' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteMint,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteGlobal != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null ||
+      accounts.baseTokenProgram == null ||
+      accounts.quoteMint == null
+    ) {
+      throw new Error(
+        "When providing 'quoteGlobal' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault', 'accounts.baseTokenProgram', 'accounts.quoteMint' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteGlobal,
       isWritable: true,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteGlobalVault != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null ||
+      accounts.baseTokenProgram == null ||
+      accounts.quoteMint == null ||
+      accounts.quoteGlobal == null
+    ) {
+      throw new Error(
+        "When providing 'quoteGlobalVault' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault', 'accounts.baseTokenProgram', 'accounts.quoteMint', 'accounts.quoteGlobal' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteGlobalVault,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteMarketVault != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null ||
+      accounts.baseTokenProgram == null ||
+      accounts.quoteMint == null ||
+      accounts.quoteGlobal == null ||
+      accounts.quoteGlobalVault == null
+    ) {
+      throw new Error(
+        "When providing 'quoteMarketVault' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault', 'accounts.baseTokenProgram', 'accounts.quoteMint', 'accounts.quoteGlobal', 'accounts.quoteGlobalVault' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteMarketVault,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteTokenProgram != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.baseGlobal == null ||
+      accounts.baseGlobalVault == null ||
+      accounts.baseMarketVault == null ||
+      accounts.baseTokenProgram == null ||
+      accounts.quoteMint == null ||
+      accounts.quoteGlobal == null ||
+      accounts.quoteGlobalVault == null ||
+      accounts.quoteMarketVault == null
+    ) {
+      throw new Error(
+        "When providing 'quoteTokenProgram' then 'accounts.baseMint', 'accounts.baseGlobal', 'accounts.baseGlobalVault', 'accounts.baseMarketVault', 'accounts.baseTokenProgram', 'accounts.quoteMint', 'accounts.quoteGlobal', 'accounts.quoteGlobalVault', 'accounts.quoteMarketVault' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteTokenProgram,
       isWritable: false,
       isSigner: false,
-    },
-  ];
+    });
+  }
 
   const ix = new web3.TransactionInstruction({
     programId,

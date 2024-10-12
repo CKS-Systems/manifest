@@ -443,14 +443,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Mint for the global global account"
+            "Mint for the base global account"
           ]
         },
         {
           "name": "baseGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global account"
           ]
@@ -459,6 +461,7 @@
           "name": "baseGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global vault"
           ]
@@ -467,6 +470,7 @@
           "name": "baseMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base market vault"
           ]
@@ -475,6 +479,7 @@
           "name": "baseTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]
@@ -483,6 +488,7 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Mint for this global account"
           ]
@@ -491,6 +497,7 @@
           "name": "quoteGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global account"
           ]
@@ -499,6 +506,7 @@
           "name": "quoteGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global vault"
           ]
@@ -507,6 +515,7 @@
           "name": "quoteMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote market vault"
           ]
@@ -515,6 +524,7 @@
           "name": "quoteTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]

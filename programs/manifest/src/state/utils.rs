@@ -54,7 +54,9 @@ pub(crate) fn remove_from_global(
         gas_receiver_opt,
         ..
     } = global_trade_accounts;
-
+    // TODO: Consider moving the gas prepayments to the market account instead
+    // of the global account.
+    
     // The simple implementation gets
     //
     //     **receiver.lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;

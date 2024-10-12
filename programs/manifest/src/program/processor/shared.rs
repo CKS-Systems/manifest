@@ -59,6 +59,10 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
     // Expand twice because of two trees at once.
+    
+    // TODO: Always take lamports. There is a bug where we are counting gas
+    // prepayments and do not take the rent required for expand, then give back
+    // the rent prepayments.
     expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;

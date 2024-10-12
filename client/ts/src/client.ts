@@ -33,7 +33,9 @@ import {
   PROGRAM_ID as WRAPPER_PROGRAM_ID,
   WrapperCancelOrderParams,
   WrapperPlaceOrderParams,
+  createBatchUpdateBaseGlobalInstruction,
   createBatchUpdateInstruction,
+  createBatchUpdateQuoteGlobalInstruction,
   createClaimSeatInstruction,
   createCreateWrapperInstruction,
   createDepositInstruction,
@@ -43,6 +45,7 @@ import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 import { genAccDiscriminator } from './utils/discriminator';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
+import { Global } from './global';
 
 export interface SetupData {
   setupNeeded: boolean;
@@ -70,6 +73,7 @@ export class ManifestClient {
     private payer: PublicKey | null,
     private baseMint: Mint,
     private quoteMint: Mint,
+    // TODO: Consider getting the globals for each side here.
   ) {
     // If no extension data then the mint is not Token2022
     this.isBase22 = baseMint.tlvData.length > 0;
@@ -625,21 +629,86 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
-    return createBatchUpdateInstruction(
-      {
-        market: this.market.address,
-        manifestProgram: MANIFEST_PROGRAM_ID,
-        owner: this.payer,
-        wrapperState: this.wrapper.address,
-      },
-      {
-        params: {
-          cancels: [],
-          cancelAll: false,
-          orders: [toWrapperPlaceOrderParams(this.market, params)],
+    if (params.orderType != OrderType.Global) {
+      return createBatchUpdateInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
         },
-      },
-    );
+        {
+          params: {
+            cancels: [],
+            cancelAll: false,
+            orders: [toWrapperPlaceOrderParams(this.market, params)],
+          },
+        },
+      );
+    }
+    if (params.isBid) {
+      const global: PublicKey = getGlobalAddress(this.quoteMint.address);
+      const globalVault: PublicKey = getGlobalVaultAddress(
+        this.quoteMint.address,
+      );
+      const vault: PublicKey = getVaultAddress(
+        this.market.address,
+        this.quoteMint.address,
+      );
+      return createBatchUpdateQuoteGlobalInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
+          quoteMint: this.quoteMint.address,
+          quoteGlobal: global,
+          quoteGlobalVault: globalVault,
+          quoteMarketVault: vault,
+          quoteTokenProgram: this.isQuote22
+            ? TOKEN_2022_PROGRAM_ID
+            : TOKEN_PROGRAM_ID,
+        },
+        {
+          params: {
+            cancels: [],
+            cancelAll: false,
+            orders: [toWrapperPlaceOrderParams(this.market, params)],
+          },
+        },
+      );
+    } else {
+      const global: PublicKey = getGlobalAddress(this.baseMint.address);
+      const globalVault: PublicKey = getGlobalVaultAddress(
+        this.baseMint.address,
+      );
+      const vault: PublicKey = getVaultAddress(
+        this.market.address,
+        this.baseMint.address,
+      );
+      return createBatchUpdateBaseGlobalInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
+          baseMint: this.baseMint.address,
+          baseGlobal: global,
+          baseGlobalVault: globalVault,
+          baseMarketVault: vault,
+          baseTokenProgram: this.isBase22
+            ? TOKEN_2022_PROGRAM_ID
+            : TOKEN_PROGRAM_ID,
+        },
+        {
+          params: {
+            cancels: [],
+            cancelAll: false,
+            orders: [toWrapperPlaceOrderParams(this.market, params)],
+          },
+        },
+      );
+    }
   }
 
   /**
@@ -654,33 +723,69 @@ export class ManifestClient {
    *
    * @returns TransactionInstruction[]
    */
-  public placeOrderWithRequiredDepositIx(
+  public async placeOrderWithRequiredDepositIx(
     payer: PublicKey,
     params: WrapperPlaceOrderParamsExternal,
-  ): TransactionInstruction[] {
-    const placeOrderIx = this.placeOrderIx(params);
+  ): Promise<TransactionInstruction[]> {
+    const placeOrderIx: TransactionInstruction = this.placeOrderIx(params);
 
-    const currentBalance = this.market.getWithdrawableBalanceTokens(
-      payer,
-      !params.isBid,
-    );
-    let depositMint: PublicKey;
-    let depositAmount = 0;
+    if (params.orderType != OrderType.Global) {
+      const currentBalanceTokens: number =
+        this.market.getWithdrawableBalanceTokens(payer, !params.isBid);
+      let depositMint: PublicKey;
+      let depositAmountTokens: number = 0;
 
-    if (params.isBid) {
-      depositMint = this.market.quoteMint();
-      depositAmount = params.numBaseTokens * params.tokenPrice - currentBalance;
+      if (params.isBid) {
+        depositMint = this.market.quoteMint();
+        depositAmountTokens =
+          params.numBaseTokens * params.tokenPrice - currentBalanceTokens;
+      } else {
+        depositMint = this.market.baseMint();
+        depositAmountTokens = params.numBaseTokens - currentBalanceTokens;
+      }
+
+      if (depositAmountTokens <= 0) {
+        return [placeOrderIx];
+      }
+      const depositIx = this.depositIx(payer, depositMint, depositAmountTokens);
+
+      return [depositIx, placeOrderIx];
     } else {
-      depositMint = this.market.baseMint();
-      depositAmount = params.numBaseTokens - currentBalance;
-    }
+      const global: Global = await Global.loadFromAddress({
+        connection: this.connection,
+        address: getGlobalAddress(
+          params.isBid ? this.quoteMint.address : this.baseMint.address,
+        ),
+      });
+      const currentBalanceTokens: number = await global.getGlobalBalanceTokens(
+        this.connection,
+        payer,
+      );
 
-    if (depositAmount <= 0) {
-      return [placeOrderIx];
-    }
-    const depositIx = this.depositIx(payer, depositMint, depositAmount);
+      let depositMint: PublicKey;
+      let depositAmountTokens: number = 0;
 
-    return [depositIx, placeOrderIx];
+      if (params.isBid) {
+        depositMint = this.market.quoteMint();
+        depositAmountTokens =
+          params.numBaseTokens * params.tokenPrice - currentBalanceTokens;
+      } else {
+        depositMint = this.market.baseMint();
+        depositAmountTokens = params.numBaseTokens - currentBalanceTokens;
+      }
+
+      if (depositAmountTokens <= 0) {
+        return [placeOrderIx];
+      }
+      const depositIx = await ManifestClient.globalDepositIx(
+        this.connection,
+        payer!,
+        depositMint,
+        depositAmountTokens,
+      );
+
+      return [depositIx, placeOrderIx];
+    }
   }
 
   /**
@@ -766,6 +871,9 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
+    
+    // Global not required for cancels. If we do cancel a global, then our gas
+    // prepayment is abandoned.
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -799,12 +907,137 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
+    // TODO: include globals for this
+    const baseGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
+      return !placeParams.isBid && placeParams.orderType == OrderType.Global;
+    })
+    const quoteGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
+      return placeParams.isBid && placeParams.orderType == OrderType.Global;
+    })
+    if (!baseGlobalRequired && !quoteGlobalRequired) {
+      return createBatchUpdateInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
+        },
+        {
+          params: {
+            cancels: cancelParams,
+            cancelAll,
+            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
+              toWrapperPlaceOrderParams(this.market, params),
+            ),
+          },
+        },
+      );
+    }
+    if (!baseGlobalRequired && quoteGlobalRequired) {
+      const global: PublicKey = getGlobalAddress(this.quoteMint.address);
+      const globalVault: PublicKey = getGlobalVaultAddress(
+        this.quoteMint.address,
+      );
+      const vault: PublicKey = getVaultAddress(
+        this.market.address,
+        this.quoteMint.address,
+      );
+      return createBatchUpdateQuoteGlobalInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
+          quoteMint: this.quoteMint.address,
+          quoteGlobal: global,
+          quoteGlobalVault: globalVault,
+          quoteTokenProgram:  this.isQuote22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
+          quoteMarketVault: vault,
+        },
+        {
+          params: {
+            cancels: cancelParams,
+            cancelAll,
+            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
+              toWrapperPlaceOrderParams(this.market, params),
+            ),
+          },
+        },
+      );
+    }
+    if (baseGlobalRequired && !quoteGlobalRequired) {
+      const global: PublicKey = getGlobalAddress(this.baseMint.address);
+      const globalVault: PublicKey = getGlobalVaultAddress(
+        this.baseMint.address,
+      );
+      const vault: PublicKey = getVaultAddress(
+        this.market.address,
+        this.baseMint.address,
+      );
+      return createBatchUpdateBaseGlobalInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
+          baseMint: this.baseMint.address,
+          baseGlobal: global,
+          baseGlobalVault: globalVault,
+          baseTokenProgram:  this.isBase22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
+          baseMarketVault: vault,
+        },
+        {
+          params: {
+            cancels: cancelParams,
+            cancelAll,
+            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
+              toWrapperPlaceOrderParams(this.market, params),
+            ),
+          },
+        },
+      );
+    }
+
+    const baseGlobal: PublicKey = getGlobalAddress(this.baseMint.address);
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
+    const baseMarketVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.baseMint.address,
+    );
+    const quoteGlobal: PublicKey = getGlobalAddress(this.quoteMint.address);
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.quoteMint.address,
+    );
+    const quoteMarketVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.quoteMint.address,
+    );
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
         manifestProgram: MANIFEST_PROGRAM_ID,
         owner: this.payer,
         wrapperState: this.wrapper.address,
+        baseMint: this.baseMint.address,
+        baseGlobal: baseGlobal,
+        baseGlobalVault: baseGlobalVault,
+        baseTokenProgram:  this.isBase22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
+        baseMarketVault,
+        quoteMint: this.quoteMint.address,
+        quoteGlobal: quoteGlobal,
+        quoteGlobalVault: quoteGlobalVault,
+        quoteTokenProgram:  this.isQuote22
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID,
+        quoteMarketVault,
       },
       {
         params: {
@@ -827,6 +1060,9 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
+
+    // Global not required for cancelAll. If we do cancel a global, then our gas
+    // prepayment is abandoned.
     return createBatchUpdateInstruction(
       {
         market: this.market.address,
@@ -907,29 +1143,6 @@ export class ManifestClient {
       mint: globalMint,
       globalVault,
       tokenProgram: is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
-    });
-  }
-
-  /**
-   * CreateGlobal instruction. Creates the global account. Should only be called
-   * once ever for a mint. Static because it does not require a wrapper.
-   *
-   * @param payer PublicKey of the rent payer
-   * @param mint PublicKey of the globalMint
-   *
-   * @returns TransactionInstruction
-   */
-  public static createGlobalIx(
-    payer: PublicKey,
-    mint: PublicKey,
-  ): TransactionInstruction {
-    const global: PublicKey = getGlobalAddress(mint);
-    const globalVault: PublicKey = getGlobalVaultAddress(mint);
-    return createGlobalCreateInstruction({
-      payer,
-      global,
-      mint,
-      globalVault,
     });
   }
 
