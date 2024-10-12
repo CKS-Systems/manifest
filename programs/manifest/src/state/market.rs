@@ -120,20 +120,21 @@ pub struct MarketFixed {
     /// Use at your own risk.
     quote_volume: QuoteAtoms,
     
-    // TODO: Use some padding for storing these for quick helpers in UI for
-    // probing TVL and liquidity.
-    //
-    // Total base withdrawable
-    // Total quote withdrawable
-    // Total base in orders
-    // Total quote in orders
-    // Total base in orders including global
-    // Total quote in orders including global
+    // The following are informational only. All this information is redundant
+    // and could be computed with other information on the market.
+    // Total base withdrawable.
+    base_withdrawable: BaseAtoms,
+    // Total quote withdrawable.
+    quote_withdrawable: QuoteAtoms,
+    // Total base in asks. Does not include global.
+    base_in_asks: BaseAtoms,
+    // Total quote in bids. Does not include global.
+    quote_in_bids: QuoteAtoms,
 
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
-    _padding3: [u64; 8],
+    _padding3: [u64; 4],
 }
 const_assert_eq!(
     size_of::<MarketFixed>(),
@@ -158,7 +159,11 @@ const_assert_eq!(
     4 +   // claimed_seats_best_index
     4 +   // free_list_head_index
     8 +   // padding2
-    64 // padding4
+    8 +   // base_withdrawable
+    8 +   // quote_withdrawable
+    8 +   // base_in_asks
+    8 +   // quote_in_bids
+    32    // padding3
 );
 const_assert_eq!(size_of::<MarketFixed>(), MARKET_FIXED_SIZE);
 const_assert_eq!(size_of::<MarketFixed>() % 8, 0);
@@ -194,7 +199,11 @@ impl MarketFixed {
             free_list_head_index: NIL,
             _padding2: [0; 1],
             quote_volume: QuoteAtoms::ZERO,
-            _padding3: [0; 8],
+            base_withdrawable: BaseAtoms::ZERO,
+            quote_withdrawable: QuoteAtoms::ZERO,
+            base_in_asks: BaseAtoms::ZERO,
+            quote_in_bids: QuoteAtoms::ZERO,
+            _padding3: [0; 4],
         }
     }
 
@@ -244,6 +253,39 @@ impl MarketFixed {
     pub fn has_free_block(&self) -> bool {
         self.free_list_head_index != NIL
     }
+    pub fn update_withdrawable_balance(&mut self, is_base: bool, is_increase: bool, amount_atoms: u64) -> ProgramResult {
+        if is_base {
+            if is_increase {
+                self.base_withdrawable = self.base_withdrawable.checked_add(BaseAtoms::new(amount_atoms))?;
+            } else {
+                self.base_withdrawable = self.base_withdrawable.checked_sub(BaseAtoms::new(amount_atoms))?;
+            }
+        } else {
+            if is_increase {
+                self.quote_withdrawable = self.quote_withdrawable.checked_add(QuoteAtoms::new(amount_atoms))?;
+            } else {
+                self.quote_withdrawable = self.quote_withdrawable.checked_sub(QuoteAtoms::new(amount_atoms))?;
+            }
+        }
+        Ok(())
+    }
+    pub fn update_orders_balance(&mut self, is_base: bool, is_increase: bool, amount_atoms: u64) -> ProgramResult {
+        if is_base {
+            if is_increase {
+                self.base_in_asks = self.base_in_asks.checked_add(BaseAtoms::new(amount_atoms))?;
+            } else {
+                self.base_in_asks = self.base_in_asks.checked_sub(BaseAtoms::new(amount_atoms))?;
+            }
+        } else {
+            if is_increase {
+                self.quote_in_bids = self.quote_in_bids.checked_add(QuoteAtoms::new(amount_atoms))?;
+            } else {
+                self.quote_in_bids = self.quote_in_bids.checked_sub(QuoteAtoms::new(amount_atoms))?;
+            }
+        }
+        Ok(())
+    }
+    // TODO: Make a fn for update_withdrawable_balance
 }
 
 impl ManifestAccount for MarketFixed {
@@ -669,7 +711,8 @@ impl<
             "No seat initialized",
         )?;
 
-        let DynamicAccount { dynamic, .. } = self.borrow_mut();
+        let DynamicAccount { dynamic, fixed } = self.borrow_mut();
+        fixed.update_withdrawable_balance(is_base, true, amount_atoms)?;
         update_balance(dynamic, trader_index, is_base, true, amount_atoms)?;
         Ok(())
     }
@@ -680,7 +723,8 @@ impl<
         amount_atoms: u64,
         is_base: bool,
     ) -> ProgramResult {
-        let DynamicAccount { dynamic, .. } = self.borrow_mut();
+        let DynamicAccount { dynamic, fixed } = self.borrow_mut();
+        fixed.update_withdrawable_balance(is_base, false, amount_atoms)?;
         update_balance(dynamic, trader_index, is_base, false, amount_atoms)?;
         Ok(())
     }
@@ -865,6 +909,7 @@ impl<
                             .checked_sub(base_atoms_traded)?,
                         true,
                     )?;
+                    ////////// TODO
                 update_balance(
                     dynamic,
                     maker_trader_index,
@@ -877,6 +922,7 @@ impl<
                 )?;
             }
 
+            ////// TODO
             // Increase maker from the matched amount in the trade.
             update_balance(
                 dynamic,
@@ -1051,16 +1097,21 @@ impl<
         } else {
             // Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker
+            let amount_atoms: u64 = if is_bid {
+                remaining_base_atoms.checked_mul(price, true)?.into()
+            } else {
+                remaining_base_atoms.into()
+            };
+
+            fixed.update_withdrawable_balance(!is_bid, false, amount_atoms)?;
+            fixed.update_orders_balance(!is_bid, true, amount_atoms)?;
+
             update_balance(
                 dynamic,
                 trader_index,
                 !is_bid,
                 false,
-                if is_bid {
-                    remaining_base_atoms.checked_mul(price, true)?.into()
-                } else {
-                    remaining_base_atoms.into()
-                },
+                amount_atoms,
             )?;
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, &resting_order);
@@ -1110,7 +1161,6 @@ impl<
             if index_to_remove != NIL {
                 // Cancel order by index will update balances.
                 self.cancel_order_by_index(
-                    trader_index,
                     index_to_remove,
                     global_trade_accounts_opts,
                 )?;
@@ -1124,37 +1174,17 @@ impl<
 
     pub fn cancel_order_by_index(
         &mut self,
-        trader_index: DataIndex,
         order_index: DataIndex,
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
-        let resting_order: &RestingOrder =
-            get_helper::<RBNode<RestingOrder>>(dynamic, order_index).get_value();
-        let is_bid: bool = resting_order.get_is_bid();
-        let amount_atoms: u64 = if is_bid {
-            (resting_order
-                .get_price()
-                .checked_quote_for_base(resting_order.get_num_base_atoms(), true)
-                .unwrap())
-            .into()
-        } else {
-            resting_order.get_num_base_atoms().into()
-        };
-
-        // Update the accounting for the order that was just canceled.
-        if resting_order.is_global() {
-            let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                &global_trade_accounts_opts[1]
-            } else {
-                &global_trade_accounts_opts[0]
-            };
-            remove_from_global(&global_trade_accounts_opt)?
-        } else {
-            update_balance(dynamic, trader_index, !is_bid, true, amount_atoms)?;
-        }
-        remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)?;
+        remove_and_update_balances(
+            fixed,
+            dynamic,
+            order_index,
+            global_trade_accounts_opts,
+        )?;
 
         Ok(())
     }
@@ -1370,6 +1400,10 @@ fn remove_and_update_balances(
         } else {
             resting_order_to_remove.get_num_base_atoms().as_u64()
         };
+
+        fixed.update_withdrawable_balance(!order_to_remove_is_bid, false, amount_atoms_to_return)?;
+        fixed.update_orders_balance(!order_to_remove_is_bid, true, amount_atoms_to_return)?;
+
         update_balance(
             dynamic,
             resting_order_to_remove.get_trader_index(),

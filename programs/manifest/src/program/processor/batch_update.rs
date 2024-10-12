@@ -211,7 +211,6 @@ pub(crate) fn process_batch_update(
                         hinted_cancel_index,
                     )?;
                     dynamic_account.cancel_order_by_index(
-                        trader_index,
                         hinted_cancel_index,
                         &global_trade_accounts_opts,
                     )?;

@@ -132,7 +132,6 @@ pub(crate) fn process_global_clean(
     // borrow in this case.
 
     market_dynamic_account.cancel_order_by_index(
-        maker_index,
         order_index,
         &global_trade_accounts,
     )?;
