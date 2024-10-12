@@ -907,7 +907,6 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
-    // TODO: include globals for this
     const baseGlobalRequired: boolean = placeParams.some(
       (placeParams: WrapperPlaceOrderParamsExternal) => {
         return !placeParams.isBid && placeParams.orderType == OrderType.Global;

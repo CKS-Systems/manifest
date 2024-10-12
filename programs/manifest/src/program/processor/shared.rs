@@ -59,10 +59,6 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
     // Expand twice because of two trees at once.
-
-    // TODO: Always take lamports. There is a bug where we are counting gas
-    // prepayments and do not take the rent required for expand, then give back
-    // the rent prepayments.
     expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;
@@ -81,8 +77,10 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let new_size: usize = expandable_account.data_len() + block_size;
 
     let rent: Rent = Rent::get()?;
+    let old_minimum_balance: u64 = rent.minimum_balance(expandable_account.data_len());
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
-    let lamports_diff: u64 = new_minimum_balance.saturating_sub(expandable_account.lamports());
+    // Dont use the actual amount since that could have gas prepayments on it.
+    let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
     let payer: &AccountInfo = payer.info;
     let system_program: &AccountInfo = system_program.info;
