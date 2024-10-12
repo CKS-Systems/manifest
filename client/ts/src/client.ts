@@ -871,7 +871,7 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
-    
+
     // Global not required for cancels. If we do cancel a global, then our gas
     // prepayment is abandoned.
     return createBatchUpdateInstruction(
@@ -908,12 +908,16 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     // TODO: include globals for this
-    const baseGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
-      return !placeParams.isBid && placeParams.orderType == OrderType.Global;
-    });
-    const quoteGlobalRequired: boolean = placeParams.some((placeParams: WrapperPlaceOrderParamsExternal) => {
-      return placeParams.isBid && placeParams.orderType == OrderType.Global;
-    });
+    const baseGlobalRequired: boolean = placeParams.some(
+      (placeParams: WrapperPlaceOrderParamsExternal) => {
+        return !placeParams.isBid && placeParams.orderType == OrderType.Global;
+      },
+    );
+    const quoteGlobalRequired: boolean = placeParams.some(
+      (placeParams: WrapperPlaceOrderParamsExternal) => {
+        return placeParams.isBid && placeParams.orderType == OrderType.Global;
+      },
+    );
     if (!baseGlobalRequired && !quoteGlobalRequired) {
       return createBatchUpdateInstruction(
         {
@@ -951,9 +955,9 @@ export class ManifestClient {
           quoteMint: this.quoteMint.address,
           quoteGlobal: global,
           quoteGlobalVault: globalVault,
-          quoteTokenProgram:  this.isQuote22
-          ? TOKEN_2022_PROGRAM_ID
-          : TOKEN_PROGRAM_ID,
+          quoteTokenProgram: this.isQuote22
+            ? TOKEN_2022_PROGRAM_ID
+            : TOKEN_PROGRAM_ID,
           quoteMarketVault: vault,
         },
         {
@@ -985,9 +989,9 @@ export class ManifestClient {
           baseMint: this.baseMint.address,
           baseGlobal: global,
           baseGlobalVault: globalVault,
-          baseTokenProgram:  this.isBase22
-          ? TOKEN_2022_PROGRAM_ID
-          : TOKEN_PROGRAM_ID,
+          baseTokenProgram: this.isBase22
+            ? TOKEN_2022_PROGRAM_ID
+            : TOKEN_PROGRAM_ID,
           baseMarketVault: vault,
         },
         {
@@ -1027,14 +1031,14 @@ export class ManifestClient {
         baseMint: this.baseMint.address,
         baseGlobal: baseGlobal,
         baseGlobalVault: baseGlobalVault,
-        baseTokenProgram:  this.isBase22
+        baseTokenProgram: this.isBase22
           ? TOKEN_2022_PROGRAM_ID
           : TOKEN_PROGRAM_ID,
         baseMarketVault,
         quoteMint: this.quoteMint.address,
         quoteGlobal: quoteGlobal,
         quoteGlobalVault: quoteGlobalVault,
-        quoteTokenProgram:  this.isQuote22
+        quoteTokenProgram: this.isQuote22
           ? TOKEN_2022_PROGRAM_ID
           : TOKEN_PROGRAM_ID,
         quoteMarketVault,
