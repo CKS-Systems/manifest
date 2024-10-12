@@ -119,6 +119,16 @@ pub struct MarketFixed {
     /// be maintained. It does not secure any value in manifest.
     /// Use at your own risk.
     quote_volume: QuoteAtoms,
+    
+    // TODO: Use some padding for storing these for quick helpers in UI for
+    // probing TVL and liquidity.
+    //
+    // Total base withdrawable
+    // Total quote withdrawable
+    // Total base in orders
+    // Total quote in orders
+    // Total base in orders including global
+    // Total quote in orders including global
 
     // Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
