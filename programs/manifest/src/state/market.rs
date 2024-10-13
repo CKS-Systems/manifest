@@ -1127,9 +1127,7 @@ impl<
             // Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker
             let amount_atoms: u64 = if is_bid {
-                price
-                    .checked_quote_for_base(remaining_base_atoms, true)?
-                    .as_u64()
+                remaining_base_atoms.checked_mul(price, true)?.into()
             } else {
                 remaining_base_atoms.into()
             };
