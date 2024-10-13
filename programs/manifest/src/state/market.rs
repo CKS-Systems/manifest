@@ -1200,7 +1200,6 @@ impl<
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
         remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)?;
-
         Ok(())
     }
 }
