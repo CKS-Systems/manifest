@@ -225,6 +225,8 @@
 <a href="#223" id="223">223</a>
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     cell::{Ref, RefMut},
     mem::size_of,
@@ -304,8 +306,10 @@
     <span class="kw">let </span>new_size: usize = expandable_account.data_len() + block_size;
 
     <span class="kw">let </span>rent: Rent = Rent::get()<span class="question-mark">?</span>;
+    <span class="kw">let </span>old_minimum_balance: u64 = rent.minimum_balance(expandable_account.data_len());
     <span class="kw">let </span>new_minimum_balance: u64 = rent.minimum_balance(new_size);
-    <span class="kw">let </span>lamports_diff: u64 = new_minimum_balance.saturating_sub(expandable_account.lamports());
+    <span class="comment">// Dont use the actual amount since that could have gas prepayments on it.
+    </span><span class="kw">let </span>lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
     <span class="kw">let </span>payer: <span class="kw-2">&amp;</span>AccountInfo = payer.info;
     <span class="kw">let </span>system_program: <span class="kw-2">&amp;</span>AccountInfo = system_program.info;
