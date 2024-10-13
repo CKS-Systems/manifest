@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728848375537,
+  "lastUpdate": 1728858298513,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6385,6 +6385,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5777,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b6085ced76a5189380753a2b4adc874e42aba64",
+          "message": "Refactor in wrapper to make style more consistent with core (#179)\n\n* Refactor in wrapper to make style more consistent with core\r\n\r\n* comment fix",
+          "timestamp": "2024-10-14T01:00:15+03:00",
+          "tree_id": "298f37eda0681bd5a2a10e3c8bda54ad3dee16ff",
+          "url": "https://github.com/CKS-Systems/manifest/commit/4b6085ced76a5189380753a2b4adc874e42aba64"
+        },
+        "date": 1728858297489,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3509,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5595,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6087,
             "unit": "CU",
             "range": "",
             "extra": ""
