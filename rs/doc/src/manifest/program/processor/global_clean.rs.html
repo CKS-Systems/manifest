@@ -141,10 +141,6 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
@@ -278,11 +274,7 @@
     <span class="comment">// Should drop global, but cancel_order_by_index actually does not need to
     // borrow in this case.
 
-    </span>market_dynamic_account.cancel_order_by_index(
-        maker_index,
-        order_index,
-        <span class="kw-2">&amp;</span>global_trade_accounts,
-    )<span class="question-mark">?</span>;
+    </span>market_dynamic_account.cancel_order_by_index(order_index, <span class="kw-2">&amp;</span>global_trade_accounts)<span class="question-mark">?</span>;
 
     <span class="comment">// The global account itself only accounting on remove_order is that it
     // tracks unclaimed gas deposits for informational purposes and this is
