@@ -1099,11 +1099,7 @@ impl<
             }
             if index_to_remove != NIL {
                 // Cancel order by index will update balances.
-                self.cancel_order_by_index(
-                    trader_index,
-                    index_to_remove,
-                    global_trade_accounts_opts,
-                )?;
+                self.cancel_order_by_index(index_to_remove, global_trade_accounts_opts)?;
                 return Ok(());
             }
         }
@@ -1114,38 +1110,12 @@ impl<
 
     pub fn cancel_order_by_index(
         &mut self,
-        trader_index: DataIndex,
         order_index: DataIndex,
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
-        let resting_order: &RestingOrder =
-            get_helper::<RBNode<RestingOrder>>(dynamic, order_index).get_value();
-        let is_bid: bool = resting_order.get_is_bid();
-        let amount_atoms: u64 = if is_bid {
-            (resting_order
-                .get_price()
-                .checked_quote_for_base(resting_order.get_num_base_atoms(), true)
-                .unwrap())
-            .into()
-        } else {
-            resting_order.get_num_base_atoms().into()
-        };
-
-        // Update the accounting for the order that was just canceled.
-        if resting_order.is_global() {
-            let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                &global_trade_accounts_opts[1]
-            } else {
-                &global_trade_accounts_opts[0]
-            };
-            remove_from_global(&global_trade_accounts_opt)?
-        } else {
-            update_balance(dynamic, trader_index, !is_bid, true, amount_atoms)?;
-        }
-        remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)?;
-
+        remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)?;
         Ok(())
     }
 }
