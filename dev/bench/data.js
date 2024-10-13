@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728847180632,
+  "lastUpdate": 1728848375537,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6319,6 +6319,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6131,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "distinct": true,
+          "id": "6805cfe814b1209fe8e01b255285f80c8223facc",
+          "message": "Make rent expansion based on bytes not current balance",
+          "timestamp": "2024-10-13T21:12:29+02:00",
+          "tree_id": "2f178e497b9688915dcf56e86ce183b1c47117d8",
+          "url": "https://github.com/CKS-Systems/manifest/commit/6805cfe814b1209fe8e01b255285f80c8223facc"
+        },
+        "date": 1728848373888,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6552,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 10025,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10940,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3006,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5647,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5777,
             "unit": "CU",
             "range": "",
             "extra": ""
