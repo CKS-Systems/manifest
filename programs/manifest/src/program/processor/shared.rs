@@ -77,8 +77,10 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let new_size: usize = expandable_account.data_len() + block_size;
 
     let rent: Rent = Rent::get()?;
+    let old_minimum_balance: u64 = rent.minimum_balance(expandable_account.data_len());
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
-    let lamports_diff: u64 = new_minimum_balance.saturating_sub(expandable_account.lamports());
+    // Dont use the actual amount since that could have gas prepayments on it.
+    let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
     let payer: &AccountInfo = payer.info;
     let system_program: &AccountInfo = system_program.info;
