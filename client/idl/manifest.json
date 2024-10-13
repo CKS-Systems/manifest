@@ -1748,11 +1748,27 @@
             "type": "u64"
           },
           {
+            "name": "baseWithdrawable",
+            "type": "u64"
+          },
+          {
+            "name": "quoteWithdrawable",
+            "type": "u64"
+          },
+          {
+            "name": "baseInAsks",
+            "type": "u64"
+          },
+          {
+            "name": "quoteInBids",
+            "type": "u64"
+          },
+          {
             "name": "padding3",
             "type": {
               "array": [
                 "u64",
-                8
+                4
               ]
             }
           }
