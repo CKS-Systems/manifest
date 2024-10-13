@@ -874,14 +874,15 @@ impl<
                         break;
                     }
                 }
+                let amount_atoms: u64 = if is_bid {
+                    quote_atoms_traded.as_u64()
+                } else {
+                    base_atoms_traded.as_u64()
+                };
                 let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
-                    GlobalAtoms::new(if is_bid {
-                        quote_atoms_traded.as_u64()
-                    } else {
-                        base_atoms_traded.as_u64()
-                    }),
+                    GlobalAtoms::new(amount_atoms),
                 )?;
                 if !has_enough_tokens {
                     let next_maker_order_index: DataIndex = get_next_candidate_match_index(
@@ -899,6 +900,9 @@ impl<
                     current_maker_order_index = next_maker_order_index;
                     continue;
                 }
+
+                // Move tokens to orders from global account.
+                fixed.update_orders_balance(is_bid, true, amount_atoms)?;
             }
 
             total_base_atoms_traded = total_base_atoms_traded.checked_add(base_atoms_traded)?;
@@ -952,7 +956,8 @@ impl<
                 base_atoms_traded.into()
             };
             fixed.update_withdrawable_balance(!is_bid, true, maker_received_atoms)?;
-            fixed.update_orders_balance(!is_bid, false, maker_received_atoms)?;
+            // The order never rests, so no need to remove from orders balance.
+
             update_balance(
                 dynamic,
                 maker_trader_index,
@@ -961,7 +966,7 @@ impl<
                 maker_received_atoms,
             )?;
 
-            // Decrease taker
+            // Decrease taker. (Maker_receive_atoms == taker_spent_atoms, rename just for readability)
             let taker_spent_atoms: u64 = if is_bid {
                 quote_atoms_traded.into()
             } else {
@@ -969,6 +974,7 @@ impl<
             };
             fixed.update_withdrawable_balance(!is_bid, false, taker_spent_atoms)?;
             // The order never rests, so no need to add to orders balance.
+
             update_balance(dynamic, trader_index, !is_bid, false, taker_spent_atoms)?;
 
             // Increase taker
@@ -978,7 +984,9 @@ impl<
                 quote_atoms_traded.into()
             };
             fixed.update_withdrawable_balance(is_bid, true, taker_received_atoms)?;
-            // The order never rests, so no need to take from orders balance.
+            // Taker received atoms are taken off the book.
+            fixed.update_orders_balance(is_bid, false, taker_received_atoms)?;
+
             update_balance(dynamic, trader_index, is_bid, true, taker_received_atoms)?;
 
             // Record maker & taker volume.
@@ -1119,7 +1127,9 @@ impl<
             // Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker
             let amount_atoms: u64 = if is_bid {
-                remaining_base_atoms.checked_mul(price, true)?.into()
+                price
+                    .checked_quote_for_base(remaining_base_atoms, true)?
+                    .as_u64()
             } else {
                 remaining_base_atoms.into()
             };
