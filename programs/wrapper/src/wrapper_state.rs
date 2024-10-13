@@ -5,7 +5,7 @@ use hypertree::{DataIndex, Get, NIL};
 use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 
-use crate::processors::shared::WRAPPER_STATE_DISCRIMINANT;
+use crate::loader::WRAPPER_STATE_DISCRIMINANT;
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Pod, Zeroable)]
