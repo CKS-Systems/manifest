@@ -30,11 +30,7 @@ export type MarketFixed = {
   freeListHeadIndex: number;
   padding2: number[] /* size: 1 */;
   quoteVolume: beet.bignum;
-  baseWithdrawable: beet.bignum;
-  quoteWithdrawable: beet.bignum;
-  baseInAsks: beet.bignum;
-  quoteInBids: beet.bignum;
-  padding3: beet.bignum[] /* size: 4 */;
+  padding3: beet.bignum[] /* size: 8 */;
 };
 
 /**
@@ -64,11 +60,7 @@ export const marketFixedBeet = new beet.BeetArgsStruct<MarketFixed>(
     ['freeListHeadIndex', beet.u32],
     ['padding2', beet.uniformFixedSizeArray(beet.u32, 1)],
     ['quoteVolume', beet.u64],
-    ['baseWithdrawable', beet.u64],
-    ['quoteWithdrawable', beet.u64],
-    ['baseInAsks', beet.u64],
-    ['quoteInBids', beet.u64],
-    ['padding3', beet.uniformFixedSizeArray(beet.u64, 4)],
+    ['padding3', beet.uniformFixedSizeArray(beet.u64, 8)],
   ],
   'MarketFixed',
 );
