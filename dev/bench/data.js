@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728940545895,
+  "lastUpdate": 1728944710184,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6771,6 +6771,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6132,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "80a5806dcffd76797c85041e127a2f4594c811f7",
+          "message": "Use minimum required not actual when expanding (#182)\n\nuse minimum required not actual",
+          "timestamp": "2024-10-14T18:00:08-04:00",
+          "tree_id": "2c1189747aafe191602a385e3c6403b61305ccd6",
+          "url": "https://github.com/CKS-Systems/manifest/commit/80a5806dcffd76797c85041e127a2f4594c811f7"
+        },
+        "date": 1728944709102,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3509,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5586,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6124,
             "unit": "CU",
             "range": "",
             "extra": ""
