@@ -69,6 +69,12 @@ pub fn process_instruction(
         ManifestWrapperInstruction::BatchUpdate => {
             process_batch_update(program_id, accounts, data)?;
         }
+        ManifestWrapperInstruction::BatchUpdateBaseGlobal => {
+            process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::BatchUpdateQuoteGlobal => {
+            process_batch_update(program_id, accounts, data)?;
+        }
     }
 
     Ok(())

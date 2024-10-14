@@ -290,6 +290,96 @@
           "docs": [
             "System program"
           ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Mint for the base global account"
+          ]
+        },
+        {
+          "name": "baseGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base global account"
+          ]
+        },
+        {
+          "name": "baseGlobalVault",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base global vault"
+          ]
+        },
+        {
+          "name": "baseMarketVault",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base market vault"
+          ]
+        },
+        {
+          "name": "baseTokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token program(22)"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Mint for this global account"
+          ]
+        },
+        {
+          "name": "quoteGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobalVault",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote global vault"
+          ]
+        },
+        {
+          "name": "quoteMarketVault",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote market vault"
+          ]
+        },
+        {
+          "name": "quoteTokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token program(22)"
+          ]
         }
       ],
       "args": [
@@ -303,6 +393,200 @@
       "discriminant": {
         "type": "u8",
         "value": 4
+      }
+    },
+    {
+      "name": "BatchUpdateBaseGlobal",
+      "accounts": [
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint for the base global account"
+          ]
+        },
+        {
+          "name": "baseGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global account"
+          ]
+        },
+        {
+          "name": "baseGlobalVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Base global vault"
+          ]
+        },
+        {
+          "name": "baseMarketVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Base market vault"
+          ]
+        },
+        {
+          "name": "baseTokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "WrapperBatchUpdateParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
+    },
+    {
+      "name": "BatchUpdateQuoteGlobal",
+      "accounts": [
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Mint for the quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobalVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Quote global vault"
+          ]
+        },
+        {
+          "name": "quoteMarketVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Quote market vault"
+          ]
+        },
+        {
+          "name": "quoteTokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "WrapperBatchUpdateParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
       }
     }
   ],
