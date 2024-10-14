@@ -76,7 +76,6 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let expandable_account: &AccountInfo = manifest_account.info;
     let new_size: usize = expandable_account.data_len() + block_size;
 
-    // TODO: Make this based on minimum required before, not actual.
     let rent: Rent = Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
     let lamports_diff: u64 = new_minimum_balance.saturating_sub(expandable_account.lamports());
