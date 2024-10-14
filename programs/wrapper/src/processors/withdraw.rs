@@ -15,9 +15,9 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use super::shared::{
-    check_signer, get_trader_index_hint_for_market, sync, WrapperStateAccountInfo,
-};
+use crate::loader::{check_signer, WrapperStateAccountInfo};
+
+use super::shared::{get_trader_index_hint_for_market, sync};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct WrapperWithdrawParams {
