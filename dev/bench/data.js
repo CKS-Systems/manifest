@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728944710184,
+  "lastUpdate": 1728947672423,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6837,6 +6837,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6124,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64477c551e97a4a465db53b6aeafd3b20ef40ab8",
+          "message": "Global in sdk (#181)\n\n* Global in sdk and add TODO in program\r\n\r\n* fmt\r\n\r\n* lint\r\n\r\n* Always take rent\r\n\r\n* todo\r\n\r\n* Partial program change\r\n\r\n* balance management\r\n\r\n* fmt\r\n\r\n* client\r\n\r\n* Make rent expansion based on bytes not current balance\r\n\r\n* revert to checked mul\r\n\r\n* remove rent change\r\n\r\n* remove todo\r\n\r\n* remove\r\n\r\n* fix idl",
+          "timestamp": "2024-10-14T18:49:12-04:00",
+          "tree_id": "c1244b5617e2b07ef81c94596718b7ded8c6e249",
+          "url": "https://github.com/CKS-Systems/manifest/commit/64477c551e97a4a465db53b6aeafd3b20ef40ab8"
+        },
+        "date": 1728947670481,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3517,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5593,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6070,
             "unit": "CU",
             "range": "",
             "extra": ""
