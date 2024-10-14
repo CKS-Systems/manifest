@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728931405771,
+  "lastUpdate": 1728940545895,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6707,6 +6707,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6095,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Britt Cyr",
+            "username": "brittcyr",
+            "email": "cyrbritt@gmail.com"
+          },
+          "committer": {
+            "name": "Britt Cyr",
+            "username": "brittcyr",
+            "email": "cyrbritt@gmail.com"
+          },
+          "id": "e2edad83e8ea24115c56fe00c3fd88ed6e5c393a",
+          "message": "use minimum required not actual",
+          "timestamp": "2024-10-14T17:58:54Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e2edad83e8ea24115c56fe00c3fd88ed6e5c393a"
+        },
+        "date": 1728940544519,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3502,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5590,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6132,
             "unit": "CU",
             "range": "",
             "extra": ""
