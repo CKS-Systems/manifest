@@ -77,6 +77,7 @@ export class FillFeed {
       ? new Date(Date.now() + 30_000)
       : new Date(Date.now() + 1_000_000_000_000);
 
+    // TODO: remove endTime in favor of stopParseLogs for testing
     while (!this.shouldEnd && new Date(Date.now()) < endTime) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
