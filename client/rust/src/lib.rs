@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 use jupiter_amm_interface::{
-    AccountMap, Amm, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas, SwapParams,
+    AccountMap, Amm, AmmContext, KeyedAccount, Quote, QuoteParams, Side, Swap, SwapAndAccountMetas,
+    SwapParams,
 };
 
 use hypertree::get_helper;
@@ -54,7 +55,7 @@ impl Amm for ManifestMarket {
         vec![self.key, self.get_base_mint(), self.get_quote_mint()]
     }
 
-    fn from_keyed_account(keyed_account: &KeyedAccount) -> Result<Self> {
+    fn from_keyed_account(keyed_account: &KeyedAccount, _amm_context: &AmmContext) -> Result<Self> {
         let mut_data: &mut &[u8] = &mut keyed_account.account.data.as_slice();
 
         let (header_bytes, dynamic_data) = mut_data.split_at(size_of::<MarketFixed>());
@@ -96,12 +97,12 @@ impl Amm for ManifestMarket {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
         let global_trade_accounts: &[Option<GlobalTradeAccounts>; 2] = &[None, None];
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
-            let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.in_amount);
+            let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
                 .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
                 .as_u64()
         } else {
-            let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.in_amount);
+            let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
                 .impact_base_atoms(true, in_atoms, global_trade_accounts)?
                 .as_u64()
@@ -116,9 +117,9 @@ impl Amm for ManifestMarket {
         let SwapParams {
             destination_mint,
             source_mint,
-            user_destination_token_account,
-            user_source_token_account,
-            user_transfer_authority,
+            source_token_account,
+            destination_token_account,
+            token_transfer_authority,
             ..
         } = swap_params;
 
@@ -126,20 +127,12 @@ impl Amm for ManifestMarket {
             if destination_mint != &self.get_quote_mint() {
                 return Err(Error::msg("Invalid quote mint"));
             }
-            (
-                Side::Ask,
-                user_source_token_account,
-                user_destination_token_account,
-            )
+            (Side::Ask, source_token_account, destination_token_account)
         } else {
             if destination_mint != &self.get_base_mint() {
                 return Err(Error::msg("Invalid base mint"));
             }
-            (
-                Side::Bid,
-                user_destination_token_account,
-                user_source_token_account,
-            )
+            (Side::Bid, destination_token_account, source_token_account)
         };
 
         let (base_vault, _base_bump) = get_vault_address(&self.key, &self.get_base_mint());
@@ -149,7 +142,7 @@ impl Amm for ManifestMarket {
 
         let account_metas: Vec<AccountMeta> = vec![
             AccountMeta::new_readonly(manifest::id(), false),
-            AccountMeta::new(*user_transfer_authority, true),
+            AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
@@ -211,6 +204,7 @@ impl Amm for ManifestMarket {
 mod test {
     use super::*;
     use hypertree::{get_mut_helper, trace, DataIndex};
+    use jupiter_amm_interface::{ClockRef, SwapMode};
     use manifest::{
         quantities::BaseAtoms,
         state::{
@@ -345,8 +339,12 @@ mod test {
             params: None,
         };
 
+        let amm_context: AmmContext = AmmContext {
+            clock_ref: ClockRef::default(),
+        };
+
         let mut manifest_market: ManifestMarket =
-            ManifestMarket::from_keyed_account(&market_account).unwrap();
+            ManifestMarket::from_keyed_account(&market_account, &amm_context).unwrap();
 
         let accounts_map: AccountMap = HashMap::from([(market_key, account)]);
 
@@ -365,7 +363,8 @@ mod test {
             };
 
             let quote_params: QuoteParams = QuoteParams {
-                in_amount,
+                amount: in_amount,
+                swap_mode: SwapMode::ExactIn,
                 input_mint,
                 output_mint,
             };
@@ -508,8 +507,11 @@ mod test {
             params: None,
         };
 
+        let amm_context: AmmContext = AmmContext {
+            clock_ref: ClockRef::default(),
+        };
         let manifest_market: ManifestMarket =
-            ManifestMarket::from_keyed_account(&market_account).unwrap();
+            ManifestMarket::from_keyed_account(&market_account, &amm_context).unwrap();
 
         assert_eq!(manifest_market.get_accounts_len(), 13);
         assert_eq!(manifest_market.label(), "Manifest");
@@ -522,11 +524,13 @@ mod test {
             in_amount: 1,
             source_mint: manifest_market.get_base_mint(),
             destination_mint: manifest_market.get_quote_mint(),
-            user_source_token_account: manifest_market.get_base_mint(),
-            user_destination_token_account: manifest_market.get_quote_mint(),
-            user_transfer_authority: trader_key,
+            source_token_account: manifest_market.get_base_mint(),
+            destination_token_account: manifest_market.get_quote_mint(),
+            token_transfer_authority: trader_key,
+            missing_dynamic_accounts_as_default: false,
             open_order_address: None,
             quote_mint_to_referrer: None,
+            out_amount: 0,
             jupiter_program_id: &manifest::id(),
         };
 
@@ -538,11 +542,13 @@ mod test {
             in_amount: 1,
             source_mint: manifest_market.get_quote_mint(),
             destination_mint: manifest_market.get_base_mint(),
-            user_source_token_account: manifest_market.get_base_mint(),
-            user_destination_token_account: manifest_market.get_quote_mint(),
-            user_transfer_authority: trader_key,
+            source_token_account: manifest_market.get_quote_mint(),
+            destination_token_account: manifest_market.get_base_mint(),
+            token_transfer_authority: trader_key,
+            missing_dynamic_accounts_as_default: false,
             open_order_address: None,
             quote_mint_to_referrer: None,
+            out_amount: 0,
             jupiter_program_id: &manifest::id(),
         };
 

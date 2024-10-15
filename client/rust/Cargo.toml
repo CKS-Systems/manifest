@@ -14,7 +14,7 @@ test = []
 anyhow = { workspace = true }
 manifest = { path = "../../programs/manifest", features=['no-clock'] }
 hypertree = { path = "../../lib" }
-jupiter-amm-interface = "0.1.1"
+jupiter-amm-interface = "0.4.5"
 solana-sdk = { workspace = true }
 solana-program = { workspace = true }
 spl-token = { workspace = true }
