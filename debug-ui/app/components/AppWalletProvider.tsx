@@ -23,6 +23,7 @@ import { ManifestClient } from '@cks-systems/manifest-sdk';
 import { Connection } from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
+import { Cluster, getClusterFromConnection } from '@cks-systems/manifest-sdk/utils/solana';
 
 require('react-toastify/dist/ReactToastify.css');
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -62,13 +63,21 @@ const AppWalletProvider = ({
     throw new Error('RPC_URL not set');
   }
 
-  const determineNetworkFromRpcUrl = (url: string): WalletAdapterNetwork => {
+  const determineNetworkFromRpcUrl = async (url: string): Promise<WalletAdapterNetwork> => {
     if (url.includes('mainnet')) {
       return WalletAdapterNetwork.Mainnet;
     } else if (url.includes('devnet')) {
       return WalletAdapterNetwork.Devnet;
     } else if (url.includes('testnet')) {
       return WalletAdapterNetwork.Testnet;
+    }
+
+    // Try to determine the network from the genesis hash.
+    const cluster: Cluster = await getClusterFromConnection(new Connection(url));
+    if (cluster == 'mainnet-beta') {
+      return WalletAdapterNetwork.Mainnet;
+    } else if (cluster == 'devnet') {
+      return WalletAdapterNetwork.Devnet;
     }
 
     toast.error('determineNetworkFromRpcUrl: Unknown network');
@@ -84,17 +93,13 @@ const AppWalletProvider = ({
 
     const fetchState = async (): Promise<void> => {
       try {
-        console.log('loading initial state');
-        const detectedNetwork = determineNetworkFromRpcUrl(rpcUrl);
+        const detectedNetwork = await determineNetworkFromRpcUrl(rpcUrl);
         setNetwork(detectedNetwork);
 
         const conn = new Connection(rpcUrl, "confirmed");
         const marketPubs = await ManifestClient.listMarketPublicKeys(conn);
         const marketAddrs = marketPubs.map((p) => p.toBase58());
-        const filteredAddrs = marketAddrs.filter(
-          (a) => a !== '6XdExjwhzXMHmKLCJS2YKvpVhGswa4K84NNY2L4c2eks',
-        );
-        setMarketAddrs(filteredAddrs);
+        setMarketAddrs(marketAddrs);
       } catch (e) {
         console.error('fetching app state:', e);
         toast.error(`placeOrder: ${ensureError(e).message}`);
