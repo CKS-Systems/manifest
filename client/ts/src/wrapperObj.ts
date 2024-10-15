@@ -6,6 +6,8 @@ import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
 import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { MarketInfo, marketInfoBeet } from './wrapper/types';
+import { convertU128 } from './utils/numbers';
+import BN from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
@@ -286,7 +288,7 @@ export class Wrapper {
           (openOrder: OpenOrderInternal) => {
             return {
               ...openOrder,
-              price: 0,
+              price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
           },
         );
