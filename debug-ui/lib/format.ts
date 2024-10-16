@@ -1,6 +1,3 @@
-
-
-
 export function formatPrice(n: number): string {
   const decimals = Math.max(0, Math.floor(9-Math.log10(n)));
   return Intl.NumberFormat('en', {
