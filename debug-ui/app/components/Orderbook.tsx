@@ -9,6 +9,7 @@ import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
+import { formatPrice } from '@/lib/format';
 
 const Orderbook = ({
   marketAddress,
@@ -59,7 +60,7 @@ const Orderbook = ({
             {asks.slice(Math.max(asks.length - 5, 0)).map((restingOrder, i) => (
               <tr key={i} className="border-b border-gray-700">
                 <td className="py-2">
-                  {Number(restingOrder.tokenPrice.toFixed(3))}
+                  {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
                 <td className="py-2">
@@ -87,7 +88,7 @@ const Orderbook = ({
             {bids.slice(Math.max(bids.length - 5, 0)).map((restingOrder, i) => (
               <tr key={i} className="border-b border-gray-700">
                 <td className="py-2">
-                  {Number(restingOrder.tokenPrice.toFixed(3))}
+                  {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
                 <td className="py-2">
