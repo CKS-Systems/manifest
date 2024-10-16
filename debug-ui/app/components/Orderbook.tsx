@@ -75,10 +75,12 @@ const Orderbook = ({
     let mid = (asks[0].tokenPrice + bids[0].tokenPrice) * 0.5;
     let bidDepth2Pct = bids
       .filter((b) => b.tokenPrice > mid * 0.98)
-      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0);
+      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
+      .toPrecision(6);
     let askDepth2Pct = bids
       .filter((b) => b.tokenPrice < mid * 1.02)
-      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0);
+      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
+      .toPrecision(6);
     divider = `spread: ${(spread * 10000).toFixed(2)}bps | depth (bid/ask): ${bidDepth2Pct} / ${askDepth2Pct}`;
   }
 
