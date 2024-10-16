@@ -55,7 +55,7 @@ const Orderbook = ({
             <tr className="border-b border-gray-700">
               <th className="py-2">Price</th>
               <th className="py-2">Amount</th>
-              <th className="py-2">Slots</th>
+              <th className="py-2">SIF</th>
               <th className="py-2">Maker</th>
             </tr>
           </thead>
@@ -66,7 +66,7 @@ const Orderbook = ({
                   {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{Number(restingOrder.lastValidSlot) - currentSlot}</td>
+                <td className="py-2">{Number(restingOrder.lastValidSlot) > 0 ? Number(restingOrder.lastValidSlot) - currentSlot : ""}</td>
                 <td className="py-2">
                   {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
                 </td>
@@ -85,7 +85,7 @@ const Orderbook = ({
             <tr className="border-b border-gray-700">
               <th className="py-2">Price</th>
               <th className="py-2">Amount</th>
-              <th className="py-2">Slots</th>
+              <th className="py-2">SIF</th>
               <th className="py-2">Maker</th>
             </tr>
           </thead>
@@ -96,7 +96,7 @@ const Orderbook = ({
                   {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{Number(restingOrder.lastValidSlot) - currentSlot}</td>
+                <td className="py-2">{Number(restingOrder.lastValidSlot) > 0 ? Number(restingOrder.lastValidSlot) - currentSlot : ""}</td>
                 <td className="py-2">
                   {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
                 </td>
