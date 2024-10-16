@@ -2,7 +2,7 @@
 
 import { fetchMarket } from '@/lib/data';
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
-import { useConnection } from '@solana/wallet-adapter-react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { useEffect, useState } from 'react';
 import { ReactElement } from 'react';
@@ -21,6 +21,7 @@ const Orderbook = ({
   const [currentSlot, setCurrentSlot] = useState<number>(0);
 
   const { connection: conn } = useConnection();
+  const { wallet } = useWallet();
 
   useEffect(() => {
     const updateOrderbook = async (): Promise<void> => {
@@ -46,6 +47,28 @@ const Orderbook = ({
     return (): void => clearInterval(id);
   }, [conn, marketAddress]);
 
+  const formatOrder = (restingOrder: RestingOrder, i: number) => {
+    let pk = wallet?.adapter?.publicKey;
+    let isOwn = pk && pk.equals(restingOrder.trader);
+    return (
+      <tr
+        key={i}
+        className={`border-b border-gray-700 ${isOwn && 'text-yellow-600'}`}
+      >
+        <td className="py-2">{formatPrice(restingOrder.tokenPrice)}</td>
+        <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
+        <td className="py-2">
+          {Number(restingOrder.lastValidSlot) > 0
+            ? Number(restingOrder.lastValidSlot) - currentSlot
+            : ''}
+        </td>
+        <td className="py-2">
+          {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
       <pre className="bg-gray-800 p-4 rounded-lg text-sm mb-4">
@@ -60,18 +83,7 @@ const Orderbook = ({
             </tr>
           </thead>
           <tbody>
-            {asks.slice(Math.max(asks.length - 5, 0)).map((restingOrder, i) => (
-              <tr key={i} className="border-b border-gray-700">
-                <td className="py-2">
-                  {formatPrice(restingOrder.tokenPrice)}
-                </td>
-                <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{Number(restingOrder.lastValidSlot) > 0 ? Number(restingOrder.lastValidSlot) - currentSlot : ""}</td>
-                <td className="py-2">
-                  {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
-                </td>
-              </tr>
-            ))}
+            {asks.slice(Math.max(asks.length - 5, 0)).map(formatOrder)}
           </tbody>
         </table>
       </pre>
@@ -90,18 +102,7 @@ const Orderbook = ({
             </tr>
           </thead>
           <tbody>
-            {bids.slice(Math.max(bids.length - 5, 0)).map((restingOrder, i) => (
-              <tr key={i} className="border-b border-gray-700">
-                <td className="py-2">
-                  {formatPrice(restingOrder.tokenPrice)}
-                </td>
-                <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
-                <td className="py-2">{Number(restingOrder.lastValidSlot) > 0 ? Number(restingOrder.lastValidSlot) - currentSlot : ""}</td>
-                <td className="py-2">
-                  {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
-                </td>
-              </tr>
-            ))}
+            {bids.slice(Math.max(bids.length - 5, 0)).map(formatOrder)}
           </tbody>
         </table>
       </pre>
