@@ -1161,7 +1161,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
                 && self.is_left_child::<V>(sibling_index)
             {
-                self.set_color::<V>(sibling_right_child_index, Color::Red);
+                self.set_color::<V>(sibling_right_child_index, parent_color);
                 self.set_color::<V>(parent_index, Color::Black);
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_left::<V>(sibling_index);
@@ -1182,7 +1182,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             if self.get_color::<V>(sibling_left_child_index) == Color::Red
                 && self.is_right_child::<V>(sibling_index)
             {
-                self.set_color::<V>(sibling_left_child_index, Color::Red);
+                self.set_color::<V>(sibling_left_child_index, parent_color);
                 self.set_color::<V>(parent_index, Color::Black);
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_right::<V>(sibling_index);
