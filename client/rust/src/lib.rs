@@ -7,13 +7,16 @@ use jupiter_amm_interface::{
 use hypertree::{get_helper, get_mut_helper};
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
-    state::{DynamicAccount, GlobalFixed, GlobalValue, MarketFixed, MarketValue, GLOBAL_FIXED_SIZE},
+    state::{
+        DynamicAccount, GlobalFixed, GlobalValue, MarketFixed, MarketValue, GLOBAL_FIXED_SIZE,
+    },
     validation::{
-        get_global_address, get_global_vault_address, get_vault_address, loaders::GlobalTradeAccounts, ManifestAccountInfo
+        get_global_address, get_global_vault_address, get_vault_address,
+        loaders::GlobalTradeAccounts, ManifestAccountInfo,
     },
 };
-use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use solana_program::account_info::AccountInfo;
+use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::{cell::RefCell, mem::size_of, rc::Rc};
 
 #[derive(Clone)]
@@ -127,7 +130,7 @@ impl Amm for ManifestGlobalMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
-        
+
         let mut data_vec: Vec<u8> = Vec::new();
         if self.quote_global.is_some() {
             let mut header_bytes: [u8; GLOBAL_FIXED_SIZE] = [0; GLOBAL_FIXED_SIZE];
