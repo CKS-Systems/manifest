@@ -9,7 +9,7 @@ import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
 import { createGlobalCreateInstruction } from '../src/manifest';
-import { UiWrapper, UiWrapperOpenOrderParsed } from '../src/uiWrapperObj';
+import { UiWrapper, UiWrapperOpenOrder } from '../src/uiWrapperObj';
 import {
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
@@ -141,7 +141,7 @@ async function testWrapper(): Promise<void> {
 
   const [wrapperOrder] = wrapper.openOrdersForMarket(
     marketAddress,
-  ) as UiWrapperOpenOrderParsed[];
+  ) as UiWrapperOpenOrder[];
   const amount =
     (wrapperOrder.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =

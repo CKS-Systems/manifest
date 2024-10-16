@@ -47,13 +47,13 @@ export interface UiWrapperData {
   /** Public key for the owner of this wrapper. */
   owner: PublicKey;
   /** Array of market infos that have been parsed. */
-  marketInfos: UiWrapperMarketInfoParsed[];
+  marketInfos: UiWrapperMarketInfo[];
 }
 
 /**
  * Parsed market info on a wrapper. Accurate to the last sync.
  */
-export interface UiWrapperMarketInfoParsed {
+export interface UiWrapperMarketInfo {
   /** Public key for market. */
   market: PublicKey;
   /** Base balance in atoms. */
@@ -61,29 +61,15 @@ export interface UiWrapperMarketInfoParsed {
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
   /** Open orders. */
-  orders: UiWrapperOpenOrderParsed[];
+  orders: UiWrapperOpenOrder[];
   /** Last update slot number. */
   lastUpdatedSlot: number;
 }
 
 /**
- * Raw market info on a wrapper.
- */
-export interface UiWrapperMarketInfoRaw {
-  market: PublicKey;
-  openOrdersRootIndex: number;
-  traderIndex: number;
-  baseBalanceAtoms: bignum;
-  quoteBalanceAtoms: bignum;
-  quoteVolumeAtoms: bignum;
-  lastUpdatedSlot: number;
-  padding: number; // 3 bytes
-}
-
-/**
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
-export interface UiWrapperOpenOrderParsed {
+export interface UiWrapperOpenOrder {
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
@@ -179,9 +165,9 @@ export class UiWrapper {
    *
    * @return MarketInfoParsed
    */
-  public marketInfoForMarket(marketPk: PublicKey): UiWrapperMarketInfoParsed | null {
-    const filtered: UiWrapperMarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: UiWrapperMarketInfoParsed) => {
+  public marketInfoForMarket(marketPk: PublicKey): UiWrapperMarketInfo | null {
+    const filtered: UiWrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfo) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -198,9 +184,9 @@ export class UiWrapper {
    *
    * @return OpenOrder[]
    */
-  public openOrdersForMarket(marketPk: PublicKey): UiWrapperOpenOrderParsed[] | null {
-    const filtered: UiWrapperMarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: UiWrapperMarketInfoParsed) => {
+  public openOrdersForMarket(marketPk: PublicKey): UiWrapperOpenOrder[] | null {
+    const filtered: UiWrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfo) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -278,14 +264,14 @@ export class UiWrapper {
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
     console.log(`Owner: ${this.data.owner.toBase58()}`);
-    this.data.marketInfos.forEach((marketInfo: UiWrapperMarketInfoParsed) => {
+    this.data.marketInfos.forEach((marketInfo: UiWrapperMarketInfo) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
       console.log(`Last updated slot: ${marketInfo.lastUpdatedSlot}`);
       console.log(
         `BaseAtoms: ${marketInfo.baseBalanceAtoms} QuoteAtoms: ${marketInfo.quoteBalanceAtoms}`,
       );
-      marketInfo.orders.forEach((order: UiWrapperOpenOrderParsed) => {
+      marketInfo.orders.forEach((order: UiWrapperOpenOrder) => {
         console.log(
           `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
@@ -335,7 +321,7 @@ export class UiWrapper {
           )
         : [];
 
-    const parsedMarketInfos: UiWrapperMarketInfoParsed[] = marketInfos.map(
+    const parsedMarketInfos: UiWrapperMarketInfo[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
         const parsedOpenOrders: UiWrapperOpenOrderRaw[] =
@@ -347,7 +333,7 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: UiWrapperOpenOrderParsed[] = parsedOpenOrders.map(
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] = parsedOpenOrders.map(
           (openOrder: UiWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
