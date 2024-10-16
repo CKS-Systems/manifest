@@ -15,4 +15,5 @@ ignore:
   # Not hermetic
   - "client/ts/src/utils/solana.ts"
   # Do not run the demo client in tests
-  - "client/ts/demo/main.ts
+  - "client/ts/tests"
+  - "client/ts/demo/main.ts"
