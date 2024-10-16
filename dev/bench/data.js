@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728947672423,
+  "lastUpdate": 1729102386676,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6903,6 +6903,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6070,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5737ad508000092c69afae4bbc77bc5d2822656b",
+          "message": "Fix in red black tree suggested by certora. Test case is in their repo (#193)",
+          "timestamp": "2024-10-16T20:47:51+03:00",
+          "tree_id": "d06f2c51c8568bf64ad39f019867e4fb3e2ce3bb",
+          "url": "https://github.com/CKS-Systems/manifest/commit/5737ad508000092c69afae4bbc77bc5d2822656b"
+        },
+        "date": 1729102384882,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3555,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5597,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6082,
             "unit": "CU",
             "range": "",
             "extra": ""
