@@ -7,3 +7,4 @@ export * from './manifest/errors';
 export * from './manifest/accounts';
 export * from './wrapper';
 export * from './wrapperObj';
+export * as uiWrapper from './uiWrapperObj';
