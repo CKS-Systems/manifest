@@ -18,6 +18,7 @@ const Orderbook = ({
 }): ReactElement => {
   const [bids, setBids] = useState<RestingOrder[]>([]);
   const [asks, setAsks] = useState<RestingOrder[]>([]);
+  const [currentSlot, setCurrentSlot] = useState<number>(0);
 
   const { connection: conn } = useConnection();
 
@@ -28,6 +29,7 @@ const Orderbook = ({
           conn,
           new PublicKey(marketAddress),
         );
+        setCurrentSlot(market['slot']);
         const asks: RestingOrder[] = market.asks();
         const bids: RestingOrder[] = market.bids();
         setBids(bids.reverse());
@@ -39,7 +41,7 @@ const Orderbook = ({
     };
 
     updateOrderbook();
-    const id = setInterval(updateOrderbook, 10_000);
+    const id = setInterval(updateOrderbook, 2_000);
 
     return (): void => clearInterval(id);
   }, [conn, marketAddress]);
@@ -53,6 +55,7 @@ const Orderbook = ({
             <tr className="border-b border-gray-700">
               <th className="py-2">Price</th>
               <th className="py-2">Amount</th>
+              <th className="py-2">Slots</th>
               <th className="py-2">Maker</th>
             </tr>
           </thead>
@@ -63,6 +66,7 @@ const Orderbook = ({
                   {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
+                <td className="py-2">{Number(restingOrder.lastValidSlot) - currentSlot}</td>
                 <td className="py-2">
                   {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
                 </td>
@@ -81,6 +85,7 @@ const Orderbook = ({
             <tr className="border-b border-gray-700">
               <th className="py-2">Price</th>
               <th className="py-2">Amount</th>
+              <th className="py-2">Slots</th>
               <th className="py-2">Maker</th>
             </tr>
           </thead>
@@ -91,6 +96,7 @@ const Orderbook = ({
                   {formatPrice(restingOrder.tokenPrice)}
                 </td>
                 <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
+                <td className="py-2">{Number(restingOrder.lastValidSlot) - currentSlot}</td>
                 <td className="py-2">
                   {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
                 </td>
