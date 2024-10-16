@@ -632,7 +632,7 @@ mod test {
         assert_eq!(manifest_market.key(), market_key);
         assert_eq!(manifest_market.program_id(), manifest::id());
         assert_eq!(manifest_market.get_reserve_mints()[0], base_mint_key);
-        assert_eq!(manifest_market.get_accounts_to_update().len(), 3);
+        assert_eq!(manifest_market.get_accounts_to_update().len(), 5);
 
         let swap_params: SwapParams = SwapParams {
             in_amount: 1,
