@@ -3520,7 +3520,7 @@
             </span><span class="kw">if </span><span class="self">self</span>.get_color::&lt;V&gt;(sibling_right_child_index) == Color::Red
                 &amp;&amp; <span class="self">self</span>.is_left_child::&lt;V&gt;(sibling_index)
             {
-                <span class="self">self</span>.set_color::&lt;V&gt;(sibling_right_child_index, Color::Red);
+                <span class="self">self</span>.set_color::&lt;V&gt;(sibling_right_child_index, parent_color);
                 <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Black);
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
                 <span class="self">self</span>.rotate_left::&lt;V&gt;(sibling_index);
@@ -3541,7 +3541,7 @@
             </span><span class="kw">if </span><span class="self">self</span>.get_color::&lt;V&gt;(sibling_left_child_index) == Color::Red
                 &amp;&amp; <span class="self">self</span>.is_right_child::&lt;V&gt;(sibling_index)
             {
-                <span class="self">self</span>.set_color::&lt;V&gt;(sibling_left_child_index, Color::Red);
+                <span class="self">self</span>.set_color::&lt;V&gt;(sibling_left_child_index, parent_color);
                 <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, Color::Black);
                 <span class="self">self</span>.set_color::&lt;V&gt;(sibling_index, Color::Black);
                 <span class="self">self</span>.rotate_right::&lt;V&gt;(sibling_index);
