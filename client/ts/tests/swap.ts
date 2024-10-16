@@ -19,7 +19,7 @@ import { placeOrder } from './placeOrder';
 import { airdropSol } from '../src/utils/solana';
 import { depositGlobal } from './globalDeposit';
 import { createGlobal } from './createGlobal';
-import { OrderType } from '../src';
+import { OrderType } from '../src/manifest/types';
 import { NO_EXPIRATION_LAST_VALID_SLOT } from '../src/constants';
 
 async function testSwap(): Promise<void> {
