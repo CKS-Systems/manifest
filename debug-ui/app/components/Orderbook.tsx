@@ -9,7 +9,7 @@ import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
-import { formatPrice } from '@/lib/format';
+import { formatNotional, formatPrice } from '@/lib/format';
 
 const Orderbook = ({
   marketAddress,
@@ -69,6 +69,19 @@ const Orderbook = ({
     );
   };
 
+  let divider = '';
+  if (bids && bids.length > 0 && asks && asks.length > 0) {
+    let spread = Math.max(0, asks[0].tokenPrice / bids[0].tokenPrice - 1);
+    let mid = (asks[0].tokenPrice + bids[0].tokenPrice) * 0.5;
+    let bidDepth2Pct = bids
+      .filter((b) => b.tokenPrice > mid * 0.98)
+      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0);
+    let askDepth2Pct = bids
+      .filter((b) => b.tokenPrice < mid * 1.02)
+      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0);
+    divider = `spread: ${(spread * 10000).toFixed(2)}bps | depth (bid/ask): ${bidDepth2Pct} / ${askDepth2Pct}`;
+  }
+
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
       <pre className="bg-gray-800 p-4 rounded-lg text-sm mb-4">
@@ -88,7 +101,7 @@ const Orderbook = ({
         </table>
       </pre>
 
-      <div className="text-center text-gray-400 my-2">====== MID ======</div>
+      <div className="text-center text-gray-400 my-2">{divider}</div>
 
       <pre className="bg-gray-800 p-4 rounded-lg text-sm">
         <strong>Bids</strong>

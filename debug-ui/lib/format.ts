@@ -5,3 +5,12 @@ export function formatPrice(n: number): string {
     maximumFractionDigits: decimals,
   }).format(n);
 }
+
+export function formatNotional(n: number, decimals: number): string {
+  return Intl.NumberFormat('en', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    style: 'currency',
+    currency: 'USD'
+  }).format(n);
+}
