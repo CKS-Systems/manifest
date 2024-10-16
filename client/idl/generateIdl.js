@@ -106,6 +106,8 @@ function modifyIdlCore(programName) {
       }
     }
 
+    updateIdlTypes(idl);
+
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
         case 'CreateMarket': {
@@ -243,16 +245,7 @@ function modifyIdlCore(programName) {
       },
     });
 
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.type.defined == 'PodBool') {
-            field.type = 'bool';
-          }
-          return field;
-        });
-      }
-    }
+    updateIdlTypes(idl);
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
@@ -346,16 +339,7 @@ function modifyIdlCore(programName) {
       },
     });
 
-    for (const idlType of idl.types) {
-      if (idlType.type && idlType.type.fields) {
-        idlType.type.fields = idlType.type.fields.map((field) => {
-          if (field.type.defined == 'PodBool') {
-            field.type = 'bool';
-          }
-          return field;
-        });
-      }
-    }
+    updateIdlTypes(idl);
 
     for (const instruction of idl.instructions) {
       switch (instruction.name) {
@@ -385,6 +369,24 @@ function modifyIdlCore(programName) {
           break;
         }
         case 'BatchUpdate': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperBatchUpdateParams',
+            },
+          });
+          break;
+        }
+        case 'BatchUpdateBaseGlobal': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'WrapperBatchUpdateParams',
+            },
+          });
+          break;
+        }
+        case 'BatchUpdateQuoteGlobal': {
           instruction.args.push({
             name: 'params',
             type: {
@@ -444,6 +446,31 @@ function findAndReplaceRecursively(target, find, replaceWith) {
     carry[key] = findAndReplaceRecursively(val, find, replaceWith);
     return carry;
   }, {});
+}
+
+function updateIdlTypes(idl) {
+  for (const idlType of idl.types) {
+    if (idlType.type && idlType.type.fields) {
+      idlType.type.fields = idlType.type.fields.map((field) => {
+        if (field.type.defined == 'PodBool') {
+          field.type = 'bool';
+        }
+        if (field.type.defined == 'BaseAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'QuoteAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'GlobalAtoms') {
+          field.type = 'u64';
+        }
+        if (field.type.defined == 'QuoteAtomsPerBaseAtom') {
+          field.type = 'u128';
+        }
+        return field;
+      });
+    }
+  }
 }
 
 main().catch((err) => {

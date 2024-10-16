@@ -73,14 +73,14 @@ pub(crate) fn process_withdraw(
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,
-                trader_token.key,
+                vault.key,
                 if is_base {
                     dynamic_account.fixed.get_base_mint()
                 } else {
                     dynamic_account.get_quote_mint()
                 },
+                trader_token.key,
                 vault.key,
-                payer.key,
                 &[],
                 amount_atoms,
                 if is_base {
@@ -118,7 +118,7 @@ pub(crate) fn process_withdraw(
     }
 
     let trader_index: DataIndex =
-        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+        get_trader_index_with_hint(trader_index_hint, &dynamic_account, &payer)?;
     dynamic_account.withdraw(trader_index, amount_atoms, is_base)?;
 
     emit_stack(WithdrawLog {

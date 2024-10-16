@@ -159,11 +159,9 @@ pub(crate) fn process_batch_update(
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-
         let trader_index: DataIndex =
-            get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+            get_trader_index_with_hint(trader_index_hint, &dynamic_account, &payer)?;
 
-        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         for cancel_order_params in cancels {
             // Hinted is preferred because that is O(1) to find and O(log n) to
             // remove. Without the hint, we lookup by order_sequence_number and
@@ -212,11 +210,8 @@ pub(crate) fn process_batch_update(
                         "Invalid cancel hint sequence number index {}",
                         hinted_cancel_index,
                     )?;
-                    dynamic_account.cancel_order_by_index(
-                        trader_index,
-                        hinted_cancel_index,
-                        &global_trade_accounts_opts,
-                    )?;
+                    dynamic_account
+                        .cancel_order_by_index(hinted_cancel_index, &global_trade_accounts_opts)?;
                 }
             };
 

@@ -12,7 +12,7 @@ use manifest::{
     program::{
         batch_update::{BatchUpdateReturn, PlaceOrderParams},
         batch_update_instruction, deposit_instruction, expand_market_instruction,
-        get_dynamic_account, get_mut_dynamic_account,
+        get_dynamic_account, get_mut_dynamic_account, invoke,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -21,7 +21,7 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::{get_return_data, invoke},
+    program::get_return_data,
     pubkey::Pubkey,
     system_program,
 };

@@ -7,11 +7,9 @@ use crate::{
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::DataIndex;
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
-use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
+use super::{get_trader_index_with_hint, invoke, shared::get_mut_dynamic_account};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DepositParams {
@@ -111,7 +109,7 @@ pub(crate) fn process_deposit(
     }
 
     let trader_index: DataIndex =
-        get_trader_index_with_hint(trader_index_hint, &mut dynamic_account, &payer)?;
+        get_trader_index_with_hint(trader_index_hint, &dynamic_account, &payer)?;
     dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)?;
 
     emit_stack(DepositLog {

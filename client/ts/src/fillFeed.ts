@@ -23,6 +23,9 @@ const fills = new promClient.Counter({
  */
 export class FillFeed {
   private wss: WebSocket.Server;
+  private shouldEnd: boolean = false;
+  private ended: boolean = false;
+
   constructor(private connection: Connection) {
     this.wss = new WebSocket.Server({ port: 1234 });
 
@@ -39,6 +42,27 @@ export class FillFeed {
     });
   }
 
+  public async stopParseLogs() {
+    this.shouldEnd = true;
+    const start = Date.now();
+    while (!this.ended) {
+      const timeout = 30_000;
+      const pollInterval = 500;
+
+      if (Date.now() - start > timeout) {
+        return Promise.reject(
+          new Error(
+            `failed to stop parseLogs after ${timeout / 1_000} seconds`,
+          ),
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+
+    return Promise.resolve();
+  }
+
   /**
    * Parse logs in an endless loop.
    */
@@ -53,7 +77,8 @@ export class FillFeed {
       ? new Date(Date.now() + 30_000)
       : new Date(Date.now() + 1_000_000_000_000);
 
-    while (new Date(Date.now()) < endTime) {
+    // TODO: remove endTime in favor of stopParseLogs for testing
+    while (!this.shouldEnd && new Date(Date.now()) < endTime) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
         await this.connection.getSignaturesForAddress(PROGRAM_ID, {
@@ -70,7 +95,10 @@ export class FillFeed {
         await this.handleSignature(signature);
       }
     }
+
+    console.log('ended loop');
     this.wss.close();
+    this.ended = true;
   }
 
   /**

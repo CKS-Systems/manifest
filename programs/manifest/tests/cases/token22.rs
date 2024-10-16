@@ -204,6 +204,20 @@ async fn token22_base() -> anyhow::Result<()> {
         &[&payer_keypair.insecure_clone()],
     )
     .await?;
+    {
+        let market_account: solana_sdk::account::Account = context
+            .borrow_mut()
+            .banks_client
+            .get_account(market_keypair.pubkey())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let market: manifest::state::MarketValue =
+            manifest::program::get_dynamic_value(market_account.data.as_slice());
+        let balance = market.get_trader_balance(&payer);
+        assert_eq!(balance.0.as_u64(), 999999000);
+    }
 
     // Place orders on both sides to
     let place_order_ix: Instruction = batch_update_instruction(
@@ -573,7 +587,6 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
     let usdc_mint_f: MintFixture =
         MintFixture::new_with_version(Rc::clone(&context), Some(6), false).await;
 
-    // TODO: Use xfer fee extension
     let spl_mint_keypair: Keypair = Keypair::new();
     let extension_types: Vec<spl_token_2022::extension::ExtensionType> =
         vec![spl_token_2022::extension::ExtensionType::TransferFeeConfig];
@@ -712,7 +725,6 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
     )
     .await?;
 
-    // TODO: Check that the balance on the seat reflects the xfer fee
     let market_account: solana_sdk::account::Account = context
         .borrow_mut()
         .banks_client

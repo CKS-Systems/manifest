@@ -104,31 +104,33 @@ class DummyTrader {
 
       const randomFunction =
         this.commands[Math.floor(Math.random() * this.commands.length)];
+      
+      // Try catch all of the functions because they could fail in
+      // getAccountInfo due to transient RPC errors.
       switch (randomFunction) {
         case 'DEPOSIT': {
           console.log(`${this.name} trying to deposit`);
-          await this.deposit();
+          try { await this.deposit(); } catch (err) {}
           break;
         }
         case 'WITHDRAW': {
           console.log(`${this.name} trying to withdraw`);
-          await this.withdraw();
+          try { await this.withdraw(); } catch (err) {}
           break;
         }
         case 'PLACE_ORDER': {
           console.log(`${this.name} trying to place order`);
-          await this.placeOrder();
-          //await this.placeOrder();
+          try { await this.placeOrder(); } catch (err) {}
           break;
         }
         case 'SWAP': {
           console.log(`${this.name} trying to swap`);
-          await this.swap();
+          try { await this.swap(); } catch (err) {}
           break;
         }
         case 'CANCEL_ORDER': {
           console.log(`${this.name} trying to cancel order`);
-          await this.cancelOrder();
+          try { await this.cancelOrder(); } catch (err) {}
           break;
         }
       }
@@ -442,7 +444,7 @@ async function createMarket(
     ),
     programId: PROGRAM_ID,
   });
-  const createMarketIx = ManifestClient.createMarketIx(
+  const createMarketIx = ManifestClient['createMarketIx'](
     keypair.publicKey,
     baseMint,
     quoteMint,

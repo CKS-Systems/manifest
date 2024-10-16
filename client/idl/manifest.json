@@ -323,14 +323,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Base mint, only inlcuded if base is Token22, otherwise not required"
+            "Base mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
           "name": "tokenProgramQuote",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22) quote. Optional. Only include if different from base"
           ]
@@ -339,8 +341,27 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Quote mint, only inlcuded if base is Token22, otherwise not required"
+            "Quote mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
           ]
         }
       ],
@@ -422,14 +443,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Mint for the global global account"
+            "Mint for the base global account"
           ]
         },
         {
           "name": "baseGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global account"
           ]
@@ -438,6 +461,7 @@
           "name": "baseGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global vault"
           ]
@@ -446,6 +470,7 @@
           "name": "baseMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base market vault"
           ]
@@ -454,6 +479,7 @@
           "name": "baseTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]
@@ -462,6 +488,7 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Mint for this global account"
           ]
@@ -470,6 +497,7 @@
           "name": "quoteGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global account"
           ]
@@ -478,6 +506,7 @@
           "name": "quoteGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global vault"
           ]
@@ -486,6 +515,7 @@
           "name": "quoteMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote market vault"
           ]
@@ -494,6 +524,7 @@
           "name": "quoteTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]
@@ -870,6 +901,14 @@
           {
             "name": "creator",
             "type": "publicKey"
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
           }
         ]
       }
@@ -953,6 +992,14 @@
           },
           {
             "name": "taker",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
             "type": "publicKey"
           },
           {
@@ -1473,6 +1520,293 @@
       }
     },
     {
+      "name": "ClaimedSeat",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseWithdrawableBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteWithdrawableBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalFixed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "discriminant",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "globalTradersRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "globalDepositsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "globalDepositsMaxIndex",
+            "type": "u32"
+          },
+          {
+            "name": "freeListHeadIndex",
+            "type": "u32"
+          },
+          {
+            "name": "numBytesAllocated",
+            "type": "u32"
+          },
+          {
+            "name": "vaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "globalBump",
+            "type": "u8"
+          },
+          {
+            "name": "numSeatsClaimed",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalTrader",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "depositIndex",
+            "type": "u32"
+          },
+          {
+            "name": "padding",
+            "type": "u32"
+          },
+          {
+            "name": "padding2",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "balanceAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketFixed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "discriminant",
+            "type": "u64"
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "baseMintDecimals",
+            "type": "u8"
+          },
+          {
+            "name": "quoteMintDecimals",
+            "type": "u8"
+          },
+          {
+            "name": "baseVaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "quoteVaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "padding1",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "orderSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "numBytesAllocated",
+            "type": "u32"
+          },
+          {
+            "name": "bidsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "bidsBestIndex",
+            "type": "u32"
+          },
+          {
+            "name": "asksRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "asksBestIndex",
+            "type": "u32"
+          },
+          {
+            "name": "claimedSeatsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "freeListHeadIndex",
+            "type": "u32"
+          },
+          {
+            "name": "padding2",
+            "type": {
+              "array": [
+                "u32",
+                1
+              ]
+            }
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "padding3",
+            "type": {
+              "array": [
+                "u64",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RestingOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price",
+            "type": "u128"
+          },
+          {
+            "name": "numBaseAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "sequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "traderIndex",
+            "type": "u32"
+          },
+          {
+            "name": "lastValidSlot",
+            "type": "u32"
+          },
+          {
+            "name": "isBid",
+            "type": "bool"
+          },
+          {
+            "name": "orderType",
+            "type": {
+              "defined": "OrderType"
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                22
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "OrderType",
       "type": {
         "kind": "enum",
@@ -1632,6 +1966,16 @@
           "name": "creator",
           "type": "publicKey",
           "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1755,6 +2099,16 @@
         },
         {
           "name": "taker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
           "type": "publicKey",
           "index": false
         },

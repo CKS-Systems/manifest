@@ -17,7 +17,7 @@ use hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
-    program::invoke,
+    instruction::Instruction,
     rent::Rent,
     system_instruction,
     sysvar::{slot_history::ProgramError, Sysvar},
@@ -78,7 +78,8 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
 
     let rent: Rent = Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
-    let lamports_diff: u64 = new_minimum_balance.saturating_sub(expandable_account.lamports());
+    let old_minimum_balance: u64 = rent.minimum_balance(expandable_account.data_len());
+    let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
     let payer: &AccountInfo = payer.info;
     let system_program: &AccountInfo = system_program.info;
@@ -104,7 +105,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     );
     #[cfg(feature = "fuzz")]
     {
-        invoke(
+        solana_program::program::invoke(
             &system_instruction::allocate(expandable_account.key, new_size as u64),
             &[expandable_account.clone(), system_program.clone()],
         )?;
@@ -167,10 +168,10 @@ pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
     dynamic_account
 }
 
-// TODO: Make dynamic_account immutable here
+// Uses a MarketRefMut instead of a MarketRef because callers will have mutable data.
 pub(crate) fn get_trader_index_with_hint(
     trader_index_hint: Option<DataIndex>,
-    dynamic_account: &mut MarketRefMut,
+    dynamic_account: &MarketRefMut,
     payer: &Signer,
 ) -> Result<DataIndex, ProgramError> {
     let trader_index: DataIndex = match trader_index_hint {
@@ -211,4 +212,15 @@ fn verify_trader_index_hint(
         hinted_index
     )?;
     Ok(())
+}
+
+pub fn invoke(ix: &Instruction, account_infos: &[AccountInfo<'_>]) -> ProgramResult {
+    #[cfg(target_os = "solana")]
+    {
+        solana_invoke::invoke_unchecked(ix, account_infos)
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        solana_program::program::invoke(ix, account_infos)
+    }
 }

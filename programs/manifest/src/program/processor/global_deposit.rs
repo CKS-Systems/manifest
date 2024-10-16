@@ -1,9 +1,7 @@
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 use crate::{
     logs::{emit_stack, GlobalDepositLog},
@@ -13,10 +11,15 @@ use crate::{
     validation::loaders::GlobalDepositContext,
 };
 
+use super::invoke;
+
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
     pub amount_atoms: u64,
-    // TODO: Use trader_index_hint. Should not be very impactful, but for consistency.
+    // No trader index hint because global account is small so there is not much
+    // benefit from hinted indices, unlike the market which can get large. Also,
+    // seats are not permanent like on a market due to eviction, so it is more
+    // likely that a client could send a bad request. Just look it up for them.
 }
 
 impl GlobalDepositParams {
@@ -70,6 +73,7 @@ pub(crate) fn process_global_deposit(
                 payer.as_ref().clone(),
             ],
         )?;
+
         let after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         deposited_amount_atoms = after_vault_balance_atoms
             .checked_sub(before_vault_balance_atoms)

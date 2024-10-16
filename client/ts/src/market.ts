@@ -5,30 +5,29 @@ import {
   Keypair,
   Signer,
   SystemProgram,
+  RpcResponseAndContext,
+  AccountInfo,
 } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
-import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
+import { publicKeyBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
-import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
-import { createCreateMarketInstruction, PROGRAM_ID } from './manifest';
+import {
+  FIXED_MANIFEST_HEADER_SIZE,
+  NIL,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+} from './constants';
+import {
+  claimedSeatBeet,
+  ClaimedSeat as ClaimedSeatInternal,
+  createCreateMarketInstruction,
+  PROGRAM_ID,
+  restingOrderBeet,
+  RestingOrder as RestingOrderInternal,
+} from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
-
-/**
- * Internal use only. Needed because shank doesnt handle f64 and because the
- * client doesnt need to know about padding.
- */
-export type RestingOrderInternal = {
-  traderIndex: bignum;
-  numBaseAtoms: bignum;
-  lastValidSlot: bignum;
-  sequenceNumber: bignum;
-  // Deserializes to UInt8Array, but we then convert it to number.
-  price: bignum;
-  padding: bignum[]; // 22 bytes
-};
 
 /**
  * RestingOrder on the market.
@@ -92,6 +91,8 @@ export class Market {
   address: PublicKey;
   /** Deserialized data. */
   private data: MarketData;
+  /** Last updated slot. */
+  private slot: number;
 
   /**
    * Constructs a Market object.
@@ -102,12 +103,15 @@ export class Market {
   private constructor({
     address,
     data,
+    slot,
   }: {
     address: PublicKey;
     data: MarketData;
+    slot: number;
   }) {
     this.address = address;
     this.data = data;
+    this.slot = slot;
   }
 
   /**
@@ -119,12 +123,22 @@ export class Market {
   static loadFromBuffer({
     address,
     buffer,
+    slot,
   }: {
     address: PublicKey;
     buffer: Buffer;
+    slot?: number;
   }): Market {
-    const marketData = Market.deserializeMarketBuffer(buffer);
-    return new Market({ address, data: marketData });
+    const marketData = Market.deserializeMarketBuffer(
+      buffer,
+      slot ?? NO_EXPIRATION_LAST_VALID_SLOT,
+    );
+    // When we are not given a slot, pretend it is time zero to show everything.
+    return new Market({
+      address,
+      data: marketData,
+      slot: slot ?? NO_EXPIRATION_LAST_VALID_SLOT,
+    });
   }
 
   /**
@@ -140,14 +154,23 @@ export class Market {
     connection: Connection;
     address: PublicKey;
   }): Promise<Market> {
-    const buffer = await connection
-      .getAccountInfo(address)
-      .then((accountInfo) => accountInfo?.data);
+    const [buffer, slot]: [Buffer | undefined, number] = await connection
+      .getAccountInfoAndContext(address)
+      .then(
+        (
+          getAccountInfoAndContext: RpcResponseAndContext<AccountInfo<Buffer> | null>,
+        ) => {
+          return [
+            getAccountInfoAndContext.value?.data,
+            getAccountInfoAndContext.context.slot,
+          ];
+        },
+      );
 
     if (buffer === undefined) {
       throw new Error(`Failed to load ${address}`);
     }
-    return Market.loadFromBuffer({ address, buffer });
+    return Market.loadFromBuffer({ address, buffer, slot });
   }
 
   /**
@@ -156,13 +179,23 @@ export class Market {
    * @param connection The Solana `Connection` object
    */
   public async reload(connection: Connection): Promise<void> {
-    const buffer = await connection
-      .getAccountInfo(this.address)
-      .then((accountInfo) => accountInfo?.data);
+    const [buffer, slot]: [Buffer | undefined, number] = await connection
+      .getAccountInfoAndContext(this.address)
+      .then(
+        (
+          getAccountInfoAndContext: RpcResponseAndContext<AccountInfo<Buffer> | null>,
+        ) => {
+          return [
+            getAccountInfoAndContext.value?.data,
+            getAccountInfoAndContext.context.slot,
+          ];
+        },
+      );
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
     }
-    this.data = Market.deserializeMarketBuffer(buffer);
+    this.slot = slot;
+    this.data = Market.deserializeMarketBuffer(buffer, slot);
   }
 
   /**
@@ -345,8 +378,12 @@ export class Market {
    * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/market.rs
    *
    * @param data The data buffer to deserialize
+   * @param currentSlot Number that is the cutoff for order expiration.
    */
-  static deserializeMarketBuffer(data: Buffer): MarketData {
+  static deserializeMarketBuffer(
+    data: Buffer,
+    currentSlot: number,
+  ): MarketData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -405,27 +442,34 @@ export class Market {
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             bidsRootIndex,
             restingOrderBeet,
-          ).map((restingOrderInternal: RestingOrderInternal) => {
-            return {
-              trader: publicKeyBeet.deserialize(
-                data.subarray(
-                  Number(restingOrderInternal.traderIndex) +
-                    16 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                  Number(restingOrderInternal.traderIndex) +
-                    48 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                ),
-              )[0].publicKey,
-              numBaseTokens:
-                toNum(restingOrderInternal.numBaseAtoms) /
-                10 ** baseMintDecimals,
-              tokenPrice:
-                convertU128(restingOrderInternal.price) *
-                10 ** (baseMintDecimals - quoteMintDecimals),
-              ...restingOrderInternal,
-            };
-          })
+          )
+            .map((restingOrderInternal: RestingOrderInternal) => {
+              return {
+                trader: publicKeyBeet.deserialize(
+                  data.subarray(
+                    Number(restingOrderInternal.traderIndex) +
+                      16 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                    Number(restingOrderInternal.traderIndex) +
+                      48 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                  ),
+                )[0].publicKey,
+                numBaseTokens:
+                  toNum(restingOrderInternal.numBaseAtoms) /
+                  10 ** baseMintDecimals,
+                tokenPrice:
+                  convertU128(restingOrderInternal.price) *
+                  10 ** (baseMintDecimals - quoteMintDecimals),
+                ...restingOrderInternal,
+              };
+            })
+            .filter((bid: RestingOrder) => {
+              return (
+                bid.lastValidSlot == NO_EXPIRATION_LAST_VALID_SLOT ||
+                Number(bid.lastValidSlot) > currentSlot
+              );
+            })
         : [];
 
     const asks: RestingOrder[] =
@@ -434,36 +478,49 @@ export class Market {
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             asksRootIndex,
             restingOrderBeet,
-          ).map((restingOrderInternal: RestingOrderInternal) => {
-            return {
-              trader: publicKeyBeet.deserialize(
-                data.subarray(
-                  Number(restingOrderInternal.traderIndex) +
-                    16 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                  Number(restingOrderInternal.traderIndex) +
-                    48 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                ),
-              )[0].publicKey,
-              numBaseTokens:
-                toNum(restingOrderInternal.numBaseAtoms) /
-                10 ** baseMintDecimals,
-              tokenPrice:
-                convertU128(restingOrderInternal.price) *
-                10 ** (baseMintDecimals - quoteMintDecimals),
-              ...restingOrderInternal,
-            };
-          })
+          )
+            .map((restingOrderInternal: RestingOrderInternal) => {
+              return {
+                trader: publicKeyBeet.deserialize(
+                  data.subarray(
+                    Number(restingOrderInternal.traderIndex) +
+                      16 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                    Number(restingOrderInternal.traderIndex) +
+                      48 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                  ),
+                )[0].publicKey,
+                numBaseTokens:
+                  toNum(restingOrderInternal.numBaseAtoms) /
+                  10 ** baseMintDecimals,
+                tokenPrice:
+                  convertU128(restingOrderInternal.price) *
+                  10 ** (baseMintDecimals - quoteMintDecimals),
+                ...restingOrderInternal,
+              };
+            })
+            .filter((ask: RestingOrder) => {
+              return (
+                ask.lastValidSlot == NO_EXPIRATION_LAST_VALID_SLOT ||
+                Number(ask.lastValidSlot) > currentSlot
+              );
+            })
         : [];
 
-    const claimedSeats =
+    const claimedSeats: ClaimedSeat[] =
       claimedSeatsRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             claimedSeatsRootIndex,
             claimedSeatBeet,
-          )
+          ).map((claimedSeatInternal: ClaimedSeatInternal) => {
+            return {
+              publicKey: claimedSeatInternal.trader,
+              baseBalance: claimedSeatInternal.baseWithdrawableBalance,
+              quoteBalance: claimedSeatInternal.quoteWithdrawableBalance,
+            };
+          })
         : [];
 
     return {

@@ -46,7 +46,7 @@ async function testWrapper(): Promise<void> {
   // Test loading successfully.
   const wrapper: Wrapper = await Wrapper.loadFromAddress({
     connection,
-    address: client.wrapper.address,
+    address: client.wrapper!.address,
   });
 
   // Test loading fails on bad address

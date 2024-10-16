@@ -11,6 +11,7 @@ use hypertree::{
     get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
+use shank::ShankType;
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
@@ -18,9 +19,7 @@ use crate::{
     program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
     require,
-    validation::{
-        get_global_address, get_global_vault_address, loaders::GlobalTradeAccounts, ManifestAccount,
-    },
+    validation::{get_global_address, get_global_vault_address, ManifestAccount},
 };
 
 use super::{
@@ -30,7 +29,7 @@ use super::{
 };
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct GlobalFixed {
     /// Discriminant for identifying this type of account.
     pub discriminant: u64,
@@ -57,6 +56,8 @@ pub struct GlobalFixed {
     num_bytes_allocated: DataIndex,
 
     vault_bump: u8,
+
+    /// Unused, but this byte wasnt being used anyways.
     global_bump: u8,
 
     num_seats_claimed: u16,
@@ -93,18 +94,14 @@ const_assert_eq!(
 // Does not need to align to word boundaries because does not deserialize.
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct GlobalTrader {
     /// Trader who controls this global trader.
     trader: Pubkey,
 
-    // Number of gas deposits on the global account. This is the number of gas
-    // deposits that were paid by the global trader, but were not taken when the
-    // order was removed. Informational purposes only.
-    unclaimed_gas_deposits: u32,
-
     deposit_index: DataIndex,
-    _padding: u64,
+    _padding: u32,
+    _padding2: u64,
 }
 const_assert_eq!(size_of::<GlobalTrader>(), GLOBAL_TRADER_SIZE);
 const_assert_eq!(size_of::<GlobalTrader>() % 8, 0);
@@ -132,7 +129,7 @@ impl std::fmt::Display for GlobalTrader {
 }
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct GlobalDeposit {
     /// Trader who controls this global trader.
     trader: Pubkey,
@@ -186,9 +183,6 @@ impl GlobalFixed {
             num_seats_claimed: 0,
         }
     }
-    pub fn get_global_traders_root_index(&self) -> DataIndex {
-        self.global_traders_root_index
-    }
     pub fn get_mint(&self) -> &Pubkey {
         &self.mint
     }
@@ -197,9 +191,6 @@ impl GlobalFixed {
     }
     pub fn get_vault_bump(&self) -> u8 {
         self.vault_bump
-    }
-    pub fn get_global_bump(&self) -> u8 {
-        self.global_bump
     }
 }
 
@@ -221,13 +212,10 @@ impl GlobalTrader {
     pub fn new_empty(trader: &Pubkey, deposit_index: DataIndex) -> Self {
         GlobalTrader {
             trader: *trader,
-            unclaimed_gas_deposits: 0,
             deposit_index,
             _padding: 0,
+            _padding2: 0,
         }
-    }
-    pub fn get_trader(&self) -> &Pubkey {
-        &self.trader
     }
 }
 
@@ -238,9 +226,6 @@ impl GlobalDeposit {
             balance_atoms: GlobalAtoms::ZERO,
             _padding: 0,
         }
-    }
-    pub fn get_trader(&self) -> &Pubkey {
-        &self.trader
     }
 }
 
@@ -528,29 +513,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    /// Remove global order. Update the GlobalTrader.
-    pub fn remove_order(
-        &mut self,
-        global_trade_owner: &Pubkey,
-        global_trade_accounts: &GlobalTradeAccounts,
-    ) -> ProgramResult {
-        let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
-        // Might not exist because of eviction.
-        if let Ok(global_trader) = get_mut_global_trader(fixed, dynamic, global_trade_owner) {
-            let GlobalTradeAccounts {
-                gas_receiver_opt: trader,
-                ..
-            } = global_trade_accounts;
-            if trader.as_ref().unwrap().info.key != global_trade_owner
-                || global_trade_accounts.system_program.is_none()
-            {
-                global_trader.unclaimed_gas_deposits += 1;
-            }
-        }
-
-        Ok(())
-    }
-
     /// Deposit to global account.
     pub fn deposit_global(&mut self, trader: &Pubkey, num_atoms: GlobalAtoms) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
@@ -612,25 +574,6 @@ fn get_global_trader<'a>(
     Some(global_trader)
 }
 
-fn get_mut_global_trader<'a>(
-    fixed: &'a mut GlobalFixed,
-    dynamic: &'a mut [u8],
-    trader: &'a Pubkey,
-) -> Result<&'a mut GlobalTrader, ProgramError> {
-    let global_trader_tree: GlobalTraderTree =
-        GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
-    let global_trader_index: DataIndex =
-        global_trader_tree.lookup_index(&GlobalTrader::new_empty(trader, NIL));
-    require!(
-        global_trader_index != NIL,
-        ManifestError::MissingGlobal,
-        "Could not find global trader",
-    )?;
-    let global_trader: &mut GlobalTrader =
-        get_mut_helper::<RBNode<GlobalTrader>>(dynamic, global_trader_index).get_mut_value();
-    Ok(global_trader)
-}
-
 fn get_mut_global_deposit<'a>(
     fixed: &'a mut GlobalFixed,
     dynamic: &'a mut [u8],
@@ -672,16 +615,31 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_display() {
+    fn test_display_trader() {
         format!("{}", GlobalTrader::default());
     }
 
     #[test]
-    fn test_cmp() {
+    fn test_cmp_trader() {
         // Just use token program ids since those have known sort order.
         let global_trader1: GlobalTrader = GlobalTrader::new_empty(&spl_token::id(), NIL);
         let global_trader2: GlobalTrader = GlobalTrader::new_empty(&spl_token_2022::id(), NIL);
         assert!(global_trader1 < global_trader2);
         assert!(global_trader1 != global_trader2);
+    }
+
+    #[test]
+    fn test_display_deposit() {
+        format!("{}", GlobalDeposit::default());
+    }
+
+    #[test]
+    fn test_cmp_deposit() {
+        let global_deposit1: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
+        let mut global_deposit2: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
+        global_deposit2.balance_atoms = GlobalAtoms::new(1);
+        // Reversed order than expected because Hypertrees give max pointer, but we want a min balance.
+        assert!(global_deposit1 > global_deposit2);
+        assert!(global_deposit1 != global_deposit2);
     }
 }

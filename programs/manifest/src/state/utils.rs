@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, ManifestError},
+    program::{get_mut_dynamic_account, invoke, ManifestError},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -42,27 +42,18 @@ pub(crate) fn get_now_slot() -> u32 {
 
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
-    global_trade_owner: &Pubkey,
 ) -> ProgramResult {
-    require!(
-        global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
-        "Missing global accounts when cancelling a global",
-    )?;
+    if global_trade_accounts_opt.is_none() {
+        // Payer is forfeiting the right to claim the gas prepayment. This
+        // results in a stranded gas prepayment on the global account.
+        return Ok(());
+    }
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts {
         global,
         gas_receiver_opt,
         ..
     } = global_trade_accounts;
-
-    // This check is a hack since the global data is borrowed in cleaning, so
-    // avoid reborrowing.
-    if global_trade_accounts.global_vault_opt.is_some() {
-        let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
-        let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.remove_order(global_trade_owner, global_trade_accounts)?;
-    }
 
     // The simple implementation gets
     //
@@ -127,7 +118,7 @@ pub(crate) fn try_to_add_to_global(
     // Done here instead of inside the object because the borrow checker needs
     // to get the data on global which it cannot while there is a mut self
     // reference.
-    solana_program::program::invoke(
+    invoke(
         &solana_program::system_instruction::transfer(
             &gas_payer_opt.as_ref().unwrap().info.key,
             &global.key,
@@ -176,6 +167,9 @@ pub(crate) fn can_back_order<'a, 'info>(
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -> bool {
+    if global_trade_accounts_opt.is_none() {
+        return false;
+    }
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, .. } = global_trade_accounts;
 
