@@ -59,8 +59,8 @@ const AppWalletProvider = ({
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
   if (!rpcUrl) {
-    toast.error('RPC_URL not set');
-    throw new Error('RPC_URL not set');
+    toast.error('NEXT_PUBLIC_RPC_URL not set');
+    throw new Error('NEXT_PUBLIC_RPC_URL not set');
   }
 
   const determineNetworkFromRpcUrl = async (url: string): Promise<WalletAdapterNetwork> => {
