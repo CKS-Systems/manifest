@@ -27,7 +27,7 @@ import {
 } from './manifest/instructions';
 import { OrderType, SwapParams } from './manifest/types';
 import { Market } from './market';
-import { MarketInfoParsed, Wrapper, WrapperData } from './wrapperObj';
+import { WrapperMarketInfoParsed, Wrapper, WrapperData } from './wrapperObj';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID, PROGRAM_ID } from './manifest';
 import {
   PROGRAM_ID as WRAPPER_PROGRAM_ID,
@@ -213,8 +213,8 @@ export class ManifestClient {
     const wrapperData: WrapperData = Wrapper.deserializeWrapperBuffer(
       userWrapper.account.data,
     );
-    const existingMarketInfos: MarketInfoParsed[] =
-      wrapperData.marketInfos.filter((marketInfo: MarketInfoParsed) => {
+    const existingMarketInfos: WrapperMarketInfoParsed[] =
+      wrapperData.marketInfos.filter((marketInfo: WrapperMarketInfoParsed) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       });
     if (existingMarketInfos.length > 0) {
@@ -318,8 +318,8 @@ export class ManifestClient {
       userWrapper.account.data,
     );
 
-    const existingMarketInfos: MarketInfoParsed[] =
-      wrapperData.marketInfos.filter((marketInfo: MarketInfoParsed) => {
+    const existingMarketInfos: WrapperMarketInfoParsed[] =
+      wrapperData.marketInfos.filter((marketInfo: WrapperMarketInfoParsed) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       });
     if (existingMarketInfos.length > 0) {

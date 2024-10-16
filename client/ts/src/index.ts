@@ -5,6 +5,7 @@ export * from './types';
 // to use the client.
 export * from './manifest/errors';
 export * from './manifest/accounts';
-export * from './wrapper';
+export * as wrapper from './wrapper';
 export * from './wrapperObj';
-export * as uiWrapper from './uiWrapperObj';
+export * as uiWrapper from "./ui_wrapper";
+export * from './uiWrapperObj';

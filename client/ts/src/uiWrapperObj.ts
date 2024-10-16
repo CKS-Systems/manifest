@@ -43,17 +43,17 @@ import { uiOpenOrderBeet } from './utils/beet';
 /**
  * All data stored on a wrapper account.
  */
-export interface WrapperData {
+export interface UiWrapperData {
   /** Public key for the owner of this wrapper. */
   owner: PublicKey;
   /** Array of market infos that have been parsed. */
-  marketInfos: MarketInfoParsed[];
+  marketInfos: UiWrapperMarketInfoParsed[];
 }
 
 /**
  * Parsed market info on a wrapper. Accurate to the last sync.
  */
-export interface MarketInfoParsed {
+export interface UiWrapperMarketInfoParsed {
   /** Public key for market. */
   market: PublicKey;
   /** Base balance in atoms. */
@@ -61,7 +61,7 @@ export interface MarketInfoParsed {
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
   /** Open orders. */
-  orders: OpenOrder[];
+  orders: UiWrapperOpenOrderParsed[];
   /** Last update slot number. */
   lastUpdatedSlot: number;
 }
@@ -69,7 +69,7 @@ export interface MarketInfoParsed {
 /**
  * Raw market info on a wrapper.
  */
-export interface MarketInfoRaw {
+export interface UiWrapperMarketInfoRaw {
   market: PublicKey;
   openOrdersRootIndex: number;
   traderIndex: number;
@@ -83,7 +83,7 @@ export interface MarketInfoRaw {
 /**
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
-export interface OpenOrder {
+export interface UiWrapperOpenOrderParsed {
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
@@ -102,7 +102,7 @@ export interface OpenOrder {
   orderType: OrderType;
 }
 
-export interface UIOpenOrderInternal {
+export interface UiWrapperOpenOrderRaw {
   price: Uint8Array;
   clientOrderId: bignum;
   orderSequenceNumber: bignum;
@@ -121,7 +121,7 @@ export class UiWrapper {
   /** Public key for the market account. */
   address: PublicKey;
   /** Deserialized data. */
-  private data: WrapperData;
+  private data: UiWrapperData;
 
   /**
    * Constructs a Wrapper object.
@@ -134,7 +134,7 @@ export class UiWrapper {
     data,
   }: {
     address: PublicKey;
-    data: WrapperData;
+    data: UiWrapperData;
   }) {
     this.address = address;
     this.data = data;
@@ -179,9 +179,9 @@ export class UiWrapper {
    *
    * @return MarketInfoParsed
    */
-  public marketInfoForMarket(marketPk: PublicKey): MarketInfoParsed | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public marketInfoForMarket(marketPk: PublicKey): UiWrapperMarketInfoParsed | null {
+    const filtered: UiWrapperMarketInfoParsed[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfoParsed) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -198,9 +198,9 @@ export class UiWrapper {
    *
    * @return OpenOrder[]
    */
-  public openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public openOrdersForMarket(marketPk: PublicKey): UiWrapperOpenOrderParsed[] | null {
+    const filtered: UiWrapperMarketInfoParsed[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfoParsed) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -278,14 +278,14 @@ export class UiWrapper {
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
     console.log(`Owner: ${this.data.owner.toBase58()}`);
-    this.data.marketInfos.forEach((marketInfo: MarketInfoParsed) => {
+    this.data.marketInfos.forEach((marketInfo: UiWrapperMarketInfoParsed) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
       console.log(`Last updated slot: ${marketInfo.lastUpdatedSlot}`);
       console.log(
         `BaseAtoms: ${marketInfo.baseBalanceAtoms} QuoteAtoms: ${marketInfo.quoteBalanceAtoms}`,
       );
-      marketInfo.orders.forEach((order: OpenOrder) => {
+      marketInfo.orders.forEach((order: UiWrapperOpenOrderParsed) => {
         console.log(
           `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
@@ -304,7 +304,7 @@ export class UiWrapper {
    *
    * @returns WrapperData
    */
-  public static deserializeWrapperBuffer(data: Buffer): WrapperData {
+  public static deserializeWrapperBuffer(data: Buffer): UiWrapperData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -335,10 +335,10 @@ export class UiWrapper {
           )
         : [];
 
-    const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
+    const parsedMarketInfos: UiWrapperMarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: UIOpenOrderInternal[] =
+        const parsedOpenOrders: UiWrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -347,8 +347,8 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: UIOpenOrderInternal) => {
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrderParsed[] = parsedOpenOrders.map(
+          (openOrder: UiWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
