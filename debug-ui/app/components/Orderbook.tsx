@@ -9,7 +9,7 @@ import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
-import { formatNotional, formatPrice } from '@/lib/format';
+import { formatPrice } from '@/lib/format';
 
 const Orderbook = ({
   marketAddress,
@@ -48,8 +48,8 @@ const Orderbook = ({
   }, [conn, marketAddress]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number) => {
-    let pk = wallet?.adapter?.publicKey;
-    let isOwn = pk && pk.equals(restingOrder.trader);
+    const pk = wallet?.adapter?.publicKey;
+    const isOwn = pk && pk.equals(restingOrder.trader);
     return (
       <tr
         key={i}
@@ -71,13 +71,13 @@ const Orderbook = ({
 
   let divider = '';
   if (bids && bids.length > 0 && asks && asks.length > 0) {
-    let spread = Math.max(0, asks[0].tokenPrice / bids[0].tokenPrice - 1);
-    let mid = (asks[0].tokenPrice + bids[0].tokenPrice) * 0.5;
-    let bidDepth2Pct = bids
+    const spread = Math.max(0, asks[0].tokenPrice / bids[0].tokenPrice - 1);
+    const mid = (asks[0].tokenPrice + bids[0].tokenPrice) * 0.5;
+    const bidDepth2Pct = bids
       .filter((b) => b.tokenPrice > mid * 0.98)
       .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
       .toPrecision(6);
-    let askDepth2Pct = bids
+    const askDepth2Pct = bids
       .filter((b) => b.tokenPrice < mid * 1.02)
       .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
       .toPrecision(6);
