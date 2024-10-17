@@ -7,9 +7,9 @@ import {
   uniformFixedSizeArray,
 } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { OpenOrderInternal } from '../wrapperObj';
+import { WrapperOpenOrderRaw } from '../wrapperObj';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
-import { UIOpenOrderInternal } from '../uiWrapperObj';
+import { UiWrapperOpenOrderRaw } from '../uiWrapperObj';
 import { PublicKey } from '@solana/web3.js';
 
 type PubkeyWrapper = {
@@ -45,7 +45,7 @@ export const redBlackTreeHeaderBeet =
  *
  * https://github.com/CKS-Systems/manifest/blob/main/programs/wrapper/src/open_order.rs
  */
-export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
+export const openOrderBeet = new BeetArgsStruct<WrapperOpenOrderRaw>(
   [
     ['price', fixedSizeUint8Array(16)],
     ['clientOrderId', u64],
@@ -65,7 +65,7 @@ export const openOrderBeet = new BeetArgsStruct<OpenOrderInternal>(
  *
  * https://github.com/CKS-Systems/manifest/blob/main/programs/ui-wrapper/src/open_order.rs
  */
-export const uiOpenOrderBeet = new BeetArgsStruct<UIOpenOrderInternal>(
+export const uiOpenOrderBeet = new BeetArgsStruct<UiWrapperOpenOrderRaw>(
   [
     ['price', fixedSizeUint8Array(16)],
     ['clientOrderId', u64],

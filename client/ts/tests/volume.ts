@@ -6,7 +6,7 @@ import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
 import { placeOrder } from './placeOrder';
-import { MarketInfoParsed, Wrapper } from '../src';
+import { WrapperMarketInfo, Wrapper } from '../src';
 
 async function testVolume(): Promise<void> {
   const connection: Connection = new Connection('http://127.0.0.1:8899');
@@ -61,7 +61,7 @@ async function testVolume(): Promise<void> {
     connection,
     address: client.wrapper!.address,
   });
-  const marketInfoParsed: MarketInfoParsed =
+  const marketInfoParsed: WrapperMarketInfo =
     wrapper.marketInfoForMarket(marketAddress)!;
 
   // 2 because self trade.

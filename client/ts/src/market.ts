@@ -20,11 +20,11 @@ import {
 } from './constants';
 import {
   claimedSeatBeet,
-  ClaimedSeat as ClaimedSeatInternal,
+  ClaimedSeat as ClaimedSeatRaw,
   createCreateMarketInstruction,
   PROGRAM_ID,
   restingOrderBeet,
-  RestingOrder as RestingOrderInternal,
+  RestingOrder as RestingOrderRaw,
 } from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
@@ -443,7 +443,7 @@ export class Market {
             bidsRootIndex,
             restingOrderBeet,
           )
-            .map((restingOrderInternal: RestingOrderInternal) => {
+            .map((restingOrderInternal: RestingOrderRaw) => {
               return {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
@@ -479,7 +479,7 @@ export class Market {
             asksRootIndex,
             restingOrderBeet,
           )
-            .map((restingOrderInternal: RestingOrderInternal) => {
+            .map((restingOrderInternal: RestingOrderRaw) => {
               return {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
@@ -514,7 +514,7 @@ export class Market {
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             claimedSeatsRootIndex,
             claimedSeatBeet,
-          ).map((claimedSeatInternal: ClaimedSeatInternal) => {
+          ).map((claimedSeatInternal: ClaimedSeatRaw) => {
             return {
               publicKey: claimedSeatInternal.trader,
               baseBalance: claimedSeatInternal.baseWithdrawableBalance,
