@@ -2528,7 +2528,7 @@ pub(crate) mod test {
         *get_mut_helper(&mut data, 31 * TEST_BLOCK_WIDTH) = RBNode {
             left: 34 * TEST_BLOCK_WIDTH,
             right: 35 * TEST_BLOCK_WIDTH,
-            parent:29 * TEST_BLOCK_WIDTH,
+            parent: 29 * TEST_BLOCK_WIDTH,
             color: Color::Black,
             payload_type: 0,
             _unused_padding: 0,
