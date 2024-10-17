@@ -83,7 +83,6 @@ const Orderbook = ({
         .filter((b) => b.tokenPrice < mid * 1.02)
         .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
         .toPrecision(6);
-      console.log({ spread, mid, bestBid, bestAsk });
       return `spread: ${(spread * 10000).toFixed(2)}bps | depth (bid/ask): ${bidDepth2Pct} / ${askDepth2Pct}`;
     } else {
       return '';
