@@ -2253,6 +2253,334 @@ pub(crate) mod test {
     }
 
     #[test]
+    fn test_regression_5() {
+        let mut data: [u8; 100000] = [0; 100000];
+        *get_mut_helper(&mut data, 1 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 2 * TEST_BLOCK_WIDTH,
+            right: 3 * TEST_BLOCK_WIDTH,
+            parent: NIL,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(1),
+        };
+        *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 4 * TEST_BLOCK_WIDTH,
+            right: 22 * TEST_BLOCK_WIDTH,
+            parent: 1 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(2),
+        };
+        *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 29 * TEST_BLOCK_WIDTH,
+            right: 5 * TEST_BLOCK_WIDTH,
+            parent: 1 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(3),
+        };
+        *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 6 * TEST_BLOCK_WIDTH,
+            right: 7 * TEST_BLOCK_WIDTH,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(4),
+        };
+        *get_mut_helper(&mut data, 5 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 8 * TEST_BLOCK_WIDTH,
+            right: 9 * TEST_BLOCK_WIDTH,
+            parent: 3 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(5),
+        };
+        *get_mut_helper(&mut data, 6 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 10 * TEST_BLOCK_WIDTH,
+            right: 20 * TEST_BLOCK_WIDTH,
+            parent: 4 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(6),
+        };
+        *get_mut_helper(&mut data, 7 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 11 * TEST_BLOCK_WIDTH,
+            right: 12 * TEST_BLOCK_WIDTH,
+            parent: 4 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(7),
+        };
+        *get_mut_helper(&mut data, 8 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 13 * TEST_BLOCK_WIDTH,
+            right: 21 * TEST_BLOCK_WIDTH,
+            parent: 5 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(8),
+        };
+        *get_mut_helper(&mut data, 9 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 14 * TEST_BLOCK_WIDTH,
+            right: 15 * TEST_BLOCK_WIDTH,
+            parent: 5 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(9),
+        };
+        *get_mut_helper(&mut data, 10 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 6 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(10),
+        };
+        *get_mut_helper(&mut data, 11 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 16 * TEST_BLOCK_WIDTH,
+            right: 17 * TEST_BLOCK_WIDTH,
+            parent: 7 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(11),
+        };
+        *get_mut_helper(&mut data, 12 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 7 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(12),
+        };
+        *get_mut_helper(&mut data, 13 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 8 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(13),
+        };
+        *get_mut_helper(&mut data, 14 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 18 * TEST_BLOCK_WIDTH,
+            right: 19 * TEST_BLOCK_WIDTH,
+            parent: 9 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(14),
+        };
+        *get_mut_helper(&mut data, 15 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 9 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(15),
+        };
+        *get_mut_helper(&mut data, 16 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 11 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(16),
+        };
+        *get_mut_helper(&mut data, 17 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 11 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(17),
+        };
+        *get_mut_helper(&mut data, 18 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 14 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(18),
+        };
+        *get_mut_helper(&mut data, 19 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 14 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(19),
+        };
+        *get_mut_helper(&mut data, 20 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 6 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(20),
+        };
+        *get_mut_helper(&mut data, 21 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 8 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(21),
+        };
+        *get_mut_helper(&mut data, 22 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 23 * TEST_BLOCK_WIDTH,
+            right: 24 * TEST_BLOCK_WIDTH,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(22),
+        };
+        *get_mut_helper(&mut data, 23 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 25 * TEST_BLOCK_WIDTH,
+            right: 26 * TEST_BLOCK_WIDTH,
+            parent: 22 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(23),
+        };
+        *get_mut_helper(&mut data, 24 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 27 * TEST_BLOCK_WIDTH,
+            right: 28 * TEST_BLOCK_WIDTH,
+            parent: 22 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(24),
+        };
+        *get_mut_helper(&mut data, 25 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 23 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(25),
+        };
+        *get_mut_helper(&mut data, 26 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 23 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(26),
+        };
+        *get_mut_helper(&mut data, 27 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 24 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(27),
+        };
+        *get_mut_helper(&mut data, 28 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 24 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(28),
+        };
+        *get_mut_helper(&mut data, 29 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 30 * TEST_BLOCK_WIDTH,
+            right: 31 * TEST_BLOCK_WIDTH,
+            parent: 3 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(29),
+        };
+        *get_mut_helper(&mut data, 30 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 32 * TEST_BLOCK_WIDTH,
+            right: 33 * TEST_BLOCK_WIDTH,
+            parent: 29 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(30),
+        };
+        *get_mut_helper(&mut data, 31 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 34 * TEST_BLOCK_WIDTH,
+            right: 35 * TEST_BLOCK_WIDTH,
+            parent: 29 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(31),
+        };
+        *get_mut_helper(&mut data, 32 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 30 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(32),
+        };
+        *get_mut_helper(&mut data, 33 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 30 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(33),
+        };
+        *get_mut_helper(&mut data, 34 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 31 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(34),
+        };
+        *get_mut_helper(&mut data, 35 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 31 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(35),
+        };
+
+        let mut tree: RedBlackTree<TestOrderBid> =
+            RedBlackTree::new(&mut data, 1 * TEST_BLOCK_WIDTH, 15 * TEST_BLOCK_WIDTH);
+        tree.verify_rb_tree::<TestOrderBid>();
+
+        tree.remove_by_index(6 * TEST_BLOCK_WIDTH);
+
+        tree.verify_rb_tree::<TestOrderBid>();
+    }
+
+    #[test]
     fn test_read_only() {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
