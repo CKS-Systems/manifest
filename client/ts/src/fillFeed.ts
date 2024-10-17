@@ -107,7 +107,9 @@ export class FillFeed {
    */
   private async handleSignature(signature: ConfirmedSignatureInfo) {
     console.log('Handling', signature.signature);
-    const tx = await this.connection.getTransaction(signature.signature)!;
+    const tx = await this.connection.getTransaction(signature.signature, {
+      maxSupportedTransactionVersion: 0,
+    });
     if (!tx?.meta?.logMessages) {
       console.log('No log messages');
       return;
