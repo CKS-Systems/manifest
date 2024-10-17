@@ -333,15 +333,14 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] = parsedOpenOrders.map(
-          (openOrder: UiWrapperOpenOrderRaw) => {
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] =
+          parsedOpenOrders.map((openOrder: UiWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
-          },
-        );
+          });
 
         return {
           market: marketInfoRaw.market,
@@ -468,11 +467,26 @@ export class UiWrapper {
     if (market != null) {
       const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
       if (wrapper) {
-        const placeIx = UiWrapper.loadFromBuffer({
+        const wrapperParsed = UiWrapper.loadFromBuffer({
           address: wrapper.pubkey,
           buffer: wrapper.account.data,
-        }).placeOrderIx(market, { payer }, args);
-        return { ixs: [placeIx], signers: [] };
+        });
+        const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
+        if (
+          wrapperParsed.activeMarkets().find((x) => x.equals(market.address))
+        ) {
+          return { ixs: [placeIx], signers: [] };
+        } else {
+          const claimSeatIx: TransactionInstruction =
+            createClaimSeatInstruction({
+              manifestProgram: MANIFEST_PROGRAM_ID,
+              payer,
+              owner,
+              market: market.address,
+              wrapperState: wrapper.pubkey,
+            });
+          return { ixs: [claimSeatIx, placeIx], signers: [] };
+        }
       } else {
         const setup = await this.setupIxs(
           connection,
