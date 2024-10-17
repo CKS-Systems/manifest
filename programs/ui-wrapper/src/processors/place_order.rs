@@ -10,9 +10,9 @@ use hypertree::{
 };
 use manifest::{
     program::{
-        batch_update::{BatchUpdateReturn, PlaceOrderParams},
-        batch_update_instruction, deposit_instruction, expand_market_instruction,
-        get_dynamic_account, get_mut_dynamic_account, invoke,
+        batch_update::{BatchUpdateParams, BatchUpdateReturn, PlaceOrderParams},
+        deposit_instruction, expand_market_instruction, get_dynamic_account,
+        get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
@@ -21,6 +21,7 @@ use manifest::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
+    instruction::{AccountMeta, Instruction},
     program::get_return_data,
     pubkey::Pubkey,
     system_program,
@@ -88,31 +89,12 @@ pub(crate) fn process_place_order(
         Program::new(next_account_info(account_iter)?, &manifest::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
 
-    let base_mint: &AccountInfo = next_account_info(account_iter)?;
-    let base_global: &AccountInfo = next_account_info(account_iter)?;
-    let base_global_vault: &AccountInfo = next_account_info(account_iter)?;
-    let base_market_vault: &AccountInfo = next_account_info(account_iter)?;
-    let base_token_program: &AccountInfo = next_account_info(account_iter)?;
-    let quote_mint: &AccountInfo = next_account_info(account_iter)?;
-    let quote_global: &AccountInfo = next_account_info(account_iter)?;
-    let quote_global_vault: &AccountInfo = next_account_info(account_iter)?;
-    let quote_market_vault: &AccountInfo = next_account_info(account_iter)?;
-    let quote_token_program: &AccountInfo = next_account_info(account_iter)?;
-
-    if spl_token_2022::id() == *token_program.key {
-        unimplemented!("token2022 not yet supported")
-    }
-
     check_signer(&wrapper_state, owner.key);
+
+    // TODO: claim seat if needed
+
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
 
-    let (base_mint_key, quote_mint_key) = {
-        let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
-        let dynamic_account: MarketRef = get_dynamic_account(market_data);
-        let base_mint_key: Pubkey = *dynamic_account.get_base_mint();
-        let quote_mint_key: Pubkey = *dynamic_account.get_quote_mint();
-        (base_mint_key, quote_mint_key)
-    };
 
     // Do an initial sync to get all existing orders and balances fresh. This is
     // needed for modifying user orders for insufficient funds.
@@ -190,50 +172,56 @@ pub(crate) fn process_place_order(
         }
     }
 
-    let core_place: PlaceOrderParams = PlaceOrderParams::new(
-        order.base_atoms,
-        order.price_mantissa,
-        order.price_exponent,
-        order.is_bid,
-        order.order_type,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-    );
+    // Call batch update and pass unparsed accounts without further looking at them
 
-    trace!("cpi place {core_place:?}");
+    {
+        let core_place: PlaceOrderParams = PlaceOrderParams::new(
+            order.base_atoms,
+            order.price_mantissa,
+            order.price_exponent,
+            order.is_bid,
+            order.order_type,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+        );
+    
+        trace!("cpi place {core_place:?}");
 
-    invoke(
-        &batch_update_instruction(
-            market.key,
-            owner.key,
-            Some(trader_index),
-            vec![],
-            vec![core_place],
-            Some(base_mint_key),
-            None,
-            Some(quote_mint_key),
-            None,
-        ),
-        &[
+        let mut account_metas = Vec::with_capacity(13);
+        account_metas.extend_from_slice(&[
+            AccountMeta::new(*owner.key, true),
+            AccountMeta::new(*market.key, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ]);
+        account_metas.extend(accounts[10..].iter().map(|ai| {
+            if ai.is_writable {
+                AccountMeta::new(*ai.key, ai.is_signer)
+            } else {
+                AccountMeta::new_readonly(*ai.key, ai.is_signer)
+            }
+        }));
+
+        let ix: Instruction = Instruction {
+            program_id: manifest::id(),
+            accounts: account_metas,
+            data: [
+                ManifestInstruction::BatchUpdate.to_vec(),
+                BatchUpdateParams::new(Some(trader_index), vec![], vec![core_place])
+                    .try_to_vec()?,
+            ]
+            .concat(),
+        };
+
+        let mut account_infos = Vec::with_capacity(18);
+        account_infos.extend_from_slice(&[
             system_program.info.clone(),
             manifest_program.info.clone(),
             owner.info.clone(),
             market.info.clone(),
-            trader_token_account.clone(),
-            vault.clone(),
-            token_program.clone(),
-            mint.clone(),
-            base_mint.clone(),
-            base_global.clone(),
-            base_global_vault.clone(),
-            base_market_vault.clone(),
-            base_token_program.clone(),
-            quote_mint.clone(),
-            quote_global.clone(),
-            quote_global_vault.clone(),
-            quote_market_vault.clone(),
-            quote_token_program.clone(),
-        ],
-    )?;
+        ]);
+        account_infos.extend_from_slice(&accounts[10..]);
+
+        invoke(&ix, &account_infos)?;
+    }
 
     // Process the order result
 
