@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729102386676,
+  "lastUpdate": 1729191111453,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -6969,6 +6969,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6082,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "parolini.francesco.1@gmail.com",
+            "name": "Francesco Parolini",
+            "username": "phreppo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38b81566d3164ef04d7b44f28e2c511b725fed2f",
+          "message": "Red black tree regression test for remove (#197)\n\n* red black tree regression test for remove\r\n\r\n* cargo fmt",
+          "timestamp": "2024-10-17T14:27:10-04:00",
+          "tree_id": "3790cbb0969ab140e477dd538fe2380ed5686491",
+          "url": "https://github.com/CKS-Systems/manifest/commit/38b81566d3164ef04d7b44f28e2c511b725fed2f"
+        },
+        "date": 1729191110368,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3557,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5600,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6114,
             "unit": "CU",
             "range": "",
             "extra": ""
