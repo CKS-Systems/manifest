@@ -270,14 +270,13 @@ export class Wrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: WrapperOpenOrder[] = parsedOpenOrders.map(
-          (openOrder: WrapperOpenOrderRaw) => {
+        const parsedOpenOrdersWithPrice: WrapperOpenOrder[] =
+          parsedOpenOrders.map((openOrder: WrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
-          },
-        );
+          });
 
         return {
           market: marketInfoRaw.market,
