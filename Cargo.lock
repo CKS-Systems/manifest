@@ -2004,12 +2004,12 @@ dependencies = [
 
 [[package]]
 name = "jupiter-amm-interface"
-version = "0.1.1"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a07d892e79ae4ad8f0947f30633188269287967ceb0b2c182f894745f49952"
+checksum = "be954b20150b666b2bc328d1e490294a1c096e545f985d852f53c941209b2649"
 dependencies = [
  "anyhow",
- "borsh 0.9.3",
+ "borsh 0.10.3",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -2168,7 +2168,7 @@ dependencies = [
  "borsh 0.9.3",
  "bytemuck",
  "hypertree",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
  "solana-invoke",
  "solana-logger",
@@ -2488,9 +2488,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.5.9"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d829733185c1ca374f17e52b762f24f535ec625d2cc1f070e34c8a9068f341b"
+checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
 dependencies = [
  "num_enum_derive 0.5.11",
 ]
@@ -5135,7 +5135,7 @@ dependencies = [
  "bytemuck",
  "num-derive 0.3.3",
  "num-traits",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "solana-program",
  "thiserror",
 ]
@@ -5920,7 +5920,7 @@ dependencies = [
  "bytemuck",
  "hypertree",
  "manifest",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
  "solana-invoke",
  "solana-logger",
@@ -6395,7 +6395,7 @@ dependencies = [
  "bytemuck",
  "hypertree",
  "manifest",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
  "solana-invoke",
  "solana-logger",
