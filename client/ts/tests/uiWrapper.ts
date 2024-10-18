@@ -45,7 +45,6 @@ async function testWrapper(): Promise<void> {
   {
     const setup = await UiWrapper.setupIxs(
       connection,
-      marketAddress,
       payerKeypair.publicKey,
       payerKeypair.publicKey,
     );

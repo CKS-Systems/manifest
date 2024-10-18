@@ -490,7 +490,6 @@ export class UiWrapper {
       } else {
         const setup = await this.setupIxs(
           connection,
-          market.address,
           owner,
           payer,
         );
@@ -517,7 +516,6 @@ export class UiWrapper {
       };
       const wrapperIxs = await this.setupIxs(
         connection,
-        market.address,
         owner,
         payer,
       );
@@ -536,7 +534,6 @@ export class UiWrapper {
 
   public static async setupIxs(
     connection: Connection,
-    market: PublicKey,
     owner: PublicKey,
     payer: PublicKey,
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
@@ -558,15 +555,8 @@ export class UiWrapper {
         owner,
         wrapperState: wrapperKeypair.publicKey,
       });
-    const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
-      manifestProgram: MANIFEST_PROGRAM_ID,
-      payer,
-      owner,
-      market,
-      wrapperState: wrapperKeypair.publicKey,
-    });
     return {
-      ixs: [createAccountIx, createWrapperIx, claimSeatIx],
+      ixs: [createAccountIx, createWrapperIx],
       signers: [wrapperKeypair],
     };
   }
