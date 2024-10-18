@@ -27,7 +27,7 @@ export const setupClient = async (
   signerPub: PublicKey | null,
   connected: boolean,
   sendTransaction: SendTransaction,
-  network: WalletAdapterNetwork | null = WalletAdapterNetwork.Devnet,
+  network: WalletAdapterNetwork | null,
 ): Promise<ManifestClient> => {
   if (!connected || !signerPub) {
     throw new Error('must be connected before setting up client');

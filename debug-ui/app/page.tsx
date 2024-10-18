@@ -3,15 +3,16 @@
 import { ReactElement } from 'react';
 import Link from 'next/link';
 import { useAppState } from './components/AppWalletProvider';
+import { addrToLabel } from '@/lib/address-labels';
 
 const Home = (): ReactElement => {
-  const { marketAddrs, loading } = useAppState();
+  const readOnly = process.env.NEXT_PUBLIC_READ_ONLY === 'true';
+  const { marketAddrs, loading, labelsByAddr } = useAppState();
+  console.log(labelsByAddr);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
       <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-xl">
-        <h1 className="text-3xl font-bold mb-6 text-center">Create Page</h1>
-
         <p className="text-sm text-gray-400 mb-6">
           Disclaimer: By accessing and using Manifest, you acknowledge and agree
           that you do so at your own risk. This platform is intended for
@@ -37,10 +38,10 @@ const Home = (): ReactElement => {
                   className="bg-gray-600 p-2 rounded-lg hover:bg-gray-500 transition-colors"
                 >
                   <Link
-                    href={`/market/${market}`}
+                    href={`/${readOnly ? 'market' : 'interact'}/${market}`}
                     className="text-blue-400 underline hover:text-blue-500 transition-colors"
                   >
-                    {market}
+                    {addrToLabel(market, labelsByAddr)}
                   </Link>
                 </li>
               ))}

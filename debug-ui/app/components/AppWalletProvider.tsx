@@ -23,7 +23,13 @@ import { ManifestClient } from '@cks-systems/manifest-sdk';
 import { Connection } from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
-import { Cluster, getClusterFromConnection } from '@cks-systems/manifest-sdk/utils/solana';
+import {
+  Cluster,
+  getClusterFromConnection,
+} from '@cks-systems/manifest-sdk/utils/solana';
+import NavBar from './NavBar';
+import { LabelsByAddr } from '@/lib/types';
+import { fetchAndSetMfxAddrLabels } from '@/lib/address-labels';
 
 require('react-toastify/dist/ReactToastify.css');
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -32,7 +38,9 @@ interface AppStateContextValue {
   loading: boolean;
   network: WalletAdapterNetwork | null;
   marketAddrs: string[];
+  labelsByAddr: LabelsByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
+  setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
@@ -54,6 +62,7 @@ const AppWalletProvider = ({
 }): ReactElement => {
   const [network, setNetwork] = useState<WalletAdapterNetwork | null>(null);
   const [marketAddrs, setMarketAddrs] = useState<string[]>([]);
+  const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
   const setupRun = useRef(false);
 
@@ -63,7 +72,9 @@ const AppWalletProvider = ({
     throw new Error('NEXT_PUBLIC_RPC_URL not set');
   }
 
-  const determineNetworkFromRpcUrl = async (url: string): Promise<WalletAdapterNetwork> => {
+  const determineNetworkFromRpcUrl = async (
+    url: string,
+  ): Promise<WalletAdapterNetwork> => {
     if (url.includes('mainnet')) {
       return WalletAdapterNetwork.Mainnet;
     } else if (url.includes('devnet')) {
@@ -73,7 +84,9 @@ const AppWalletProvider = ({
     }
 
     // Try to determine the network from the genesis hash.
-    const cluster: Cluster = await getClusterFromConnection(new Connection(url));
+    const cluster: Cluster = await getClusterFromConnection(
+      new Connection(url),
+    );
     if (cluster == 'mainnet-beta') {
       return WalletAdapterNetwork.Mainnet;
     } else if (cluster == 'devnet') {
@@ -96,10 +109,11 @@ const AppWalletProvider = ({
         const detectedNetwork = await determineNetworkFromRpcUrl(rpcUrl);
         setNetwork(detectedNetwork);
 
-        const conn = new Connection(rpcUrl, "confirmed");
+        const conn = new Connection(rpcUrl, 'confirmed');
         const marketPubs = await ManifestClient.listMarketPublicKeys(conn);
         const marketAddrs = marketPubs.map((p) => p.toBase58());
         setMarketAddrs(marketAddrs);
+        fetchAndSetMfxAddrLabels(conn, marketAddrs, setLabelsByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
         toast.error(`placeOrder: ${ensureError(e).message}`);
@@ -127,9 +141,17 @@ const AppWalletProvider = ({
       <WalletProvider wallets={wallets}>
         <WalletModalProvider>
           <AppStateContext.Provider
-            value={{ network, marketAddrs, setMarketAddrs, loading }}
+            value={{
+              network,
+              marketAddrs,
+              labelsByAddr,
+              setLabelsByAddr,
+              setMarketAddrs,
+              loading,
+            }}
           >
             <WalletConnection />
+            <NavBar />
             {children}
             <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 pointer-events-none">
               {network ? `connected to ${network}` : 'loading network...'}

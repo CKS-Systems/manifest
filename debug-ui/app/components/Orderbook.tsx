@@ -47,7 +47,7 @@ const Orderbook = ({
     return (): void => clearInterval(id);
   }, [conn, marketAddress]);
 
-  const formatOrder = (restingOrder: RestingOrder, i: number) => {
+  const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
     const isOwn = pk && pk.equals(restingOrder.trader);
     return (
