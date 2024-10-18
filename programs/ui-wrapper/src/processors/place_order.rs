@@ -11,11 +11,14 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::{BatchUpdateParams, BatchUpdateReturn, PlaceOrderParams},
-        deposit_instruction, expand_market_instruction, get_dynamic_account,
-        get_mut_dynamic_account, invoke, ManifestInstruction,
+        claim_seat_instruction, deposit_instruction, expand_market_instruction,
+        get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, MarketRef, OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{
+        claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRef, OrderType,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -23,6 +26,7 @@ use solana_program::{
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
     program::get_return_data,
+    program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
 };
@@ -33,7 +37,7 @@ use crate::{
 
 use super::shared::{
     check_signer, expand_wrapper_if_needed, get_market_info_index_for_market, sync_fast,
-    OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
+    MarketInfosTree, OpenOrdersTree, UnusedWrapperFreeListPadding, WrapperStateAccountInfo,
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
@@ -68,6 +72,116 @@ impl WrapperPlaceOrderParams {
     }
 }
 
+fn get_or_create_trader_index<'a, 'info>(
+    market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
+    owner: &Signer<'a, 'info>,
+    payer: &Signer<'a, 'info>,
+    manifest_program: &Program<'a, 'info>,
+    system_program: &Program<'a, 'info>,
+) -> Result<DataIndex, ProgramError> {
+    let trader_index: DataIndex = {
+        let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(market_data);
+        dynamic_account.get_trader_index(owner.key)
+    };
+
+    if trader_index != NIL {
+        // If core seat was already initialized, nothing to do here
+        Ok(trader_index)
+    } else {
+        // Need to intialize a new seat on core
+        // Call expand so claim seat has enough free space
+        // and owner doesn't get charged rent
+        invoke(
+            &expand_market_instruction(market.key, payer.key),
+            &[
+                manifest_program.info.clone(),
+                payer.info.clone(),
+                market.info.clone(),
+                system_program.info.clone(),
+            ],
+        )?;
+
+        // Call the ClaimSeat CPI
+        invoke(
+            &claim_seat_instruction(market.key, owner.key),
+            &[
+                manifest_program.info.clone(),
+                owner.info.clone(),
+                market.info.clone(),
+                system_program.info.clone(),
+            ],
+        )?;
+
+        // fetch newly assigned trader index after claiming core seat
+        let market_data: &Ref<&mut [u8]> = &mut market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(market_data);
+        Ok(dynamic_account.get_trader_index(owner.key))
+    }
+}
+
+fn get_or_create_market_info<'a, 'info>(
+    wrapper_state: &WrapperStateAccountInfo<'a, 'info>,
+    market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
+    payer: &Signer<'a, 'info>,
+    system_program: &Program<'a, 'info>,
+    trader_index: u32,
+) -> Result<(MarketInfo, DataIndex), ProgramError> {
+    let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
+    if market_info_index != NIL {
+        // Do an initial sync to get all existing orders and balances fresh. This is
+        // needed for modifying user orders for insufficient funds.
+        sync_fast(&wrapper_state, &market, market_info_index)?;
+
+        let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
+        let (_fixed_data, wrapper_dynamic_data) =
+            wrapper_data.split_at(size_of::<ManifestWrapperUserFixed>());
+
+        let market_info: MarketInfo =
+            *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
+
+        Ok((market_info, market_info_index))
+    } else {
+        // Market info not found, create a new one in wrapper.
+        expand_wrapper_if_needed(&wrapper_state, &payer, &system_program)?;
+
+        // Load the market_infos tree and insert a new one.
+        let wrapper_state_info: &AccountInfo = wrapper_state.info;
+        let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state_info.try_borrow_mut_data()?;
+        let (fixed_data, wrapper_dynamic_data) =
+            wrapper_data.split_at_mut(size_of::<ManifestWrapperUserFixed>());
+        let wrapper_fixed: &mut ManifestWrapperUserFixed = get_mut_helper(fixed_data, 0);
+        let mut market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
+        market_info.quote_volume = {
+            // Sync volume from core seat to prevent double billing if seat
+            // existed before wrapper invocation
+            let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+            let dynamic_account: MarketRef = get_dynamic_account(market_data);
+            let claimed_seat: &ClaimedSeat =
+                get_helper::<RBNode<ClaimedSeat>>(dynamic_account.dynamic, trader_index)
+                    .get_value();
+            claimed_seat.quote_volume
+        };
+
+        // Put that market_info at the free list head.
+        let mut free_list: FreeList<UnusedWrapperFreeListPadding> =
+            FreeList::new(wrapper_dynamic_data, wrapper_fixed.free_list_head_index);
+        let market_info_index: DataIndex = free_list.remove();
+        wrapper_fixed.free_list_head_index = free_list.get_head();
+
+        // Insert into the MarketInfosTree.
+        let mut market_infos_tree: MarketInfosTree = MarketInfosTree::new(
+            wrapper_dynamic_data,
+            wrapper_fixed.market_infos_root_index,
+            NIL,
+        );
+        market_infos_tree.insert(market_info_index, market_info);
+        wrapper_fixed.market_infos_root_index = market_infos_tree.get_root_index();
+
+        Ok((market_info, market_info_index))
+    }
+}
+
 pub(crate) fn process_place_order(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -91,28 +205,21 @@ pub(crate) fn process_place_order(
 
     check_signer(&wrapper_state, owner.key);
 
-    // TODO: claim seat if needed
-
-    let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
-
-
-    // Do an initial sync to get all existing orders and balances fresh. This is
-    // needed for modifying user orders for insufficient funds.
-    sync_fast(&wrapper_state, &market, market_info_index)?;
-
-    let order = WrapperPlaceOrderParams::try_from_slice(data)?;
-
-    let wrapper_data: Ref<&mut [u8]> = wrapper_state.info.try_borrow_data()?;
-    let (_fixed_data, wrapper_dynamic_data) =
-        wrapper_data.split_at(size_of::<ManifestWrapperUserFixed>());
-
-    let market_info: MarketInfo =
-        *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
+    // Ensure ClaimedSeat in core and MarketInfo in wrapper are allocated.
+    // Syncs MarketInfo from ClaimedSeat to calculate required deposits.
+    let trader_index =
+        get_or_create_trader_index(&market, &owner, &payer, &manifest_program, &system_program)?;
+    let (market_info, market_info_index) = get_or_create_market_info(
+        &wrapper_state,
+        &market,
+        &payer,
+        &system_program,
+        trader_index,
+    )?;
     let remaining_base_atoms: BaseAtoms = market_info.base_balance;
     let remaining_quote_atoms: QuoteAtoms = market_info.quote_balance;
-    let trader_index: DataIndex = market_info.trader_index;
-    drop(wrapper_data);
 
+    let order = WrapperPlaceOrderParams::try_from_slice(data)?;
     let base_atoms = BaseAtoms::new(order.base_atoms);
     let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
         order.price_mantissa,
@@ -152,7 +259,7 @@ pub(crate) fn process_place_order(
         )?;
     }
 
-    // Call expand so claim seat has enough free space and owner doesn't get
+    // Call expand so core has enough free space for order and owner doesn't get
     // charged rent. This is done here to keep payer and owner separate in the
     // case of PDA owners. There is always one free block, this checks if there
     // will be an extra one after we place an order.
@@ -183,7 +290,7 @@ pub(crate) fn process_place_order(
             order.order_type,
             NO_EXPIRATION_LAST_VALID_SLOT,
         );
-    
+
         trace!("cpi place {core_place:?}");
 
         let mut account_metas = Vec::with_capacity(13);
