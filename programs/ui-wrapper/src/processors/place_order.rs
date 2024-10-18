@@ -221,6 +221,10 @@ pub(crate) fn process_place_order(
 
     check_signer(&wrapper_state, owner.key);
 
+    if spl_token_2022::id() == *token_program.key {
+        unimplemented!("token2022 not yet supported")
+    }
+
     // Ensure ClaimedSeat in core and MarketInfo in wrapper are allocated.
     // Syncs MarketInfo from ClaimedSeat to calculate required deposits.
     let trader_index =
