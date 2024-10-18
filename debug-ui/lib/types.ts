@@ -1,3 +1,7 @@
+export interface LabelsByAddr {
+  [addr: string]: string;
+}
+
 export type FillResultUi = {
   market: string;
   maker: string;
