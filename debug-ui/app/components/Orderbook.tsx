@@ -4,7 +4,7 @@ import { fetchMarket } from '@/lib/data';
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
@@ -69,20 +69,25 @@ const Orderbook = ({
     );
   };
 
-  let divider = '';
-  if (bids && bids.length > 0 && asks && asks.length > 0) {
-    const spread = Math.max(0, asks[0].tokenPrice / bids[0].tokenPrice - 1);
-    const mid = (asks[0].tokenPrice + bids[0].tokenPrice) * 0.5;
-    const bidDepth2Pct = bids
-      .filter((b) => b.tokenPrice > mid * 0.98)
-      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
-      .toPrecision(6);
-    const askDepth2Pct = bids
-      .filter((b) => b.tokenPrice < mid * 1.02)
-      .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
-      .toPrecision(6);
-    divider = `spread: ${(spread * 10000).toFixed(2)}bps | depth (bid/ask): ${bidDepth2Pct} / ${askDepth2Pct}`;
-  }
+  const dividerText = useMemo(() => {
+    if (bids && bids.length > 0 && asks && asks.length > 0) {
+      const bestBid = bids[0].tokenPrice;
+      const bestAsk = asks[asks.length - 1].tokenPrice;
+      const spread = Math.max(0, bestAsk / bestBid - 1);
+      const mid = (bestAsk + bestBid) * 0.5;
+      const bidDepth2Pct = bids
+        .filter((b) => b.tokenPrice > mid * 0.98)
+        .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
+        .toPrecision(6);
+      const askDepth2Pct = asks
+        .filter((b) => b.tokenPrice < mid * 1.02)
+        .reduce((acc, b) => acc + Number(b.numBaseTokens.toString()), 0)
+        .toPrecision(6);
+      return `spread: ${(spread * 10000).toFixed(2)}bps | depth (bid/ask): ${bidDepth2Pct} / ${askDepth2Pct}`;
+    } else {
+      return '';
+    }
+  }, [bids, asks]);
 
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
@@ -103,7 +108,7 @@ const Orderbook = ({
         </table>
       </pre>
 
-      <div className="text-center text-gray-400 my-2">{divider}</div>
+      <div className="text-center text-gray-400 my-2">{dividerText}</div>
 
       <pre className="bg-gray-800 p-4 rounded-lg text-sm">
         <strong>Bids</strong>
