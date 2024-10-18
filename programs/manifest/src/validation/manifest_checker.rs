@@ -84,6 +84,12 @@ fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> Program
         size_of::<T>(),
         bytes.len()
     )?;
+
+    // This can't happen because for Market, we increase the size of the account
+    // with a free block when it gets init, so the first check fails. For
+    // global, we dont use new_init because the account is a PDA, so it is not
+    // at an existing account. Keep the check for thoroughness in case a new
+    // type is ever added.
     require!(
         bytes.iter().all(|&byte| byte == 0),
         ProgramError::InvalidAccountData,
