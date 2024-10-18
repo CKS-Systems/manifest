@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ManifestMarket"]};
+window.SIDEBAR_ITEMS = {"struct":["ManifestGlobalMarket"]};
