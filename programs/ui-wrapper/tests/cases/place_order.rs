@@ -13,7 +13,7 @@ use solana_program::{instruction::AccountMeta, system_program};
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account, instruction::Instruction, program_pack::Pack, pubkey::Pubkey,
-    signature::Keypair, signer::Signer,
+    signature::Keypair, signer::Signer, system_instruction::transfer,
 };
 use spl_token;
 use ui_wrapper::{
@@ -277,7 +277,6 @@ async fn wrapper_place_order_test() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
@@ -312,6 +311,25 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
     let (quote_mint, trader_token_account_quote) = test_fixture
         .fund_trader_wallet(&owner_keypair, Token::USDC, 1)
         .await;
+
+    // deplete all gas of owner
+    {
+        let owner_balance = test_fixture
+            .context
+            .borrow_mut()
+            .banks_client
+            .get_balance(owner)
+            .await?;
+        let ix = transfer(&owner, &payer, owner_balance);
+        send_tx_with_retry(
+            Rc::clone(&test_fixture.context),
+            &[ix],
+            Some(&payer),
+            &[&payer_keypair, &owner_keypair],
+        )
+        .await
+        .unwrap();
+    }
 
     let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
     let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
@@ -535,7 +553,6 @@ async fn wrapper_place_order_with_broke_owner_test() -> anyhow::Result<()> {
 
     Ok(())
 }
-
 
 #[tokio::test]
 async fn wrapper_place_order_without_globals_test() -> anyhow::Result<()> {
@@ -769,7 +786,6 @@ async fn wrapper_place_order_without_globals_test() -> anyhow::Result<()> {
 
     Ok(())
 }
-
 
 #[tokio::test]
 async fn wrapper_fill_order_test() -> anyhow::Result<()> {

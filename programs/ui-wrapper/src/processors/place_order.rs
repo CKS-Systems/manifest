@@ -72,6 +72,33 @@ impl WrapperPlaceOrderParams {
     }
 }
 
+// Call expand so core has enough free space and owner doesn't get charged
+// rent on a subsequent operation. This allows to keep payer and owner
+// separate in the case of PDA owners.
+fn expand_market_if_needed<'a, 'info>(
+    market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
+    payer: &Signer<'a, 'info>,
+    manifest_program: &Program<'a, 'info>,
+    system_program: &Program<'a, 'info>,
+) -> ProgramResult {
+    let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
+    let dynamic_account: MarketRef = get_dynamic_account(&market_data);
+    // Check for two free blocks, bc. there needs to be always one free block
+    // after every operation.
+    if !dynamic_account.has_two_free_blocks() {
+        invoke(
+            &expand_market_instruction(market.key, payer.key),
+            &[
+                manifest_program.info.clone(),
+                payer.info.clone(),
+                market.info.clone(),
+                system_program.info.clone(),
+            ],
+        )?
+    }
+    Ok(())
+}
+
 fn get_or_create_trader_index<'a, 'info>(
     market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
     owner: &Signer<'a, 'info>,
@@ -86,23 +113,11 @@ fn get_or_create_trader_index<'a, 'info>(
     };
 
     if trader_index != NIL {
-        // If core seat was already initialized, nothing to do here
+        // If core seat was already initialized, nothing to do here.
         Ok(trader_index)
     } else {
-        // Need to intialize a new seat on core
-        // Call expand so claim seat has enough free space
-        // and owner doesn't get charged rent
-        invoke(
-            &expand_market_instruction(market.key, payer.key),
-            &[
-                manifest_program.info.clone(),
-                payer.info.clone(),
-                market.info.clone(),
-                system_program.info.clone(),
-            ],
-        )?;
-
-        // Call the ClaimSeat CPI
+        // Need to intialize a new seat on core.
+        expand_market_if_needed(market, payer, manifest_program, system_program)?;
         invoke(
             &claim_seat_instruction(market.key, owner.key),
             &[
@@ -259,25 +274,7 @@ pub(crate) fn process_place_order(
         )?;
     }
 
-    // Call expand so core has enough free space for order and owner doesn't get
-    // charged rent. This is done here to keep payer and owner separate in the
-    // case of PDA owners. There is always one free block, this checks if there
-    // will be an extra one after we place an order.
-    {
-        let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
-        let dynamic_account: MarketRef = get_dynamic_account(&market_data);
-        if dynamic_account.has_two_free_blocks() {
-            invoke(
-                &expand_market_instruction(market.key, payer.key),
-                &[
-                    manifest_program.info.clone(),
-                    payer.info.clone(),
-                    market.info.clone(),
-                    system_program.info.clone(),
-                ],
-            )?;
-        }
-    }
+    expand_market_if_needed(&market, &payer, &manifest_program, &system_program)?;
 
     // Call batch update and pass unparsed accounts without further looking at them
 

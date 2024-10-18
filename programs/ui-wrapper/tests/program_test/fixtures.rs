@@ -19,7 +19,7 @@ use solana_sdk::{
 use spl_token_2022::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
-    instruction_builders::{create_wrapper_instructions},
+    instruction_builders::create_wrapper_instructions,
     wrapper_user::{ManifestWrapperUserFixed, WrapperUserValue},
 };
 

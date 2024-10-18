@@ -246,7 +246,7 @@ pub(crate) fn process_edit_order(
                 deposit_amount_atoms,
                 trader_token_account.key,
                 *token_program.key,
-                Some(trader_index)
+                Some(trader_index),
             ),
             &[
                 manifest_program.info.clone(),
