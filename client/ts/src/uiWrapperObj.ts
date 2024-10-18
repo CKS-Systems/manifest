@@ -488,11 +488,7 @@ export class UiWrapper {
           return { ixs: [claimSeatIx, placeIx], signers: [] };
         }
       } else {
-        const setup = await this.setupIxs(
-          connection,
-          owner,
-          payer,
-        );
+        const setup = await this.setupIxs(connection, owner, payer);
         const wrapper = setup.signers[0].publicKey;
         const place = await this.placeIx_(market, wrapper, owner, payer, args);
         return {
@@ -514,11 +510,7 @@ export class UiWrapper {
         baseDecimals: () => baseDecimals,
         quoteDecimals: () => quoteDecimals,
       };
-      const wrapperIxs = await this.setupIxs(
-        connection,
-        owner,
-        payer,
-      );
+      const wrapperIxs = await this.setupIxs(connection, owner, payer);
       const wrapper = wrapperIxs.signers[0].publicKey;
       const placeIx = await this.placeIx_(market, wrapper, owner, payer, args);
       return {
