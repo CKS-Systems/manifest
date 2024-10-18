@@ -86,6 +86,7 @@ fn expand_market_if_needed<'a, 'info>(
     // Check for two free blocks, bc. there needs to be always one free block
     // after every operation.
     if !dynamic_account.has_two_free_blocks() {
+        drop(market_data);
         invoke(
             &expand_market_instruction(market.key, payer.key),
             &[
@@ -128,7 +129,7 @@ fn get_or_create_trader_index<'a, 'info>(
             ],
         )?;
 
-        // fetch newly assigned trader index after claiming core seat
+        // Fetch newly assigned trader index after claiming core seat.
         let market_data: &Ref<&mut [u8]> = &mut market.try_borrow_data()?;
         let dynamic_account: MarketRef = get_dynamic_account(market_data);
         Ok(dynamic_account.get_trader_index(owner.key))
