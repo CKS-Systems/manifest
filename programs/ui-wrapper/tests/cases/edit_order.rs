@@ -19,7 +19,7 @@ use spl_token;
 use ui_wrapper::{
     self,
     instruction::ManifestWrapperInstruction,
-    instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
+    instruction_builders::create_wrapper_instructions,
     market_info::MarketInfo,
     open_order::WrapperOpenOrder,
     processors::{
@@ -38,7 +38,6 @@ use crate::{
 #[tokio::test]
 async fn wrapper_edit_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
-    test_fixture.claim_seat().await?;
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
@@ -279,7 +278,6 @@ async fn wrapper_edit_order_test() -> anyhow::Result<()> {
 #[tokio::test]
 async fn wrapper_edit_filled_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
-    test_fixture.claim_seat().await?;
 
     let taker: Pubkey = test_fixture.payer();
     let taker_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
@@ -303,20 +301,6 @@ async fn wrapper_edit_filled_order_test() -> anyhow::Result<()> {
         )
         .await?;
 
-        let claim_seat_ix: Instruction = claim_seat_instruction(
-            &test_fixture.market.key,
-            &maker,
-            &maker,
-            &wrapper_keypair.pubkey(),
-        );
-
-        send_tx_with_retry(
-            Rc::clone(&test_fixture.context),
-            &[claim_seat_ix],
-            Some(&maker),
-            &[&maker_keypair],
-        )
-        .await?;
         WrapperFixture::new(Rc::clone(&test_fixture.context), wrapper_keypair.pubkey()).await
     };
 

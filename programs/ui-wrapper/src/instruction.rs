@@ -16,6 +16,7 @@ pub enum ManifestWrapperInstruction {
     #[account(3, writable, name = "wrapper_state", desc = "Wrapper state")]
     CreateWrapper = 0,
 
+    /// Unused
     /// Allocate a seat on a given market, this adds a market info to the given
     /// wrapper.
     #[account(0, name = "manifest_program", desc = "Manifest program")]
@@ -24,7 +25,7 @@ pub enum ManifestWrapperInstruction {
     #[account(3, name = "system_program", desc = "System program")]
     #[account(4, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     #[account(5, writable, name = "wrapper_state", desc = "Wrapper state")]
-    ClaimSeat = 1,
+    ClaimSeatUnused = 1,
 
     /// Place order, deposits additional funds needed.
     /// Syncs both balances and open orders on the wrapper.

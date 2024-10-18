@@ -19,7 +19,7 @@ use solana_sdk::{
 use spl_token_2022::state::Mint;
 use std::rc::Rc;
 use ui_wrapper::{
-    instruction_builders::{claim_seat_instruction, create_wrapper_instructions},
+    instruction_builders::{create_wrapper_instructions},
     wrapper_user::{ManifestWrapperUserFixed, WrapperUserValue},
 };
 
@@ -220,41 +220,6 @@ impl TestFixture {
         };
 
         (mint, trader_token_account)
-    }
-
-    pub async fn claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
-        self.claim_seat_for_keypair(&self.payer_keypair()).await
-    }
-
-    pub async fn claim_seat_for_keypair(
-        &self,
-        keypair: &Keypair,
-    ) -> anyhow::Result<(), BanksClientError> {
-        let wrapper_key: Pubkey = self.wrapper.key;
-        self.claim_seat_for_keypair_with_wrapper(keypair, &wrapper_key)
-            .await
-    }
-
-    pub async fn claim_seat_for_keypair_with_wrapper(
-        &self,
-        keypair: &Keypair,
-        wrapper_state: &Pubkey,
-    ) -> anyhow::Result<(), BanksClientError> {
-        let claim_seat_ix: Instruction = claim_seat_instruction(
-            &self.market.key,
-            &keypair.pubkey(),
-            &keypair.pubkey(),
-            wrapper_state,
-        );
-        send_tx_with_retry(
-            Rc::clone(&self.context),
-            &[claim_seat_ix],
-            Some(&keypair.pubkey()),
-            &[&keypair.insecure_clone()],
-        )
-        .await
-        .unwrap();
-        Ok(())
     }
 }
 
