@@ -15,7 +15,7 @@ spl-token-2022 = { version = "3.0.4", features = [ "no-entrypoint" ] }
 solana-program = "1.18.1"
 borsh = "=0.9.3"
 bytemuck = "1.7.2"
-num_enum = "=0.5.9"
+num_enum = "=0.5.11"
 thiserror = "1.0.38"
 solana-security-txt = "1.1.0"
 static_assertions = "=1.1.0"
