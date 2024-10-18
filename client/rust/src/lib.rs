@@ -59,12 +59,6 @@ impl ManifestLocalMarket {
     pub fn get_quote_mint(&self) -> Pubkey {
         *self.market.get_quote_mint()
     }
-    pub fn get_base_global_address(&self) -> Pubkey {
-        get_global_address(self.market.get_base_mint()).0
-    }
-    pub fn get_quote_global_address(&self) -> Pubkey {
-        get_global_address(self.market.get_quote_mint()).0
-    }
 }
 
 impl Amm for ManifestLocalMarket {
