@@ -39,7 +39,10 @@ import {
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
-import { MarketInfo as UiWrapperMarketInfoRaw, marketInfoBeet } from './ui_wrapper/types';
+import {
+  MarketInfo as UiWrapperMarketInfoRaw,
+  marketInfoBeet,
+} from './ui_wrapper/types';
 
 /**
  * All data stored on a wrapper account.
@@ -334,8 +337,8 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] = rawOpenOrders.map(
-          (openOrder: UIWrapperOpenOrderRaw) => {
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] =
+          rawOpenOrders.map((openOrder: UIWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
