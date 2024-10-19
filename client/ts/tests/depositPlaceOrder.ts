@@ -104,7 +104,12 @@ async function testDepositPlaceOrder(): Promise<void> {
         baseOpenOrdersBalanceTokens: 4,
         quoteOpenOrdersBalanceTokens: 0,
       }),
-    'getBalances failed',
+    `getBalances failed expected ${JSON.stringify({
+      baseWithdrawableBalanceTokens: 6,
+      quoteWithdrawableBalanceTokens: 0,
+      baseOpenOrdersBalanceTokens: 4,
+      quoteOpenOrdersBalanceTokens: 0,
+    })} actual ${JSON.stringify(market.getBalances(payerKeypair.publicKey))}`,
   );
 }
 
