@@ -99,7 +99,7 @@ export async function depositGlobal(
   const signature: string = await sendAndConfirmTransaction(
     connection,
     new Transaction().add(globalAddTraderIx, globalDepositIx),
-    [traderKeypair, mintAuthorityKeypair],
+    [traderKeypair],
     {
       commitment: 'confirmed',
     },
