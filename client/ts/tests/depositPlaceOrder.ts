@@ -97,12 +97,13 @@ async function testDepositPlaceOrder(): Promise<void> {
   );
 
   assert(
-    JSON.stringify(market.getBalances(payerKeypair.publicKey)) == JSON.stringify({
-      baseWithdrawableBalanceTokens: 6,
-      quoteWithdrawableBalanceTokens: 0,
-      baseOpenOrdersBalanceTokens: 4,
-      quoteOpenOrdersBalanceTokens: 0,
-  }),
+    JSON.stringify(market.getBalances(payerKeypair.publicKey)) ==
+      JSON.stringify({
+        baseWithdrawableBalanceTokens: 6,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 4,
+        quoteOpenOrdersBalanceTokens: 0,
+      }),
     'getBalances failed',
   );
 }
