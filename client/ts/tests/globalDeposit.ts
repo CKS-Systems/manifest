@@ -4,6 +4,7 @@ import {
   sendAndConfirmTransaction,
   PublicKey,
   Transaction,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
 import {
@@ -38,7 +39,13 @@ async function testGlobalDeposit(): Promise<void> {
     address: getGlobalAddress(tokenMint),
   });
 
-  await depositGlobal(connection, payerKeypair, global.tokenMint(), 10);
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    global.tokenMint(),
+    10,
+    payerKeypair,
+  );
 
   await global.reload(connection);
   assert(
@@ -51,47 +58,48 @@ async function testGlobalDeposit(): Promise<void> {
 
 export async function depositGlobal(
   connection: Connection,
-  payerKeypair: Keypair,
+  traderKeypair: Keypair,
   mint: PublicKey,
   amountTokens: number,
+  mintAuthorityKeypair: Keypair,
 ): Promise<void> {
-  const globalAddTraderIx = ManifestClient.createGlobalAddTraderIx(
-    payerKeypair.publicKey,
-    mint,
-  );
+  const globalAddTraderIx: TransactionInstruction =
+    ManifestClient.createGlobalAddTraderIx(traderKeypair.publicKey, mint);
 
-  const globalDepositIx = await ManifestClient.globalDepositIx(
-    connection,
-    payerKeypair.publicKey,
-    mint,
-    amountTokens,
-  );
+  const globalDepositIx: TransactionInstruction =
+    await ManifestClient.globalDepositIx(
+      connection,
+      traderKeypair.publicKey,
+      mint,
+      amountTokens,
+    );
 
-  const traderTokenAccount = await createAssociatedTokenAccountIdempotent(
-    connection,
-    payerKeypair,
-    mint,
-    payerKeypair.publicKey,
-  );
+  const traderTokenAccount: PublicKey =
+    await createAssociatedTokenAccountIdempotent(
+      connection,
+      traderKeypair,
+      mint,
+      traderKeypair.publicKey,
+    );
 
-  const mintDecimals = (await getMint(connection, mint)).decimals;
-  const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
-  const mintSig = await mintTo(
+  const mintDecimals: number = (await getMint(connection, mint)).decimals;
+  const amountAtoms: number = Math.ceil(amountTokens * 10 ** mintDecimals);
+  const mintSig: string = await mintTo(
     connection,
-    payerKeypair,
+    traderKeypair,
     mint,
     traderTokenAccount,
-    payerKeypair.publicKey,
+    mintAuthorityKeypair,
     amountAtoms,
   );
   console.log(
     `Minted ${amountTokens} tokens to ${traderTokenAccount} in ${mintSig}`,
   );
 
-  const signature = await sendAndConfirmTransaction(
+  const signature: string = await sendAndConfirmTransaction(
     connection,
     new Transaction().add(globalAddTraderIx, globalDepositIx),
-    [payerKeypair],
+    [traderKeypair],
     {
       commitment: 'confirmed',
     },
