@@ -95,7 +95,7 @@ export async function swap(
     new Transaction().add(swapIx),
     [payerKeypair],
   );
-  console.log(`Placed order in ${signature}`);
+  console.log(`Swapped in ${signature}`);
 }
 
 async function testSwapGlobal(): Promise<void> {
