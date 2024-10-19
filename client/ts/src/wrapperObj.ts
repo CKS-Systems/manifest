@@ -1,11 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { openOrderBeet } from './utils/beet';
 import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
 import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
-import { MarketInfo, marketInfoBeet } from './wrapper/types';
+import {
+  MarketInfo,
+  WrapperOpenOrder,
+  marketInfoBeet,
+  wrapperOpenOrderBeet,
+} from './wrapper/types';
 import { convertU128 } from './utils/numbers';
 import BN from 'bn.js';
 
@@ -275,17 +279,17 @@ export class Wrapper {
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: OpenOrderInternal[] =
+        const parsedOpenOrders: WrapperOpenOrder[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                openOrderBeet,
+                wrapperOpenOrderBeet,
               )
             : [];
 
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: OpenOrderInternal) => {
+          (openOrder: WrapperOpenOrder) => {
             return {
               ...openOrder,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
