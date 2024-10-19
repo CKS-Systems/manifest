@@ -104,6 +104,8 @@ async function testSwapGlobal(): Promise<void> {
     'confirmed',
   );
   const payerKeypair: Keypair = Keypair.generate();
+  const restingOrderTraderKeypair: Keypair = Keypair.generate();
+  await airdropSol(connection, restingOrderTraderKeypair.publicKey);
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
   const market: Market = await Market.loadFromAddress({
@@ -127,7 +129,7 @@ async function testSwapGlobal(): Promise<void> {
   );
 
   const amountBaseAtoms: number = 1_000_000_000;
-  const mintSig = await mintTo(
+  const mintSig: string = await mintTo(
     connection,
     payerKeypair,
     market.baseMint(),
@@ -142,10 +144,10 @@ async function testSwapGlobal(): Promise<void> {
   // Note that this is a self-trade for simplicity.
   await airdropSol(connection, payerKeypair.publicKey);
   await createGlobal(connection, payerKeypair, market.quoteMint());
-  await depositGlobal(connection, payerKeypair, market.quoteMint(), 10_000);
+  await depositGlobal(connection, restingOrderTraderKeypair, market.quoteMint(), 10_000, payerKeypair);
   await placeOrder(
     connection,
-    payerKeypair,
+    restingOrderTraderKeypair,
     marketAddress,
     5,
     5,
@@ -160,8 +162,8 @@ async function testSwapGlobal(): Promise<void> {
   market.prettyPrint();
 
   // Verify that the resting order got matched and resulted in deposited base on
-  // the market. Quote came from global and got withdrawn in the swap. Because
-  // it is a self-trade, it resets to zero, so we need to check the wallet.
+  // the market. Quote came from global and got withdrawn in the swap. Seat
+  // results in no net deposit.
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     `Expected quote ${0} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
@@ -191,10 +193,10 @@ async function testSwapGlobal(): Promise<void> {
     baseBalance == 1,
     `Expected wallet base ${1} actual base ${baseBalance}`,
   );
-  // 5 * 5, received from matching the global order.
+  // 5, received from matching the global order.
   assert(
-    quoteBalance == 25,
-    `Expected  quote ${25} actual quote ${quoteBalance}`,
+    quoteBalance == 5,
+    `Expected  quote ${5} actual quote ${quoteBalance}`,
   );
 }
 
