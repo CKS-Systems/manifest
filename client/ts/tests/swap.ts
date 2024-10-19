@@ -144,7 +144,13 @@ async function testSwapGlobal(): Promise<void> {
   // Note that this is a self-trade for simplicity.
   await airdropSol(connection, payerKeypair.publicKey);
   await createGlobal(connection, payerKeypair, market.quoteMint());
-  await depositGlobal(connection, restingOrderTraderKeypair, market.quoteMint(), 10_000, payerKeypair);
+  await depositGlobal(
+    connection,
+    restingOrderTraderKeypair,
+    market.quoteMint(),
+    10_000,
+    payerKeypair,
+  );
   await placeOrder(
     connection,
     restingOrderTraderKeypair,

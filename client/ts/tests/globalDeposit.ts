@@ -39,7 +39,13 @@ async function testGlobalDeposit(): Promise<void> {
     address: getGlobalAddress(tokenMint),
   });
 
-  await depositGlobal(connection, payerKeypair, global.tokenMint(), 10, payerKeypair);
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    global.tokenMint(),
+    10,
+    payerKeypair,
+  );
 
   await global.reload(connection);
   assert(
@@ -57,24 +63,24 @@ export async function depositGlobal(
   amountTokens: number,
   mintAuthorityKeypair: Keypair,
 ): Promise<void> {
-  const globalAddTraderIx: TransactionInstruction = ManifestClient.createGlobalAddTraderIx(
-    traderKeypair.publicKey,
-    mint,
-  );
+  const globalAddTraderIx: TransactionInstruction =
+    ManifestClient.createGlobalAddTraderIx(traderKeypair.publicKey, mint);
 
-  const globalDepositIx: TransactionInstruction = await ManifestClient.globalDepositIx(
-    connection,
-    traderKeypair.publicKey,
-    mint,
-    amountTokens,
-  );
+  const globalDepositIx: TransactionInstruction =
+    await ManifestClient.globalDepositIx(
+      connection,
+      traderKeypair.publicKey,
+      mint,
+      amountTokens,
+    );
 
-  const traderTokenAccount: PublicKey = await createAssociatedTokenAccountIdempotent(
-    connection,
-    traderKeypair,
-    mint,
-    traderKeypair.publicKey,
-  );
+  const traderTokenAccount: PublicKey =
+    await createAssociatedTokenAccountIdempotent(
+      connection,
+      traderKeypair,
+      mint,
+      traderKeypair.publicKey,
+    );
 
   const mintDecimals: number = (await getMint(connection, mint)).decimals;
   const amountAtoms: number = Math.ceil(amountTokens * 10 ** mintDecimals);
