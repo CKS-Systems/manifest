@@ -98,7 +98,7 @@ export async function swap(
   console.log(`Placed order in ${signature}`);
 }
 
-async function _testSwapGlobal(): Promise<void> {
+async function testSwapGlobal(): Promise<void> {
   const connection: Connection = new Connection(
     'http://127.0.0.1:8899',
     'confirmed',
@@ -203,7 +203,6 @@ describe('Swap test', () => {
     await testSwap();
   });
   it('Swap against global', async () => {
-    // TODO: Enable once able to place global order through batch update
-    // await testSwapGlobal();
+    await testSwapGlobal();
   });
 });
