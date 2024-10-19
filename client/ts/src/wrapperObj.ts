@@ -1,11 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { openOrderBeet } from './utils/beet';
 import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
 import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
-import { MarketInfo, marketInfoBeet } from './wrapper/types';
+import {
+  MarketInfo,
+  WrapperOpenOrder as WrapperOpenOrderRaw,
+  marketInfoBeet,
+  wrapperOpenOrderBeet,
+} from './wrapper/types';
 import { convertU128 } from './utils/numbers';
 import BN from 'bn.js';
 
@@ -57,18 +61,6 @@ export interface WrapperOpenOrder {
   isBid: boolean;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
-}
-
-export interface WrapperOpenOrderRaw {
-  price: Uint8Array;
-  clientOrderId: bignum;
-  orderSequenceNumber: bignum;
-  numBaseAtoms: bignum;
-  marketDataIndex: number;
-  lastValidSlot: number;
-  isBid: boolean;
-  orderType: number;
-  padding: bignum[]; // 30 bytes
 }
 
 /**
@@ -261,17 +253,17 @@ export class Wrapper {
     const parsedMarketInfos: WrapperMarketInfo[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: WrapperOpenOrderRaw[] =
+        const rawOpenOrders: WrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                openOrderBeet,
+                wrapperOpenOrderBeet,
               )
             : [];
 
         const parsedOpenOrdersWithPrice: WrapperOpenOrder[] =
-          parsedOpenOrders.map((openOrder: WrapperOpenOrderRaw) => {
+          rawOpenOrders.map((openOrder: WrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               price: convertU128(new BN(openOrder.price, 10, 'le')),

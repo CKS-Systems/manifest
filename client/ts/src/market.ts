@@ -226,6 +226,63 @@ export class Market {
   }
 
   /**
+   * Get the amount in tokens of balance that is deposited on this market, split
+   * by base, quote, and whether in orders or not.
+   *
+   * @param trader PublicKey of the trader to check balance of
+   *
+   * @returns {
+   *    baseWithdrawableBalanceTokens: number,
+   *    quoteWithdrawableBalanceTokens: number,
+   *    baseOpenOrdersBalanceTokens: number,
+   *    quoteOpenOrdersBalanceTokens: number
+   * }
+   */
+  public getBalances(trader: PublicKey): {
+    baseWithdrawableBalanceTokens: number;
+    quoteWithdrawableBalanceTokens: number;
+    baseOpenOrdersBalanceTokens: number;
+    quoteOpenOrdersBalanceTokens: number;
+  } {
+    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
+      return claimedSeat.publicKey.equals(trader);
+    });
+    // No seat claimed.
+    if (filteredSeats.length == 0) {
+      return {
+        baseWithdrawableBalanceTokens: 0,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 0,
+        quoteOpenOrdersBalanceTokens: 0,
+      };
+    }
+    const seat: ClaimedSeat = filteredSeats[0];
+
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.asks();
+    const baseOpenOrdersBalanceTokens: number = asks
+      .filter((ask) => ask.trader.equals(trader))
+      .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
+    const quoteOpenOrdersBalanceTokens: number = bids
+      .filter((bid) => bid.trader.equals(trader))
+      .reduce(
+        (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
+        0,
+      );
+
+    const quoteWithdrawableBalanceTokens: number =
+      toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    const baseWithdrawableBalanceTokens: number =
+      toNum(seat.baseBalance) / 10 ** this.baseDecimals();
+    return {
+      baseWithdrawableBalanceTokens,
+      quoteWithdrawableBalanceTokens,
+      baseOpenOrdersBalanceTokens,
+      quoteOpenOrdersBalanceTokens,
+    };
+  }
+
+  /**
    * Gets the base mint of the market
    *
    * @returns PublicKey

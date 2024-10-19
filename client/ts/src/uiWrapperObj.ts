@@ -17,6 +17,8 @@ import {
   OrderType,
   PROGRAM_ID,
   SettleFundsInstructionArgs,
+  wrapperOpenOrderBeet as uiWrapperOpenOrderBeet,
+  WrapperOpenOrder as UIWrapperOpenOrderRaw,
 } from './ui_wrapper';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
@@ -37,8 +39,7 @@ import {
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
-import { MarketInfo, marketInfoBeet } from './wrapper/types';
-import { uiOpenOrderBeet } from './utils/beet';
+import { MarketInfo as UiWrapperMarketInfoRaw, marketInfoBeet } from './ui_wrapper/types';
 
 /**
  * All data stored on a wrapper account.
@@ -312,7 +313,7 @@ export class UiWrapper {
     const _padding = data.readUInt32LE(offset);
     offset += 12;
 
-    const marketInfos: MarketInfo[] =
+    const marketInfos: UiWrapperMarketInfoRaw[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -322,19 +323,19 @@ export class UiWrapper {
         : [];
 
     const parsedMarketInfos: UiWrapperMarketInfo[] = marketInfos.map(
-      (marketInfoRaw: MarketInfo) => {
+      (marketInfoRaw: UiWrapperMarketInfoRaw) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: UiWrapperOpenOrderRaw[] =
+        const rawOpenOrders: UIWrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                uiOpenOrderBeet,
+                uiWrapperOpenOrderBeet,
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] =
-          parsedOpenOrders.map((openOrder: UiWrapperOpenOrderRaw) => {
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] = rawOpenOrders.map(
+          (openOrder: UIWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
