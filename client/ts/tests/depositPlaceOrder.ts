@@ -95,6 +95,16 @@ async function testDepositPlaceOrder(): Promise<void> {
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'withdraw withdrawable balance check quote',
   );
+
+  assert(
+    JSON.stringify(market.getBalances(payerKeypair.publicKey)) == JSON.stringify({
+      baseWithdrawableBalanceTokens: 6,
+      quoteWithdrawableBalanceTokens: 0,
+      baseOpenOrdersBalanceTokens: 4,
+      quoteOpenOrdersBalanceTokens: 0,
+  }),
+    'getBalances failed',
+  );
 }
 
 export async function depositPlaceOrder(
