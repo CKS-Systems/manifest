@@ -15,10 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{
-        claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRef, OrderType,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-    },
+    state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRef, OrderType},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -69,6 +66,19 @@ impl WrapperPlaceOrderParams {
             last_valid_slot,
             order_type,
         }
+    }
+}
+
+impl Into<PlaceOrderParams> for WrapperPlaceOrderParams {
+    fn into(self) -> PlaceOrderParams {
+        PlaceOrderParams::new(
+            self.base_atoms,
+            self.price_mantissa,
+            self.price_exponent,
+            self.is_bid,
+            self.order_type,
+            self.last_valid_slot,
+        )
     }
 }
 
@@ -281,18 +291,9 @@ pub(crate) fn process_place_order(
 
     expand_market_if_needed(&market, &payer, &manifest_program, &system_program)?;
 
-    // Call batch update and pass unparsed accounts without further looking at them
-
+    // Call batch update and pass unparsed accounts without verifying them
     {
-        let core_place: PlaceOrderParams = PlaceOrderParams::new(
-            order.base_atoms,
-            order.price_mantissa,
-            order.price_exponent,
-            order.is_bid,
-            order.order_type,
-            NO_EXPIRATION_LAST_VALID_SLOT,
-        );
-
+        let core_place: PlaceOrderParams = order.clone().into();
         trace!("cpi place {core_place:?}");
 
         let mut account_metas = Vec::with_capacity(13);
@@ -391,4 +392,35 @@ pub(crate) fn process_place_order(
     sync_fast(&wrapper_state, &market, market_info_index)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WrapperPlaceOrderParams;
+    use manifest::{
+        program::batch_update::PlaceOrderParams,
+        quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
+        state::OrderType,
+    };
+
+    #[test]
+    fn test_pass_order_params_to_core() {
+        let wrapper_order =
+            WrapperPlaceOrderParams::new(1, 2, 3, 4, true, 5, OrderType::ImmediateOrCancel);
+        assert_eq!(wrapper_order.client_order_id, 1);
+
+        let core_order: PlaceOrderParams = wrapper_order.into();
+        assert_eq!(core_order.base_atoms(), 2);
+        assert_eq!(
+            core_order
+                .try_price()
+                .unwrap()
+                .checked_quote_for_base(BaseAtoms::new(1), false)
+                .unwrap(),
+            QuoteAtoms::new(30_000)
+        );
+        assert_eq!(core_order.is_bid(), true);
+        assert_eq!(core_order.order_type(), OrderType::ImmediateOrCancel);
+        assert_eq!(core_order.last_valid_slot(), 5);
+    }
 }
