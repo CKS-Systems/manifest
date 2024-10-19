@@ -34,7 +34,13 @@ async function testGlobalWithdraw(): Promise<void> {
     address: getGlobalAddress(tokenMint),
   });
 
-  await depositGlobal(connection, payerKeypair, global.tokenMint(), 10);
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    global.tokenMint(),
+    10,
+    payerKeypair,
+  );
   await withdrawGlobal(connection, payerKeypair, global.tokenMint(), 5);
 
   await global.reload(connection);
