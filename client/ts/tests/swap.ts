@@ -178,7 +178,7 @@ async function testSwapGlobal(): Promise<void> {
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
     `Expected base ${0} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
   );
-  const baseBalance: number = (
+  const swapperBaseBalance: number = (
     await connection.getTokenAccountBalance(
       await getAssociatedTokenAddress(
         market.baseMint(),
@@ -186,7 +186,7 @@ async function testSwapGlobal(): Promise<void> {
       ),
     )
   ).value.uiAmount!;
-  const quoteBalance: number = (
+  const swapperQuoteBalance: number = (
     await connection.getTokenAccountBalance(
       await getAssociatedTokenAddress(
         market.quoteMint(),
@@ -194,15 +194,15 @@ async function testSwapGlobal(): Promise<void> {
       ),
     )
   ).value.uiAmount!;
-  // Because of the self trade, it resets the wallet to pre-trade amount.
+
   assert(
-    baseBalance == 1,
-    `Expected wallet base ${1} actual base ${baseBalance}`,
+    swapperBaseBalance == 0,
+    `Expected wallet base ${0} actual base ${swapperBaseBalance}`,
   );
   // 5, received from matching the global order.
   assert(
-    quoteBalance == 5,
-    `Expected  quote ${5} actual quote ${quoteBalance}`,
+    swapperQuoteBalance == 5,
+    `Expected  quote ${5} actual quote ${swapperQuoteBalance}`,
   );
 }
 
