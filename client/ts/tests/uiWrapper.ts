@@ -69,8 +69,8 @@ async function testWrapper(): Promise<void> {
     buffer: wrapperAcc.account.data,
   });
   assert(
-    wrapper.marketInfoForMarket(marketAddress)?.orders.length == 0,
-    'no orders yet in market',
+    wrapper.marketInfoForMarket(marketAddress) == null,
+    'no seat claimed yet in market',
   );
 
   {
