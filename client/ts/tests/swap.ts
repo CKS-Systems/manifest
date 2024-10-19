@@ -86,7 +86,7 @@ export async function swap(
   const swapIx: TransactionInstruction = client.swapIx(payerKeypair.publicKey, {
     inAtoms: amountAtoms,
     outAtoms: minOutAtoms,
-    isBaseIn: isBid,
+    isBaseIn: !isBid,
     isExactIn: true,
   });
 
