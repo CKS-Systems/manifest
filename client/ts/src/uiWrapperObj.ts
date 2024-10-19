@@ -17,6 +17,8 @@ import {
   OrderType,
   PROGRAM_ID,
   SettleFundsInstructionArgs,
+  wrapperOpenOrderBeet as uiWrapperOpenOrderBeet,
+  WrapperOpenOrder as UIWrapperOpenOrder
 } from './ui_wrapper';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
@@ -38,7 +40,6 @@ import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
 import { MarketInfo, marketInfoBeet } from './wrapper/types';
-import { uiOpenOrderBeet } from './utils/beet';
 
 /**
  * All data stored on a wrapper account.
@@ -338,17 +339,17 @@ export class UiWrapper {
     const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: UIOpenOrderInternal[] =
+        const parsedOpenOrders: UIWrapperOpenOrder[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                uiOpenOrderBeet,
+                uiWrapperOpenOrderBeet,
               )
             : [];
 
         const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: UIOpenOrderInternal) => {
+          (openOrder: UIWrapperOpenOrder) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
