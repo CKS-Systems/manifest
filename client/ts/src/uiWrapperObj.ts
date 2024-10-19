@@ -18,7 +18,7 @@ import {
   PROGRAM_ID,
   SettleFundsInstructionArgs,
   wrapperOpenOrderBeet as uiWrapperOpenOrderBeet,
-  WrapperOpenOrder as UIWrapperOpenOrder
+  WrapperOpenOrder as UIWrapperOpenOrder,
 } from './ui_wrapper';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {

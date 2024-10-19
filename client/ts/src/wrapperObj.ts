@@ -4,7 +4,12 @@ import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
 import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
-import { MarketInfo, WrapperOpenOrder, marketInfoBeet, wrapperOpenOrderBeet } from './wrapper/types';
+import {
+  MarketInfo,
+  WrapperOpenOrder,
+  marketInfoBeet,
+  wrapperOpenOrderBeet,
+} from './wrapper/types';
 import { convertU128 } from './utils/numbers';
 import BN from 'bn.js';
 

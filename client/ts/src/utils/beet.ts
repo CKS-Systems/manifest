@@ -1,7 +1,4 @@
-import {
-  BeetArgsStruct,
-  u32,
-} from '@metaplex-foundation/beet';
+import { BeetArgsStruct, u32 } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
 import { PublicKey } from '@solana/web3.js';
