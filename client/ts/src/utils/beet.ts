@@ -1,15 +1,9 @@
 import {
   BeetArgsStruct,
-  fixedSizeUint8Array,
   u32,
-  u64,
-  u8,
-  uniformFixedSizeArray,
 } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { OpenOrderInternal } from '../wrapperObj';
 import { RedBlackTreeNodeHeader } from './redBlackTree';
-import { UIOpenOrderInternal } from '../uiWrapperObj';
 import { PublicKey } from '@solana/web3.js';
 
 type PubkeyWrapper = {
