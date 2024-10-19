@@ -108,7 +108,7 @@ async function testDepositPlaceOrder(): Promise<void> {
       baseWithdrawableBalanceTokens: 6,
       quoteWithdrawableBalanceTokens: 0,
       baseOpenOrdersBalanceTokens: 4,
-      quoteOpenOrdersBalanceTokens: 0,
+      quoteOpenOrdersBalanceTokens: 20,
     })} actual ${JSON.stringify(market.getBalances(payerKeypair.publicKey))}`,
   );
 }
