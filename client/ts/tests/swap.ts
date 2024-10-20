@@ -86,7 +86,7 @@ export async function swap(
   const swapIx: TransactionInstruction = client.swapIx(payerKeypair.publicKey, {
     inAtoms: amountAtoms,
     outAtoms: minOutAtoms,
-    isBaseIn: isBid,
+    isBaseIn: !isBid,
     isExactIn: true,
   });
 
@@ -95,15 +95,17 @@ export async function swap(
     new Transaction().add(swapIx),
     [payerKeypair],
   );
-  console.log(`Placed order in ${signature}`);
+  console.log(`Swapped in ${signature}`);
 }
 
-async function _testSwapGlobal(): Promise<void> {
+async function testSwapGlobal(): Promise<void> {
   const connection: Connection = new Connection(
     'http://127.0.0.1:8899',
     'confirmed',
   );
   const payerKeypair: Keypair = Keypair.generate();
+  const restingOrderTraderKeypair: Keypair = Keypair.generate();
+  await airdropSol(connection, restingOrderTraderKeypair.publicKey);
 
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
   const market: Market = await Market.loadFromAddress({
@@ -127,7 +129,7 @@ async function _testSwapGlobal(): Promise<void> {
   );
 
   const amountBaseAtoms: number = 1_000_000_000;
-  const mintSig = await mintTo(
+  const mintSig: string = await mintTo(
     connection,
     payerKeypair,
     market.baseMint(),
@@ -142,10 +144,16 @@ async function _testSwapGlobal(): Promise<void> {
   // Note that this is a self-trade for simplicity.
   await airdropSol(connection, payerKeypair.publicKey);
   await createGlobal(connection, payerKeypair, market.quoteMint());
-  await depositGlobal(connection, payerKeypair, market.quoteMint(), 10_000);
+  await depositGlobal(
+    connection,
+    restingOrderTraderKeypair,
+    market.quoteMint(),
+    10_000,
+    payerKeypair,
+  );
   await placeOrder(
     connection,
-    payerKeypair,
+    restingOrderTraderKeypair,
     marketAddress,
     5,
     5,
@@ -160,8 +168,8 @@ async function _testSwapGlobal(): Promise<void> {
   market.prettyPrint();
 
   // Verify that the resting order got matched and resulted in deposited base on
-  // the market. Quote came from global and got withdrawn in the swap. Because
-  // it is a self-trade, it resets to zero, so we need to check the wallet.
+  // the market. Quote came from global and got withdrawn in the swap. Seat
+  // results in no net deposit.
   assert(
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     `Expected quote ${0} actual quote ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false)}`,
@@ -170,7 +178,7 @@ async function _testSwapGlobal(): Promise<void> {
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true) == 0,
     `Expected base ${0} actual base ${market.getWithdrawableBalanceTokens(payerKeypair.publicKey, true)}`,
   );
-  const baseBalance: number = (
+  const swapperBaseBalance: number = (
     await connection.getTokenAccountBalance(
       await getAssociatedTokenAddress(
         market.baseMint(),
@@ -178,7 +186,7 @@ async function _testSwapGlobal(): Promise<void> {
       ),
     )
   ).value.uiAmount!;
-  const quoteBalance: number = (
+  const swapperQuoteBalance: number = (
     await connection.getTokenAccountBalance(
       await getAssociatedTokenAddress(
         market.quoteMint(),
@@ -186,15 +194,15 @@ async function _testSwapGlobal(): Promise<void> {
       ),
     )
   ).value.uiAmount!;
-  // Because of the self trade, it resets the wallet to pre-trade amount.
+
   assert(
-    baseBalance == 1,
-    `Expected wallet base ${1} actual base ${baseBalance}`,
+    swapperBaseBalance == 0,
+    `Expected wallet base ${0} actual base ${swapperBaseBalance}`,
   );
-  // 5 * 5, received from matching the global order.
+  // 5, received from matching the global order.
   assert(
-    quoteBalance == 25,
-    `Expected  quote ${25} actual quote ${quoteBalance}`,
+    swapperQuoteBalance == 5,
+    `Expected  quote ${5} actual quote ${swapperQuoteBalance}`,
   );
 }
 
@@ -203,7 +211,6 @@ describe('Swap test', () => {
     await testSwap();
   });
   it('Swap against global', async () => {
-    // TODO: Enable once able to place global order through batch update
-    // await testSwapGlobal();
+    await testSwapGlobal();
   });
 });

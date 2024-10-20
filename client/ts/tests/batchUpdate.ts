@@ -69,7 +69,13 @@ async function testBatchUpdateWithGlobal(): Promise<void> {
   });
 
   await createGlobal(connection, payerKeypair, market.quoteMint());
-  await depositGlobal(connection, payerKeypair, market.quoteMint(), 10);
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    market.quoteMint(),
+    10,
+    payerKeypair,
+  );
   await batchUpdate(
     connection,
     payerKeypair,
