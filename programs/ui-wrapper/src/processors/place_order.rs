@@ -14,8 +14,8 @@ use manifest::{
         claim_seat_instruction, deposit_instruction, expand_market_instruction,
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
-    require,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    require,
     state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRef, OrderType},
     validation::{ManifestAccountInfo, Program, Signer},
 };
@@ -27,6 +27,14 @@ use solana_program::{
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
+    sysvar::{clock::Clock, Sysvar},
+};
+use spl_token_2022::{
+    extension::{
+        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        StateWithExtensions,
+    },
+    state::Mint,
 };
 
 use crate::{
@@ -233,10 +241,6 @@ pub(crate) fn process_place_order(
 
     check_signer(&wrapper_state, owner.key);
 
-    if spl_token_2022::id() == *token_program.key {
-        unimplemented!("token2022 not yet supported")
-    }
-
     // Ensure ClaimedSeat in core and MarketInfo in wrapper are allocated.
     // Syncs MarketInfo from ClaimedSeat to calculate required deposits.
     let trader_index =
@@ -258,7 +262,7 @@ pub(crate) fn process_place_order(
         order.price_exponent,
     )?;
 
-    let deposit_amount_atoms: u64 = if order.is_bid {
+    let missing_amount_atoms: u64 = if order.is_bid {
         // Core CPI verifies token account / vault consistency with mint.
         require!(
             mint.key.eq(market.get_fixed()?.get_quote_mint()),
@@ -279,7 +283,37 @@ pub(crate) fn process_place_order(
         base_atoms.saturating_sub(remaining_base_atoms).as_u64()
     };
 
-    trace!("deposit amount:{deposit_amount_atoms} mint:{:?}", mint.key);
+    // Adjust deposited amount for TransferFee if possible.
+    let deposit_amount_atoms = if *mint.owner == spl_token_2022::id() {
+        let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+        let deposit_mint: StateWithExtensions<'_, Mint> =
+            StateWithExtensions::<Mint>::unpack(&mint_data)?;
+
+        if let Ok(extension) = deposit_mint.get_extension::<TransferHook>() {
+            if !extension.program_id.0.eq(&Pubkey::default()) {
+                solana_program::msg!(
+                    "Warning, you are placing an order while using TransferHook. There is no accurate way to estimate deposits required for this trade. You might need to manually deposit using the core instruction before placing orders."
+                );
+            }
+        }
+
+        if let Ok(extension) = deposit_mint.get_extension::<TransferFeeConfig>() {
+            let epoch_fee = extension.get_epoch_fee(Clock::get()?.epoch);
+            missing_amount_atoms
+                + epoch_fee
+                    .calculate_pre_fee_amount(missing_amount_atoms)
+                    .unwrap()
+        } else {
+            missing_amount_atoms
+        }
+    } else {
+        missing_amount_atoms
+    };
+
+    trace!(
+        "deposit amount:{deposit_amount_atoms} to cover missing: {missing_amount_atoms} mint:{:?}",
+        mint.key
+    );
     if deposit_amount_atoms > 0 {
         invoke(
             &deposit_instruction(
