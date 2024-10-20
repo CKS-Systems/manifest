@@ -1,6 +1,7 @@
 //! UI-Wrapper program for Manifest
 //!
 
+pub mod error;
 pub mod instruction;
 pub mod instruction_builders;
 pub mod logs;

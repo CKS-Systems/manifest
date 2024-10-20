@@ -14,6 +14,7 @@ use manifest::{
         claim_seat_instruction, deposit_instruction, expand_market_instruction,
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
+    require,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRef, OrderType},
     validation::{ManifestAccountInfo, Program, Signer},
@@ -29,7 +30,8 @@ use solana_program::{
 };
 
 use crate::{
-    market_info::MarketInfo, open_order::WrapperOpenOrder, wrapper_user::ManifestWrapperUserFixed,
+    error::ManifestWrapperError::InvalidDepositAccounts, market_info::MarketInfo,
+    open_order::WrapperOpenOrder, wrapper_user::ManifestWrapperUserFixed,
 };
 
 use super::shared::{
@@ -257,11 +259,23 @@ pub(crate) fn process_place_order(
     )?;
 
     let deposit_amount_atoms: u64 = if order.is_bid {
+        // Core CPI verifies token account / vault consistency with mint.
+        require!(
+            mint.key.eq(market.get_fixed()?.get_quote_mint()),
+            InvalidDepositAccounts,
+            "expected market.quote_mint as deposit mint"
+        )?;
         let required_quote_atoms = base_atoms.checked_mul(price, true)?;
         required_quote_atoms
             .saturating_sub(remaining_quote_atoms)
             .as_u64()
     } else {
+        // Core CPI verifies token account / vault consistency with mint.
+        require!(
+            mint.key.eq(market.get_fixed()?.get_base_mint()),
+            InvalidDepositAccounts,
+            "expected market.base_mint as deposit mint"
+        )?;
         base_atoms.saturating_sub(remaining_base_atoms).as_u64()
     };
 
