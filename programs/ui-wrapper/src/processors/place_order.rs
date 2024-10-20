@@ -299,10 +299,9 @@ pub(crate) fn process_place_order(
 
         if let Ok(extension) = deposit_mint.get_extension::<TransferFeeConfig>() {
             let epoch_fee = extension.get_epoch_fee(Clock::get()?.epoch);
-            missing_amount_atoms
-                + epoch_fee
-                    .calculate_pre_fee_amount(missing_amount_atoms)
-                    .unwrap()
+            epoch_fee
+                .calculate_pre_fee_amount(missing_amount_atoms)
+                .unwrap()
         } else {
             missing_amount_atoms
         }
