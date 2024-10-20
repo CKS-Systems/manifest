@@ -788,6 +788,138 @@ async fn wrapper_place_order_without_globals_test() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn wrapper_place_order_with_mixed_up_mint_ask() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+    let (base_mint, trader_token_account_base) = test_fixture
+        .fund_trader_wallet(&payer_keypair, Token::SOL, 1)
+        .await;
+    let (quote_mint, trader_token_account_quote) = test_fixture
+        .fund_trader_wallet(&payer_keypair, Token::USDC, 1)
+        .await;
+
+    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+
+    let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
+    let (global_base, _) = get_global_address(&base_mint);
+    let (global_quote, _) = get_global_address(&quote_mint);
+    let (global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
+
+    // place order as ask, but passing quote currency should fail
+    let place_order_ix = Instruction {
+        program_id: ui_wrapper::id(),
+        accounts: vec![
+            AccountMeta::new(test_fixture.wrapper.key, false),
+            AccountMeta::new(payer, true),
+            AccountMeta::new(trader_token_account_quote, false),
+            AccountMeta::new(test_fixture.market.key, false),
+            AccountMeta::new(quote_vault, false),
+            AccountMeta::new_readonly(quote_mint, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(manifest::id(), false),
+            AccountMeta::new(payer, true),
+        ],
+        data: [
+            ManifestWrapperInstruction::PlaceOrder.to_vec(),
+            WrapperPlaceOrderParams::new(
+                1,
+                1,
+                1,
+                0,
+                false,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+                OrderType::Limit,
+            )
+            .try_to_vec()
+            .unwrap(),
+        ]
+        .concat(),
+    };
+    let result = send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[place_order_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await;
+
+    assert!(result.is_err());
+    Ok(())
+}
+
+#[tokio::test]
+async fn wrapper_place_order_with_mixed_up_mint_bid() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+    let (base_mint, trader_token_account_base) = test_fixture
+        .fund_trader_wallet(&payer_keypair, Token::SOL, 1)
+        .await;
+    let (quote_mint, trader_token_account_quote) = test_fixture
+        .fund_trader_wallet(&payer_keypair, Token::USDC, 1)
+        .await;
+
+    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+
+    let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
+    let (global_base, _) = get_global_address(&base_mint);
+    let (global_quote, _) = get_global_address(&quote_mint);
+    let (global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
+
+    // place order as ask, but passing quote currency should fail
+    let place_order_ix = Instruction {
+        program_id: ui_wrapper::id(),
+        accounts: vec![
+            AccountMeta::new(test_fixture.wrapper.key, false),
+            AccountMeta::new(payer, true),
+            AccountMeta::new(trader_token_account_base, false),
+            AccountMeta::new(test_fixture.market.key, false),
+            AccountMeta::new(base_vault, false),
+            AccountMeta::new_readonly(base_mint, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(manifest::id(), false),
+            AccountMeta::new(payer, true),
+        ],
+        data: [
+            ManifestWrapperInstruction::PlaceOrder.to_vec(),
+            WrapperPlaceOrderParams::new(
+                1,
+                1,
+                1,
+                0,
+                true,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+                OrderType::Limit,
+            )
+            .try_to_vec()
+            .unwrap(),
+        ]
+        .concat(),
+    };
+    let result = send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[place_order_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await;
+
+    assert!(result.is_err());
+    Ok(())
+}
+
+#[tokio::test]
 async fn wrapper_fill_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
 
