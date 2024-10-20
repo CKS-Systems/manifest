@@ -35,6 +35,9 @@ use crate::{
     send_tx_with_retry, TestFixture, Token, WrapperFixture, SOL_UNIT_SIZE, USDC_UNIT_SIZE,
 };
 
+
+// TODO: test case for ask instead of bid
+// TODO: test case without global
 #[tokio::test]
 async fn wrapper_edit_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
@@ -275,6 +278,8 @@ async fn wrapper_edit_order_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+
+// TODO: check why this doesn't trigger the order fully filled test
 #[tokio::test]
 async fn wrapper_edit_filled_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
