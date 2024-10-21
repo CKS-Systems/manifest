@@ -25,15 +25,12 @@ pub(crate) fn process_create_wrapper(
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new_init(next_account_info(account_iter)?)?;
 
+    // Initialize wrapper state.
     {
-        // Initialize wrapper state
         let empty_market_fixed: ManifestWrapperUserFixed =
             ManifestWrapperUserFixed::new_empty(owner.key);
         let market_bytes: &mut [u8] = &mut wrapper_state.try_borrow_mut_data()?[..];
         *get_mut_helper::<ManifestWrapperUserFixed>(market_bytes, 0_u32) = empty_market_fixed;
-
-        // Drop the reference to wrapper_state so it can be borrowed in expand
-        // wrapper if needed.
     }
 
     // Expand wrapper so there is an initial block available.

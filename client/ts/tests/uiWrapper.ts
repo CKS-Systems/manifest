@@ -9,7 +9,7 @@ import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
 import { createGlobalCreateInstruction } from '../src/manifest';
-import { UiWrapper, OpenOrder } from '../src/uiWrapperObj';
+import { UiWrapper, UiWrapperOpenOrder } from '../src/uiWrapperObj';
 import {
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
@@ -45,7 +45,6 @@ async function testWrapper(): Promise<void> {
   {
     const setup = await UiWrapper.setupIxs(
       connection,
-      marketAddress,
       payerKeypair.publicKey,
       payerKeypair.publicKey,
     );
@@ -70,8 +69,8 @@ async function testWrapper(): Promise<void> {
     buffer: wrapperAcc.account.data,
   });
   assert(
-    wrapper.marketInfoForMarket(marketAddress)?.orders.length == 0,
-    'no orders yet in market',
+    wrapper.marketInfoForMarket(marketAddress) == null,
+    'no seat claimed yet in market',
   );
 
   {
@@ -141,7 +140,7 @@ async function testWrapper(): Promise<void> {
 
   const [wrapperOrder] = wrapper.openOrdersForMarket(
     marketAddress,
-  ) as OpenOrder[];
+  ) as UiWrapperOpenOrder[];
   const amount =
     (wrapperOrder.numBaseAtoms.toString() as any) / 10 ** market.baseDecimals();
   const price =
