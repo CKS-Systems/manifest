@@ -34,10 +34,10 @@ async function testGlobalDeposit(): Promise<void> {
   );
   await createGlobal(connection, payerKeypair, tokenMint);
 
-  const global: Global = await Global.loadFromAddress({
+  const global: Global = (await Global.loadFromAddress({
     connection,
     address: getGlobalAddress(tokenMint),
-  });
+  }))!;
 
   await depositGlobal(
     connection,

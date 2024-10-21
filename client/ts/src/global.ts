@@ -48,10 +48,11 @@ export class Global {
   }: {
     connection: Connection;
     address: PublicKey;
-  }): Promise<Global> {
+  }): Promise<Global | null> {
     const accountInfo = await connection.getAccountInfo(address, 'confirmed');
     if (!accountInfo?.data) {
-      throw new Error(`Failed to load ${address}`);
+      // This is possible to fail because the global account was not initialized.
+      return null;
     }
     return Global.loadFromBuffer({ address, buffer: accountInfo.data });
   }
