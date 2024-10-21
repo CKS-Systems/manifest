@@ -16,8 +16,8 @@ use solana_program::{
 };
 use spl_token_2022::{
     extension::{
-        transfer_fee::TransferFeeConfig,
-        BaseStateWithExtensions, StateWithExtensions,
+        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        StateWithExtensions,
     },
     state::Mint,
 };
@@ -242,7 +242,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
-        
+
         // Don't bother checking new vs old config. If a token has/had a non-zero
         // fee, then we do not allow it for global.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
@@ -255,6 +255,16 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             })
         {
             solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
+            return Ok(false);
+        }
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())
+            .unwrap()
+            .get_extension::<TransferHook>()
+            .is_ok_and(|f| f.program_id.0 != Pubkey::default())
+        {
+            solana_program::msg!(
+                "Treating global order as unbacked because it has a transfer hook"
+            );
             return Ok(false);
         }
 
