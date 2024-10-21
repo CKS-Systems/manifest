@@ -49,6 +49,7 @@ export const checkForBase22 = async (
   return acc.owner === TOKEN_2022_PROGRAM_ID;
 };
 
+// TODO: find a way to cache this between reloads or some other way to prevent rate limiting...
 export const fetchAndSetMfxAddrLabels = async (
   conn: Connection,
   marketAddrs: Array<string>,
