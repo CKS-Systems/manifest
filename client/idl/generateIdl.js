@@ -252,7 +252,7 @@ function modifyIdlCore(programName) {
         case 'CreateWrapper': {
           break;
         }
-        case 'ClaimSeat': {
+        case 'ClaimSeatUnused': {
           // Claim seat does not have params
           break;
         }

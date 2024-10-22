@@ -1,6 +1,7 @@
 //! UI-Wrapper program for Manifest
 //!
 
+pub mod error;
 pub mod instruction;
 pub mod instruction_builders;
 pub mod logs;
@@ -12,8 +13,8 @@ pub mod wrapper_user;
 use hypertree::trace;
 use instruction::ManifestWrapperInstruction;
 use processors::{
-    cancel_order::process_cancel_order, claim_seat::process_claim_seat,
-    create_wrapper::process_create_wrapper, place_order::process_place_order,
+    cancel_order::process_cancel_order, create_wrapper::process_create_wrapper,
+    place_order::process_place_order,
     settle_funds::process_settle_funds,
 };
 use solana_program::{
@@ -58,8 +59,8 @@ pub fn process_instruction(
         ManifestWrapperInstruction::CreateWrapper => {
             process_create_wrapper(program_id, accounts, data)?;
         }
-        ManifestWrapperInstruction::ClaimSeat => {
-            process_claim_seat(program_id, accounts, data)?;
+        ManifestWrapperInstruction::ClaimSeatUnused => {
+            unimplemented!("ClaimSeat has been removed and is handled on-demand in PlaceOrder")
         }
         ManifestWrapperInstruction::PlaceOrder => {
             process_place_order(program_id, accounts, data)?;
