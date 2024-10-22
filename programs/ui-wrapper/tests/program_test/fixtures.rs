@@ -3,6 +3,7 @@ use std::{
     io::Error,
 };
 
+use hypertree::trace;
 use manifest::{
     program::{create_global_instruction, create_market_instructions, get_dynamic_value},
     quantities::WrapperU64,
@@ -72,6 +73,8 @@ impl TestFixture {
             ui_wrapper::ID,
             processor!(ui_wrapper::process_instruction),
         );
+        // needed extra cu for logs and traces
+        program.set_compute_max_units(600_000);
         program.add_program(
             "manifest",
             manifest::ID,
@@ -84,8 +87,6 @@ impl TestFixture {
             solana_sdk::account::Account::new(SOL_UNIT_SIZE, 0, &solana_sdk::system_program::id()),
         );
 
-        let usdc_keypair: Keypair = Keypair::new();
-        let sol_keypair: Keypair = Keypair::new();
         let market_keypair: Keypair = Keypair::new();
         let wrapper_keypair: Keypair = Keypair::new();
 
@@ -164,6 +165,8 @@ impl TestFixture {
             ui_wrapper::ID,
             processor!(ui_wrapper::process_instruction),
         );
+        // needed extra cu for logs and traces
+        program.set_compute_max_units(600_000);
         program.add_program(
             "manifest",
             manifest::ID,
@@ -291,6 +294,18 @@ impl TestFixture {
         token_account_fixture.key
     }
 
+    pub async fn fund_token_account_2022(&self, mint_pk: &Pubkey, owner_pk: &Pubkey) -> Pubkey {
+        let token_account_keypair: Keypair = Keypair::new();
+        let token_account_fixture: TokenAccountFixture =
+            TokenAccountFixture::new_with_keypair_2022(
+                Rc::clone(&self.context),
+                mint_pk,
+                owner_pk,
+                &token_account_keypair,
+            )
+            .await;
+        token_account_fixture.key
+    }
     /// returns (mint, trader_token_account)
     pub async fn fund_trader_wallet(
         &mut self,
@@ -299,6 +314,10 @@ impl TestFixture {
         amount_atoms: u64,
     ) -> (Pubkey, Pubkey) {
         let is_base: bool = token == Token::SOL;
+        trace!(
+            "fund_trader_wallet {} {amount_atoms}",
+            if is_base { "SOL" } else { "USDC" }
+        );
         let (mint, trader_token_account) = if is_base {
             let trader_token_account: Pubkey = if keypair.pubkey() == self.payer() {
                 self.payer_sol.key
@@ -316,11 +335,53 @@ impl TestFixture {
                 self.payer_usdc.key
             } else {
                 // Make a temporary token account
+
                 self.fund_token_account(&self.usdc_mint.key, &keypair.pubkey())
                     .await
             };
             self.usdc_mint
                 .mint_to(&trader_token_account, amount_atoms)
+                .await;
+
+            (self.usdc_mint.key.clone(), trader_token_account)
+        };
+
+        (mint, trader_token_account)
+    }
+
+    pub async fn fund_trader_wallet_2022(
+        &mut self,
+        keypair: &Keypair,
+        token: Token,
+        amount_atoms: u64,
+    ) -> (Pubkey, Pubkey) {
+        let is_base: bool = token == Token::SOL;
+        trace!(
+            "fund_trader_wallet_2022 {} {amount_atoms}",
+            if is_base { "SOL" } else { "USDC" }
+        );
+        let (mint, trader_token_account) = if is_base {
+            let trader_token_account: Pubkey = if keypair.pubkey() == self.payer() {
+                self.payer_sol.key
+            } else {
+                // Make a temporary token account
+                self.fund_token_account_2022(&self.sol_mint.key, &keypair.pubkey())
+                    .await
+            };
+            self.sol_mint
+                .mint_to_2022(&trader_token_account, amount_atoms)
+                .await;
+            (self.sol_mint.key.clone(), trader_token_account)
+        } else {
+            let trader_token_account: Pubkey = if keypair.pubkey() == self.payer() {
+                self.payer_usdc.key
+            } else {
+                // Make a temporary token account
+                self.fund_token_account_2022(&self.usdc_mint.key, &keypair.pubkey())
+                    .await
+            };
+            self.usdc_mint
+                .mint_to_2022(&trader_token_account, amount_atoms)
                 .await;
             (self.usdc_mint.key.clone(), trader_token_account)
         };
@@ -839,13 +900,14 @@ impl TokenAccountFixture {
         let instructions: [Instruction; 2] =
             Self::create_ixs(rent, mint_pk, &payer, owner_pk, keypair).await;
 
-        let _ = send_tx_with_retry(
+        send_tx_with_retry(
             Rc::clone(&context),
             &instructions[..],
             Some(&payer),
             &[&payer_keypair, keypair],
         )
-        .await;
+        .await
+        .unwrap();
 
         let context_ref: Rc<RefCell<ProgramTestContext>> = context.clone();
         Self {

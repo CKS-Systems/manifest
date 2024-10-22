@@ -16,6 +16,7 @@ use solana_sdk::{
     signature::Keypair, signer::Signer, system_instruction::transfer,
 };
 use spl_token;
+use spl_token_2022::extension::StateWithExtensions;
 use ui_wrapper::{
     self,
     instruction::ManifestWrapperInstruction,
@@ -1691,17 +1692,21 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
         .fund_trader_wallet(&taker_keypair, Token::SOL, 1 * SOL_UNIT_SIZE)
         .await;
     let (_, taker_token_account_quote) = test_fixture
-        .fund_trader_wallet(&taker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE)
+        .fund_trader_wallet_2022(&taker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE + 100)
         .await;
 
     let (base_mint, maker_token_account_base) = test_fixture
         .fund_trader_wallet(&maker_keypair, Token::SOL, 1 * SOL_UNIT_SIZE)
         .await;
     let (quote_mint, maker_token_account_quote) = test_fixture
-        .fund_trader_wallet(&maker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE)
+        .fund_trader_wallet_2022(&maker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE + 100)
         .await;
-    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &taker).await;
-    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &taker).await;
+    let platform_token_account = test_fixture
+        .fund_token_account_2022(&quote_mint, &taker)
+        .await;
+    let referred_token_account = test_fixture
+        .fund_token_account_2022(&quote_mint, &taker)
+        .await;
 
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
@@ -1721,7 +1726,7 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
             AccountMeta::new(quote_vault, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(system_program::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(maker, true),
             AccountMeta::new_readonly(base_mint, false),
@@ -1733,7 +1738,7 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
             AccountMeta::new(global_quote, false),
             AccountMeta::new(global_quote_vault, false),
             AccountMeta::new(quote_vault, false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -1808,7 +1813,7 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
     );
     assert_eq!(open_order.get_market_data_index(), core_index);
 
-    // taker buys 1 sol @ 1000 USDC
+    // taker sells 1 sol @ 1000 USDC
     let taker_order_ix = Instruction {
         program_id: ui_wrapper::id(),
         accounts: vec![
@@ -1831,7 +1836,7 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
             AccountMeta::new(global_quote, false),
             AccountMeta::new(global_quote_vault, false),
             AccountMeta::new(quote_vault, false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -1899,9 +1904,10 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(platform_token_account, false),
+            AccountMeta::new(referred_token_account, false),
         ],
         data: [
             ManifestWrapperInstruction::SettleFunds.to_vec(),
@@ -1943,11 +1949,16 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
         .unwrap()
         .unwrap();
 
-    let taker_token_account_quote =
-        spl_token::state::Account::unpack(&taker_token_account_quote.data)?;
-    assert_eq!(taker_token_account_quote.amount, USDC_UNIT_SIZE * 3 / 2);
+    let taker_token_account_quote = StateWithExtensions::<spl_token_2022::state::Account>::unpack(
+        &taker_token_account_quote.data,
+    )?;
+    assert_eq!(
+        taker_token_account_quote.base.amount,
+        USDC_UNIT_SIZE * 3 / 2
+    );
 
     // verify the remaining 50% was paid to platform not referrer
+    // transfer fees of 100 applied on the settled amount
     let platform_token_account_quote: Account = test_fixture
         .context
         .borrow_mut()
@@ -1958,8 +1969,13 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
         .unwrap();
 
     let platform_token_account_quote =
-        spl_token::state::Account::unpack(&platform_token_account_quote.data)?;
-    assert_eq!(platform_token_account_quote.amount, USDC_UNIT_SIZE / 2);
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(
+            &platform_token_account_quote.data,
+        )?;
+    assert_eq!(
+        platform_token_account_quote.base.amount,
+        USDC_UNIT_SIZE / 4 - 100
+    );
 
     let referred_token_account_quote: Account = test_fixture
         .context
@@ -1971,8 +1987,13 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
         .unwrap();
 
     let referred_token_account_quote =
-        spl_token::state::Account::unpack(&referred_token_account_quote.data)?;
-    assert_eq!(referred_token_account_quote.amount, 0);
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(
+            &referred_token_account_quote.data,
+        )?;
+    assert_eq!(
+        referred_token_account_quote.base.amount,
+        USDC_UNIT_SIZE / 4 - 100
+    );
 
     let settle_maker_ix = Instruction {
         program_id: ui_wrapper::id(),
@@ -1987,9 +2008,10 @@ async fn wrapper_fill_order_with_transfer_fees_test() -> anyhow::Result<()> {
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(platform_token_account, false),
+            AccountMeta::new(referred_token_account, false),
         ],
         data: [
             ManifestWrapperInstruction::SettleFunds.to_vec(),
@@ -2059,17 +2081,18 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
         .fund_trader_wallet(&taker_keypair, Token::SOL, 1 * SOL_UNIT_SIZE)
         .await;
     let (_, taker_token_account_quote) = test_fixture
-        .fund_trader_wallet(&taker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE)
+        .fund_trader_wallet_2022(&taker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE + 100)
         .await;
 
     let (base_mint, maker_token_account_base) = test_fixture
         .fund_trader_wallet(&maker_keypair, Token::SOL, 1 * SOL_UNIT_SIZE)
         .await;
     let (quote_mint, maker_token_account_quote) = test_fixture
-        .fund_trader_wallet(&maker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE)
+        .fund_trader_wallet_2022(&maker_keypair, Token::USDC, 1 * USDC_UNIT_SIZE + 100)
         .await;
-    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &taker).await;
-    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &taker).await;
+    let platform_token_account = test_fixture
+        .fund_token_account_2022(&quote_mint, &taker)
+        .await;
 
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
@@ -2089,7 +2112,7 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
             AccountMeta::new(quote_vault, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(system_program::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(maker, true),
             AccountMeta::new_readonly(base_mint, false),
@@ -2101,7 +2124,7 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
             AccountMeta::new(global_quote, false),
             AccountMeta::new(global_quote_vault, false),
             AccountMeta::new(quote_vault, false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -2176,7 +2199,7 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
     );
     assert_eq!(open_order.get_market_data_index(), core_index);
 
-    // taker buys 1 sol @ 1000 USDC
+    // taker sells 1 sol @ 1000 USDC
     let taker_order_ix = Instruction {
         program_id: ui_wrapper::id(),
         accounts: vec![
@@ -2199,7 +2222,7 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
             AccountMeta::new(global_quote, false),
             AccountMeta::new(global_quote_vault, false),
             AccountMeta::new(quote_vault, false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
         ],
         data: [
             ManifestWrapperInstruction::PlaceOrder.to_vec(),
@@ -2267,10 +2290,9 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(platform_token_account, false),
-            AccountMeta::new(referred_token_account, false),
         ],
         data: [
             ManifestWrapperInstruction::SettleFunds.to_vec(),
@@ -2312,11 +2334,16 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
         .unwrap()
         .unwrap();
 
-    let taker_token_account_quote =
-        spl_token::state::Account::unpack(&taker_token_account_quote.data)?;
-    assert_eq!(taker_token_account_quote.amount, USDC_UNIT_SIZE * 3 / 2);
+    let taker_token_account_quote = StateWithExtensions::<spl_token_2022::state::Account>::unpack(
+        &taker_token_account_quote.data,
+    )?;
+    assert_eq!(
+        taker_token_account_quote.base.amount,
+        USDC_UNIT_SIZE * 3 / 2
+    );
 
-    // verify the remaining 50% was split 50/50 between platform & referrer
+    // verify the remaining 50% was not split with referrer
+    // transfer fees of 100 applied on the settled amount
     let platform_token_account_quote: Account = test_fixture
         .context
         .borrow_mut()
@@ -2327,21 +2354,13 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
         .unwrap();
 
     let platform_token_account_quote =
-        spl_token::state::Account::unpack(&platform_token_account_quote.data)?;
-    assert_eq!(platform_token_account_quote.amount, USDC_UNIT_SIZE / 4);
-
-    let referred_token_account_quote: Account = test_fixture
-        .context
-        .borrow_mut()
-        .banks_client
-        .get_account(referred_token_account)
-        .await
-        .unwrap()
-        .unwrap();
-
-    let referred_token_account_quote =
-        spl_token::state::Account::unpack(&referred_token_account_quote.data)?;
-    assert_eq!(referred_token_account_quote.amount, USDC_UNIT_SIZE / 4);
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(
+            &platform_token_account_quote.data,
+        )?;
+    assert_eq!(
+        platform_token_account_quote.base.amount,
+        USDC_UNIT_SIZE / 2 - 100
+    );
 
     let settle_maker_ix = Instruction {
         program_id: ui_wrapper::id(),
@@ -2356,10 +2375,9 @@ async fn wrapper_fill_order_with_transfer_fees_without_referral_test() -> anyhow
             AccountMeta::new_readonly(base_mint, false),
             AccountMeta::new_readonly(quote_mint, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(platform_token_account, false),
-            AccountMeta::new(referred_token_account, false),
         ],
         data: [
             ManifestWrapperInstruction::SettleFunds.to_vec(),
