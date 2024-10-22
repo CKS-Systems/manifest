@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, GlobalCreateLog},
@@ -11,6 +11,11 @@ use hypertree::{get_mut_helper, trace};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
     rent::Rent, sysvar::Sysvar,
+};
+use spl_token_2022::{
+    extension::{BaseStateWithExtensions, ExtensionType, PodStateWithExtensions},
+    pod::PodMint,
+    state::Account,
 };
 
 pub(crate) fn process_global_create(
@@ -76,16 +81,27 @@ pub(crate) fn process_global_create(
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_vault_bump],
             ];
-            create_account(
-                payer.as_ref(),
-                global_vault.as_ref(),
-                system_program.as_ref(),
-                &token_program_for_mint,
-                &Rent::get()?,
-                spl_token::state::Account::LEN as u64,
-                global_vault_seeds,
-            )?;
+            let rent: Rent = Rent::get()?;
+
             if is_mint_22 {
+                let mint_data: Ref<'_, &mut [u8]> = global_mint.info.data.borrow();
+                let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
+                    PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
+                let mint_extensions: Vec<ExtensionType> =
+                    mint_with_extension.get_extension_types()?;
+                let required_extensions: Vec<ExtensionType> =
+                    ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                let space: usize =
+                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)?;
+                create_account(
+                    payer.as_ref(),
+                    global_vault.info,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    global_vault_seeds,
+                )?;
                 invoke(
                     &spl_token_2022::instruction::initialize_account3(
                         &spl_token_2022::id(),
@@ -101,6 +117,16 @@ pub(crate) fn process_global_create(
                     ],
                 )?;
             } else {
+                let space: usize = spl_token::state::Account::LEN;
+                create_account(
+                    payer.as_ref(),
+                    global_vault.info,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    global_vault_seeds,
+                )?;
                 invoke(
                     &spl_token::instruction::initialize_account3(
                         &spl_token::id(),
