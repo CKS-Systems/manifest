@@ -128,7 +128,33 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, mem::size_of};
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, GlobalCreateLog},
@@ -141,6 +167,11 @@
 <span class="kw">use </span>solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
     rent::Rent, sysvar::Sysvar,
+};
+<span class="kw">use </span>spl_token_2022::{
+    extension::{BaseStateWithExtensions, ExtensionType, PodStateWithExtensions},
+    pod::PodMint,
+    state::Account,
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_global_create(
@@ -206,16 +237,27 @@
                 global_mint.info.key.as_ref().to_vec(),
                 <span class="macro">vec!</span>[global_vault_bump],
             ];
-            create_account(
-                payer.as_ref(),
-                global_vault.as_ref(),
-                system_program.as_ref(),
-                <span class="kw-2">&amp;</span>token_program_for_mint,
-                <span class="kw-2">&amp;</span>Rent::get()<span class="question-mark">?</span>,
-                spl_token::state::Account::LEN <span class="kw">as </span>u64,
-                global_vault_seeds,
-            )<span class="question-mark">?</span>;
+            <span class="kw">let </span>rent: Rent = Rent::get()<span class="question-mark">?</span>;
+
             <span class="kw">if </span>is_mint_22 {
+                <span class="kw">let </span>mint_data: Ref&lt;<span class="lifetime">'_</span>, <span class="kw-2">&amp;mut </span>[u8]&gt; = global_mint.info.data.borrow();
+                <span class="kw">let </span>mint_with_extension: PodStateWithExtensions&lt;<span class="lifetime">'_</span>, PodMint&gt; =
+                    PodStateWithExtensions::&lt;PodMint&gt;::unpack(<span class="kw-2">&amp;</span>mint_data).unwrap();
+                <span class="kw">let </span>mint_extensions: Vec&lt;ExtensionType&gt; =
+                    mint_with_extension.get_extension_types()<span class="question-mark">?</span>;
+                <span class="kw">let </span>required_extensions: Vec&lt;ExtensionType&gt; =
+                    ExtensionType::get_required_init_account_extensions(<span class="kw-2">&amp;</span>mint_extensions);
+                <span class="kw">let </span>space: usize =
+                    ExtensionType::try_calculate_account_len::&lt;Account&gt;(<span class="kw-2">&amp;</span>required_extensions)<span class="question-mark">?</span>;
+                create_account(
+                    payer.as_ref(),
+                    global_vault.info,
+                    system_program.as_ref(),
+                    <span class="kw-2">&amp;</span>token_program_for_mint,
+                    <span class="kw-2">&amp;</span>rent,
+                    space <span class="kw">as </span>u64,
+                    global_vault_seeds,
+                )<span class="question-mark">?</span>;
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token_2022::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>spl_token_2022::id(),
@@ -231,6 +273,16 @@
                     ],
                 )<span class="question-mark">?</span>;
             } <span class="kw">else </span>{
+                <span class="kw">let </span>space: usize = spl_token::state::Account::LEN;
+                create_account(
+                    payer.as_ref(),
+                    global_vault.info,
+                    system_program.as_ref(),
+                    <span class="kw-2">&amp;</span>token_program_for_mint,
+                    <span class="kw-2">&amp;</span>rent,
+                    space <span class="kw">as </span>u64,
+                    global_vault_seeds,
+                )<span class="question-mark">?</span>;
                 invoke(
                     <span class="kw-2">&amp;</span>spl_token::instruction::initialize_account3(
                         <span class="kw-2">&amp;</span>spl_token::id(),
