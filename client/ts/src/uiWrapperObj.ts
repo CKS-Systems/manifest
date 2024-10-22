@@ -10,7 +10,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import {
-  createClaimSeatInstruction,
   createCreateWrapperInstruction,
   createPlaceOrderInstruction,
   createSettleFundsInstruction,
@@ -476,21 +475,7 @@ export class UiWrapper {
           buffer: wrapper.account.data,
         });
         const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
-        if (
-          wrapperParsed.activeMarkets().find((x) => x.equals(market.address))
-        ) {
-          return { ixs: [placeIx], signers: [] };
-        } else {
-          const claimSeatIx: TransactionInstruction =
-            createClaimSeatInstruction({
-              manifestProgram: MANIFEST_PROGRAM_ID,
-              payer,
-              owner,
-              market: market.address,
-              wrapperState: wrapper.pubkey,
-            });
-          return { ixs: [claimSeatIx, placeIx], signers: [] };
-        }
+        return { ixs: [placeIx], signers: [] };
       } else {
         const setup = await this.setupIxs(connection, owner, payer);
         const wrapper = setup.signers[0].publicKey;
