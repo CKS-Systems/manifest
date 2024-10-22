@@ -29,12 +29,18 @@ async function testGlobalWithdraw(): Promise<void> {
   );
   await createGlobal(connection, payerKeypair, tokenMint);
 
-  const global: Global = await Global.loadFromAddress({
+  const global: Global = (await Global.loadFromAddress({
     connection,
     address: getGlobalAddress(tokenMint),
-  });
+  }))!;
 
-  await depositGlobal(connection, payerKeypair, global.tokenMint(), 10);
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    global.tokenMint(),
+    10,
+    payerKeypair,
+  );
   await withdrawGlobal(connection, payerKeypair, global.tokenMint(), 5);
 
   await global.reload(connection);

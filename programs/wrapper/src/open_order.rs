@@ -1,8 +1,8 @@
 use bytemuck::{Pod, Zeroable};
-use hypertree::{DataIndex, PodBool, NIL};
+use hypertree::{DataIndex, PodBool};
 use manifest::{
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
-    state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::OrderType,
 };
 use shank::ShankType;
 use static_assertions::const_assert_eq;
@@ -66,21 +66,6 @@ impl WrapperOpenOrder {
         }
     }
 
-    /// Create a new empty WrapperOpenOrder. Useful in tests.
-    pub fn new_empty(client_order_id: u64) -> Self {
-        WrapperOpenOrder {
-            client_order_id,
-            order_sequence_number: 0,
-            price: QuoteAtomsPerBaseAtom::ZERO,
-            num_base_atoms: BaseAtoms::ZERO,
-            last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
-            order_type: OrderType::Limit,
-            market_data_index: NIL,
-            is_bid: PodBool::from_bool(true),
-            _padding: [0; 30],
-        }
-    }
-
     /// is_bid as a boolean.
     pub fn get_is_bid(&self) -> bool {
         self.is_bid.0 == 1
@@ -109,11 +94,6 @@ impl WrapperOpenOrder {
     /// Get price on the order.
     pub fn get_price(&self) -> QuoteAtomsPerBaseAtom {
         self.price
-    }
-
-    /// Set whether the order is a bid or not.
-    pub fn set_is_bid(&mut self, is_bid: bool) {
-        self.is_bid = PodBool::from_bool(is_bid);
     }
 
     /// Set the price on an order.
@@ -191,4 +171,5 @@ fn test_cmp() {
         OrderType::Limit,
     );
     assert!(open_order2 > open_order);
+    assert!(open_order2 != open_order);
 }
