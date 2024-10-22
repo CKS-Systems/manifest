@@ -17,6 +17,7 @@ import * as beetSolana from '@metaplex-foundation/beet-solana';
 export type ReferrerFeeLogArgs = {
   market: web3.PublicKey;
   user: web3.PublicKey;
+  mint: web3.PublicKey;
   referrerTokenAccount: web3.PublicKey;
   referrerFee: beet.bignum;
 };
@@ -31,6 +32,7 @@ export class ReferrerFeeLog implements ReferrerFeeLogArgs {
   private constructor(
     readonly market: web3.PublicKey,
     readonly user: web3.PublicKey,
+    readonly mint: web3.PublicKey,
     readonly referrerTokenAccount: web3.PublicKey,
     readonly referrerFee: beet.bignum,
   ) {}
@@ -42,6 +44,7 @@ export class ReferrerFeeLog implements ReferrerFeeLogArgs {
     return new ReferrerFeeLog(
       args.market,
       args.user,
+      args.mint,
       args.referrerTokenAccount,
       args.referrerFee,
     );
@@ -149,6 +152,7 @@ export class ReferrerFeeLog implements ReferrerFeeLogArgs {
     return {
       market: this.market.toBase58(),
       user: this.user.toBase58(),
+      mint: this.mint.toBase58(),
       referrerTokenAccount: this.referrerTokenAccount.toBase58(),
       referrerFee: (() => {
         const x = <{ toNumber: () => number }>this.referrerFee;
@@ -176,6 +180,7 @@ export const referrerFeeLogBeet = new beet.BeetStruct<
   [
     ['market', beetSolana.publicKey],
     ['user', beetSolana.publicKey],
+    ['mint', beetSolana.publicKey],
     ['referrerTokenAccount', beetSolana.publicKey],
     ['referrerFee', beet.u64],
   ],
