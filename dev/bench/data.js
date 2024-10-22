@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729637636751,
+  "lastUpdate": 1729639508659,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -7167,6 +7167,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6102,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92dae582356719adb8d3a34c567863b64310205e",
+          "message": "place order and settle for fill city (#211)\n\n* place order and settle for typescript client\r\n* place order automatically claims seats\r\n* claim seat instruction is deprecated",
+          "timestamp": "2024-10-23T02:00:34+03:00",
+          "tree_id": "003c11f8b41bd54f4d4fd1e1af890d19d8bfebfb",
+          "url": "https://github.com/CKS-Systems/manifest/commit/92dae582356719adb8d3a34c567863b64310205e"
+        },
+        "date": 1729639506715,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3558,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5602,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6097,
             "unit": "CU",
             "range": "",
             "extra": ""
