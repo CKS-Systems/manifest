@@ -13,6 +13,8 @@ import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { toast } from 'react-toastify';
+import { useAppState } from './AppWalletProvider';
+import { addrToLabel } from '@/lib/address-labels';
 
 const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -20,7 +22,11 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const marketRef = useRef<Market | null>(null); // To track the latest market value
 
+  const { labelsByAddr } = useAppState();
+
   const [chartEntries, setChartEntries] = useState<CandlestickData[]>([]);
+  const [marketName, setMarketName] = useState<string>(marketAddress);
+
   const { connection: conn } = useConnection();
 
   useEffect(() => {
@@ -32,7 +38,9 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       console.log('got market', m);
       marketRef.current = m;
     });
-  }, [conn, marketAddress]);
+
+    setMarketName(addrToLabel(marketAddress, labelsByAddr));
+  }, [conn, marketAddress, labelsByAddr]);
 
   useEffect(() => {
     const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
@@ -178,6 +186,10 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg w-full">
+      <h2 className="text-xl font-semibold text-gray-200 mb-4 text-center">
+        {marketName}
+      </h2>
+
       <div ref={chartContainerRef} className="w-full h-96" />
     </div>
   );

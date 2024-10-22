@@ -33,10 +33,10 @@ async function testCreateGlobal(): Promise<void> {
   await createGlobal(connection, payerKeypair, tokenMint);
   await new Promise((f) => setTimeout(f, 1_000));
 
-  const global: Global = await Global.loadFromAddress({
+  const global: Global = (await Global.loadFromAddress({
     connection,
     address: getGlobalAddress(tokenMint),
-  });
+  }))!;
   global.prettyPrint();
 }
 
