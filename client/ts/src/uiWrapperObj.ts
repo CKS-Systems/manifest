@@ -10,7 +10,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import {
-  createClaimSeatInstruction,
   createCreateWrapperInstruction,
   createPlaceOrderInstruction,
   createSettleFundsInstruction,
@@ -18,7 +17,7 @@ import {
   PROGRAM_ID,
   SettleFundsInstructionArgs,
   wrapperOpenOrderBeet as uiWrapperOpenOrderBeet,
-  WrapperOpenOrder as UIWrapperOpenOrder,
+  WrapperOpenOrder as UIWrapperOpenOrderRaw,
 } from './ui_wrapper';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
@@ -39,22 +38,25 @@ import {
 import { convertU128 } from './utils/numbers';
 import { BN } from 'bn.js';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
-import { MarketInfo, marketInfoBeet } from './wrapper/types';
+import {
+  MarketInfo as UiWrapperMarketInfoRaw,
+  marketInfoBeet,
+} from './ui_wrapper/types';
 
 /**
  * All data stored on a wrapper account.
  */
-export interface WrapperData {
+export interface UiWrapperData {
   /** Public key for the owner of this wrapper. */
   owner: PublicKey;
   /** Array of market infos that have been parsed. */
-  marketInfos: MarketInfoParsed[];
+  marketInfos: UiWrapperMarketInfo[];
 }
 
 /**
  * Parsed market info on a wrapper. Accurate to the last sync.
  */
-export interface MarketInfoParsed {
+export interface UiWrapperMarketInfo {
   /** Public key for market. */
   market: PublicKey;
   /** Base balance in atoms. */
@@ -62,29 +64,15 @@ export interface MarketInfoParsed {
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
   /** Open orders. */
-  orders: OpenOrder[];
+  orders: UiWrapperOpenOrder[];
   /** Last update slot number. */
   lastUpdatedSlot: number;
 }
 
 /**
- * Raw market info on a wrapper.
- */
-export interface MarketInfoRaw {
-  market: PublicKey;
-  openOrdersRootIndex: number;
-  traderIndex: number;
-  baseBalanceAtoms: bignum;
-  quoteBalanceAtoms: bignum;
-  quoteVolumeAtoms: bignum;
-  lastUpdatedSlot: number;
-  padding: number; // 3 bytes
-}
-
-/**
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
-export interface OpenOrder {
+export interface UiWrapperOpenOrder {
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
@@ -103,7 +91,7 @@ export interface OpenOrder {
   orderType: OrderType;
 }
 
-export interface UIOpenOrderInternal {
+export interface UiWrapperOpenOrderRaw {
   price: Uint8Array;
   clientOrderId: bignum;
   orderSequenceNumber: bignum;
@@ -122,7 +110,7 @@ export class UiWrapper {
   /** Public key for the market account. */
   address: PublicKey;
   /** Deserialized data. */
-  private data: WrapperData;
+  private data: UiWrapperData;
 
   /**
    * Constructs a Wrapper object.
@@ -135,7 +123,7 @@ export class UiWrapper {
     data,
   }: {
     address: PublicKey;
-    data: WrapperData;
+    data: UiWrapperData;
   }) {
     this.address = address;
     this.data = data;
@@ -180,9 +168,9 @@ export class UiWrapper {
    *
    * @return MarketInfoParsed
    */
-  public marketInfoForMarket(marketPk: PublicKey): MarketInfoParsed | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public marketInfoForMarket(marketPk: PublicKey): UiWrapperMarketInfo | null {
+    const filtered: UiWrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfo) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -199,9 +187,9 @@ export class UiWrapper {
    *
    * @return OpenOrder[]
    */
-  public openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public openOrdersForMarket(marketPk: PublicKey): UiWrapperOpenOrder[] | null {
+    const filtered: UiWrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: UiWrapperMarketInfo) => {
         return marketInfo.market.equals(marketPk);
       },
     );
@@ -279,14 +267,14 @@ export class UiWrapper {
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
     console.log(`Owner: ${this.data.owner.toBase58()}`);
-    this.data.marketInfos.forEach((marketInfo: MarketInfoParsed) => {
+    this.data.marketInfos.forEach((marketInfo: UiWrapperMarketInfo) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
       console.log(`Last updated slot: ${marketInfo.lastUpdatedSlot}`);
       console.log(
         `BaseAtoms: ${marketInfo.baseBalanceAtoms} QuoteAtoms: ${marketInfo.quoteBalanceAtoms}`,
       );
-      marketInfo.orders.forEach((order: OpenOrder) => {
+      marketInfo.orders.forEach((order: UiWrapperOpenOrder) => {
         console.log(
           `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
@@ -305,7 +293,7 @@ export class UiWrapper {
    *
    * @returns WrapperData
    */
-  public static deserializeWrapperBuffer(data: Buffer): WrapperData {
+  public static deserializeWrapperBuffer(data: Buffer): UiWrapperData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -327,7 +315,7 @@ export class UiWrapper {
     const _padding = data.readUInt32LE(offset);
     offset += 12;
 
-    const marketInfos: MarketInfo[] =
+    const marketInfos: UiWrapperMarketInfoRaw[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -336,10 +324,10 @@ export class UiWrapper {
           )
         : [];
 
-    const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
-      (marketInfoRaw: MarketInfo) => {
+    const parsedMarketInfos: UiWrapperMarketInfo[] = marketInfos.map(
+      (marketInfoRaw: UiWrapperMarketInfoRaw) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: UIWrapperOpenOrder[] =
+        const rawOpenOrders: UIWrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -348,15 +336,14 @@ export class UiWrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: UIWrapperOpenOrder) => {
+        const parsedOpenOrdersWithPrice: UiWrapperOpenOrder[] =
+          rawOpenOrders.map((openOrder: UIWrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               dataIndex: openOrder.marketDataIndex,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
-          },
-        );
+          });
 
         return {
           market: marketInfoRaw.market,
@@ -483,18 +470,14 @@ export class UiWrapper {
     if (market != null) {
       const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
       if (wrapper) {
-        const placeIx = UiWrapper.loadFromBuffer({
+        const wrapperParsed = UiWrapper.loadFromBuffer({
           address: wrapper.pubkey,
           buffer: wrapper.account.data,
-        }).placeOrderIx(market, { payer }, args);
+        });
+        const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
         return { ixs: [placeIx], signers: [] };
       } else {
-        const setup = await this.setupIxs(
-          connection,
-          market.address,
-          owner,
-          payer,
-        );
+        const setup = await this.setupIxs(connection, owner, payer);
         const wrapper = setup.signers[0].publicKey;
         const place = await this.placeIx_(market, wrapper, owner, payer, args);
         return {
@@ -516,12 +499,7 @@ export class UiWrapper {
         baseDecimals: () => baseDecimals,
         quoteDecimals: () => quoteDecimals,
       };
-      const wrapperIxs = await this.setupIxs(
-        connection,
-        market.address,
-        owner,
-        payer,
-      );
+      const wrapperIxs = await this.setupIxs(connection, owner, payer);
       const wrapper = wrapperIxs.signers[0].publicKey;
       const placeIx = await this.placeIx_(market, wrapper, owner, payer, args);
       return {
@@ -537,7 +515,6 @@ export class UiWrapper {
 
   public static async setupIxs(
     connection: Connection,
-    market: PublicKey,
     owner: PublicKey,
     payer: PublicKey,
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
@@ -559,15 +536,8 @@ export class UiWrapper {
         owner,
         wrapperState: wrapperKeypair.publicKey,
       });
-    const claimSeatIx: TransactionInstruction = createClaimSeatInstruction({
-      manifestProgram: MANIFEST_PROGRAM_ID,
-      payer,
-      owner,
-      market,
-      wrapperState: wrapperKeypair.publicKey,
-    });
     return {
-      ixs: [createAccountIx, createWrapperIx, claimSeatIx],
+      ixs: [createAccountIx, createWrapperIx],
       signers: [wrapperKeypair],
     };
   }

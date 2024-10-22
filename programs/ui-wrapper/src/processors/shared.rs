@@ -40,8 +40,8 @@ pub const EXPECTED_ORDER_BATCH_SIZE: usize = 16;
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 pub struct UnusedWrapperFreeListPadding {
-    _padding: [u64; 9],
-    _padding2: [u32; 5],
+    _padding: [u64; 11],
+    _padding2: [u32; 1],
 }
 pub const FREE_LIST_HEADER_SIZE: usize = 4;
 // Assert that the free list blocks take up the same size as regular blocks.

@@ -6,7 +6,7 @@ import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import {
   MarketInfo,
-  WrapperOpenOrder,
+  WrapperOpenOrder as WrapperOpenOrderRaw,
   marketInfoBeet,
   wrapperOpenOrderBeet,
 } from './wrapper/types';
@@ -20,13 +20,13 @@ export interface WrapperData {
   /** Public key for the trader that owns this wrapper. */
   trader: PublicKey;
   /** Array of market infos that have been parsed. */
-  marketInfos: MarketInfoParsed[];
+  marketInfos: WrapperMarketInfo[];
 }
 
 /**
  * Parsed market info on a wrapper. Accurate to the last sync.
  */
-export interface MarketInfoParsed {
+export interface WrapperMarketInfo {
   /** Public key for market. */
   market: PublicKey;
   /** Base balance in atoms. */
@@ -36,29 +36,15 @@ export interface MarketInfoParsed {
   /** Quote volume in atoms. */
   quoteVolumeAtoms: bignum;
   /** Open orders. */
-  orders: OpenOrder[];
+  orders: WrapperOpenOrder[];
   /** Last update slot number. */
   lastUpdatedSlot: number;
 }
 
 /**
- * Raw market info on a wrapper.
- */
-export interface MarketInfoRaw {
-  market: PublicKey;
-  openOrdersRootIndex: number;
-  traderIndex: number;
-  baseBalanceAtoms: bignum;
-  quoteBalanceAtoms: bignum;
-  quoteVolumeAtoms: bignum;
-  lastUpdatedSlot: number;
-  padding: number; // 3 bytes
-}
-
-/**
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
-export interface OpenOrder {
+export interface WrapperOpenOrder {
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
@@ -75,18 +61,6 @@ export interface OpenOrder {
   isBid: boolean;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
-}
-
-export interface OpenOrderInternal {
-  price: Uint8Array;
-  clientOrderId: bignum;
-  orderSequenceNumber: bignum;
-  numBaseAtoms: bignum;
-  marketDataIndex: number;
-  lastValidSlot: number;
-  isBid: boolean;
-  orderType: number;
-  padding: bignum[]; // 30 bytes
 }
 
 /**
@@ -177,9 +151,9 @@ export class Wrapper {
    *
    * @return MarketInfoParsed
    */
-  public marketInfoForMarket(marketPk: PublicKey): MarketInfoParsed | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public marketInfoForMarket(marketPk: PublicKey): WrapperMarketInfo | null {
+    const filtered: WrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: WrapperMarketInfo) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       },
     );
@@ -196,9 +170,9 @@ export class Wrapper {
    *
    * @return OpenOrder[]
    */
-  public openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public openOrdersForMarket(marketPk: PublicKey): WrapperOpenOrder[] | null {
+    const filtered: WrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: WrapperMarketInfo) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       },
     );
@@ -219,14 +193,14 @@ export class Wrapper {
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
     console.log(`Trader: ${this.data.trader.toBase58()}`);
-    this.data.marketInfos.forEach((marketInfo: MarketInfoParsed) => {
+    this.data.marketInfos.forEach((marketInfo: WrapperMarketInfo) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
       console.log(`Last updated slot: ${marketInfo.lastUpdatedSlot}`);
       console.log(
         `BaseAtoms: ${marketInfo.baseBalanceAtoms} QuoteAtoms: ${marketInfo.quoteBalanceAtoms}`,
       );
-      marketInfo.orders.forEach((order: OpenOrder) => {
+      marketInfo.orders.forEach((order: WrapperOpenOrder) => {
         console.log(
           `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
@@ -276,10 +250,10 @@ export class Wrapper {
           )
         : [];
 
-    const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
+    const parsedMarketInfos: WrapperMarketInfo[] = marketInfos.map(
       (marketInfoRaw: MarketInfo) => {
         const rootIndex: number = marketInfoRaw.ordersRootIndex;
-        const parsedOpenOrders: WrapperOpenOrder[] =
+        const rawOpenOrders: WrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -288,8 +262,8 @@ export class Wrapper {
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: WrapperOpenOrder) => {
+        const parsedOpenOrdersWithPrice: WrapperOpenOrder[] = rawOpenOrders.map(
+          (openOrder: WrapperOpenOrderRaw) => {
             return {
               ...openOrder,
               price: convertU128(new BN(openOrder.price, 10, 'le')),
