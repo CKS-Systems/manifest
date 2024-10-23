@@ -190,8 +190,7 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
     fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
-    fn get_sibling_index<V: Payload>(&self, index: DataIndex)
-        -> DataIndex;
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
 }
 
 impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
@@ -285,10 +284,7 @@ where
         self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
     }
 
-    fn get_sibling_index<V: Payload>(
-        &self,
-        index: DataIndex,
-    ) -> DataIndex {
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         debug_assert_ne!(parent_index, NIL);
         let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
