@@ -2654,32 +2654,6 @@
 <a href="#2652" id="2652">2652</a>
 <a href="#2653" id="2653">2653</a>
 <a href="#2654" id="2654">2654</a>
-<a href="#2655" id="2655">2655</a>
-<a href="#2656" id="2656">2656</a>
-<a href="#2657" id="2657">2657</a>
-<a href="#2658" id="2658">2658</a>
-<a href="#2659" id="2659">2659</a>
-<a href="#2660" id="2660">2660</a>
-<a href="#2661" id="2661">2661</a>
-<a href="#2662" id="2662">2662</a>
-<a href="#2663" id="2663">2663</a>
-<a href="#2664" id="2664">2664</a>
-<a href="#2665" id="2665">2665</a>
-<a href="#2666" id="2666">2666</a>
-<a href="#2667" id="2667">2667</a>
-<a href="#2668" id="2668">2668</a>
-<a href="#2669" id="2669">2669</a>
-<a href="#2670" id="2670">2670</a>
-<a href="#2671" id="2671">2671</a>
-<a href="#2672" id="2672">2672</a>
-<a href="#2673" id="2673">2673</a>
-<a href="#2674" id="2674">2674</a>
-<a href="#2675" id="2675">2675</a>
-<a href="#2676" id="2676">2676</a>
-<a href="#2677" id="2677">2677</a>
-<a href="#2678" id="2678">2678</a>
-<a href="#2679" id="2679">2679</a>
-<a href="#2680" id="2680">2680</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -3315,27 +3289,16 @@
     }
 
     <span class="doccomment">/// Get the next index. This walks the tree, so does not care about equal
-    /// keys. Used in swapping when insert/delete requires an internal node.
+    /// keys. Used to swap an internal node with the next leaf, when insert
+    /// or delete points at an internal node.
+    /// It should never be called on leaf nodes.
     </span><span class="kw">fn </span>get_next_higher_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex {
-        <span class="kw">if </span>index == NIL {
-            <span class="kw">return </span>NIL;
+        <span class="macro">debug_assert!</span>(index != NIL);
+        <span class="macro">debug_assert!</span>(<span class="self">self</span>.get_right_index::&lt;V&gt;(index) != NIL);
+        <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(index);
+        <span class="kw">while </span><span class="self">self</span>.get_left_index::&lt;V&gt;(current_index) != NIL {
+            current_index = <span class="self">self</span>.get_left_index::&lt;V&gt;(current_index);
         }
-        <span class="comment">// Successor is below us.
-        </span><span class="kw">if </span><span class="self">self</span>.get_right_index::&lt;V&gt;(index) != NIL {
-            <span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(index);
-            <span class="kw">while </span><span class="self">self</span>.get_left_index::&lt;V&gt;(current_index) != NIL {
-                current_index = <span class="self">self</span>.get_left_index::&lt;V&gt;(current_index);
-            }
-            <span class="kw">return </span>current_index;
-        }
-
-        <span class="comment">// Successor is above, keep going up while we are the right child
-        </span><span class="kw">let </span><span class="kw-2">mut </span>current_index: DataIndex = index;
-        <span class="kw">while </span><span class="self">self</span>.is_right_child::&lt;V&gt;(current_index) {
-            current_index = <span class="self">self</span>.get_parent_index::&lt;V&gt;(current_index);
-        }
-        current_index = <span class="self">self</span>.get_parent_index::&lt;V&gt;(current_index);
-
         current_index
     }
 }
@@ -5343,21 +5306,6 @@
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">1234</span>));
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">4567</span>));
         tree.lookup_index(<span class="kw-2">&amp;</span>TestOrder2::new(<span class="number">1_000</span>, <span class="number">7890</span>));
-    }
-
-    <span class="comment">// Get next higher index
-    </span><span class="attr">#[test]
-    </span><span class="kw">fn </span>test_get_next_higher_index() {
-        <span class="kw">let </span><span class="kw-2">mut </span>data: [u8; <span class="number">100000</span>] = [<span class="number">0</span>; <span class="number">100000</span>];
-        <span class="kw">let </span>tree: RedBlackTree&lt;TestOrderBid&gt; = init_simple_tree(<span class="kw-2">&amp;mut </span>data);
-        tree.pretty_print::&lt;TestOrderBid&gt;();
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..<span class="number">11 </span>{
-            <span class="macro">assert_eq!</span>(
-                tree.get_next_higher_index::&lt;TestOrderBid&gt;(TEST_BLOCK_WIDTH * i),
-                TEST_BLOCK_WIDTH * (i + <span class="number">1</span>)
-            );
-        }
-        <span class="macro">assert_eq!</span>(tree.get_next_higher_index::&lt;TestOrderBid&gt;(NIL), NIL);
     }
 }
 </code></pre></div></section></main></body></html>
