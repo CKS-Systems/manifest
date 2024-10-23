@@ -85,7 +85,7 @@ export const fetchAndSetMfxAddrLabels = async (
   const marketLabels: LabelsByAddr = {};
   for (const m of markets) {
     marketLabels[m.address.toBase58()] =
-      `MFX-${shortenPub(m.address)}-${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}`;
+      `MFX-${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}-${shortenPub(m.address)}`;
   }
 
   setLabelsByAddr({ ...mintLabels, ...marketLabels });
