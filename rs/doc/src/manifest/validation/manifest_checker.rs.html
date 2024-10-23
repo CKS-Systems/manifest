@@ -129,6 +129,12 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::Pod;
 <span class="kw">use </span>hypertree::{get_helper, Get};
 <span class="kw">use </span>solana_program::{
@@ -215,7 +221,13 @@
         size_of::&lt;T&gt;(),
         bytes.len()
     )<span class="question-mark">?</span>;
-    <span class="macro">require!</span>(
+
+    <span class="comment">// This can't happen because for Market, we increase the size of the account
+    // with a free block when it gets init, so the first check fails. For
+    // global, we dont use new_init because the account is a PDA, so it is not
+    // at an existing account. Keep the check for thoroughness in case a new
+    // type is ever added.
+    </span><span class="macro">require!</span>(
         bytes.iter().all(|<span class="kw-2">&amp;</span>byte| byte == <span class="number">0</span>),
         ProgramError::InvalidAccountData,
         <span class="string">"Expected zeroed"</span>,

@@ -780,6 +780,8 @@
 <a href="#778" id="778">778</a>
 <a href="#779" id="779">779</a>
 <a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -1257,6 +1259,17 @@
                 next_account_info(account_iter);
             <span class="kw">if </span>next_account_info_or.is_ok() {
                 <span class="kw">let </span>mint: MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; = MintAccountInfo::new(next_account_info_or<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>(index, expected_market_vault_address) = <span class="kw">if </span>base_mint == <span class="kw-2">*</span>mint.info.key {
+                    (<span class="number">0</span>, <span class="kw-2">&amp;</span>base_vault)
+                } <span class="kw">else </span>{
+                    <span class="macro">require!</span>(
+                        quote_mint == <span class="kw-2">*</span>mint.info.key,
+                        ManifestError::MissingGlobal,
+                        <span class="string">"Unexpected global mint"</span>,
+                    )<span class="question-mark">?</span>;
+                    (<span class="number">1</span>, <span class="kw-2">&amp;</span>quote_vault)
+                };
+
                 <span class="kw">let </span>global_or: <span class="prelude-ty">Result</span>&lt;ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;, ProgramError&gt; =
                     ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>);
 
@@ -1285,16 +1298,7 @@
                         <span class="kw-2">&amp;</span>expected_global_vault_address,
                     )<span class="question-mark">?</span>;
                 drop(global_data);
-                <span class="kw">let </span>(index, expected_market_vault_address) = <span class="kw">if </span>base_mint == <span class="kw-2">*</span>mint.info.key {
-                    (<span class="number">0</span>, <span class="kw-2">&amp;</span>base_vault)
-                } <span class="kw">else </span>{
-                    <span class="macro">require!</span>(
-                        quote_mint == <span class="kw-2">*</span>mint.info.key,
-                        ManifestError::MissingGlobal,
-                        <span class="string">"Unexpected global accounts"</span>,
-                    )<span class="question-mark">?</span>;
-                    (<span class="number">1</span>, <span class="kw-2">&amp;</span>quote_vault)
-                };
+
                 <span class="kw">let </span>market_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
                     TokenAccountInfo::new_with_owner_and_key(
                         next_account_info(account_iter)<span class="question-mark">?</span>,
