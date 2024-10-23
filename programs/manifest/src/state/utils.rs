@@ -14,7 +14,6 @@ use solana_program::sysvar::Sysvar;
 use solana_program::{
     entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
 };
-use solana_sdk::{clock::Clock, sysvar::Sysvar};
 use spl_token_2022::{
     extension::{
         transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
