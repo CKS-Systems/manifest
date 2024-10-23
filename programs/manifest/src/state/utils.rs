@@ -14,6 +14,13 @@ use solana_program::sysvar::Sysvar;
 use solana_program::{
     entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
 };
+use spl_token_2022::{
+    extension::{
+        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        StateWithExtensions,
+    },
+    state::Mint,
+};
 
 use super::{
     order_type_can_take, GlobalRefMut, OrderType, RestingOrder, GAS_DEPOSIT_LAMPORTS,
@@ -38,6 +45,22 @@ pub(crate) fn get_now_slot() -> u32 {
         })
         .slot;
     now_slot as u32
+}
+
+pub(crate) fn get_now_epoch() -> u64 {
+    #[cfg(feature = "no-clock")]
+    let now_epoch: u64 = 0;
+    #[cfg(not(feature = "no-clock"))]
+    let now_epoch: u64 = solana_program::clock::Clock::get()
+        .unwrap_or(solana_program::clock::Clock {
+            slot: u64::MAX,
+            epoch_start_timestamp: i64::MAX,
+            epoch: u64::MAX,
+            leader_schedule_epoch: u64::MAX,
+            unix_timestamp: i64::MAX,
+        })
+        .slot;
+    now_epoch
 }
 
 pub(crate) fn remove_from_global(
@@ -235,7 +258,27 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
+
+        // Don't bother checking new vs old config. If a token has/had a non-zero
+        // fee, then we do not allow it for global.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+            .get_extension::<TransferFeeConfig>()
+            .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into())
+        {
+            solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
+            return Ok(false);
+        }
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+            .get_extension::<TransferHook>()
+            .is_ok_and(|f| f.program_id.0 != Pubkey::default())
+        {
+            solana_program::msg!(
+                "Treating global order as unbacked because it has a transfer hook"
+            );
+            return Ok(false);
+        }
+
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,
