@@ -475,6 +475,17 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                 next_account_info(account_iter);
             if next_account_info_or.is_ok() {
                 let mint: MintAccountInfo<'a, 'info> = MintAccountInfo::new(next_account_info_or?)?;
+                let (index, expected_market_vault_address) = if base_mint == *mint.info.key {
+                    (0, &base_vault)
+                } else {
+                    require!(
+                        quote_mint == *mint.info.key,
+                        ManifestError::MissingGlobal,
+                        "Unexpected global mint",
+                    )?;
+                    (1, &quote_vault)
+                };
+
                 let global_or: Result<ManifestAccountInfo<'a, 'info, GlobalFixed>, ProgramError> =
                     ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?);
 
@@ -503,16 +514,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                         &expected_global_vault_address,
                     )?;
                 drop(global_data);
-                let (index, expected_market_vault_address) = if base_mint == *mint.info.key {
-                    (0, &base_vault)
-                } else {
-                    require!(
-                        quote_mint == *mint.info.key,
-                        ManifestError::MissingGlobal,
-                        "Unexpected global accounts",
-                    )?;
-                    (1, &quote_vault)
-                };
+
                 let market_vault: TokenAccountInfo<'a, 'info> =
                     TokenAccountInfo::new_with_owner_and_key(
                         next_account_info(account_iter)?,
