@@ -650,7 +650,7 @@ where
             }
             return current_index;
         }
-        
+
         // This is unreachable not because you can never need it when getting
         // the next higher index, but because this function is only called for
         // swap which only is called on internal nodes.
