@@ -320,7 +320,6 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -582,8 +581,7 @@
             <span class="string">"Missing global mint"</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Don't bother checking new vs old config. If a token has/had a non-zero
-        // fee, then we do not allow it for global.
+        <span class="comment">// Prevent transfer from global to market vault if a token has a non-zero fee.
         </span><span class="kw">let </span>mint_account_info: <span class="kw-2">&amp;</span>MintAccountInfo = <span class="kw-2">&amp;</span>mint_opt.as_ref().unwrap();
         <span class="kw">if </span>StateWithExtensions::&lt;Mint&gt;::unpack(<span class="kw-2">&amp;</span>mint_account_info.info.data.borrow())<span class="question-mark">?
             </span>.get_extension::&lt;TransferFeeConfig&gt;()
