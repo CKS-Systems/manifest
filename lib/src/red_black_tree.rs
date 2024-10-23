@@ -650,15 +650,11 @@ where
             }
             return current_index;
         }
-
-        // Successor is above, keep going up while we are the right child
-        let mut current_index: DataIndex = index;
-        while self.is_right_child::<V>(current_index) {
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        current_index = self.get_parent_index::<V>(current_index);
-
-        current_index
+        
+        // This is unreachable not because you can never need it when getting
+        // the next higher index, but because this function is only called for
+        // swap which only is called on internal nodes.
+        unreachable!();
     }
 }
 
@@ -2666,20 +2662,5 @@ pub(crate) mod test {
         tree.lookup_index(&TestOrder2::new(1_000, 1234));
         tree.lookup_index(&TestOrder2::new(1_000, 4567));
         tree.lookup_index(&TestOrder2::new(1_000, 7890));
-    }
-
-    // Get next higher index
-    #[test]
-    fn test_get_next_higher_index() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        tree.pretty_print::<TestOrderBid>();
-        for i in 1..11 {
-            assert_eq!(
-                tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i),
-                TEST_BLOCK_WIDTH * (i + 1)
-            );
-        }
-        assert_eq!(tree.get_next_higher_index::<TestOrderBid>(NIL), NIL);
     }
 }
