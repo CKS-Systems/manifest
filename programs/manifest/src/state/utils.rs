@@ -259,8 +259,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             "Missing global mint",
         )?;
 
-        // Don't bother checking new vs old config. If a token has/had a non-zero
-        // fee, then we do not allow it for global.
+        // Prevent transfer from global to market vault if a token has a non-zero fee.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
         if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
             .get_extension::<TransferFeeConfig>()
