@@ -1331,28 +1331,28 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             return NIL;
         }
 
+        let index_to_fix_color: Color = self.get_color::<V>(index_to_fix);
         // Case II: Uncle is black, left left
         if parent_is_left && current_is_left {
             self.rotate_right::<V>(grandparent_index);
             self.set_color::<V>(grandparent_index, parent_color);
             self.set_color::<V>(parent_index, grandparent_color);
         }
-        let index_to_fix_color: Color = self.get_color::<V>(index_to_fix);
         // Case III: Uncle is black, left right
-        if parent_is_left && !current_is_left {
+        else if parent_is_left && !current_is_left {
             self.rotate_left::<V>(parent_index);
             self.rotate_right::<V>(grandparent_index);
             self.set_color::<V>(index_to_fix, grandparent_color);
             self.set_color::<V>(grandparent_index, index_to_fix_color);
         }
         // Case IV: Uncle is black, right right
-        if !parent_is_left && !current_is_left {
+        else if !parent_is_left && !current_is_left {
             self.rotate_left::<V>(grandparent_index);
             self.set_color::<V>(grandparent_index, parent_color);
             self.set_color::<V>(parent_index, grandparent_color);
         }
         // Case V: Uncle is black, right left
-        if !parent_is_left && current_is_left {
+        else if !parent_is_left && current_is_left {
             self.rotate_right::<V>(parent_index);
             self.rotate_left::<V>(grandparent_index);
             self.set_color::<V>(index_to_fix, grandparent_color);
