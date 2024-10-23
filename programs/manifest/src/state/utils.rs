@@ -47,6 +47,22 @@ pub(crate) fn get_now_slot() -> u32 {
     now_slot as u32
 }
 
+pub(crate) fn get_now_epoch() -> u64 {
+    #[cfg(feature = "no-clock")]
+    let now_epoch: u64 = 0;
+    #[cfg(not(feature = "no-clock"))]
+    let now_epoch: u64 = solana_program::clock::Clock::get()
+        .unwrap_or(solana_program::clock::Clock {
+            slot: u64::MAX,
+            epoch_start_timestamp: i64::MAX,
+            epoch: u64::MAX,
+            leader_schedule_epoch: u64::MAX,
+            unix_timestamp: i64::MAX,
+        })
+        .slot;
+    now_epoch
+}
+
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
 ) -> ProgramResult {
@@ -249,8 +265,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
             .get_extension::<TransferFeeConfig>()
             .is_ok_and(|f| {
-                f.newer_transfer_fee.transfer_fee_basis_points != 0.into()
-                    || f.older_transfer_fee.transfer_fee_basis_points != 0.into()
+                f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into()
             })
         {
             solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
