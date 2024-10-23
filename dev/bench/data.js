@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729701374402,
+  "lastUpdate": 1729702605333,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -7629,6 +7629,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6070,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "509e0b8a266f7ff5fc47bd353d4a3ffc48987380",
+          "message": "Mark unreachable the part of get_next_higher_index that you dont get … (#217)\n\n* Mark unreachable the part of get_next_higher_index that you dont get in swap\r\n\r\n* fmt\r\n\r\n* move checks to debug assets\r\n\r\n* update comment again\r\n\r\n* fix cmt\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-23T19:32:16+03:00",
+          "tree_id": "48b626d8d78a2d8b65f41b8fac56482e34bdcd84",
+          "url": "https://github.com/CKS-Systems/manifest/commit/509e0b8a266f7ff5fc47bd353d4a3ffc48987380"
+        },
+        "date": 1729702604063,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3538,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5583,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6042,
             "unit": "CU",
             "range": "",
             "extra": ""
