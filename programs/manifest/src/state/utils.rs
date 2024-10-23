@@ -14,6 +14,7 @@ use solana_program::sysvar::Sysvar;
 use solana_program::{
     entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
 };
+use solana_sdk::{clock::Clock, sysvar::Sysvar};
 use spl_token_2022::{
     extension::{
         transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
@@ -246,8 +247,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         // Don't bother checking new vs old config. If a token has/had a non-zero
         // fee, then we do not allow it for global.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())
-            .unwrap()
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
             .get_extension::<TransferFeeConfig>()
             .is_ok_and(|f| {
                 f.newer_transfer_fee.transfer_fee_basis_points != 0.into()
@@ -257,8 +257,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
             return Ok(false);
         }
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())
-            .unwrap()
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
             .get_extension::<TransferHook>()
             .is_ok_and(|f| f.program_id.0 != Pubkey::default())
         {
