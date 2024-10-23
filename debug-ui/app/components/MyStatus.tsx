@@ -5,8 +5,8 @@ import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import {
   Market,
   RestingOrder,
-  WrapperCancelOrderParams,
 } from '@cks-systems/manifest-sdk';
+import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {

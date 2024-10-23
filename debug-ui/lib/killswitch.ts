@@ -27,7 +27,7 @@ export const killswitch = async (
   userPub: PublicKey | null,
   sendTransaction: SendTransaction,
   network: WalletAdapterNetwork | null,
-) => {
+): Promise<void> => {
   if (!userPub) {
     throw new Error('must be connected before setting up client');
   }

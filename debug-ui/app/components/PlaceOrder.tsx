@@ -8,9 +8,9 @@ import {
   PublicKey,
 } from '@solana/web3.js';
 import {
-  OrderType,
   WrapperPlaceOrderParamsExternal,
 } from '@cks-systems/manifest-sdk';
+import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import { useAppState } from './AppWalletProvider';
 import { toast } from 'react-toastify';
