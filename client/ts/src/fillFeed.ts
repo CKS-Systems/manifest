@@ -25,6 +25,7 @@ export class FillFeed {
   private wss: WebSocket.Server;
   private shouldEnd: boolean = false;
   private ended: boolean = false;
+  private lastUpdateUnix: number = Date.now();
 
   constructor(private connection: Connection) {
     this.wss = new WebSocket.Server({ port: 1234 });
@@ -40,6 +41,10 @@ export class FillFeed {
         console.log('Client disconnected');
       });
     });
+  }
+
+  public msSinceLastUpdate() {
+    return Date.now() - this.lastUpdateUnix;
   }
 
   public async stopParseLogs() {
@@ -94,6 +99,8 @@ export class FillFeed {
       for (const signature of signatures) {
         await this.handleSignature(signature);
       }
+
+      this.lastUpdateUnix = Date.now();
     }
 
     console.log('ended loop');

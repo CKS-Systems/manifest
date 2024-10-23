@@ -42,6 +42,10 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
       ws.onmessage = (message): void => {
         const fill: FillLogResult = JSON.parse(message.data);
+        if (fill.market !== marketAddress) {
+          return;
+        }
+
         const quoteTokens =
           Number(fill.quoteAtoms) /
           10 ** Number(marketRef.current?.quoteDecimals() || 0);
@@ -73,7 +77,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         wsRef.current = null;
       };
     }
-  }, []); // Empty dependency array ensures this effect only runs once
+  });
 
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
