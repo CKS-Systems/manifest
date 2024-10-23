@@ -638,23 +638,15 @@ where
 
     /// Get the next index. This walks the tree, so does not care about equal
     /// keys. Used in swapping when insert/delete requires an internal node.
+    /// It should never be called on root or lead nodes.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
-        if index == NIL {
-            return NIL;
+        debug_assert!(index != NIL);
+        debug_assert!(self.get_right_index::<V>(index) != NIL);
+        let mut current_index: DataIndex = self.get_right_index::<V>(index);
+        while self.get_left_index::<V>(current_index) != NIL {
+            current_index = self.get_left_index::<V>(current_index);
         }
-        // Successor is below us.
-        if self.get_right_index::<V>(index) != NIL {
-            let mut current_index: DataIndex = self.get_right_index::<V>(index);
-            while self.get_left_index::<V>(current_index) != NIL {
-                current_index = self.get_left_index::<V>(current_index);
-            }
-            return current_index;
-        }
-
-        // This is unreachable not because you can never need it when getting
-        // the next higher index, but because this function is only called for
-        // swap which only is called on internal nodes.
-        unreachable!();
+        current_index
     }
 }
 
