@@ -278,6 +278,49 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -293,6 +336,13 @@
 </span><span class="kw">use </span>solana_program::sysvar::Sysvar;
 <span class="kw">use </span>solana_program::{
     entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+};
+<span class="kw">use </span>spl_token_2022::{
+    extension::{
+        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        StateWithExtensions,
+    },
+    state::Mint,
 };
 
 <span class="kw">use super</span>::{
@@ -318,6 +368,22 @@
         })
         .slot;
     now_slot <span class="kw">as </span>u32
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_now_epoch() -&gt; u64 {
+    <span class="attr">#[cfg(feature = <span class="string">"no-clock"</span>)]
+    </span><span class="kw">let </span>now_epoch: u64 = <span class="number">0</span>;
+    <span class="attr">#[cfg(not(feature = <span class="string">"no-clock"</span>))]
+    </span><span class="kw">let </span>now_epoch: u64 = solana_program::clock::Clock::get()
+        .unwrap_or(solana_program::clock::Clock {
+            slot: u64::MAX,
+            epoch_start_timestamp: i64::MAX,
+            epoch: u64::MAX,
+            leader_schedule_epoch: u64::MAX,
+            unix_timestamp: i64::MAX,
+        })
+        .slot;
+    now_epoch
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_from_global(
@@ -515,7 +581,27 @@
             ManifestError::MissingGlobal,
             <span class="string">"Missing global mint"</span>,
         )<span class="question-mark">?</span>;
-        <span class="kw">let </span>mint_account_info: <span class="kw-2">&amp;</span>MintAccountInfo = <span class="kw-2">&amp;</span>mint_opt.as_ref().unwrap();
+
+        <span class="comment">// Don't bother checking new vs old config. If a token has/had a non-zero
+        // fee, then we do not allow it for global.
+        </span><span class="kw">let </span>mint_account_info: <span class="kw-2">&amp;</span>MintAccountInfo = <span class="kw-2">&amp;</span>mint_opt.as_ref().unwrap();
+        <span class="kw">if </span>StateWithExtensions::&lt;Mint&gt;::unpack(<span class="kw-2">&amp;</span>mint_account_info.info.data.borrow())<span class="question-mark">?
+            </span>.get_extension::&lt;TransferFeeConfig&gt;()
+            .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != <span class="number">0</span>.into())
+        {
+            <span class="macro">solana_program::msg!</span>(<span class="string">"Treating global order as unbacked because it has a transfer fee"</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+        }
+        <span class="kw">if </span>StateWithExtensions::&lt;Mint&gt;::unpack(<span class="kw-2">&amp;</span>mint_account_info.info.data.borrow())<span class="question-mark">?
+            </span>.get_extension::&lt;TransferHook&gt;()
+            .is_ok_and(|f| f.program_id.<span class="number">0 </span>!= Pubkey::default())
+        {
+            <span class="macro">solana_program::msg!</span>(
+                <span class="string">"Treating global order as unbacked because it has a transfer hook"
+            </span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+        }
+
         invoke_signed(
             <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
                 token_program.key,
