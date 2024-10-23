@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729639508659,
+  "lastUpdate": 1729690896635,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -7233,6 +7233,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6097,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e33e49c13a0a58a47ebc0ba681c1cf72b66cfd6a",
+          "message": "Block global + 22 for some situations (#209)\n\n* Do not allow transfer fees on global\r\n\r\n* Do not try to move tokens for transfer hook\r\n\r\n* bubble up error\r\n\r\n* fix lint\r\n\r\n* correctly use currrent transfer fee to avoid A-B-A issue\r\n\r\n* fmt\r\n\r\n---------\r\n\r\nCo-authored-by: Maximilian Schneider <mail@maximilianschneider.net>",
+          "timestamp": "2024-10-23T09:16:35-04:00",
+          "tree_id": "b53aa7c49152a02701a3afe8ee7579a786838ec5",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e33e49c13a0a58a47ebc0ba681c1cf72b66cfd6a"
+        },
+        "date": 1729690895043,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3559,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5612,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6117,
             "unit": "CU",
             "range": "",
             "extra": ""
