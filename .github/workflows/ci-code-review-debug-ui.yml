@@ -99,4 +99,4 @@ jobs:
         run: yarn install --frozen-lockfile
         
       - name: Next build
-        run: yarn build
+        run: cp .env.example .env; yarn build
