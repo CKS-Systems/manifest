@@ -10,16 +10,42 @@ if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
+const rpcUrl = RPC_URL as string;
+
+const monitorFeed = async (feed: FillFeed) => {
+  // 5 minutes
+  const deadThreshold = 300_000;
+  while (true) {
+    await sleep(60_000);
+    const msSinceUpdate = feed.msSinceLastUpdate();
+    if (msSinceUpdate > deadThreshold) {
+      throw new Error(
+        `fillFeed has had no updates since ${deadThreshold / 1_000} seconds ago.`,
+      );
+    }
+  }
+};
+
 const run = async () => {
   const timeoutMs = 5_000;
 
+  console.log('starting feed...');
+  let feed: FillFeed | null = null;
   while (true) {
     try {
-      const conn = new Connection(RPC_URL!, 'confirmed');
-      const feed = new FillFeed(conn);
-      await feed.parseLogs(false);
+      console.log('setting up connection...');
+      const conn = new Connection(rpcUrl, 'confirmed');
+      console.log('setting up feed...');
+      feed = new FillFeed(conn);
+      console.log('parsing logs...');
+      await Promise.all([monitorFeed(feed), feed.parseLogs(false)]);
     } catch (e: unknown) {
       console.error('start:feed: error: ', e);
+      if (feed) {
+        console.log('shutting down feed before restarting...');
+        await feed.stopParseLogs();
+        console.log('feed has shut down successfully');
+      }
     } finally {
       console.warn(`sleeping ${timeoutMs / 1000} before restarting`);
       sleep(timeoutMs);
