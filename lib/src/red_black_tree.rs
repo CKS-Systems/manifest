@@ -57,7 +57,7 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
 //    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
 //    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
-//    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+//    fn get_sibling_index<V: Payload>(&self, index: DataIndex)
 // trait RedBlackTreeWriteOperationsHelpers<'a>
 //    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
 //    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
@@ -190,7 +190,7 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
     fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
-    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex)
         -> DataIndex;
 }
 
@@ -288,8 +288,8 @@ where
     fn get_sibling_index<V: Payload>(
         &self,
         index: DataIndex,
-        parent_index: DataIndex,
     ) -> DataIndex {
+        let parent_index: DataIndex = self.get_parent_index::<V>(index);
         debug_assert_ne!(parent_index, NIL);
         let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
         if parent_left_child_index == index {
@@ -1135,7 +1135,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             return (NIL, NIL);
         }
 
-        let sibling_index: DataIndex = self.get_sibling_index::<V>(current_index, parent_index);
+        let sibling_index: DataIndex = self.get_sibling_index::<V>(current_index);
         let sibling_color: Color = self.get_color::<V>(sibling_index);
         let parent_color: Color = self.get_color::<V>(parent_index);
 
