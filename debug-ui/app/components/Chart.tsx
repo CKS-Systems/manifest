@@ -126,7 +126,7 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     return (): void => {
       ws.close();
     };
-  }, [chartEntries, conn]);
+  }, [chartEntries, conn, marketAddress]);
 
   useEffect(() => {
     if (chartContainerRef.current) {

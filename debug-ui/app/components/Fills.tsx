@@ -77,7 +77,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         wsRef.current = null;
       };
     }
-  }, []); // Empty dependency array ensures this effect only runs once
+  });
 
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
