@@ -2680,10 +2680,6 @@
 <a href="#2678" id="2678">2678</a>
 <a href="#2679" id="2679">2679</a>
 <a href="#2680" id="2680">2680</a>
-<a href="#2681" id="2681">2681</a>
-<a href="#2682" id="2682">2682</a>
-<a href="#2683" id="2683">2683</a>
-<a href="#2684" id="2684">2684</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -3044,7 +3040,6 @@
 
         </span><span class="kw">let </span>g_index: DataIndex = index;
         <span class="kw">let </span>p_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(g_index);
-        <span class="kw">let </span>x_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(p_index);
         <span class="kw">let </span>y_index: DataIndex = <span class="self">self</span>.get_left_index::&lt;V&gt;(p_index);
         <span class="kw">let </span>gg_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(index);
 
@@ -3054,7 +3049,6 @@
             </span><span class="kw">let </span>p_node: <span class="kw-2">&amp;mut </span>RBNode&lt;V&gt; = get_mut_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data(), p_index);
             p_node.parent = gg_index;
             p_node.left = g_index;
-            p_node.right = x_index;
         }
 
         <span class="comment">// Y
@@ -3101,7 +3095,6 @@
 
         </span><span class="kw">let </span>g_index: DataIndex = index;
         <span class="kw">let </span>p_index: DataIndex = <span class="self">self</span>.get_left_index::&lt;V&gt;(g_index);
-        <span class="kw">let </span>x_index: DataIndex = <span class="self">self</span>.get_left_index::&lt;V&gt;(p_index);
         <span class="kw">let </span>y_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(p_index);
         <span class="kw">let </span>gg_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(index);
 
@@ -3110,7 +3103,6 @@
             <span class="comment">// Does not use the helpers to avoid redundant NIL checks.
             </span><span class="kw">let </span>p_node: <span class="kw-2">&amp;mut </span>RBNode&lt;V&gt; = get_mut_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data(), p_index);
             p_node.parent = gg_index;
-            p_node.left = x_index;
             p_node.right = g_index;
         }
 
