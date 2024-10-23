@@ -358,7 +358,6 @@ where
 
         let g_index: DataIndex = index;
         let p_index: DataIndex = self.get_right_index::<V>(g_index);
-        let x_index: DataIndex = self.get_right_index::<V>(p_index);
         let y_index: DataIndex = self.get_left_index::<V>(p_index);
         let gg_index: DataIndex = self.get_parent_index::<V>(index);
 
@@ -368,7 +367,6 @@ where
             let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
             p_node.parent = gg_index;
             p_node.left = g_index;
-            p_node.right = x_index;
         }
 
         // Y
@@ -415,7 +413,6 @@ where
 
         let g_index: DataIndex = index;
         let p_index: DataIndex = self.get_left_index::<V>(g_index);
-        let x_index: DataIndex = self.get_left_index::<V>(p_index);
         let y_index: DataIndex = self.get_right_index::<V>(p_index);
         let gg_index: DataIndex = self.get_parent_index::<V>(index);
 
@@ -424,7 +421,6 @@ where
             // Does not use the helpers to avoid redundant NIL checks.
             let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
             p_node.parent = gg_index;
-            p_node.left = x_index;
             p_node.right = g_index;
         }
 
