@@ -142,6 +142,7 @@ impl Amm for ManifestLocalMarket {
         })
     }
 
+    /// ManifestLocalMarket::update should be called once before calling this method
     fn get_swap_and_account_metas(&self, swap_params: &SwapParams) -> Result<SwapAndAccountMetas> {
         let SwapParams {
             destination_mint,
@@ -403,6 +404,9 @@ impl Amm for ManifestMarket {
         };
         Ok(Quote {
             // Artificially penalize by 1 atom to be worse than the non-global version.
+            // This ensures that routes that can be filled without global accounts cause less
+            // lock contention on the global accounts, which will allow them to be included
+            // the block earlier. The UX improvement should be worth at least 1 atom.
             out_amount: out_amount.saturating_sub(1),
             ..Quote::default()
         })
