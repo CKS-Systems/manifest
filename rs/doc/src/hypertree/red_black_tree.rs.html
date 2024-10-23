@@ -4018,28 +4018,28 @@
             <span class="kw">return </span>NIL;
         }
 
+        <span class="kw">let </span>index_to_fix_color: Color = <span class="self">self</span>.get_color::&lt;V&gt;(index_to_fix);
         <span class="comment">// Case II: Uncle is black, left left
         </span><span class="kw">if </span>parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right::&lt;V&gt;(grandparent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(grandparent_index, parent_color);
             <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, grandparent_color);
         }
-        <span class="kw">let </span>index_to_fix_color: Color = <span class="self">self</span>.get_color::&lt;V&gt;(index_to_fix);
         <span class="comment">// Case III: Uncle is black, left right
-        </span><span class="kw">if </span>parent_is_left &amp;&amp; !current_is_left {
+        </span><span class="kw">else if </span>parent_is_left &amp;&amp; !current_is_left {
             <span class="self">self</span>.rotate_left::&lt;V&gt;(parent_index);
             <span class="self">self</span>.rotate_right::&lt;V&gt;(grandparent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(index_to_fix, grandparent_color);
             <span class="self">self</span>.set_color::&lt;V&gt;(grandparent_index, index_to_fix_color);
         }
         <span class="comment">// Case IV: Uncle is black, right right
-        </span><span class="kw">if </span>!parent_is_left &amp;&amp; !current_is_left {
+        </span><span class="kw">else if </span>!parent_is_left &amp;&amp; !current_is_left {
             <span class="self">self</span>.rotate_left::&lt;V&gt;(grandparent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(grandparent_index, parent_color);
             <span class="self">self</span>.set_color::&lt;V&gt;(parent_index, grandparent_color);
         }
         <span class="comment">// Case V: Uncle is black, right left
-        </span><span class="kw">if </span>!parent_is_left &amp;&amp; current_is_left {
+        </span><span class="kw">else if </span>!parent_is_left &amp;&amp; current_is_left {
             <span class="self">self</span>.rotate_right::&lt;V&gt;(parent_index);
             <span class="self">self</span>.rotate_left::&lt;V&gt;(grandparent_index);
             <span class="self">self</span>.set_color::&lt;V&gt;(index_to_fix, grandparent_color);
