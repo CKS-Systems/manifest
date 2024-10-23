@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729701315393,
+  "lastUpdate": 1729701374402,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -7563,6 +7563,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6098,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "29ac9765de32204985da2b79f8c0a920266b12d2",
+          "message": "Remove unnecessary parent update in rotate in rbtree (#216)",
+          "timestamp": "2024-10-23T19:11:38+03:00",
+          "tree_id": "d00be8a0df2e39c2d03291941587a4dab3c85ae9",
+          "url": "https://github.com/CKS-Systems/manifest/commit/29ac9765de32204985da2b79f8c0a920266b12d2"
+        },
+        "date": 1729701373089,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3534,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5579,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6070,
             "unit": "CU",
             "range": "",
             "extra": ""
