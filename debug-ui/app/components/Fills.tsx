@@ -42,6 +42,10 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
       ws.onmessage = (message): void => {
         const fill: FillLogResult = JSON.parse(message.data);
+        if (fill.market !== marketAddress) {
+          return;
+        }
+
         const quoteTokens =
           Number(fill.quoteAtoms) /
           10 ** Number(marketRef.current?.quoteDecimals() || 0);

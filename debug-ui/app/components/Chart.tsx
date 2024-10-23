@@ -53,6 +53,9 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
     ws.onmessage = async (message): Promise<void> => {
       const fill: FillLogResult = JSON.parse(message.data);
+      if (fill.market !== marketAddress) {
+        return;
+      }
 
       const aggregateFillData = async (
         fill: FillLogResult,
