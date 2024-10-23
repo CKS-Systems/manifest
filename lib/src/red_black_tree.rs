@@ -1320,7 +1320,6 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
 
         let grandparent_color: Color = self.get_color::<V>(grandparent_index);
-        let parent_color: Color = self.get_color::<V>(parent_index);
         let parent_is_left: bool = self.is_left_child::<V>(parent_index);
         let current_is_left: bool = self.is_left_child::<V>(index_to_fix);
 
