@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "preinstall": "cd ../ && yarn build",
+    "preinstall": "cd ../ && yarn install --frozen-lockfile && yarn build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "start:feed": "tsx scripts/start-fill-feed.ts",
     "run:pk-solflare-to-phantom": "tsx scripts/pk-solflare-to-phantom.ts",
+    "check-all": "yarn format && yarn lint",
+    "fix-all": "yarn format:fix && yarn lint:fix",
+    "format": "prettier -c app/ lib/ scripts/",
+    "format:fix": "prettier -w app/ lib/ scripts/",
     "lint": "tsc --noEmit && next lint",
     "lint:fix": "tsc --noEmit && next lint --fix",
     "run:rando-bot": "tsx scripts/run-rando-bot.ts"
@@ -30,7 +34,7 @@
   },
   "devDependencies": {
     "@solana/spl-token": "^0.4.8",
-    "@types/node": "^20",
+    "@types/node": "^22.7.8",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "bs58": "^6.0.0",
@@ -39,6 +43,7 @@
     "eslint-config-next": "14.2.5",
     "mini-css-extract-plugin": "^2.9.0",
     "postcss": "^8",
+    "prettier": "^3.3.3",
     "tailwindcss": "^3",
     "tsx": "^4.19.0",
     "typescript": "5.4"

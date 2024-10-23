@@ -15,6 +15,7 @@ const rpcUrl = RPC_URL as string;
 const monitorFeed = async (feed: FillFeed) => {
   // 5 minutes
   const deadThreshold = 300_000;
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     await sleep(60_000);
     const msSinceUpdate = feed.msSinceLastUpdate();
