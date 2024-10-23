@@ -264,9 +264,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
         if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
             .get_extension::<TransferFeeConfig>()
-            .is_ok_and(|f| {
-                f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into()
-            })
+            .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into())
         {
             solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
             return Ok(false);
