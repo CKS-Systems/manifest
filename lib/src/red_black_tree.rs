@@ -633,27 +633,16 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal
-    /// keys. Used in swapping when insert/delete requires an internal node.
+    /// keys. Used to swap an internal node with the next leaf, when insert
+    /// or delete points at an internal node.
+    /// It should never be called on leaf nodes.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
-        if index == NIL {
-            return NIL;
+        debug_assert!(index != NIL);
+        debug_assert!(self.get_right_index::<V>(index) != NIL);
+        let mut current_index: DataIndex = self.get_right_index::<V>(index);
+        while self.get_left_index::<V>(current_index) != NIL {
+            current_index = self.get_left_index::<V>(current_index);
         }
-        // Successor is below us.
-        if self.get_right_index::<V>(index) != NIL {
-            let mut current_index: DataIndex = self.get_right_index::<V>(index);
-            while self.get_left_index::<V>(current_index) != NIL {
-                current_index = self.get_left_index::<V>(current_index);
-            }
-            return current_index;
-        }
-
-        // Successor is above, keep going up while we are the right child
-        let mut current_index: DataIndex = index;
-        while self.is_right_child::<V>(current_index) {
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        current_index = self.get_parent_index::<V>(current_index);
-
         current_index
     }
 }
@@ -2661,20 +2650,5 @@ pub(crate) mod test {
         tree.lookup_index(&TestOrder2::new(1_000, 1234));
         tree.lookup_index(&TestOrder2::new(1_000, 4567));
         tree.lookup_index(&TestOrder2::new(1_000, 7890));
-    }
-
-    // Get next higher index
-    #[test]
-    fn test_get_next_higher_index() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        tree.pretty_print::<TestOrderBid>();
-        for i in 1..11 {
-            assert_eq!(
-                tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i),
-                TEST_BLOCK_WIDTH * (i + 1)
-            );
-        }
-        assert_eq!(tree.get_next_higher_index::<TestOrderBid>(NIL), NIL);
     }
 }
