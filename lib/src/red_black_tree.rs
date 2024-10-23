@@ -637,8 +637,9 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal
-    /// keys. Used in swapping when insert/delete requires an internal node.
-    /// It should never be called on root or lead nodes.
+    /// keys. Used to swap an internal node with the next leaf, when insert
+    /// or delete points at an internal node.
+    /// It should never be called on root or leaf nodes.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
         debug_assert!(index != NIL);
         debug_assert!(self.get_right_index::<V>(index) != NIL);
