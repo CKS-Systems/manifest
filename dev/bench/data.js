@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729700970744,
+  "lastUpdate": 1729701315393,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -7497,6 +7497,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6087,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa59acf15cc2a6d8706c7f7fbeba8d98963c3925",
+          "message": "Remove extra init of parent color (#219)\n\nremove extra init of parent color",
+          "timestamp": "2024-10-23T19:10:09+03:00",
+          "tree_id": "15944e4fd9817adf0d9f5d84740ee18559268d24",
+          "url": "https://github.com/CKS-Systems/manifest/commit/fa59acf15cc2a6d8706c7f7fbeba8d98963c3925"
+        },
+        "date": 1729701313462,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3542,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5588,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6098,
             "unit": "CU",
             "range": "",
             "extra": ""
