@@ -106,3 +106,9 @@ cargo test-sbf
 ```
 sh local-validator-test.sh
 ```
+
+### Client SDK
+  [NPM Package](https://www.npmjs.com/package/@cks-systems/manifest-sdk)
+
+### Tip Jar
+  B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6
