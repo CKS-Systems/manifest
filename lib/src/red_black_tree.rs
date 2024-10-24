@@ -491,11 +491,27 @@ where
         self.set_parent_index::<V>(right_0, index_1);
         self.set_parent_index::<V>(right_1, index_0);
 
-        // Edge case of swapping with successor.
+        // Edge case of swapping with successor or predecessor. Note that the
+        // way that this is called in practice, only the parent_1 == index_1 &&
+        // !is_left_1 case is covered. The rest are included for completeness in
+        // case any implementation decides to use swap with a different usage.
         if parent_1 == index_0 {
             self.set_parent_index::<V>(index_0, index_1);
             self.set_parent_index::<V>(index_1, parent_0);
-            self.set_right_index::<V>(index_1, index_0);
+            if is_left_1 {
+                self.set_left_index::<V>(index_1, index_0);
+            } else {
+                self.set_right_index::<V>(index_1, index_0);
+            }
+        }
+        if parent_0 == index_1 {
+            self.set_parent_index::<V>(index_1, index_0);
+            self.set_parent_index::<V>(index_0, parent_1);
+            if is_left_0 {
+                self.set_left_index::<V>(index_0, index_1);
+            } else {
+                self.set_right_index::<V>(index_0, index_1);
+            }
         }
 
         // Should not happen because we only swap with successor of an
