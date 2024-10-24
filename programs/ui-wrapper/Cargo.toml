@@ -1,6 +1,6 @@
 [package]
 name = "ui-wrapper"
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Maximilian Schneider <max@mango.markets>"]

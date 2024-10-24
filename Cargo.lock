@@ -2162,7 +2162,7 @@ dependencies = [
 
 [[package]]
 name = "manifest"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
@@ -5913,7 +5913,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "ui-wrapper"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
@@ -6388,7 +6388,7 @@ dependencies = [
 
 [[package]]
 name = "wrapper"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
