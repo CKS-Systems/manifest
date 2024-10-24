@@ -284,14 +284,11 @@ where
         self.get_right_index::<V>(index) != NIL && self.get_left_index::<V>(index) != NIL
     }
 
-    fn get_sibling_index<V: Payload>(
-        &self,
-        index: DataIndex,
-    ) -> DataIndex {
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex) -> DataIndex {
         let parent_index: DataIndex = self.get_parent_index::<V>(index);
         debug_assert_ne!(parent_index, NIL);
         let parent_left_child_index: DataIndex = self.get_left_index::<V>(parent_index);
-        
+
         // It is possible that there is no exact match for the sibling. This
         // happens when we have removed a node and are doing a remove_fix and
         // the current_index is pointing at what was just removed, so the parent
@@ -300,9 +297,9 @@ where
         // the sibling of the first NIL we find.
         if parent_left_child_index == index {
             self.get_right_index::<V>(parent_index)
-        } else if self.get_left_index::<V>(parent_index) == index{
+        } else if self.get_left_index::<V>(parent_index) == index {
             parent_left_child_index
-        } else if parent_left_child_index == NIL{
+        } else if parent_left_child_index == NIL {
             self.get_right_index::<V>(parent_index)
         } else {
             parent_left_child_index
@@ -1121,10 +1118,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.remove_by_index(index);
     }
 
-    fn remove_fix(
-        &mut self,
-        current_index: DataIndex,
-    ) -> DataIndex {
+    fn remove_fix(&mut self, current_index: DataIndex) -> DataIndex {
         // Current is double black. It could be NIL if we just deleted a leaf,
         // so we need the parent to know where in the tree we are.
 
