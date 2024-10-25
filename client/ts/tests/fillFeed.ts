@@ -48,8 +48,8 @@ async function testFillFeed(): Promise<void> {
   await Promise.all([
     fillFeed.parseLogs(),
     async () => {
-      await checkForFillMessage(connection, payerKeypair, marketAddress),
-        await fillFeed.stopParseLogs();
+      await checkForFillMessage(connection, payerKeypair, marketAddress);
+      await fillFeed.stopParseLogs();
     },
   ]);
 }
