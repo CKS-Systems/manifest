@@ -71,19 +71,13 @@ export class FillFeed {
   /**
    * Parse logs in an endless loop.
    */
-  public async parseLogs(endEarly?: boolean) {
+  public async parseLogs() {
     // Start with a hopefully recent signature.
     let lastSignature: string | undefined = (
       await this.connection.getSignaturesForAddress(PROGRAM_ID)
     )[0].signature;
 
-    // End early is 30 seconds, used for testing.
-    const endTime: Date = endEarly
-      ? new Date(Date.now() + 30_000)
-      : new Date(Date.now() + 1_000_000_000_000);
-
-    // TODO: remove endTime in favor of stopParseLogs for testing
-    while (!this.shouldEnd && new Date(Date.now()) < endTime) {
+    while (!this.shouldEnd) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
         await this.connection.getSignaturesForAddress(PROGRAM_ID, {
