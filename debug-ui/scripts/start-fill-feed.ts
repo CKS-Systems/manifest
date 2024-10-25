@@ -39,7 +39,7 @@ const run = async () => {
       console.log('setting up feed...');
       feed = new FillFeed(conn);
       console.log('parsing logs...');
-      await Promise.all([monitorFeed(feed), feed.parseLogs(false)]);
+      await Promise.all([monitorFeed(feed), feed.parseLogs()]);
     } catch (e: unknown) {
       console.error('start:feed: error: ', e);
       if (feed) {
