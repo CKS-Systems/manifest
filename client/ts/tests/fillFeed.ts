@@ -86,9 +86,11 @@ async function checkForFillMessage(
   );
 
   // Wait for the fill log
+  console.log('Waiting for fill');
   await new Promise((f) => setTimeout(f, 20_000));
   assert(gotFillMessage, 'Fill feed message');
   ws.close();
+  console.log('Closed websocket');
 }
 
 describe('FillListener test', () => {
