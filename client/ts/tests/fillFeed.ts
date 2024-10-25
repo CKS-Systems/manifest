@@ -49,6 +49,7 @@ async function testFillFeed(): Promise<void> {
     fillFeed.parseLogs(),
     async () => {
       await checkForFillMessage(connection, payerKeypair, marketAddress);
+      console.log('Done checking for fill message');
       await fillFeed.stopParseLogs();
     },
   ]);
