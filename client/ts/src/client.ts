@@ -458,14 +458,12 @@ export class ManifestClient {
 
     let wrapper: Wrapper | null = null;
     if (trader != null) {
-      const userWrapper: WrapperResponse | null = await ManifestClient.fetchFirstUserWrapper(
-        connection,
-        trader,
-      );
+      const userWrapper: WrapperResponse | null =
+        await ManifestClient.fetchFirstUserWrapper(connection, trader);
       if (userWrapper) {
         wrapper = Wrapper.loadFromBuffer({
           address: userWrapper.pubkey,
-          buffer: userWrapper.account.data
+          buffer: userWrapper.account.data,
         });
       }
     }
