@@ -2,8 +2,9 @@
 
 import { fetchMarket } from '@/lib/data';
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
-import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
+import { ManifestClient, Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
+import { WrapperOpenOrder} from '@cks-systems/manifest-sdk/wrapperObj';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
@@ -38,6 +39,7 @@ const MyStatus = ({
   const [quoteExchangeBalance, setQuoteExchangeBalance] = useState<number>(0);
   const [myBids, setMyBids] = useState<RestingOrder[]>([]);
   const [myAsks, setMyAsks] = useState<RestingOrder[]>([]);
+  const [myWrapperOpenOrders, setMyWrapperOpenOrders] = useState<WrapperOpenOrder[]>([]);
   const [clientOrderId, setClientOrderId] = useState('0');
   const [actOnQuote, setActOnQuote] = useState(true);
   const [amountTokens, setAmountTokens] = useState('0');
@@ -194,7 +196,13 @@ const MyStatus = ({
     if (signerPub) {
       const updateState = async (): Promise<void> => {
         const marketPub = new PublicKey(marketAddress);
-        const market: Market = await fetchMarket(conn, marketPub);
+        const mClient: ManifestClient = await ManifestClient.getClientReadOnly(
+          conn,
+          marketPub,
+          signerPub,
+        );
+        await mClient.reload();
+        const market: Market = mClient.market;
         setBaseMint(market.baseMint().toBase58());
         setQuoteMint(market.quoteMint().toBase58());
 
@@ -215,6 +223,14 @@ const MyStatus = ({
         } catch (err) {
           console.log(err);
           // don't notify since not having an ata would trigger spammy notifications...
+        }
+
+        // Get the client to get a wrapper which is needed for client order ids.
+        if (mClient.wrapper) {
+          const wrapperOpenOrders: WrapperOpenOrder[] | null = mClient.wrapper.openOrdersForMarket(marketPub);
+          if (wrapperOpenOrders) {
+            setMyWrapperOpenOrders(wrapperOpenOrders);
+          }
         }
 
         const signerAddr = signerPub.toBase58();
@@ -366,6 +382,7 @@ const MyStatus = ({
               <tr className="border-b border-gray-700">
                 <th className="py-2">Price</th>
                 <th className="py-2">Amount</th>
+                <th className="py-2">ClientOrderId</th>
               </tr>
             </thead>
             <tbody>
@@ -373,6 +390,14 @@ const MyStatus = ({
                 <tr key={i} className="border-b border-gray-700">
                   <td className="py-2">{restingOrder.tokenPrice}</td>
                   <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
+                  <td className="py-2">
+                    {
+                      myWrapperOpenOrders.filter((openOrder: WrapperOpenOrder) => {
+                        return openOrder.orderSequenceNumber = restingOrder.sequenceNumber;
+                      })
+                      .reduce((_acc, current) => { return current.clientOrderId.toString(); }, '')
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -386,6 +411,7 @@ const MyStatus = ({
               <tr className="border-b border-gray-700">
                 <th className="py-2">Price</th>
                 <th className="py-2">Amount</th>
+                <th className="py-2">ClientOrderId</th>
               </tr>
             </thead>
             <tbody>
@@ -393,6 +419,14 @@ const MyStatus = ({
                 <tr key={i} className="border-b border-gray-700">
                   <td className="py-2">{restingOrder.tokenPrice}</td>
                   <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
+                  <td className="py-2">
+                    {
+                      myWrapperOpenOrders.filter((openOrder: WrapperOpenOrder) => {
+                        return openOrder.orderSequenceNumber = restingOrder.sequenceNumber;
+                      })
+                      .reduce((_acc, current) => { return current.clientOrderId.toString(); }, '')
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
