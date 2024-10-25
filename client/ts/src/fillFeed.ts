@@ -49,6 +49,7 @@ export class FillFeed {
 
   public async stopParseLogs() {
     this.shouldEnd = true;
+    console.log('stop parsing logs');
     const start = Date.now();
     while (!this.ended) {
       const timeout = 30_000;
@@ -78,6 +79,7 @@ export class FillFeed {
     )[0].signature;
 
     while (!this.shouldEnd) {
+      console.log('parse logs iter');
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
         await this.connection.getSignaturesForAddress(PROGRAM_ID, {

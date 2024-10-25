@@ -48,10 +48,9 @@ async function testFillFeed(): Promise<void> {
   await Promise.all([
     fillFeed.parseLogs(),
     async () => {
-      await new Promise((f) => setTimeout(f, 30_000));
+      await checkForFillMessage(connection, payerKeypair, marketAddress),
       await fillFeed.stopParseLogs();
     },
-    checkForFillMessage(connection, payerKeypair, marketAddress),
   ]);
 }
 
