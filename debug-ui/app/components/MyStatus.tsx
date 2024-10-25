@@ -1,6 +1,5 @@
 'use client';
 
-import { fetchMarket } from '@/lib/data';
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import { ManifestClient, Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
