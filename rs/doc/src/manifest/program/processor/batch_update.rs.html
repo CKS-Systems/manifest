@@ -465,7 +465,7 @@
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     </span><span class="macro">require!</span>(
-                        trader_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
+                        hinted_cancel_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
                         ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint index {}"</span>,
                         hinted_cancel_index,
