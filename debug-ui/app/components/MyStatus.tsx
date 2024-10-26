@@ -1,9 +1,13 @@
 'use client';
 
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
-import { ManifestClient, Market, RestingOrder } from '@cks-systems/manifest-sdk';
+import {
+  ManifestClient,
+  Market,
+  RestingOrder,
+} from '@cks-systems/manifest-sdk';
 import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
-import { WrapperOpenOrder} from '@cks-systems/manifest-sdk/wrapperObj';
+import { WrapperOpenOrder } from '@cks-systems/manifest-sdk/wrapperObj';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
@@ -38,7 +42,9 @@ const MyStatus = ({
   const [quoteExchangeBalance, setQuoteExchangeBalance] = useState<number>(0);
   const [myBids, setMyBids] = useState<RestingOrder[]>([]);
   const [myAsks, setMyAsks] = useState<RestingOrder[]>([]);
-  const [myWrapperOpenOrders, setMyWrapperOpenOrders] = useState<WrapperOpenOrder[]>([]);
+  const [myWrapperOpenOrders, setMyWrapperOpenOrders] = useState<
+    WrapperOpenOrder[]
+  >([]);
   const [clientOrderId, setClientOrderId] = useState('0');
   const [actOnQuote, setActOnQuote] = useState(true);
   const [amountTokens, setAmountTokens] = useState('0');
@@ -226,7 +232,8 @@ const MyStatus = ({
 
         // Get the client to get a wrapper which is needed for client order ids.
         if (mClient.wrapper) {
-          const wrapperOpenOrders: WrapperOpenOrder[] | null = mClient.wrapper.openOrdersForMarket(marketPub);
+          const wrapperOpenOrders: WrapperOpenOrder[] | null =
+            mClient.wrapper.openOrdersForMarket(marketPub);
           if (wrapperOpenOrders) {
             setMyWrapperOpenOrders(wrapperOpenOrders);
           }
@@ -390,12 +397,14 @@ const MyStatus = ({
                   <td className="py-2">{restingOrder.tokenPrice}</td>
                   <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
                   <td className="py-2">
-                    {
-                      myWrapperOpenOrders.filter((openOrder: WrapperOpenOrder) => {
-                        return openOrder.orderSequenceNumber = restingOrder.sequenceNumber;
+                    {myWrapperOpenOrders
+                      .filter((openOrder: WrapperOpenOrder) => {
+                        return (openOrder.orderSequenceNumber =
+                          restingOrder.sequenceNumber);
                       })
-                      .reduce((_acc, current) => { return current.clientOrderId.toString(); }, '')
-                    }
+                      .reduce((_acc, current) => {
+                        return current.clientOrderId.toString();
+                      }, '')}
                   </td>
                 </tr>
               ))}
@@ -419,12 +428,14 @@ const MyStatus = ({
                   <td className="py-2">{restingOrder.tokenPrice}</td>
                   <td className="py-2">{Number(restingOrder.numBaseTokens)}</td>
                   <td className="py-2">
-                    {
-                      myWrapperOpenOrders.filter((openOrder: WrapperOpenOrder) => {
-                        return openOrder.orderSequenceNumber = restingOrder.sequenceNumber;
+                    {myWrapperOpenOrders
+                      .filter((openOrder: WrapperOpenOrder) => {
+                        return (openOrder.orderSequenceNumber =
+                          restingOrder.sequenceNumber);
                       })
-                      .reduce((_acc, current) => { return current.clientOrderId.toString(); }, '')
-                    }
+                      .reduce((_acc, current) => {
+                        return current.clientOrderId.toString();
+                      }, '')}
                   </td>
                 </tr>
               ))}
