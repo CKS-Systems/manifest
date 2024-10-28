@@ -180,7 +180,7 @@ pub(crate) fn process_batch_update(
                     // aligns with block boundaries. We do a check that it is an
                     // order owned by the payer inside the handler.
                     require!(
-                        trader_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
+                        hinted_cancel_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
                         ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint index {}",
                         hinted_cancel_index,
