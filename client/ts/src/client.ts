@@ -430,12 +430,14 @@ export class ManifestClient {
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
+   * @param trader PublicKey for trader whose wrapper to fetch
    *
    * @returns ManifestClient
    */
   public static async getClientReadOnly(
     connection: Connection,
     marketPk: PublicKey,
+    trader?: PublicKey,
   ): Promise<ManifestClient> {
     const marketObject: Market = await Market.loadFromAddress({
       connection: connection,
@@ -454,9 +456,21 @@ export class ManifestClient {
       address: getGlobalAddress(quoteMint.address),
     });
 
+    let wrapper: Wrapper | null = null;
+    if (trader != null) {
+      const userWrapper: WrapperResponse | null =
+        await ManifestClient.fetchFirstUserWrapper(connection, trader);
+      if (userWrapper) {
+        wrapper = Wrapper.loadFromBuffer({
+          address: userWrapper.pubkey,
+          buffer: userWrapper.account.data,
+        });
+      }
+    }
+
     return new ManifestClient(
       connection,
-      null,
+      wrapper,
       marketObject,
       null,
       baseMint,

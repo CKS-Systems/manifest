@@ -45,12 +45,12 @@ export interface WrapperMarketInfo {
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
 export interface WrapperOpenOrder {
+  /** Price as float in atoms of quote per atoms of base. */
+  price: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
   orderSequenceNumber: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
-  price: number;
   /** Number of base atoms in the order. */
   numBaseAtoms: bignum;
   /** Hint for the location of the order in the manifest dynamic data. */
@@ -61,6 +61,8 @@ export interface WrapperOpenOrder {
   isBid: boolean;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
+  /** unused */
+  padding: number[];
 }
 
 /**
@@ -168,7 +170,7 @@ export class Wrapper {
    *
    * @param marketPk PublicKey for the market
    *
-   * @return OpenOrder[]
+   * @return WrapperOpenOrder[]
    */
   public openOrdersForMarket(marketPk: PublicKey): WrapperOpenOrder[] | null {
     const filtered: WrapperMarketInfo[] = this.data.marketInfos.filter(
