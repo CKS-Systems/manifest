@@ -24,4 +24,6 @@ export type FillLogResult = {
   takerSequenceNumber: string;
   /** Slot number of the fill. */
   slot: number;
+  /** Signature of the tx where the fill happened. */
+  signature: string;
 };
