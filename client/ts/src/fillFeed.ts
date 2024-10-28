@@ -155,7 +155,11 @@ export class FillFeed {
         buffer.subarray(8),
       )[0];
       const resultString: string = JSON.stringify(
-        toFillLogResult(deserializedFillLog, signature.slot),
+        toFillLogResult(
+          deserializedFillLog,
+          signature.slot,
+          signature.signature,
+        ),
       );
       console.log('Got a fill', resultString);
       fills.inc({
@@ -165,7 +169,13 @@ export class FillFeed {
       });
       this.wss.clients.forEach((client) => {
         client.send(
-          JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
+          JSON.stringify(
+            toFillLogResult(
+              deserializedFillLog,
+              signature.slot,
+              signature.signature,
+            ),
+          ),
         );
       });
     }
@@ -208,7 +218,11 @@ export async function runFillFeed() {
 
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
-function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
+function toFillLogResult(
+  fillLog: FillLog,
+  slot: number,
+  signature: string,
+): FillLogResult {
   return {
     market: fillLog.market.toBase58(),
     maker: fillLog.maker.toBase58(),
@@ -220,6 +234,7 @@ function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
     isMakerGlobal: fillLog.isMakerGlobal,
     makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
     takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
+    signature,
     slot,
   };
 }
