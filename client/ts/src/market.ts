@@ -22,6 +22,7 @@ import {
   claimedSeatBeet,
   ClaimedSeat as ClaimedSeatRaw,
   createCreateMarketInstruction,
+  OrderType,
   PROGRAM_ID,
   restingOrderBeet,
   RestingOrder as RestingOrderRaw,
@@ -43,6 +44,8 @@ export type RestingOrder = {
   sequenceNumber: bignum;
   /** Price as float in tokens of quote per tokens of base. */
   tokenPrice: number;
+  /** OrderType: 🌎 or Limit or PostOnly */
+  orderType: OrderType;
 };
 
 /**
