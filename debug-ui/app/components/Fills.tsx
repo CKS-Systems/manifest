@@ -113,7 +113,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                     rel="noopener noreferrer"
                     href={'https://explorer.solana.com/tx/' + fill.signature}
                   >
-                    {fill.signature.substring(0, 5)}
+                    {fill.signature.substring(0, 5) + '...'}
                   </a>
                 </td>
               </tr>

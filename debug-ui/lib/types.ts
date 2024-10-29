@@ -10,6 +10,6 @@ export type FillResultUi = {
   quoteTokens: number;
   priceTokens: number;
   takerSide: string;
-  signature: sting;
+  signature: string;
   slot: number;
 };
