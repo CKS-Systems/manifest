@@ -400,8 +400,8 @@ const MyStatus = ({
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
                         return (
-                          openOrder.orderSequenceNumber.toNumber() ==
-                          restingOrder.sequenceNumber.toNumber()
+                          (openOrder.orderSequenceNumber as BN).toNumber() ==
+                          (restingOrder.sequenceNumber as BN).toNumber()
                         );
                       })
                       .reduce((_acc, current) => {
@@ -433,8 +433,8 @@ const MyStatus = ({
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
                         return (
-                          openOrder.orderSequenceNumber.toNumber() ==
-                          restingOrder.sequenceNumber.toNumber()
+                          (openOrder.orderSequenceNumber as BN).toNumber() ==
+                          (restingOrder.sequenceNumber as BN).toNumber()
                         );
                       })
                       .reduce((_acc, current) => {
