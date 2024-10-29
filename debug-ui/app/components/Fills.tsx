@@ -61,6 +61,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
           baseTokens,
           quoteTokens,
           priceTokens,
+          isMakerGlobal: fill.isMakerGlobal,
           takerSide: fill.takerIsBuy ? 'bid' : 'ask',
           signature: fill.signature,
           slot: fill.slot,
@@ -100,6 +101,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
                 <td className="py-2">
+                  {fill.isMakerGlobal ? '🌎' : ''}
                   <SolscanAddrLink address={fill.maker} />
                 </td>
                 <td className="py-2">
