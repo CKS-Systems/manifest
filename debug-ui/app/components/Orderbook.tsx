@@ -64,7 +64,7 @@ const Orderbook = ({
             : ''}
         </td>
         <td className="py-2">
-          { restingOrder.orderType == OrderType.Global ? '🌎' : '' }
+          {restingOrder.orderType == OrderType.Global ? '🌎' : ''}
           {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
         </td>
       </tr>

@@ -101,7 +101,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
                 <td className="py-2">
-                  { fill.isMakerGlobal ? '🌎' : '' }
+                  {fill.isMakerGlobal ? '🌎' : ''}
                   <SolscanAddrLink address={fill.maker} />
                 </td>
                 <td className="py-2">
