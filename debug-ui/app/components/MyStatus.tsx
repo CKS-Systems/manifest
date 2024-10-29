@@ -399,8 +399,10 @@ const MyStatus = ({
                   <td className="py-2">
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
-                        return (openOrder.orderSequenceNumber =
-                          restingOrder.sequenceNumber);
+                        return (
+                          Number(openOrder.orderSequenceNumber) ==
+                          Number(restingOrder.sequenceNumber)
+                        );
                       })
                       .reduce((_acc, current) => {
                         return current.clientOrderId.toString();
@@ -430,8 +432,10 @@ const MyStatus = ({
                   <td className="py-2">
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
-                        return (openOrder.orderSequenceNumber =
-                          restingOrder.sequenceNumber);
+                        return (
+                          Number(openOrder.orderSequenceNumber) ==
+                          Number(restingOrder.sequenceNumber)
+                        );
                       })
                       .reduce((_acc, current) => {
                         return current.clientOrderId.toString();
