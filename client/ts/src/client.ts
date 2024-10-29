@@ -9,6 +9,7 @@ import {
   sendAndConfirmTransaction,
   AccountInfo,
   TransactionSignature,
+  GetProgramAccountsResponse,
 } from '@solana/web3.js';
 import {
   Mint,
@@ -136,6 +137,31 @@ export class ManifestClient {
     });
 
     return accounts.map((a) => a.pubkey);
+  }
+
+  /**
+   * Get all market program accounts. This is expensive RPC load..
+   *
+   * @param connection Connection
+   * @returns GetProgramAccountsResponse
+   */
+  public static async getMarketProgramAccounts(
+    connection: Connection,
+  ): Promise<GetProgramAccountsResponse> {
+    const accounts: GetProgramAccountsResponse =
+      await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [
+          {
+            memcmp: {
+              offset: 0,
+              bytes: marketDiscriminator.toString('base64'),
+              encoding: 'base64',
+            },
+          },
+        ],
+      });
+
+    return accounts;
   }
 
   /**
