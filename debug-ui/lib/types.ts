@@ -6,6 +6,7 @@ export type FillResultUi = {
   market: string;
   maker: string;
   taker: string;
+  isMakerGlobal: boolean;
   baseTokens: number;
   quoteTokens: number;
   priceTokens: number;
