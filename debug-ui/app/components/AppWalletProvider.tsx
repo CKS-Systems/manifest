@@ -19,8 +19,12 @@ import {
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import WalletConnection from './WalletConnection';
-import { ManifestClient } from '@cks-systems/manifest-sdk';
-import { Connection } from '@solana/web3.js';
+import { ManifestClient, Market } from '@cks-systems/manifest-sdk';
+import {
+  Connection,
+  GetProgramAccountsResponse,
+  PublicKey,
+} from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
 import {
@@ -38,9 +42,11 @@ interface AppStateContextValue {
   loading: boolean;
   network: WalletAdapterNetwork | null;
   marketAddrs: string[];
+  marketVolumes: [string, number][];
   labelsByAddr: LabelsByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
+  setMarketVolumes: Dispatch<SetStateAction<[string, number][]>>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
@@ -62,6 +68,7 @@ const AppWalletProvider = ({
 }): ReactElement => {
   const [network, setNetwork] = useState<WalletAdapterNetwork | null>(null);
   const [marketAddrs, setMarketAddrs] = useState<string[]>([]);
+  const [marketVolumes, setMarketVolumes] = useState<[string, number][]>([]);
   const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
   const setupRun = useRef(false);
@@ -109,10 +116,33 @@ const AppWalletProvider = ({
         const detectedNetwork = await determineNetworkFromRpcUrl(rpcUrl);
         setNetwork(detectedNetwork);
 
-        const conn = new Connection(rpcUrl, 'confirmed');
-        const marketPubs = await ManifestClient.listMarketPublicKeys(conn);
-        const marketAddrs = marketPubs.map((p) => p.toBase58());
+        const conn: Connection = new Connection(rpcUrl, 'confirmed');
+        const marketProgramAccounts: GetProgramAccountsResponse =
+          await ManifestClient.getMarketProgramAccounts(conn);
+        const marketPubs: PublicKey[] = marketProgramAccounts.map(
+          (a) => a.pubkey,
+        );
+        const marketAddrs: string[] = marketPubs.map((p) => p.toBase58());
+        const marketVolumes: [string, number][] = marketProgramAccounts.map(
+          (a) => {
+            const market: Market = Market.loadFromBuffer({
+              address: a.pubkey,
+              buffer: a.account.data,
+            });
+            if (
+              market.quoteMint().toBase58() ==
+              'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+            ) {
+              return [
+                market.address.toBase58(),
+                Number(market.quoteVolume()) / 10 ** 6,
+              ];
+            }
+            return [market.address.toBase58(), 0];
+          },
+        );
         setMarketAddrs(marketAddrs);
+        setMarketVolumes(marketVolumes);
         fetchAndSetMfxAddrLabels(conn, marketAddrs, setLabelsByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
@@ -144,9 +174,11 @@ const AppWalletProvider = ({
             value={{
               network,
               marketAddrs,
+              marketVolumes,
               labelsByAddr,
               setLabelsByAddr,
               setMarketAddrs,
+              setMarketVolumes,
               loading,
             }}
           >

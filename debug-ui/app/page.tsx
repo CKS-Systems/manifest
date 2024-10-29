@@ -7,8 +7,8 @@ import { addrToLabel } from '@/lib/address-labels';
 
 const Home = (): ReactElement => {
   const readOnly = process.env.NEXT_PUBLIC_READ_ONLY === 'true';
-  const { marketAddrs, loading, labelsByAddr } = useAppState();
-  console.log(labelsByAddr);
+  const { marketAddrs, loading, labelsByAddr, marketVolumes } = useAppState();
+  const marketVolumesMap: Map<string, number> = new Map(marketVolumes);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
@@ -43,6 +43,9 @@ const Home = (): ReactElement => {
                   >
                     {addrToLabel(market, labelsByAddr)}
                   </Link>
+                  {marketVolumesMap.get(market) != 0
+                    ? ': $' + marketVolumesMap.get(market)?.toFixed(2)
+                    : ''}
                 </li>
               ))}
             </ul>
