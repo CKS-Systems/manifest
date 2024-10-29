@@ -15,7 +15,6 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { BN } from 'bn.js';
 import { useEffect, useState, ReactElement, ChangeEvent } from 'react';
 import { toast } from 'react-toastify';
 import { useAppState } from './AppWalletProvider';
@@ -401,8 +400,8 @@ const MyStatus = ({
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
                         return (
-                          (openOrder.orderSequenceNumber as BN).toNumber() ==
-                          (restingOrder.sequenceNumber as BN).toNumber()
+                          Number(openOrder.orderSequenceNumber) ==
+                          Number(restingOrder.sequenceNumber)
                         );
                       })
                       .reduce((_acc, current) => {
@@ -434,8 +433,8 @@ const MyStatus = ({
                     {myWrapperOpenOrders
                       .filter((openOrder: WrapperOpenOrder) => {
                         return (
-                          (openOrder.orderSequenceNumber as BN).toNumber() ==
-                          (restingOrder.sequenceNumber as BN).toNumber()
+                          Number(openOrder.orderSequenceNumber) ==
+                          Number(restingOrder.sequenceNumber)
                         );
                       })
                       .reduce((_acc, current) => {
