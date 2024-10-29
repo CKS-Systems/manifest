@@ -10,6 +10,7 @@ import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
 import { formatPrice } from '@/lib/format';
+import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 
 const Orderbook = ({
   marketAddress,
@@ -63,6 +64,7 @@ const Orderbook = ({
             : ''}
         </td>
         <td className="py-2">
+          { restingOrder.orderType == OrderType.Global ? '🌎' : '' }
           {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
         </td>
       </tr>
