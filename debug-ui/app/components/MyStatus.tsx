@@ -15,6 +15,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
+import { BN } from 'bn.js';
 import { useEffect, useState, ReactElement, ChangeEvent } from 'react';
 import { toast } from 'react-toastify';
 import { useAppState } from './AppWalletProvider';
