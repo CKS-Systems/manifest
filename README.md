@@ -112,3 +112,10 @@ sh local-validator-test.sh
 
 ### Tip Jar
   B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6
+
+### Debugging
+A fork of solana explorer with insruction decoding and fill log parsing has been made in
+[this repo](https://github.com/CKS-Systems/explorer/tree/master) which is hosted at
+[explorer.manifest.trade](https://explorer.manifest.trade/). Due to the lack of updates from anchor and hacky
+changes to get the explorer to handle parsing a non-anchor program, we are not
+currently going to try to backport our changes.
