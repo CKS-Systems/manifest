@@ -703,6 +703,26 @@ mod test {
         let accounts_map: AccountMap = HashMap::from([
             (MARKET_KEY, market_account),
             (quote_global_key, quote_global_account),
+            (
+                BASE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+            (
+                QUOTE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
         ]);
         manifest_market.update(&accounts_map).unwrap();
 
@@ -845,7 +865,29 @@ mod test {
         let mut manifest_market: ManifestLocalMarket =
             ManifestLocalMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([(MARKET_KEY, market_account)]);
+        let accounts_map: AccountMap = HashMap::from([
+            (MARKET_KEY, market_account),
+            (
+                BASE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+            (
+                QUOTE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+        ]);
         manifest_market.update(&accounts_map).unwrap();
 
         let (base_mint, quote_mint) = {
@@ -1113,5 +1155,55 @@ mod test {
         assert!(manifest_market.get_user_setup().is_none());
         assert!(!manifest_market.unidirectional());
         assert_eq!(manifest_market.program_dependencies().len(), 0);
+
+        let manifest_local_market: ManifestLocalMarket =
+            ManifestLocalMarket::from_keyed_account(&market_account, &amm_context).unwrap();
+        assert_eq!(manifest_local_market.label(), "Manifest");
+        assert_eq!(manifest_local_market.key(), MARKET_KEY);
+        assert_eq!(manifest_local_market.program_id(), manifest::id());
+        assert_eq!(manifest_local_market.get_accounts_to_update().len(), 3);
+        assert_eq!(manifest_local_market.get_accounts_len(), 11);
+        assert_eq!(manifest_local_market.get_reserve_mints()[0], BASE_MINT_KEY);
+        manifest_local_market.clone_amm();
+        assert!(!manifest_local_market.has_dynamic_accounts());
+        assert!(manifest_local_market.get_user_setup().is_none());
+        assert!(!manifest_local_market.unidirectional());
+        assert_eq!(manifest_local_market.program_dependencies().len(), 0);
+
+        let swap_params: SwapParams = SwapParams {
+            in_amount: 1,
+            source_mint: manifest_market.get_base_mint(),
+            destination_mint: manifest_market.get_quote_mint(),
+            source_token_account: Pubkey::new_unique(),
+            destination_token_account: Pubkey::new_unique(),
+            token_transfer_authority: TRADER_KEY,
+            missing_dynamic_accounts_as_default: false,
+            open_order_address: None,
+            quote_mint_to_referrer: None,
+            out_amount: 0,
+            jupiter_program_id: &manifest::id(),
+        };
+
+        let _results_forward: SwapAndAccountMetas = manifest_local_market
+            .get_swap_and_account_metas(&swap_params)
+            .unwrap();
+
+        let swap_params: SwapParams = SwapParams {
+            in_amount: 1,
+            source_mint: manifest_market.get_quote_mint(),
+            destination_mint: manifest_market.get_base_mint(),
+            source_token_account: Pubkey::new_unique(),
+            destination_token_account: Pubkey::new_unique(),
+            token_transfer_authority: TRADER_KEY,
+            missing_dynamic_accounts_as_default: false,
+            open_order_address: None,
+            quote_mint_to_referrer: None,
+            out_amount: 0,
+            jupiter_program_id: &manifest::id(),
+        };
+
+        let _results_backward: SwapAndAccountMetas = manifest_local_market
+            .get_swap_and_account_metas(&swap_params)
+            .unwrap();
     }
 }
