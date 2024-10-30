@@ -1,6 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Metaplex } from '@metaplex-foundation/js';
-import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { ENV, TokenInfo, TokenListProvider } from '@solana/spl-token-registry';
 import { Market } from '@cks-systems/manifest-sdk';
 import { LabelsByAddr } from './types';
@@ -61,7 +60,7 @@ export const fetchAndSetMfxAddrLabels = async (
     Array.from(mints.values()).map(async (m) => {
       try {
         if (localStorage.getItem(m)) {
-          mintLabels[m] = localStorage.getItem(m);
+          mintLabels[m] = localStorage.getItem(m)!;
         } else {
           const symbol = await getTokenSymbol(conn, new PublicKey(m));
           mintLabels[m] = symbol;
