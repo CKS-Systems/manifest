@@ -2,10 +2,7 @@
 
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import {
-  AccountInfo,
-  PublicKey,
-} from '@solana/web3.js';
+import { AccountInfo, PublicKey } from '@solana/web3.js';
 import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
