@@ -61,7 +61,11 @@ const Orderbook = ({
     initialLoad();
 
     const updateSlot = async (): Promise<void> => {
-      setCurrentSlot(await conn.getSlot());
+      try {
+        setCurrentSlot(await conn.getSlot());
+      } catch (err) {
+        console.error('getSlot:', err);
+      }
     };
     updateSlot();
     // 200 ms is half a slot, so we can expect this to update on each slot.
