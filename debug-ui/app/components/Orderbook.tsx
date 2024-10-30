@@ -1,13 +1,10 @@
 'use client';
 
-import { fetchMarket } from '@/lib/data';
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
   AccountInfo,
-  KeyedAccountInfo,
   PublicKey,
-  SlotUpdate,
 } from '@solana/web3.js';
 import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
@@ -15,7 +12,7 @@ import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
 import { formatPrice } from '@/lib/format';
-import { OrderType, PROGRAM_ID } from '@cks-systems/manifest-sdk/manifest';
+import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 
 const Orderbook = ({
   marketAddress,
@@ -74,7 +71,7 @@ const Orderbook = ({
     const id = setInterval(updateSlot, 200);
 
     return (): void => clearInterval(id);
-  }, [conn]);
+  }, [conn, marketAddress]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
