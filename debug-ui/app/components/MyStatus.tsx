@@ -8,7 +8,11 @@ import {
 } from '@cks-systems/manifest-sdk';
 import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
 import { WrapperOpenOrder } from '@cks-systems/manifest-sdk/wrapperObj';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
   PublicKey,
@@ -213,7 +217,12 @@ const MyStatus = ({
 
         try {
           const baseBalance = await conn.getTokenAccountBalance(
-            getAssociatedTokenAddressSync(market.baseMint(), signerPub),
+            getAssociatedTokenAddressSync(
+              market.baseMint(),
+              signerPub,
+              true,
+              mClient.isBase22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+            ),
           );
           setBaseWalletBalance(baseBalance.value.uiAmount!);
         } catch (err) {
@@ -222,7 +231,12 @@ const MyStatus = ({
         }
         try {
           const quoteBalance = await conn.getTokenAccountBalance(
-            getAssociatedTokenAddressSync(market.quoteMint(), signerPub),
+            getAssociatedTokenAddressSync(
+              market.quoteMint(),
+              signerPub,
+              true,
+              mClient.isQuote22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+            ),
           );
           setQuoteWalletBalance(quoteBalance.value.uiAmount!);
         } catch (err) {
