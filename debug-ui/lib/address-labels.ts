@@ -61,11 +61,11 @@ export const fetchAndSetMfxAddrLabels = async (
     Array.from(mints.values()).map(async (m) => {
       try {
         if (localStorage.getItem(m)) {
-            mintLabels[m] = localStorage.getItem(m);
+          mintLabels[m] = localStorage.getItem(m);
         } else {
-            const symbol = await getTokenSymbol(conn, new PublicKey(m));
-            mintLabels[m] = symbol;
-            localStorage.setItem(m, symbol);
+          const symbol = await getTokenSymbol(conn, new PublicKey(m));
+          mintLabels[m] = symbol;
+          localStorage.setItem(m, symbol);
         }
       } catch (e) {
         console.error('getTokenSymbol:', e);
