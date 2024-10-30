@@ -53,10 +53,14 @@ const Orderbook = ({
   useEffect(() => {
     // Initial load of the market.
     const initialLoad = async (): Promise<void> => {
-      const marketInfo: AccountInfo<Buffer> = (await conn.getAccountInfo(
-        new PublicKey(marketAddress),
-      ))!;
-      setMarketData(marketInfo.data);
+      try {
+        const marketInfo: AccountInfo<Buffer> = (await conn.getAccountInfo(
+          new PublicKey(marketAddress),
+        ))!;
+        setMarketData(marketInfo.data);
+      } catch (err) {
+        console.error('initialLoad:', err);
+      }
     };
     initialLoad();
 
