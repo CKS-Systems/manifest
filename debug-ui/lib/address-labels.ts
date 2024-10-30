@@ -72,7 +72,6 @@ export const fetchAndSetMfxAddrLabels = async (
       }
     }),
   );
-  console.log('localstorage', localStorage);
 
   const marketLabels: LabelsByAddr = {};
   for (const m of markets) {
