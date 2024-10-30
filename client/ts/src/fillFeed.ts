@@ -142,13 +142,7 @@ export class FillFeed {
         c.charCodeAt(0),
       );
       const buffer = Buffer.from(byteArray);
-      // Hack to fix the difference in caching on the CI action.
-      if (
-        !buffer.subarray(0, 8).equals(fillDiscriminant) &&
-        !buffer
-          .subarray(0, 8)
-          .equals(Buffer.from([52, 81, 147, 82, 119, 191, 72, 172]))
-      ) {
+      if (!buffer.subarray(0, 8).equals(fillDiscriminant)) {
         continue;
       }
       const deserializedFillLog: FillLog = FillLog.deserialize(
