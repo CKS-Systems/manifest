@@ -3,20 +3,26 @@
 import { fetchMarket } from '@/lib/data';
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import {
+  AccountInfo,
+  KeyedAccountInfo,
+  PublicKey,
+  SlotUpdate,
+} from '@solana/web3.js';
 import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
 import { formatPrice } from '@/lib/format';
-import { OrderType } from '@cks-systems/manifest-sdk/manifest';
+import { OrderType, PROGRAM_ID } from '@cks-systems/manifest-sdk/manifest';
 
 const Orderbook = ({
   marketAddress,
 }: {
   marketAddress: string;
 }): ReactElement => {
+  const [marketData, setMarketData] = useState<Buffer>();
   const [bids, setBids] = useState<RestingOrder[]>([]);
   const [asks, setAsks] = useState<RestingOrder[]>([]);
   const [currentSlot, setCurrentSlot] = useState<number>(0);
@@ -24,29 +30,51 @@ const Orderbook = ({
   const { connection: conn } = useConnection();
   const { wallet } = useWallet();
 
+  conn.onAccountChange(
+    new PublicKey(marketAddress),
+    (accountInfo: AccountInfo<Buffer>) => {
+      setMarketData(accountInfo.data);
+    },
+  );
+
   useEffect(() => {
-    const updateOrderbook = async (): Promise<void> => {
-      try {
-        const market: Market = await fetchMarket(
-          conn,
-          new PublicKey(marketAddress),
-        );
-        setCurrentSlot(market['slot']);
+    try {
+      if (marketData) {
+        const market: Market = Market.loadFromBuffer({
+          address: new PublicKey(marketAddress),
+          buffer: marketData,
+          slot: currentSlot,
+        });
         const asks: RestingOrder[] = market.asks();
         const bids: RestingOrder[] = market.bids();
         setBids(bids.reverse());
         setAsks(asks);
-      } catch (e) {
-        console.error('updateOrderbook:', e);
-        toast.error(`updateOrderbook: ${ensureError(e).message}`);
       }
-    };
+    } catch (e) {
+      console.error('updateOrderbook:', e);
+      toast.error(`updateOrderbook: ${ensureError(e).message}`);
+    }
+  }, [conn, currentSlot, marketData, marketAddress]);
 
-    updateOrderbook();
-    const id = setInterval(updateOrderbook, 2_000);
+  useEffect(() => {
+    // Initial load of the market.
+    const initialLoad = async (): Promise<void> => {
+      const marketInfo: AccountInfo<Buffer> = (await conn.getAccountInfo(
+        new PublicKey(marketAddress),
+      ))!;
+      setMarketData(marketInfo.data);
+    };
+    initialLoad();
+
+    const updateSlot = async (): Promise<void> => {
+      setCurrentSlot(await conn.getSlot());
+    };
+    updateSlot();
+    // 200 ms is half a slot, so we can expect this to update on each slot.
+    const id = setInterval(updateSlot, 200);
 
     return (): void => clearInterval(id);
-  }, [conn, marketAddress]);
+  }, [conn]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
