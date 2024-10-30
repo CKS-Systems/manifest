@@ -47,8 +47,6 @@
         "bn.js": "^5.2.1",
         "borsh": "^0.7.0",
         "bs58": "^6.0.0",
-        "express": "^4.21.0",
-        "express-prom-bundle": "^7.0.0",
         "js-sha256": "^0.11.0",
         "keccak256": "^1.0.6",
         "percentile": "^1.6.0",
