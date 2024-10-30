@@ -2666,10 +2666,6 @@
 <a href="#2664" id="2664">2664</a>
 <a href="#2665" id="2665">2665</a>
 <a href="#2666" id="2666">2666</a>
-<a href="#2667" id="2667">2667</a>
-<a href="#2668" id="2668">2668</a>
-<a href="#2669" id="2669">2669</a>
-<a href="#2670" id="2670">2670</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -2870,9 +2866,7 @@
 <span class="kw">where
     </span>T: GetRedBlackTreeReadOnlyData&lt;<span class="lifetime">'a</span>&gt;,
 {
-    <span class="comment">// TODO: Make unchecked versions of these to avoid unnecessary NIL checks
-    // when we already know the index is not NIL.
-    </span><span class="kw">fn </span>get_value&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V {
+    <span class="kw">fn </span>get_value&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V {
         <span class="macro">debug_assert_ne!</span>(index, NIL);
         <span class="kw">let </span>node: <span class="kw-2">&amp;</span>RBNode&lt;V&gt; = get_helper::&lt;RBNode&lt;V&gt;&gt;(<span class="self">self</span>.data(), index);
         <span class="kw-2">&amp;</span>node.value
@@ -2917,9 +2911,7 @@
     }
 
     <span class="kw">fn </span>is_left_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool {
-        <span class="comment">// TODO: Explore if we can store is_left_child and is_right_child in the
-        // empty bits after color to avoid the compute of checking the parent.
-        </span><span class="kw">if </span>index == <span class="self">self</span>.root_index() {
+        <span class="kw">if </span>index == <span class="self">self</span>.root_index() {
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="kw">let </span>parent_index: DataIndex = <span class="self">self</span>.get_parent_index::&lt;V&gt;(index);
