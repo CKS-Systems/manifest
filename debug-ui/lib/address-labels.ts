@@ -37,19 +37,6 @@ export const getTokenSymbol = async (
   return tokenSymbol || shortenPub(mintPub);
 };
 
-export const checkForBase22 = async (
-  conn: Connection,
-  mint: PublicKey,
-): Promise<boolean> => {
-  const acc = await conn.getAccountInfo(mint);
-  if (!acc) {
-    throw new Error('checkForBase22: account does not exist');
-  }
-
-  return acc.owner === TOKEN_2022_PROGRAM_ID;
-};
-
-// TODO: find a way to cache this between reloads or some other way to prevent rate limiting...
 export const fetchAndSetMfxAddrLabels = async (
   conn: Connection,
   marketAddrs: Array<string>,
@@ -73,14 +60,19 @@ export const fetchAndSetMfxAddrLabels = async (
   await Promise.all(
     Array.from(mints.values()).map(async (m) => {
       try {
-        const symbol = await getTokenSymbol(conn, new PublicKey(m));
-
-        mintLabels[m] = symbol;
+        if (localStorage.getItem(m)) {
+            mintLabels[m] = localStorage.getItem(m);
+        } else {
+            const symbol = await getTokenSymbol(conn, new PublicKey(m));
+            mintLabels[m] = symbol;
+            localStorage.setItem(m, symbol);
+        }
       } catch (e) {
         console.error('getTokenSymbol:', e);
       }
     }),
   );
+  console.log('localstorage', localStorage);
 
   const marketLabels: LabelsByAddr = {};
   for (const m of markets) {
