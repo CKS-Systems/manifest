@@ -1,7 +1,9 @@
 use std::{mem::size_of, rc::Rc};
 
-use hypertree::{get_helper, DataIndex, HyperTreeReadOperations, RBNode, NIL};
-use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType};
+use hypertree::{
+    get_helper, DataIndex, HyperTreeReadOperations, RBNode, RedBlackTreeTestHelpers, NIL,
+};
+use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType, RestingOrder};
 use solana_program::instruction::Instruction;
 use solana_program_test::tokio;
 use solana_sdk::{account::Account, pubkey::Pubkey, signature::Keypair, signer::Signer};
@@ -399,6 +401,82 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
         get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value();
     let orders_root_index: DataIndex = market_info.orders_root_index;
     assert_eq!(orders_root_index, NIL, "Deleted all orders in cancel all");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn wrapper_ignore_post_only() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture.deposit(Token::SOL, 2 * SOL_UNIT_SIZE).await?;
+    test_fixture
+        .deposit(Token::USDC, 2 * USDC_UNIT_SIZE)
+        .await?;
+
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market.key,
+        &payer,
+        &test_fixture.wrapper.key,
+        vec![],
+        false,
+        vec![WrapperPlaceOrderParams::new(
+            0,
+            1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            false,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )],
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    // This post only will cross, so it should not get placed.
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market.key,
+        &payer,
+        &test_fixture.wrapper.key,
+        vec![],
+        false,
+        vec![WrapperPlaceOrderParams::new(
+            0,
+            1 * SOL_UNIT_SIZE,
+            2,
+            0,
+            true,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::PostOnly,
+        )],
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    test_fixture.market.reload().await;
+    // There is just one ask and did not match due to post only.
+    assert_eq!(
+        test_fixture
+            .market
+            .market
+            .get_asks()
+            .node_iter::<RBNode<RestingOrder>>()
+            .count(),
+        1
+    );
 
     Ok(())
 }

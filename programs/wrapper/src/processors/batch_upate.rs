@@ -162,7 +162,6 @@ fn prepare_orders(
         get_dynamic_account::<MarketFixed>(&market_data);
     let best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
     let best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
-    drop(market_ref);
 
     let best_ask_price: QuoteAtomsPerBaseAtom =
         get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
