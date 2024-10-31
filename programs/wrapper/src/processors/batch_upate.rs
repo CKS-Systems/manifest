@@ -183,15 +183,14 @@ fn prepare_orders(
                 // if they do not have the funds on the exchange that the orders
                 // require.
                 let mut num_base_atoms: u64 = order.base_atoms;
+                let price: QuoteAtomsPerBaseAtom =
+                    QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+                        order.price_mantissa,
+                        order.price_exponent,
+                    )
+                    .unwrap();
                 if order.order_type != OrderType::Global {
                     if order.is_bid {
-                        let price: QuoteAtomsPerBaseAtom =
-                            QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-                                order.price_mantissa,
-                                order.price_exponent,
-                            )
-                            .unwrap();
-
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price > best_ask_price && order.order_type == OrderType::PostOnly {
                             num_base_atoms = 0;
@@ -207,13 +206,6 @@ fn prepare_orders(
                         }
                     } else {
                         let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
-
-                        let price: QuoteAtomsPerBaseAtom =
-                            QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-                                order.price_mantissa,
-                                order.price_exponent,
-                            )
-                            .unwrap();
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price < best_bid_price && order.order_type == OrderType::PostOnly {
                             num_base_atoms = 0;
