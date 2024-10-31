@@ -1,7 +1,7 @@
 use std::{mem::size_of, rc::Rc};
 
 use hypertree::{
-    get_helper, DataIndex, HyperTreeReadOperations, HyperTreeValueIteratorTrait, RBNode, NIL
+    get_helper, DataIndex, HyperTreeReadOperations, HyperTreeValueIteratorTrait, RBNode, NIL,
 };
 use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType, RestingOrder};
 use solana_program::instruction::Instruction;
