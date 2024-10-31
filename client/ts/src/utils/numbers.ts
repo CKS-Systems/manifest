@@ -11,7 +11,7 @@ export function toNum(n: bignum): number {
   if (typeof n === 'number') {
     target = n;
   } else {
-    target = n.toNumber();
+    target = n.toString() as any as number;
   }
   return target;
 }
