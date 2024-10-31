@@ -163,14 +163,20 @@ fn prepare_orders(
     let best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
     let best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
 
-    let best_ask_price: QuoteAtomsPerBaseAtom =
+    let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
         get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
             .get_value()
-            .get_price();
-    let best_bid_price: QuoteAtomsPerBaseAtom =
+            .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MAX
+    };
+    let best_bid_price: QuoteAtomsPerBaseAtom = if best_bid_index != NIL {
         get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
             .get_value()
-            .get_price();
+            .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MIN
+    };
 
     let mut result: Vec<PlaceOrderParams> = Vec::with_capacity(orders.len());
     result.extend(
