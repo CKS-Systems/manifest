@@ -215,7 +215,7 @@ fn prepare_orders(
                             )
                             .unwrap();
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
-                        if price > best_ask_price && order.order_type == OrderType::PostOnly {
+                        if price < best_bid_price && order.order_type == OrderType::PostOnly {
                             num_base_atoms = 0;
                         } else {
                             if desired > *remaining_base_atoms {
