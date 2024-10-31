@@ -198,8 +198,6 @@ impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
     T: GetRedBlackTreeReadOnlyData<'a>,
 {
-    // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
-    // when we already know the index is not NIL.
     fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
@@ -245,8 +243,6 @@ where
     }
 
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
-        // TODO: Explore if we can store is_left_child and is_right_child in the
-        // empty bits after color to avoid the compute of checking the parent.
         if index == self.root_index() {
             return false;
         }
