@@ -24,12 +24,18 @@ const Orderbook = ({
   const { connection: conn } = useConnection();
   const { wallet } = useWallet();
 
-  conn.onAccountChange(
-    new PublicKey(marketAddress),
-    (accountInfo: AccountInfo<Buffer>) => {
-      setMarketData(accountInfo.data);
-    },
-  );
+  useEffect(() => {
+    const accountChangeListenerId: number = conn.onAccountChange(
+      new PublicKey(marketAddress),
+      (accountInfo: AccountInfo<Buffer>) => {
+        setMarketData(accountInfo.data);
+      },
+    );
+
+    return () => {
+      conn.removeAccountChangeListener(accountChangeListenerId);
+    };
+  }, [marketAddress]);
 
   useEffect(() => {
     try {
