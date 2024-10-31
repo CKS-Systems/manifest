@@ -16,7 +16,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
-  getMint,
+  unpackMint,
 } from '@solana/spl-token';
 import {
   createCreateMarketInstruction,
@@ -64,8 +64,8 @@ const marketDiscriminator: Buffer = genAccDiscriminator(
 );
 
 export class ManifestClient {
-  private isBase22: boolean;
-  private isQuote22: boolean;
+  public isBase22: boolean;
+  public isQuote22: boolean;
 
   private constructor(
     public connection: Connection,
@@ -184,8 +184,20 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+    const baseMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(baseMintPk))!;
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo.owner,
+    );
+    const quoteMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(quoteMintPk))!;
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo.owner,
+    );
     const baseGlobal: Global | null = await Global.loadFromAddress({
       connection,
       address: getGlobalAddress(baseMint.address),
@@ -412,8 +424,20 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+    const baseMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(baseMintPk))!;
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo.owner,
+    );
+    const quoteMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(quoteMintPk))!;
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo.owner,
+    );
 
     const userWrapper = await ManifestClient.fetchFirstUserWrapper(
       connection,
@@ -471,8 +495,20 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+    const baseMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(baseMintPk))!;
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo.owner,
+    );
+    const quoteMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(quoteMintPk))!;
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo.owner,
+    );
     const baseGlobal: Global | null = await Global.loadFromAddress({
       connection,
       address: getGlobalAddress(baseMint.address),
@@ -1222,8 +1258,14 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const global: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
     return createGlobalCreateInstruction({
       payer,
       global,
@@ -1275,9 +1317,15 @@ export class ManifestClient {
       globalMint,
       payer,
     );
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
-    const mintDecimals = mintInfo.decimals;
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
+    const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
     return createGlobalDepositInstruction(
@@ -1319,9 +1367,15 @@ export class ManifestClient {
       globalMint,
       payer,
     );
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
-    const mintDecimals = mintInfo.decimals;
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
+    const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
     return createGlobalWithdrawInstruction(
