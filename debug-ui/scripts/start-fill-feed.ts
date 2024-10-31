@@ -3,6 +3,9 @@ import 'dotenv/config';
 import { FillFeed } from '@cks-systems/manifest-sdk/fillFeed';
 import { Connection } from '@solana/web3.js';
 import { sleep } from '@/lib/util';
+import * as promClient from 'prom-client';
+import express from 'express';
+import promBundle from 'express-prom-bundle';
 
 const { RPC_URL } = process.env;
 
@@ -28,6 +31,27 @@ const monitorFeed = async (feed: FillFeed) => {
 };
 
 const run = async () => {
+  // Prometheus monitoring for this feed on the default prometheus port.
+  promClient.collectDefaultMetrics({
+    labels: {
+      app: 'fillFeed',
+    },
+  });
+
+  const register = new promClient.Registry();
+  register.setDefaultLabels({
+    app: 'fillFeed',
+  });
+  const metricsApp = express();
+  metricsApp.listen(9090);
+
+  const promMetrics = promBundle({
+    includeMethod: true,
+    metricsApp,
+    autoregister: false,
+  });
+  metricsApp.use(promMetrics);
+
   const timeoutMs = 5_000;
 
   console.log('starting feed...');
