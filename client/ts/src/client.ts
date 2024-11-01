@@ -614,13 +614,15 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      mint,
-      payer,
-    );
     const is22: boolean =
       (mint.equals(this.baseMint.address) && this.isBase22) ||
       (mint.equals(this.quoteMint.address) && this.isQuote22);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      mint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
@@ -664,13 +666,15 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      mint,
-      payer,
-    );
     const is22: boolean =
       (mint.equals(this.baseMint.address) && this.isBase22) ||
       (mint.equals(this.quoteMint.address) && this.isQuote22);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      mint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
@@ -924,10 +928,14 @@ export class ManifestClient {
     const traderBase: PublicKey = getAssociatedTokenAddressSync(
       this.baseMint.address,
       payer,
+      true,
+      this.isBase22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const traderQuote: PublicKey = getAssociatedTokenAddressSync(
       this.quoteMint.address,
       payer,
+      true,
+      this.isQuote22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const baseVault: PublicKey = getVaultAddress(
       this.market.address,
@@ -1313,10 +1321,6 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const globalAddress: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      globalMint,
-      payer,
-    );
     const globalMintAccountInfo: AccountInfo<Buffer> =
       (await connection.getAccountInfo(globalMint))!;
     const mint: Mint = unpackMint(
@@ -1325,6 +1329,12 @@ export class ManifestClient {
       globalMintAccountInfo.owner,
     );
     const is22: boolean = mint.tlvData.length > 0;
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      globalMint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
@@ -1363,10 +1373,6 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const globalAddress: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      globalMint,
-      payer,
-    );
     const globalMintAccountInfo: AccountInfo<Buffer> =
       (await connection.getAccountInfo(globalMint))!;
     const mint: Mint = unpackMint(
@@ -1375,6 +1381,12 @@ export class ManifestClient {
       globalMintAccountInfo.owner,
     );
     const is22: boolean = mint.tlvData.length > 0;
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      globalMint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
