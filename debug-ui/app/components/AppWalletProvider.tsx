@@ -21,6 +21,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import WalletConnection from './WalletConnection';
 import { ManifestClient, Market } from '@cks-systems/manifest-sdk';
 import {
+  AccountInfo,
   Connection,
   GetProgramAccountsResponse,
   PublicKey,
@@ -32,7 +33,7 @@ import {
   getClusterFromConnection,
 } from '@cks-systems/manifest-sdk/utils/solana';
 import NavBar from './NavBar';
-import { LabelsByAddr } from '@/lib/types';
+import { ActiveByAddr, LabelsByAddr, VolumeByAddr } from '@/lib/types';
 import { fetchAndSetMfxAddrLabels } from '@/lib/address-labels';
 
 require('react-toastify/dist/ReactToastify.css');
@@ -42,11 +43,13 @@ interface AppStateContextValue {
   loading: boolean;
   network: WalletAdapterNetwork | null;
   marketAddrs: string[];
-  marketVolumes: [string, number][];
   labelsByAddr: LabelsByAddr;
+  activeByAddr: ActiveByAddr;
+  marketVolumes: VolumeByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
-  setMarketVolumes: Dispatch<SetStateAction<[string, number][]>>;
+  setActiveByAddr: Dispatch<SetStateAction<ActiveByAddr>>;
+  setMarketVolumes: Dispatch<SetStateAction<VolumeByAddr>>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
@@ -68,8 +71,9 @@ const AppWalletProvider = ({
 }): ReactElement => {
   const [network, setNetwork] = useState<WalletAdapterNetwork | null>(null);
   const [marketAddrs, setMarketAddrs] = useState<string[]>([]);
-  const [marketVolumes, setMarketVolumes] = useState<[string, number][]>([]);
+  const [marketVolumes, setMarketVolumes] = useState<VolumeByAddr>({});
   const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
+  const [activeByAddr, setActiveByAddr] = useState<ActiveByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
   const setupRun = useRef(false);
 
@@ -123,8 +127,11 @@ const AppWalletProvider = ({
           (a) => a.pubkey,
         );
         const marketAddrs: string[] = marketPubs.map((p) => p.toBase58());
-        const marketVolumes: [string, number][] = marketProgramAccounts.map(
-          (a) => {
+        const volumeByAddr: VolumeByAddr = {};
+        marketProgramAccounts.forEach(
+          (
+            a: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
+          ) => {
             const market: Market = Market.loadFromBuffer({
               address: a.pubkey,
               buffer: a.account.data,
@@ -133,16 +140,59 @@ const AppWalletProvider = ({
               market.quoteMint().toBase58() ==
               'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
             ) {
-              return [
-                market.address.toBase58(),
-                Number(market.quoteVolume()) / 10 ** 6,
-              ];
+              volumeByAddr[market.address.toBase58()] =
+                Number(market.quoteVolume()) / 10 ** 6;
+            } else {
+              volumeByAddr[market.address.toBase58()] = 0;
             }
-            return [market.address.toBase58(), 0];
           },
         );
         setMarketAddrs(marketAddrs);
-        setMarketVolumes(marketVolumes);
+        setMarketVolumes(volumeByAddr);
+
+        // Fine to do an N^2 search until the number of markets gets too big.
+        const activeByAddr: ActiveByAddr = {};
+        marketProgramAccounts.forEach(
+          (
+            acct1: Readonly<{
+              account: AccountInfo<Buffer>;
+              pubkey: PublicKey;
+            }>,
+          ) => {
+            const market: Market = Market.loadFromBuffer({
+              address: acct1.pubkey,
+              buffer: acct1.account.data,
+            });
+            let foundBigger: boolean = false;
+
+            marketProgramAccounts.forEach(
+              (
+                acct2: Readonly<{
+                  account: AccountInfo<Buffer>;
+                  pubkey: PublicKey;
+                }>,
+              ) => {
+                const market2: Market = Market.loadFromBuffer({
+                  address: acct2.pubkey,
+                  buffer: acct2.account.data,
+                });
+                if (
+                  market.baseMint().toString() ==
+                    market2.baseMint().toString() &&
+                  market.quoteMint().toString() ==
+                    market2.quoteMint().toString() &&
+                  volumeByAddr[market2.address.toBase58()] >
+                    volumeByAddr[market.address.toBase58()]
+                ) {
+                  foundBigger = true;
+                }
+              },
+            );
+            activeByAddr[market.address.toBase58()] = !foundBigger;
+          },
+        );
+        setActiveByAddr(activeByAddr);
+
         fetchAndSetMfxAddrLabels(conn, marketAddrs, setLabelsByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
@@ -175,10 +225,12 @@ const AppWalletProvider = ({
               network,
               marketAddrs,
               marketVolumes,
+              activeByAddr,
               labelsByAddr,
               setLabelsByAddr,
               setMarketAddrs,
               setMarketVolumes,
+              setActiveByAddr,
               loading,
             }}
           >
