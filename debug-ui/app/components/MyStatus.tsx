@@ -280,7 +280,7 @@ const MyStatus = ({
         );
         if (mClient.quoteGlobal) {
           setQuoteGlobalBalance(
-            await mClient.quoteGlobal.getGlobalBalanceTokens(conn, signerPub)
+            await mClient.quoteGlobal.getGlobalBalanceTokens(conn, signerPub),
           );
         }
       };
@@ -321,11 +321,9 @@ const MyStatus = ({
           <ul>
             <li>Base: {baseExchangeBalance}</li>
             <li>Quote: {quoteExchangeBalance}</li>
-            {
-              quoteGlobalBalance != 0 && (
-                <li>Global Quote: {quoteGlobalBalance}</li>
-              )
-            }
+            {quoteGlobalBalance != 0 && (
+              <li>Global Quote: {quoteGlobalBalance}</li>
+            )}
           </ul>
         </pre>
 
