@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730322932883,
+  "lastUpdate": 1730762144374,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8023,6 +8023,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6051,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d67a2f8d6d4e8ca7542edb84ef28b4349223c51",
+          "message": "Comment explaining why we dont partial fill against a global (#252)\n\nComment explaining why we dont partial flil against a global",
+          "timestamp": "2024-11-04T17:50:38-05:00",
+          "tree_id": "0012b8e6aa0e195fdbc1c983e5842e4adc9db77e",
+          "url": "https://github.com/CKS-Systems/manifest/commit/2d67a2f8d6d4e8ca7542edb84ef28b4349223c51"
+        },
+        "date": 1730762142667,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3539,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5578,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6161,
             "unit": "CU",
             "range": "",
             "extra": ""
