@@ -44,6 +44,7 @@ const MyStatus = ({
   const [quoteMint, setQuoteMint] = useState<string>('');
   const [baseExchangeBalance, setBaseExchangeBalance] = useState<number>(0);
   const [quoteExchangeBalance, setQuoteExchangeBalance] = useState<number>(0);
+  const [quoteGlobalBalance, setQuoteGlobalBalance] = useState<number>(0);
   const [myBids, setMyBids] = useState<RestingOrder[]>([]);
   const [myAsks, setMyAsks] = useState<RestingOrder[]>([]);
   const [myWrapperOpenOrders, setMyWrapperOpenOrders] = useState<
@@ -277,6 +278,11 @@ const MyStatus = ({
         setQuoteExchangeBalance(
           market.getWithdrawableBalanceTokens(signerPub, false),
         );
+        if (mClient.quoteGlobal) {
+          setQuoteGlobalBalance(
+            await mClient.quoteGlobal.getGlobalBalanceTokens(conn, signerPub),
+          );
+        }
       };
 
       updateState().catch((e) => {
@@ -315,6 +321,9 @@ const MyStatus = ({
           <ul>
             <li>Base: {baseExchangeBalance}</li>
             <li>Quote: {quoteExchangeBalance}</li>
+            {quoteGlobalBalance != 0 && (
+              <li>Global Quote: {quoteGlobalBalance}</li>
+            )}
           </ul>
         </pre>
 
