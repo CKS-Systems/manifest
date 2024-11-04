@@ -320,6 +320,10 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -552,7 +556,12 @@
 
     <span class="kw">let </span>num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader);
-    <span class="kw">if </span>desired_global_atoms &gt; num_deposited_atoms {
+    <span class="comment">// Intentionally does not allow partial fills against a global order. The
+    // reason for this is to punish global orders that are not backed. There is
+    // no technical blocker for supporting partial fills against a global. It is
+    // just because of the mechanism design where we want global to only be used
+    // when needed, not just for all orders.
+    </span><span class="kw">if </span>desired_global_atoms &gt; num_deposited_atoms {
         emit_stack(GlobalCleanupLog {
             cleaner: <span class="kw-2">*</span>gas_receiver_opt.as_ref().unwrap().key,
             maker: <span class="kw-2">*</span>resting_order_trader,
@@ -561,9 +570,8 @@
         })<span class="question-mark">?</span>;
         <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
     }
-    <span class="comment">// TODO: Allow matching against a global that can only partially fill the order.
 
-    // Update the GlobalTrader
+    <span class="comment">// Update the GlobalTrader
     </span>global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>mint_key: <span class="kw-2">&amp;</span>Pubkey = global_dynamic_account.fixed.get_mint();
