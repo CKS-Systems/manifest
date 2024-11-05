@@ -90,7 +90,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         return localStorage.getItem(slot.toString())!;
       } else {
         const timestamp: number = (await conn.getBlockTime(slot))!;
-        const dateString: string = new Date(timestamp * 1_000).toISOString();
+        const dateString: string = new Date(timestamp * 1_000).toTimeString();
         localStorage.setItem(slot.toString(), dateString);
         return dateString;
       }
@@ -106,18 +106,19 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         <table className="table-auto w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-700">
+              <th className="pb-2">Timestamp</th>
               <th className="pb-2">Price</th>
               <th className="pb-2">Base Tokens</th>
               <th className="pb-2">Maker</th>
               <th className="pb-2">Taker</th>
               <th className="pb-2">Taker Side</th>
               <th className="pb-2">Signature</th>
-              <th className="pb-2">Timestamp</th>
             </tr>
           </thead>
           <tbody>
             {fills.map((fill: FillResultUi, i) => (
               <tr key={i} className="border-b border-gray-700">
+                <td className="py-2">{fill.dateString}</td>
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
                 <td className="py-2">
@@ -138,7 +139,6 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                     {fill.signature.substring(0, 5) + '...'}
                   </a>
                 </td>
-                <td className="py-2">{fill.dateString}</td>
               </tr>
             ))}
           </tbody>
