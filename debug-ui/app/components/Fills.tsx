@@ -83,12 +83,14 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   });
 
   async function slotToTimestamp(slot: number): Promise<string> {
+    // Local storage isnt necessary here, but if we do ever start saving fills
+    // for page refresh, it will be.
     try {
       if (localStorage.getItem(slot.toString())) {
         return localStorage.getItem(slot.toString())!;
       } else {
         const timestamp: number = (await conn.getBlockTime(slot))!;
-        const dateString: string = new Date(timestamp).toISOString();
+        const dateString: string = new Date(timestamp * 1_000).toISOString();
         localStorage.setItem(slot.toString(), dateString);
         return dateString;
       }
