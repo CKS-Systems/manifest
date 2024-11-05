@@ -90,7 +90,9 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         return localStorage.getItem(slot.toString())!;
       } else {
         const timestamp: number = (await conn.getBlockTime(slot))!;
-        const dateString: string = new Date(timestamp * 1_000).toTimeString();
+        const dateString: string = new Date(timestamp * 1_000)
+          .toTimeString()
+          .slice(0, 9);
         localStorage.setItem(slot.toString(), dateString);
         return dateString;
       }
