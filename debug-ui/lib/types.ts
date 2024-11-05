@@ -24,4 +24,5 @@ export type FillResultUi = {
   takerSide: string;
   signature: string;
   slot: number;
+  dateString: string;
 };
