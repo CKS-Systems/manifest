@@ -465,52 +465,66 @@ export class UiWrapper {
     payer: PublicKey,
     args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
-    const markets = await Market.findByMints(connection, baseMint, quoteMint);
-    const market = markets.length > 0 ? markets[0] : null;
-    if (market != null) {
-      const wrapper = await UiWrapper.fetchFirstUserWrapper(connection, owner);
-      if (wrapper) {
-        const wrapperParsed = UiWrapper.loadFromBuffer({
-          address: wrapper.pubkey,
-          buffer: wrapper.account.data,
-        });
-        const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
-        return { ixs: [placeIx], signers: [] };
-      } else {
-        const setup = await this.setupIxs(connection, owner, payer);
-        const wrapper = setup.signers[0].publicKey;
-        const place = await this.placeIx_(market, wrapper, owner, payer, args);
-        return {
-          ixs: [...setup.ixs, ...place.ixs],
-          signers: [...setup.signers, ...place.signers],
-        };
-      }
-    } else {
+    const ixs: TransactionInstruction[] = [];
+    const signers: Signer[] = [];
+
+    const [markets, wrapper] = await Promise.all([
+      Market.findByMints(connection, baseMint, quoteMint),
+      UiWrapper.fetchFirstUserWrapper(connection, owner),
+    ]);
+    let market = markets.length > 0 ? markets[0] : null;
+    let wrapperPk = wrapper?.pubkey;
+
+    if (!market) {
       const marketIxs = await Market.setupIxs(
         connection,
         baseMint,
         quoteMint,
         payer,
       );
-      const market = {
+      market = {
         address: marketIxs.signers[0].publicKey,
         baseMint: () => baseMint,
         quoteMint: () => quoteMint,
         baseDecimals: () => baseDecimals,
         quoteDecimals: () => quoteDecimals,
-      };
-      const wrapperIxs = await this.setupIxs(connection, owner, payer);
-      const wrapper = wrapperIxs.signers[0].publicKey;
-      const placeIx = await this.placeIx_(market, wrapper, owner, payer, args);
-      return {
-        ixs: [...marketIxs.ixs, ...wrapperIxs.ixs, ...placeIx.ixs],
-        signers: [
-          ...marketIxs.signers,
-          ...wrapperIxs.signers,
-          ...placeIx.signers,
-        ],
-      };
+      } as Market;
+
+      ixs.push(...marketIxs.ixs);
+      signers.push(...marketIxs.signers);
     }
+
+    if (!wrapper) {
+      const setup = await this.setupIxs(connection, owner, payer);
+      wrapperPk = setup.signers[0].publicKey;
+
+      ixs.push(...setup.ixs);
+      signers.push(...setup.signers);
+    }
+
+    if (wrapper) {
+      const wrapperParsed = UiWrapper.loadFromBuffer({
+        address: wrapper.pubkey,
+        buffer: wrapper.account.data,
+      });
+      const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
+      ixs.push(placeIx);
+    } else {
+      const placeIx = await this.placeIx_(
+        market,
+        wrapperPk!,
+        owner,
+        payer,
+        args,
+      );
+      ixs.push(...placeIx.ixs);
+      signers.push(...placeIx.signers);
+    }
+
+    return {
+      ixs,
+      signers,
+    };
   }
 
   public static async setupIxs(
