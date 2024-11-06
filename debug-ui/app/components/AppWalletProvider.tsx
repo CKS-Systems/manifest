@@ -147,6 +147,9 @@ const AppWalletProvider = ({
             }
           },
         );
+        marketAddrs.sort((addr1: string, addr2: string) => {
+          return volumeByAddr[addr2] - volumeByAddr[addr1];
+        });
         setMarketAddrs(marketAddrs);
         setMarketVolumes(volumeByAddr);
 
