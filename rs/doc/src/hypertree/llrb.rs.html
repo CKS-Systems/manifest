@@ -1308,7 +1308,7 @@
             <span class="kw">if </span>to_delete_index == current_index {
                 <span class="comment">// Swap with the successor
                 </span><span class="kw">let </span>min: DataIndex = <span class="self">self</span>.get_min(<span class="self">self</span>.get_right_index::&lt;V&gt;(current_index));
-                <span class="self">self</span>.swap_nodes::&lt;V&gt;(current_index, min);
+                <span class="self">self</span>.swap_node_with_successor::&lt;V&gt;(current_index, min);
 
                 <span class="comment">// deleteMin on the right subtree
                 </span><span class="kw">let </span>right_index: DataIndex = <span class="self">self</span>.get_right_index::&lt;V&gt;(min);
