@@ -87,6 +87,9 @@ pub(crate) fn process_swap(
     // This check is redundant with the check that will be done within token
     // program on deposit, but it is done here to future proof in case we later
     // remove checked math.
+    // This actually adds a new restriction that the wallet can fully fund the
+    // swap instead of a combination of wallet and existing withdrawable
+    // balance.
     if is_exact_in {
         if is_base_in {
             require!(
