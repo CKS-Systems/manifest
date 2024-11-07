@@ -92,13 +92,17 @@ pub(crate) fn process_swap(
             require!(
                 in_atoms <= trader_base_account.get_balance_atoms(),
                 ManifestError::Overflow,
-                "Insufficient in atoms for swap"
+                "Insufficient in atoms for swap has: {} requires: {}",
+                trader_base_account.get_balance_atoms(),
+                in_atoms,
             )?;
         } else {
             require!(
                 in_atoms <= trader_quote_account.get_balance_atoms(),
                 ManifestError::Overflow,
-                "Insufficient in atoms for swap"
+                "Insufficient in atoms for swap has: {} requires: {}",
+                trader_quote_account.get_balance_atoms(),
+                in_atoms,
             )?;
         }
     }
