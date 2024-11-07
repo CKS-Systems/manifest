@@ -251,6 +251,90 @@
       "expected_result": "Verified",
       "prover_options": [],
       "cargo_features": []
-    }	     
+    },
+    {
+      "name": "rule_matching_if_maker_order_exists_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_if_maker_order_exists_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_crossed_prices_if_matched_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_crossed_prices_if_matched_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_place_single_order_full_match_balances_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_place_single_order_full_match_balances_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_place_single_order_partial_match_balances_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_place_single_order_partial_match_balances_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_order_removed_if_fully_matched_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_order_removed_if_fully_matched_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_fully_matched_if_order_removed_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_fully_matched_if_order_removed_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_decrease_maker_order_atoms_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },   
+    {
+      "name": "rule_matching_decrease_maker_order_atoms_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    }
   ]
 }

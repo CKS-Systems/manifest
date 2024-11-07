@@ -8,6 +8,7 @@ pub mod place_order_checks;
 pub mod no_funds_loss_util;
 pub mod cancel_order_checks;
 pub mod batch_update_checks;
+pub mod matching_checks;
 
 /// Utility functions for verification.
 pub(crate) mod verification_utils {

@@ -1371,6 +1371,7 @@ fn remove_order_from_tree(
 }
 
 // Remove order from the tree, free the block.
+#[cfg_attr(feature = "certora", cvt_hook_end(remove_order_from_tree_and_free_was_called()))]
 fn remove_order_from_tree_and_free(
     fixed: &mut MarketFixed,
     dynamic: &mut [u8],
