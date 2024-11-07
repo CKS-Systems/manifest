@@ -83,7 +83,7 @@ pub(crate) fn process_swap(
     } = SwapParams::try_from_slice(data)?;
 
     trace!("swap in_atoms:{in_atoms} out_atoms:{out_atoms} is_base_in:{is_base_in} is_exact_in:{is_exact_in}");
-    
+
     // This check is redundant with the check that will be done within token
     // program on deposit, but it is done here to future proof in case we later
     // remove checked math.
