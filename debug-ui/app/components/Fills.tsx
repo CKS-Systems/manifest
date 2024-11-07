@@ -112,7 +112,9 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={'https://explorer.manifest.trade/tx/' + fill.signature}
+                    href={
+                      'https://explorer.manifest.trade/tx/' + fill.signature
+                    }
                   >
                     {fill.signature.substring(0, 5) + '...'}
                   </a>
