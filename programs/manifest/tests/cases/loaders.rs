@@ -265,7 +265,6 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
         .mint_to(&test_fixture.payer_usdc_fixture.key, 1 * USDC_UNIT_SIZE)
         .await;
 
-
     test_fixture
         .place_order(
             Side::Ask,
