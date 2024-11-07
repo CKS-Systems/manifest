@@ -256,6 +256,14 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
     test_fixture
         .deposit(Token::USDC, USDC_UNIT_SIZE * 1_000)
         .await?;
+    test_fixture
+        .sol_mint_fixture
+        .mint_to(&test_fixture.payer_sol_fixture.key, 1 * SOL_UNIT_SIZE)
+        .await;
+    test_fixture
+        .usdc_mint_fixture
+        .mint_to(&test_fixture.payer_usdc_fixture.key, 1 * USDC_UNIT_SIZE)
+        .await;
 
     test_fixture
         .place_order(
