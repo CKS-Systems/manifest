@@ -131,12 +131,13 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                   <SolscanAddrLink address={fill.taker} />
                 </td>
                 <td className="py-2">{fill.takerSide}</td>
-                {/* Uses the public block explorer because the enhanced one does not have a good public RPC */}
                 <td className="py-2">
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={'https://explorer.solana.com/tx/' + fill.signature}
+                    href={
+                      'https://explorer.manifest.trade/tx/' + fill.signature
+                    }
                   >
                     {fill.signature.substring(0, 5) + '...'}
                   </a>
