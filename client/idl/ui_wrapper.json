@@ -649,6 +649,7 @@
           "name": "referrerTokenAccount",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Referrer fee token account"
           ]
