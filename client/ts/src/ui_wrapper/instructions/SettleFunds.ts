@@ -71,7 +71,7 @@ export type SettleFundsInstructionAccounts = {
   tokenProgramQuote: web3.PublicKey;
   manifestProgram: web3.PublicKey;
   platformTokenAccount: web3.PublicKey;
-  referrerTokenAccount: web3.PublicKey;
+  referrerTokenAccount: web3.PublicKey | null;
 };
 
 export const settleFundsInstructionDiscriminator = 5;
@@ -161,12 +161,15 @@ export function createSettleFundsInstruction(
       isWritable: true,
       isSigner: false,
     },
-    {
+  ];
+
+  if (accounts.referrerTokenAccount) {
+    keys.push({
       pubkey: accounts.referrerTokenAccount,
       isWritable: true,
       isSigner: false,
-    },
-  ];
+    });
+  }
 
   const ix = new web3.TransactionInstruction({
     programId,
