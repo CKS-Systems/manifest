@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731019471984,
+  "lastUpdate": 1731096691681,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8221,6 +8221,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6075,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e991c07396e1c72b985ad722be6a59966854e5ed",
+          "message": "Update ui wrapper idl for making refer optional (#264)\n\n* Update ui wrapper idl for making refer optional\r\n\r\n* version bump\r\n\r\n* update version",
+          "timestamp": "2024-11-08T14:46:07-05:00",
+          "tree_id": "37778adf5de2af3079785b42c08a192789a486c7",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e991c07396e1c72b985ad722be6a59966854e5ed"
+        },
+        "date": 1731096690253,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3538,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5580,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6091,
             "unit": "CU",
             "range": "",
             "extra": ""
