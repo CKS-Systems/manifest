@@ -1,14 +1,21 @@
 'use client';
 
-import { ReactElement } from 'react';
+import { ReactElement, useState } from 'react';
 import Link from 'next/link';
 import { useAppState } from './components/AppWalletProvider';
 import { addrToLabel } from '@/lib/address-labels';
+import Toggle from 'react-toggle';
+import 'react-toggle/style.css';
 
 const Home = (): ReactElement => {
   const readOnly = process.env.NEXT_PUBLIC_READ_ONLY === 'true';
   const { marketAddrs, loading, labelsByAddr, marketVolumes, activeByAddr } =
     useAppState();
+  const [showAll, setShowAll] = useState<boolean>(false);
+
+  function handleShowAllChange(event: { target: { checked: any } }) {
+    setShowAll(event.target.checked);
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200 p-8">
@@ -34,7 +41,7 @@ const Home = (): ReactElement => {
             <ul className="space-y-4 bg-gray-700 p-4 rounded-lg">
               {marketAddrs.map(
                 (market, index) =>
-                  activeByAddr[market] && (
+                  (showAll || activeByAddr[market]) && (
                     <li
                       key={index}
                       className="bg-gray-600 p-2 rounded-lg hover:bg-gray-500 transition-colors"
@@ -52,6 +59,12 @@ const Home = (): ReactElement => {
                   ),
               )}
             </ul>
+            <Toggle
+              defaultChecked={false}
+              icons={false}
+              onChange={handleShowAllChange}
+            />
+            <span>Show All</span>
           </>
         ) : (
           <p className="text-center">No markets found.</p>
