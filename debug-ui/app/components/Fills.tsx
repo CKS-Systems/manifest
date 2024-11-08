@@ -68,7 +68,11 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
           dateString: await slotToTimestamp(fill.slot),
         };
 
-        setFills((prevFills) => [fillUi, ...prevFills]);
+        setFills((prevFills) =>
+          [fillUi, ...prevFills].filter((value, index, self) => {
+            return self.indexOf(value) === index;
+          }),
+        );
       };
 
       ws.onclose = (message): void => {
