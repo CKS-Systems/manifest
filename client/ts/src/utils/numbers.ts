@@ -16,7 +16,7 @@ export function toNum(n: bignum): number {
   return target;
 }
 
-const BN_NUMBER_MAX = new BN(2 ** 53 - 1);
+const BN_NUMBER_MAX = new BN(2 ** 48 - 1);
 const BN_10 = new BN(10);
 
 /**

@@ -65,7 +65,7 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
 //    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
 //    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
-//    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+//    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
 //    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 // trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>>
 //    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
@@ -303,7 +303,7 @@ pub(crate) trait RedBlackTreeWriteOperationsHelpers<'a> {
     fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
     fn rotate_left<V: Payload>(&mut self, index: DataIndex);
     fn rotate_right<V: Payload>(&mut self, index: DataIndex);
-    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
     fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 }
 impl<'a, T> RedBlackTreeWriteOperationsHelpers<'a> for T
@@ -451,7 +451,7 @@ where
         }
     }
 
-    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex) {
+    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex) {
         let parent_0: DataIndex = self.get_parent_index::<V>(index_0);
         let parent_1: DataIndex = self.get_parent_index::<V>(index_1);
         let left_0: DataIndex = self.get_left_index::<V>(index_0);
@@ -487,27 +487,10 @@ where
         self.set_parent_index::<V>(right_0, index_1);
         self.set_parent_index::<V>(right_1, index_0);
 
-        // Edge case of swapping with successor or predecessor. Note that the
-        // way that this is called in practice, only the parent_1 == index_1 &&
-        // !is_left_1 case is covered. The rest are included for completeness in
-        // case any implementation decides to use swap with a different usage.
         if parent_1 == index_0 {
             self.set_parent_index::<V>(index_0, index_1);
             self.set_parent_index::<V>(index_1, parent_0);
-            if is_left_1 {
-                self.set_left_index::<V>(index_1, index_0);
-            } else {
-                self.set_right_index::<V>(index_1, index_0);
-            }
-        }
-        if parent_0 == index_1 {
-            self.set_parent_index::<V>(index_1, index_0);
-            self.set_parent_index::<V>(index_0, parent_1);
-            if is_left_0 {
-                self.set_left_index::<V>(index_0, index_1);
-            } else {
-                self.set_right_index::<V>(index_0, index_1);
-            }
+            self.set_right_index::<V>(index_1, index_0);
         }
 
         // Should not happen because we only swap with successor of an
@@ -1059,7 +1042,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         if self.is_internal::<V>(index) {
             // Swap nodes
             let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
-            self.swap_nodes::<V>(index, successor_index);
+            self.swap_node_with_successor::<V>(index, successor_index);
         }
 
         // Now we are guaranteed that the node to delete is either a leaf or has
