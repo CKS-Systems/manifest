@@ -354,6 +354,9 @@ export class ManifestStatsServer {
       if (!dailyVolumesByToken.has(baseMint)) {
         dailyVolumesByToken.set(baseMint, 0);
       }
+      if (!dailyVolumesByToken.has(quoteMint)) {
+        dailyVolumesByToken.set(quoteMint, 0);
+      }
       dailyVolumesByToken.set(
         baseMint,
         dailyVolumesByToken.get(baseMint)! + baseVolume
