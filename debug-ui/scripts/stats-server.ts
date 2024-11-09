@@ -210,7 +210,7 @@ export class ManifestStatsServer {
 
   /**
    * Get Tickers
-   * 
+   *
    * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0#heading=h.pa64vhp5pbih
    */
   getTickers() {
@@ -248,7 +248,7 @@ export class ManifestStatsServer {
 
   /**
    * Get Orderbook
-   * 
+   *
    * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0#heading=h.vgzsfbx8rvps
    */
   async getOrderbook(tickerId: string, depth: number) {
