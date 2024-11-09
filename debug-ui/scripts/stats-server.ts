@@ -38,11 +38,12 @@ const reconnects: promClient.Counter<string> = new promClient.Counter({
   help: 'Number of reconnects to websocket',
 });
 
-const volume: promClient.Gauge<"market" | "mint" | "side"> = new promClient.Gauge({
-  name: 'volume',
-  help: 'Volume in last 24 hours in tokens',
-  labelNames: ['market', 'mint', 'side'] as const,
-});
+const volume: promClient.Gauge<'market' | 'mint' | 'side'> =
+  new promClient.Gauge({
+    name: 'volume',
+    help: 'Volume in last 24 hours in tokens',
+    labelNames: ['market', 'mint', 'side'] as const,
+  });
 
 const lastPrice: promClient.Gauge<'market'> = new promClient.Gauge({
   name: 'last_price',
