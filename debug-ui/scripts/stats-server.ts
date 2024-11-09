@@ -38,16 +38,10 @@ const reconnects: promClient.Counter<string> = new promClient.Counter({
   help: 'Number of reconnects to websocket',
 });
 
-const baseVolume: promClient.Gauge<'market'> = new promClient.Gauge({
-  name: 'base_volume',
-  help: 'Base volume in last 24 hours',
-  labelNames: ['market'] as const,
-});
-
-const quoteVolume: promClient.Gauge<'market'> = new promClient.Gauge({
-  name: 'quote_volume',
-  help: 'Quote volume in last 24 hours',
-  labelNames: ['market'] as const,
+const volume: promClient.Gauge<"market" | "mint" | "side"> = new promClient.Gauge({
+  name: 'volume',
+  help: 'Volume in last 24 hours in tokens',
+  labelNames: ['market', 'mint', 'side'] as const,
 });
 
 const lastPrice: promClient.Gauge<'market'> = new promClient.Gauge({
@@ -180,7 +174,7 @@ export class ManifestStatsServer {
    * Periodically save the volume so a 24 hour rolling volume can be calculated.
    */
   saveCheckpoints(): void {
-    this.markets.forEach((_value: Market, market: string) => {
+    this.markets.forEach((value: Market, market: string) => {
       this.baseVolumeAtomsCheckpoints.set(market, [
         ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
         this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
@@ -193,15 +187,17 @@ export class ManifestStatsServer {
       ]);
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
-      baseVolume.set(
-        { market },
+      const baseMint: string = value.baseMint().toBase58();
+      const quoteMint: string = value.baseMint().toBase58();
+      volume.set(
+        { market, mint: baseMint, side: 'base' },
         this.baseVolumeAtomsCheckpoints
           .get(market)!
           .reduce((sum, num) => sum + num, 0),
       );
-      quoteVolume.set(
-        { market },
-        this.quoteVolumeAtomsCheckpoints
+      volume.set(
+        { market, mint: quoteMint, side: 'base' },
+        this.baseVolumeAtomsCheckpoints
           .get(market)!
           .reduce((sum, num) => sum + num, 0),
       );
