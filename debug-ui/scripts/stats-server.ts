@@ -317,37 +317,44 @@ export class ManifestStatsServer {
   async getVolume() {
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
-    const lifetimeVolume: number = marketProgramAccounts.map(
-      (
-        value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
-      ) => {
-        const marketPk: string = value.pubkey.toBase58();
-        const market: Market = Market.loadFromBuffer({
-          buffer: value.account.data,
-          address: new PublicKey(marketPk),
-        });
-        // Only track lifetime volume of USDC. We only track quote volume on a
-        // market and this is the only token that is always quote. Other stables
-        // could also be base when in stable pairs.
-        if (market.quoteMint().toBase58() != "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v") {
-          return 0;
-        }
-        return Number(market.quoteVolume()) / 10 ** 6;
-      },
-    ).reduce((sum, num) => sum + num, 0);
+    const lifetimeVolume: number = marketProgramAccounts
+      .map(
+        (
+          value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
+        ) => {
+          const marketPk: string = value.pubkey.toBase58();
+          const market: Market = Market.loadFromBuffer({
+            buffer: value.account.data,
+            address: new PublicKey(marketPk),
+          });
+          // Only track lifetime volume of USDC. We only track quote volume on a
+          // market and this is the only token that is always quote. Other stables
+          // could also be base when in stable pairs.
+          if (
+            market.quoteMint().toBase58() !=
+            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+          ) {
+            return 0;
+          }
+          return Number(market.quoteVolume()) / 10 ** 6;
+        },
+      )
+      .reduce((sum, num) => sum + num, 0);
 
     const dailyVolumesByToken: Map<string, number> = new Map();
     this.markets.forEach((market: Market, marketPk: string) => {
-      const baseVolume: number = 
+      const baseVolume: number =
         this.baseVolumeAtomsCheckpoints
           .get(marketPk)!
-          .reduce((sum, num) => sum + num, 0) / 10 ** market.baseDecimals();
-      const quoteVolume: number = 
+          .reduce((sum, num) => sum + num, 0) /
+        10 ** market.baseDecimals();
+      const quoteVolume: number =
         this.quoteVolumeAtomsCheckpoints
           .get(marketPk)!
-          .reduce((sum, num) => sum + num, 0) / 10 ** market.quoteDecimals();
-      const baseMint: string = "solana:" + market.baseMint().toBase58();
-      const quoteMint: string = "solana:" + market.quoteMint().toBase58();
+          .reduce((sum, num) => sum + num, 0) /
+        10 ** market.quoteDecimals();
+      const baseMint: string = 'solana:' + market.baseMint().toBase58();
+      const quoteMint: string = 'solana:' + market.quoteMint().toBase58();
       if (baseVolume == 0 || quoteVolume == 0) {
         return;
       }
@@ -359,21 +366,21 @@ export class ManifestStatsServer {
       }
       dailyVolumesByToken.set(
         baseMint,
-        dailyVolumesByToken.get(baseMint)! + baseVolume
+        dailyVolumesByToken.get(baseMint)! + baseVolume,
       );
       dailyVolumesByToken.set(
         quoteMint,
-        dailyVolumesByToken.get(quoteMint)! + quoteVolume
+        dailyVolumesByToken.get(quoteMint)! + quoteVolume,
       );
     });
 
     return {
-      "totalVolume": {
-        "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": lifetimeVolume,
+      totalVolume: {
+        'solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': lifetimeVolume,
       },
-      "dailyVolume": Object.fromEntries(dailyVolumesByToken)
+      dailyVolume: Object.fromEntries(dailyVolumesByToken),
     };
-  };
+  }
 }
 
 const run = async () => {
