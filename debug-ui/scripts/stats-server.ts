@@ -156,6 +156,8 @@ export class ManifestStatsServer {
           buffer: value.account.data,
           address: new PublicKey(marketPk),
         });
+        // Skip markets that have never traded to keep the amount of data
+        // retention smaller.
         if (Number(market.quoteVolume()) == 0) {
           return;
         }
@@ -174,17 +176,20 @@ export class ManifestStatsServer {
     );
   }
 
+  /**
+   * Periodically save the volume so a 24 hour rolling volume can be calculated.
+   */
   saveCheckpoints(): void {
     this.markets.forEach((_value: Market, market: string) => {
       this.baseVolumeAtomsCheckpoints.set(market, [
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
         ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
+        this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
       ]);
       this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
       this.quoteVolumeAtomsCheckpoints.set(market, [
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
         ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
+        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
       ]);
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
@@ -203,6 +208,11 @@ export class ManifestStatsServer {
     });
   }
 
+  /**
+   * Get Tickers
+   * 
+   * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0#heading=h.pa64vhp5pbih
+   */
   getTickers() {
     const tickers: any = [];
     this.markets.forEach((market: Market, marketPk: string) => {
@@ -236,6 +246,11 @@ export class ManifestStatsServer {
     return tickers;
   }
 
+  /**
+   * Get Orderbook
+   * 
+   * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0#heading=h.vgzsfbx8rvps
+   */
   async getOrderbook(tickerId: string, depth: number) {
     const market: Market = await Market.loadFromAddress({
       connection: this.connection,
