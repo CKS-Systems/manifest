@@ -345,7 +345,7 @@ export class ManifestStatsServer {
       const quoteVolume: number = 
         this.quoteVolumeAtomsCheckpoints
           .get(marketPk)!
-          .reduce((sum, num) => sum + num, 0) / 10 ** market.baseDecimals();
+          .reduce((sum, num) => sum + num, 0) / 10 ** market.quoteDecimals();
       const baseMint: string = "solana:" + market.baseMint().toBase58();
       const quoteMint: string = "solana:" + market.quoteMint().toBase58();
       if (baseVolume == 0 || quoteVolume == 0) {
