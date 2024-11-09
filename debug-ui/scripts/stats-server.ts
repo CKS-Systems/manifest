@@ -16,7 +16,8 @@ import {
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
 
-const CHECKPOINT_DURATION_SEC: number = 60 * 60;
+// Stores checkpoints every 5 minutes
+const CHECKPOINT_DURATION_SEC: number = 5 * 60 * 60;
 const ONE_DAY_SEC: number = 24 * 60 * 60;
 const PORT: number = 3000;
 
