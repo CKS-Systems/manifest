@@ -26,6 +26,35 @@ if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
+const fills: promClient.Counter<'market'> = new promClient.Counter({
+  name: 'fills',
+  help: 'Number of fills',
+  labelNames: ['market'] as const,
+});
+
+const reconnects: promClient.Counter<string> = new promClient.Counter({
+  name: 'reconnects',
+  help: 'Number of reconnects to websocket',
+});
+
+const baseVolume: promClient.Gauge<'market'> = new promClient.Gauge({
+  name: 'base_volume',
+  help: 'Base volume in last 24 hours',
+  labelNames: ['market'] as const,
+});
+
+const quoteVolume: promClient.Gauge<'market'> = new promClient.Gauge({
+  name: 'quote_volume',
+  help: 'Quote volume in last 24 hours',
+  labelNames: ['market'] as const,
+});
+
+const lastPrice: promClient.Gauge<'market'> = new promClient.Gauge({
+  name: 'last_price',
+  help: 'Last traded price',
+  labelNames: ['market'] as const,
+});
+
 /**
  * Server for serving stats according to this spec:
  * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0
@@ -34,10 +63,8 @@ export class ManifestStatsServer {
   private connection: Connection;
   private ws: WebSocket;
   // Base and quote volume
-  private baseVolumeAtomsByMarketSinceLastCheckpoint: Map<string, number> =
-    new Map();
-  private quoteVolumeAtomsByMarketSinceLastCheckpoint: Map<string, number> =
-    new Map();
+  private baseVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
+  private quoteVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
 
   // Hourly checkpoints
   private baseVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
@@ -58,21 +85,23 @@ export class ManifestStatsServer {
     this.ws.on('close', () => {
       console.log('Disconnected. Reconnecting');
       this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
-      // TODO: Prometheus
+      reconnects.inc();
     });
     this.ws.on('error', () => {
       console.log('Error. Reconnecting');
-      // TODO: Prometheus
+      this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
+      reconnects.inc();
     });
 
     this.ws.on('message', async (message) => {
       const fill: FillLogResult = JSON.parse(message.toString());
       const { market, baseAtoms, quoteAtoms, price } = fill;
+      fills.inc({ market });
+      lastPrice.set({ market }, price);
 
-      const marketPk: PublicKey = new PublicKey(market);
       if (this.markets.get(market) == undefined) {
-        this.baseVolumeAtomsByMarketSinceLastCheckpoint.set(market, 0);
-        this.quoteVolumeAtomsByMarketSinceLastCheckpoint.set(market, 0);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
         this.baseVolumeAtomsCheckpoints.set(
           market,
           new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
@@ -81,6 +110,7 @@ export class ManifestStatsServer {
           market,
           new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
         );
+        const marketPk: PublicKey = new PublicKey(market);
         this.markets.set(
           market,
           await Market.loadFromAddress({
@@ -91,18 +121,16 @@ export class ManifestStatsServer {
       }
 
       this.lastPriceByMarket.set(market, price);
-      this.baseVolumeAtomsByMarketSinceLastCheckpoint.set(
+      this.baseVolumeAtomsSinceLastCheckpoint.set(
         market,
-        this.baseVolumeAtomsByMarketSinceLastCheckpoint.get(market)! +
+        this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
           Number(baseAtoms),
       );
-      this.quoteVolumeAtomsByMarketSinceLastCheckpoint.set(
+      this.quoteVolumeAtomsSinceLastCheckpoint.set(
         market,
-        this.quoteVolumeAtomsByMarketSinceLastCheckpoint.get(market)! +
+        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
           Number(quoteAtoms),
       );
-
-      // TODO: Prometheus for fill.
     });
   }
 
@@ -124,8 +152,8 @@ export class ManifestStatsServer {
         if (Number(market.quoteVolume()) == 0) {
           return;
         }
-        this.baseVolumeAtomsByMarketSinceLastCheckpoint.set(marketPk, 0);
-        this.quoteVolumeAtomsByMarketSinceLastCheckpoint.set(marketPk, 0);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
         this.baseVolumeAtomsCheckpoints.set(
           marketPk,
           new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
@@ -140,20 +168,32 @@ export class ManifestStatsServer {
   }
 
   saveCheckpoints(): void {
-    this.markets.forEach((_value: Market, marketPk: string) => {
-      this.baseVolumeAtomsCheckpoints.set(marketPk, [
-        this.baseVolumeAtomsByMarketSinceLastCheckpoint.get(marketPk)!,
-        ...this.baseVolumeAtomsCheckpoints.get(marketPk)!.slice(1),
+    this.markets.forEach((_value: Market, market: string) => {
+      this.baseVolumeAtomsCheckpoints.set(market, [
+        this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
       ]);
-      this.baseVolumeAtomsByMarketSinceLastCheckpoint.set(marketPk, 0);
+      this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
-      this.quoteVolumeAtomsCheckpoints.set(marketPk, [
-        this.quoteVolumeAtomsByMarketSinceLastCheckpoint.get(marketPk)!,
-        ...this.quoteVolumeAtomsCheckpoints.get(marketPk)!.slice(1),
+      this.quoteVolumeAtomsCheckpoints.set(market, [
+        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
       ]);
-      this.quoteVolumeAtomsByMarketSinceLastCheckpoint.set(marketPk, 0);
+      this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+
+      baseVolume.set(
+        { market },
+        this.baseVolumeAtomsCheckpoints
+          .get(market)!
+          .reduce((sum, num) => sum + num, 0),
+      );
+      quoteVolume.set(
+        { market },
+        this.quoteVolumeAtomsCheckpoints
+          .get(market)!
+          .reduce((sum, num) => sum + num, 0),
+      );
     });
-    // TODO: Prometheus metric for most recent checkpoint.
   }
 
   getTickers() {
@@ -179,7 +219,7 @@ export class ManifestStatsServer {
         pool_id: marketPk,
         // Does not apply to orderbooks.
         liquidity_in_usd: 0,
-        // Not yet implemented
+        // Optional: not yet implemented
         // "bid": 0,
         // "ask": 0,
         // "high": 0,
