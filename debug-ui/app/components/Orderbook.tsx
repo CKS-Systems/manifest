@@ -12,6 +12,8 @@ import { ensureError } from '@/lib/error';
 import { formatPrice } from '@/lib/format';
 import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 
+const MAX_ORDERS_TO_SHOW: number = 5;
+
 const Orderbook = ({
   marketAddress,
 }: {
@@ -34,8 +36,8 @@ const Orderbook = ({
         setCurrentSlot(market['slot']);
         const asks: RestingOrder[] = market.asks();
         const bids: RestingOrder[] = market.bids();
-        setBids(bids.reverse());
-        setAsks(asks);
+        setBids(bids.reverse().slice(0, MAX_ORDERS_TO_SHOW));
+        setAsks(asks.slice(0, MAX_ORDERS_TO_SHOW));
       } catch (e) {
         console.error('updateOrderbook:', e);
         toast.error(`updateOrderbook: ${ensureError(e).message}`);
@@ -104,9 +106,7 @@ const Orderbook = ({
               <th className="py-2">Maker</th>
             </tr>
           </thead>
-          <tbody>
-            {asks.slice(Math.max(asks.length - 5, 0)).map(formatOrder)}
-          </tbody>
+          <tbody>{asks.map(formatOrder)}</tbody>
         </table>
       </pre>
 
@@ -123,9 +123,7 @@ const Orderbook = ({
               <th className="py-2">Maker</th>
             </tr>
           </thead>
-          <tbody>
-            {bids.slice(Math.max(bids.length - 5, 0)).map(formatOrder)}
-          </tbody>
+          <tbody>{bids.map(formatOrder)}</tbody>
         </table>
       </pre>
     </div>
