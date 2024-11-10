@@ -15,7 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType},
+    state::{DynamicAccount, MarketFixed, OrderType, RestingOrder},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -155,7 +155,29 @@ fn prepare_orders(
     orders: &Vec<WrapperPlaceOrderParams>,
     remaining_base_atoms: &mut BaseAtoms,
     remaining_quote_atoms: &mut QuoteAtoms,
+    market: &ManifestAccountInfo<MarketFixed>,
 ) -> Vec<PlaceOrderParams> {
+    let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data().unwrap();
+    let market_ref: DynamicAccount<&MarketFixed, &[u8]> =
+        get_dynamic_account::<MarketFixed>(&market_data);
+    let best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
+    let best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
+
+    let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
+        get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
+            .get_value()
+            .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MAX
+    };
+    let best_bid_price: QuoteAtomsPerBaseAtom = if best_bid_index != NIL {
+        get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
+            .get_value()
+            .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MIN
+    };
+
     let mut result: Vec<PlaceOrderParams> = Vec::with_capacity(orders.len());
     result.extend(
         orders
@@ -166,27 +188,38 @@ fn prepare_orders(
                 // if they do not have the funds on the exchange that the orders
                 // require.
                 let mut num_base_atoms: u64 = order.base_atoms;
+                let price: QuoteAtomsPerBaseAtom =
+                    QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+                        order.price_mantissa,
+                        order.price_exponent,
+                    )
+                    .unwrap();
                 if order.order_type != OrderType::Global {
                     if order.is_bid {
-                        let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-                            order.price_mantissa,
-                            order.price_exponent,
-                        )
-                        .unwrap();
-                        let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
-                            .checked_mul(price, true)
-                            .unwrap();
-                        if desired > *remaining_quote_atoms {
+                        // If a post only would cross, then reduce to no size and clear it in the filter later.
+                        if price > best_ask_price && order.order_type == OrderType::PostOnly {
                             num_base_atoms = 0;
                         } else {
-                            *remaining_quote_atoms -= desired;
+                            let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
+                                .checked_mul(price, true)
+                                .unwrap();
+                            if desired > *remaining_quote_atoms {
+                                num_base_atoms = 0;
+                            } else {
+                                *remaining_quote_atoms -= desired;
+                            }
                         }
                     } else {
                         let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
-                        if desired > *remaining_base_atoms {
+                        // If a post only would cross, then reduce to no size and clear it in the filter later.
+                        if price < best_bid_price && order.order_type == OrderType::PostOnly {
                             num_base_atoms = 0;
                         } else {
-                            *remaining_base_atoms -= desired;
+                            if desired > *remaining_base_atoms {
+                                num_base_atoms = 0;
+                            } else {
+                                *remaining_base_atoms -= desired;
+                            }
                         }
                     }
                 }
@@ -406,6 +439,7 @@ pub(crate) fn process_batch_update(
         &orders,
         &mut remaining_base_atoms,
         &mut remaining_quote_atoms,
+        &market,
     );
 
     execute_cpi(accounts, trader_index_hint, core_cancels, core_orders)?;
