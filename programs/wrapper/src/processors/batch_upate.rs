@@ -169,17 +169,19 @@ fn prepare_orders(
     // this is only best-effort.
     let now_slot: u32 = get_now_slot();
 
-    while get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
-        .get_value()
-        .is_expired(now_slot)
+    while best_ask_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
+            .get_value()
+            .is_expired(now_slot)
     {
         best_ask_index = market_ref
             .get_asks()
             .get_next_lower_index::<RBNode<RestingOrder>>(best_ask_index);
     }
-    while get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
-        .get_value()
-        .is_expired(now_slot)
+    while best_bid_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
+            .get_value()
+            .is_expired(now_slot)
     {
         best_bid_index = market_ref
             .get_bids()
