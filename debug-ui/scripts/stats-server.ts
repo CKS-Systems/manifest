@@ -79,7 +79,9 @@ export class ManifestStatsServer {
   }
 
   private resetWebsocket() {
-    this.ws.close();
+    try {
+      this.ws.close();
+    } catch {}
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
 
     this.ws.on('open', () => {});
