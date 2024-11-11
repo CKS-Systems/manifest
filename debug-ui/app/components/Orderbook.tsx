@@ -2,7 +2,7 @@
 
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { AccountInfo, PublicKey } from '@solana/web3.js';
+import { AccountInfo, PublicKey, SlotUpdate } from '@solana/web3.js';
 import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
@@ -70,18 +70,15 @@ const Orderbook = ({
     };
     initialLoad();
 
-    const updateSlot = async (): Promise<void> => {
-      try {
-        setCurrentSlot(await conn.getSlot());
-      } catch (err) {
-        console.error('getSlot:', err);
+    const slotUpdateListenerId = conn.onSlotUpdate((slotUpdate: SlotUpdate) => {
+      if (slotUpdate.type == 'root') {
+        setCurrentSlot(slotUpdate.slot);
       }
-    };
-    updateSlot();
-    // 200 ms is half a slot, so we can expect this to update on each slot.
-    const id = setInterval(updateSlot, 200);
+    });
 
-    return (): void => clearInterval(id);
+    return () => {
+      conn.removeSlotUpdateListener(slotUpdateListenerId);
+    };
   }, [conn, marketAddress]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
