@@ -20,7 +20,7 @@ import {
 const CHECKPOINT_DURATION_SEC: number = 5 * 60;
 const ONE_DAY_SEC: number = 24 * 60 * 60;
 const PORT: number = 3000;
-const DEPTHS_BPS: number[] = [5, 10, 100, 200];
+const DEPTHS_BPS: number[] = [50, 100, 200];
 
 const { RPC_URL } = process.env;
 
