@@ -99,14 +99,6 @@ export class ManifestStatsServer {
       const fill: FillLogResult = JSON.parse(message.toString());
       const { market, baseAtoms, quoteAtoms, price } = fill;
       fills.inc({ market });
-      lastPrice.set(
-        { market },
-        price *
-          10 **
-            (this.markets.get(market)!.baseDecimals() -
-              this.markets.get(market)!.quoteDecimals()),
-      );
-
       console.log('Got fill:', fill);
 
       if (this.markets.get(market) == undefined) {
@@ -129,6 +121,13 @@ export class ManifestStatsServer {
           }),
         );
       }
+      lastPrice.set(
+        { market },
+        price *
+          10 **
+            (this.markets.get(market)!.baseDecimals() -
+              this.markets.get(market)!.quoteDecimals()),
+      );
 
       this.lastPriceByMarket.set(market, price);
       this.baseVolumeAtomsSinceLastCheckpoint.set(
