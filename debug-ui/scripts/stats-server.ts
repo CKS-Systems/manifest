@@ -73,8 +73,14 @@ export class ManifestStatsServer {
   private markets: Map<string, Market> = new Map();
 
   constructor() {
-    this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
     this.connection = new Connection(RPC_URL!);
+    this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
+    this.resetWebsocket();
+  }
+
+  private resetWebsocket() {
+    this.ws.close();
+    this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
 
     this.ws.on('open', () => {});
 
@@ -100,6 +106,8 @@ export class ManifestStatsServer {
             (this.markets.get(market)!.baseDecimals() -
               this.markets.get(market)!.quoteDecimals()),
       );
+
+      console.log('Got fill:', fill);
 
       if (this.markets.get(market) == undefined) {
         this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -175,6 +183,12 @@ export class ManifestStatsServer {
    * Periodically save the volume so a 24 hour rolling volume can be calculated.
    */
   saveCheckpoints(): void {
+    console.log('Saving checkpoints');
+
+    // Reset the websocket. It sometimes disconnects quietly, so just to be
+    // safe, do it here.
+    this.resetWebsocket();
+
     this.markets.forEach((value: Market, market: string) => {
       this.baseVolumeAtomsCheckpoints.set(market, [
         ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
@@ -197,8 +211,8 @@ export class ManifestStatsServer {
           .reduce((sum, num) => sum + num, 0),
       );
       volume.set(
-        { market, mint: quoteMint, side: 'base' },
-        this.baseVolumeAtomsCheckpoints
+        { market, mint: quoteMint, side: 'quote' },
+        this.quoteVolumeAtomsCheckpoints
           .get(market)!
           .reduce((sum, num) => sum + num, 0),
       );
