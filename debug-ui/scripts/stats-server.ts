@@ -79,9 +79,7 @@ export class ManifestStatsServer {
   }
 
   private resetWebsocket() {
-    try {
-      this.ws.close();
-    } catch {}
+    // Allow old one to timeout.
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
 
     this.ws.on('open', () => {});
