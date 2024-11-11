@@ -69,7 +69,9 @@ const Orderbook = ({
       }
     };
     initialLoad();
+  }, [conn, marketAddress]);
 
+  useEffect(() => {
     const slotUpdateListenerId = conn.onSlotUpdate((slotUpdate: SlotUpdate) => {
       if (slotUpdate.type == 'root') {
         setCurrentSlot(slotUpdate.slot);
@@ -79,7 +81,7 @@ const Orderbook = ({
     return () => {
       conn.removeSlotUpdateListener(slotUpdateListenerId);
     };
-  }, [conn, marketAddress]);
+  }, []);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
