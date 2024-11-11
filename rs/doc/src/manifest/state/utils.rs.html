@@ -353,7 +353,7 @@
     NO_EXPIRATION_LAST_VALID_SLOT,
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_now_slot() -&gt; u32 {
+<span class="kw">pub fn </span>get_now_slot() -&gt; u32 {
     <span class="comment">// If we cannot get the clock (happens in tests, then only match with
     // orders without expiration). We assume that the clock cannot be
     // maliciously manipulated to clear all orders with expirations on the
