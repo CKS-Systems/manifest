@@ -51,10 +51,11 @@ const Orderbook = ({
         const bids: RestingOrder[] = market.bids();
         setBids(bids.reverse().slice(0, MAX_ORDERS_TO_SHOW));
         setAsks(asks.slice(0, MAX_ORDERS_TO_SHOW));
-      } catch (e) {
-        console.error('updateOrderbook:', e);
-        toast.error(`updateOrderbook: ${ensureError(e).message}`);
       }
+    } catch (e) {
+      console.error('updateOrderbook:', e);
+      toast.error(`updateOrderbook: ${ensureError(e).message}`);
+    }
   }, [conn, currentSlot, marketData, marketAddress]);
 
   useEffect(() => {
