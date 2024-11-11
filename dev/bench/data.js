@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731278806938,
+  "lastUpdate": 1731354963523,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8353,6 +8353,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6142,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e14e670ba2fc657739b69648fd724a9ad8705ec",
+          "message": "Update post only wrapper protection to skip expired orders (#274)\n\n* Update post only wrapper protection to skip expired orders\r\n\r\n* NIL check",
+          "timestamp": "2024-11-11T14:31:27-05:00",
+          "tree_id": "e4009aaf64cc2abf57dbe6a12a72f9337c3cc61f",
+          "url": "https://github.com/CKS-Systems/manifest/commit/7e14e670ba2fc657739b69648fd724a9ad8705ec"
+        },
+        "date": 1731354961976,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3582,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5678,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6290,
             "unit": "CU",
             "range": "",
             "extra": ""
