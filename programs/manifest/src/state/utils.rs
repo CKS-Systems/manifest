@@ -27,7 +27,7 @@ use super::{
     NO_EXPIRATION_LAST_VALID_SLOT,
 };
 
-pub(crate) fn get_now_slot() -> u32 {
+pub fn get_now_slot() -> u32 {
     // If we cannot get the clock (happens in tests, then only match with
     // orders without expiration). We assume that the clock cannot be
     // maliciously manipulated to clear all orders with expirations on the
