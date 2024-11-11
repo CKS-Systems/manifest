@@ -211,8 +211,8 @@ export class ManifestStatsServer {
           .reduce((sum, num) => sum + num, 0),
       );
       volume.set(
-        { market, mint: quoteMint, side: 'base' },
-        this.baseVolumeAtomsCheckpoints
+        { market, mint: quoteMint, side: 'quote' },
+        this.quoteVolumeAtomsCheckpoints
           .get(market)!
           .reduce((sum, num) => sum + num, 0),
       );
