@@ -15,7 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType, RestingOrder},
+    state::{utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -160,8 +160,33 @@ fn prepare_orders(
     let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data().unwrap();
     let market_ref: DynamicAccount<&MarketFixed, &[u8]> =
         get_dynamic_account::<MarketFixed>(&market_data);
-    let best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
-    let best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
+    let mut best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
+    let mut best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
+
+    // Walk the tree until you find a non-expired order since those can be
+    // trivially ignored. Does not prevent unbacked global orders, but that
+    // would require global accounts and be too complicated to do here because
+    // this is only best-effort.
+    let now_slot: u32 = get_now_slot();
+
+    while best_ask_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
+            .get_value()
+            .is_expired(now_slot)
+    {
+        best_ask_index = market_ref
+            .get_asks()
+            .get_next_lower_index::<RBNode<RestingOrder>>(best_ask_index);
+    }
+    while best_bid_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
+            .get_value()
+            .is_expired(now_slot)
+    {
+        best_bid_index = market_ref
+            .get_bids()
+            .get_next_lower_index::<RBNode<RestingOrder>>(best_bid_index);
+    }
 
     let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
         get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
