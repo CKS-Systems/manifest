@@ -20,6 +20,7 @@ import {
 const CHECKPOINT_DURATION_SEC: number = 5 * 60;
 const ONE_DAY_SEC: number = 24 * 60 * 60;
 const PORT: number = 3000;
+const DEPTHS_BPS: number[] = [5, 10, 100, 200];
 
 const { RPC_URL } = process.env;
 
@@ -50,6 +51,13 @@ const lastPrice: promClient.Gauge<'market'> = new promClient.Gauge({
   help: 'Last traded price',
   labelNames: ['market'] as const,
 });
+
+const depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'> =
+  new promClient.Gauge({
+    name: 'depth',
+    help: 'Number of tokens in orders at a given depth by trader',
+    labelNames: ['depth_bps', 'market', 'trader'] as const,
+  });
 
 /**
  * Server for serving stats according to this spec:
@@ -216,6 +224,95 @@ export class ManifestStatsServer {
           .reduce((sum, num) => sum + num, 0),
       );
     });
+  }
+
+  /**
+   * Periodically save to prometheus the depths of different market makers. This
+   * is expensive, so it will only be run every few minutes at most. If we
+   * wanted more frequent, should subscribe to market accounts. Because the
+   * number of markets is unbounded, that is not done here.
+   */
+  async depthProbe(): Promise<void> {
+    console.log('Probing depths for market maker data');
+
+    // Once there are more than 200 accounts, should batch this into multiple fetches.
+    const marketKeys: PublicKey[] = Array.from(this.markets.keys()).map(
+      (market: string) => {
+        return new PublicKey(market);
+      },
+    );
+
+    const accountInfos: (AccountInfo<Buffer> | null)[] =
+      await this.connection.getMultipleAccountsInfo(marketKeys);
+    accountInfos.forEach(
+      (accountInfo: AccountInfo<Buffer> | null, index: number) => {
+        if (!accountInfo) {
+          return;
+        }
+        const marketPk: PublicKey = marketKeys[index];
+        const market: Market = Market.loadFromBuffer({
+          buffer: accountInfo.data,
+          address: marketPk,
+        });
+        const bids: RestingOrder[] = market.bids();
+        const asks: RestingOrder[] = market.asks();
+        if (bids.length == 0 || asks.length == 0) {
+          return;
+        }
+
+        const mid: number =
+          (bids[bids.length - 1].tokenPrice +
+            asks[asks.length - 1].tokenPrice) /
+          2;
+
+        DEPTHS_BPS.forEach((depthBps: number) => {
+          const bidsAtDepth: RestingOrder[] = bids.filter(
+            (bid: RestingOrder) => {
+              return bid.tokenPrice > mid * (1 - depthBps * 0.0001);
+            },
+          );
+          const asksAtDepth: RestingOrder[] = asks.filter(
+            (ask: RestingOrder) => {
+              return ask.tokenPrice < mid * (1 + depthBps * 0.0001);
+            },
+          );
+
+          const bidTraders: Set<string> = new Set(
+            bidsAtDepth.map((bid: RestingOrder) => bid.trader.toBase58()),
+          );
+
+          bidTraders.forEach((trader: string) => {
+            const bidTokensAtDepth: number = bidsAtDepth
+              .filter((bid: RestingOrder) => {
+                return bid.trader.toBase58() == trader;
+              })
+              .map((bid: RestingOrder) => {
+                return Number(bid.numBaseTokens);
+              })
+              .reduce((sum, num) => sum + num, 0);
+            const askTokensAtDepth: number = asksAtDepth
+              .filter((ask: RestingOrder) => {
+                return ask.trader.toBase58() == trader;
+              })
+              .map((ask: RestingOrder) => {
+                return Number(ask.numBaseTokens);
+              })
+              .reduce((sum, num) => sum + num, 0);
+
+            if (bidTokensAtDepth > 0 && askTokensAtDepth > 0) {
+              depth.set(
+                {
+                  depth_bps: depthBps,
+                  market: marketPk.toBase58(),
+                  trader: trader,
+                },
+                Math.min(bidTokensAtDepth, askTokensAtDepth),
+              );
+            }
+          });
+        });
+      },
+    );
   }
 
   /**
@@ -439,7 +536,12 @@ const run = async () => {
 
   while (true) {
     statsServer.saveCheckpoints();
-    await sleep(CHECKPOINT_DURATION_SEC * 1_000);
+    // Promise.all here so depth probing doesnt get the save checkpoints off
+    // schedule. Could be done with separate setInterval instead.
+    await Promise.all([
+      statsServer.depthProbe(),
+      sleep(CHECKPOINT_DURATION_SEC * 1_000),
+    ]);
   }
 };
 
