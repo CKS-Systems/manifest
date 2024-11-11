@@ -1,9 +1,8 @@
 'use client';
 
-import { fetchMarket } from '@/lib/data';
 import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { AccountInfo, PublicKey, SlotUpdate } from '@solana/web3.js';
 import { useEffect, useMemo, useState } from 'react';
 import { ReactElement } from 'react';
 import SolscanAddrLink from './SolscanAddrLink';
@@ -19,6 +18,7 @@ const Orderbook = ({
 }: {
   marketAddress: string;
 }): ReactElement => {
+  const [marketData, setMarketData] = useState<Buffer>();
   const [bids, setBids] = useState<RestingOrder[]>([]);
   const [asks, setAsks] = useState<RestingOrder[]>([]);
   const [currentSlot, setCurrentSlot] = useState<number>(0);
@@ -27,28 +27,63 @@ const Orderbook = ({
   const { wallet } = useWallet();
 
   useEffect(() => {
-    const updateOrderbook = async (): Promise<void> => {
-      try {
-        const market: Market = await fetchMarket(
-          conn,
-          new PublicKey(marketAddress),
-        );
-        setCurrentSlot(market['slot']);
+    const accountChangeListenerId: number = conn.onAccountChange(
+      new PublicKey(marketAddress),
+      (accountInfo: AccountInfo<Buffer>) => {
+        setMarketData(accountInfo.data);
+      },
+    );
+
+    return () => {
+      conn.removeAccountChangeListener(accountChangeListenerId);
+    };
+  }, [marketAddress]);
+
+  useEffect(() => {
+    try {
+      if (marketData) {
+        const market: Market = Market.loadFromBuffer({
+          address: new PublicKey(marketAddress),
+          buffer: marketData,
+          slot: currentSlot,
+        });
         const asks: RestingOrder[] = market.asks();
         const bids: RestingOrder[] = market.bids();
         setBids(bids.reverse().slice(0, MAX_ORDERS_TO_SHOW));
         setAsks(asks.slice(0, MAX_ORDERS_TO_SHOW));
-      } catch (e) {
-        console.error('updateOrderbook:', e);
-        toast.error(`updateOrderbook: ${ensureError(e).message}`);
+      }
+    } catch (e) {
+      console.error('updateOrderbook:', e);
+      toast.error(`updateOrderbook: ${ensureError(e).message}`);
+    }
+  }, [conn, currentSlot, marketData, marketAddress]);
+
+  useEffect(() => {
+    // Initial load of the market.
+    const initialLoad = async (): Promise<void> => {
+      try {
+        const marketInfo: AccountInfo<Buffer> = (await conn.getAccountInfo(
+          new PublicKey(marketAddress),
+        ))!;
+        setMarketData(marketInfo.data);
+      } catch (err) {
+        console.error('initialLoad:', err);
       }
     };
-
-    updateOrderbook();
-    const id = setInterval(updateOrderbook, 2_000);
-
-    return (): void => clearInterval(id);
+    initialLoad();
   }, [conn, marketAddress]);
+
+  useEffect(() => {
+    const slotUpdateListenerId = conn.onSlotUpdate((slotUpdate: SlotUpdate) => {
+      if (slotUpdate.type == 'root') {
+        setCurrentSlot(slotUpdate.slot);
+      }
+    });
+
+    return () => {
+      conn.removeSlotUpdateListener(slotUpdateListenerId);
+    };
+  }, []);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
