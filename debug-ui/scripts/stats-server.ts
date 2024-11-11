@@ -203,7 +203,7 @@ export class ManifestStatsServer {
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
       const baseMint: string = value.baseMint().toBase58();
-      const quoteMint: string = value.baseMint().toBase58();
+      const quoteMint: string = value.quoteMint().toBase58();
       volume.set(
         { market, mint: baseMint, side: 'base' },
         this.baseVolumeAtomsCheckpoints
