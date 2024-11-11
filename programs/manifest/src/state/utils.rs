@@ -230,6 +230,11 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
     let num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader);
+    // Intentionally does not allow partial fills against a global order. The
+    // reason for this is to punish global orders that are not backed. There is
+    // no technical blocker for supporting partial fills against a global. It is
+    // just because of the mechanism design where we want global to only be used
+    // when needed, not just for all orders.
     if desired_global_atoms > num_deposited_atoms {
         emit_stack(GlobalCleanupLog {
             cleaner: *gas_receiver_opt.as_ref().unwrap().key,
@@ -239,7 +244,6 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         })?;
         return Ok(false);
     }
-    // TODO: Allow matching against a global that can only partially fill the order.
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;

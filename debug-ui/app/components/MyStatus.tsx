@@ -8,7 +8,11 @@ import {
 } from '@cks-systems/manifest-sdk';
 import { WrapperCancelOrderParams } from '@cks-systems/manifest-sdk/wrapper';
 import { WrapperOpenOrder } from '@cks-systems/manifest-sdk/wrapperObj';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
   PublicKey,
@@ -40,6 +44,7 @@ const MyStatus = ({
   const [quoteMint, setQuoteMint] = useState<string>('');
   const [baseExchangeBalance, setBaseExchangeBalance] = useState<number>(0);
   const [quoteExchangeBalance, setQuoteExchangeBalance] = useState<number>(0);
+  const [quoteGlobalBalance, setQuoteGlobalBalance] = useState<number>(0);
   const [myBids, setMyBids] = useState<RestingOrder[]>([]);
   const [myAsks, setMyAsks] = useState<RestingOrder[]>([]);
   const [myWrapperOpenOrders, setMyWrapperOpenOrders] = useState<
@@ -213,7 +218,12 @@ const MyStatus = ({
 
         try {
           const baseBalance = await conn.getTokenAccountBalance(
-            getAssociatedTokenAddressSync(market.baseMint(), signerPub),
+            getAssociatedTokenAddressSync(
+              market.baseMint(),
+              signerPub,
+              true,
+              mClient.isBase22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+            ),
           );
           setBaseWalletBalance(baseBalance.value.uiAmount!);
         } catch (err) {
@@ -222,7 +232,12 @@ const MyStatus = ({
         }
         try {
           const quoteBalance = await conn.getTokenAccountBalance(
-            getAssociatedTokenAddressSync(market.quoteMint(), signerPub),
+            getAssociatedTokenAddressSync(
+              market.quoteMint(),
+              signerPub,
+              true,
+              mClient.isQuote22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+            ),
           );
           setQuoteWalletBalance(quoteBalance.value.uiAmount!);
         } catch (err) {
@@ -263,6 +278,11 @@ const MyStatus = ({
         setQuoteExchangeBalance(
           market.getWithdrawableBalanceTokens(signerPub, false),
         );
+        if (mClient.quoteGlobal) {
+          setQuoteGlobalBalance(
+            await mClient.quoteGlobal.getGlobalBalanceTokens(conn, signerPub),
+          );
+        }
       };
 
       updateState().catch((e) => {
@@ -301,6 +321,9 @@ const MyStatus = ({
           <ul>
             <li>Base: {baseExchangeBalance}</li>
             <li>Quote: {quoteExchangeBalance}</li>
+            {quoteGlobalBalance != 0 && (
+              <li>Global Quote: {quoteGlobalBalance}</li>
+            )}
           </ul>
         </pre>
 

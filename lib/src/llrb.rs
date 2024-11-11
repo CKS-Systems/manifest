@@ -241,7 +241,7 @@ impl<'a, V: Payload> LLRB<'a, V> {
             if to_delete_index == current_index {
                 // Swap with the successor
                 let min: DataIndex = self.get_min(self.get_right_index::<V>(current_index));
-                self.swap_nodes::<V>(current_index, min);
+                self.swap_node_with_successor::<V>(current_index, min);
 
                 // deleteMin on the right subtree
                 let right_index: DataIndex = self.get_right_index::<V>(min);

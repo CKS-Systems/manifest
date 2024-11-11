@@ -40,7 +40,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         console.log('fill feed opened:', message);
       };
 
-      ws.onmessage = (message): void => {
+      ws.onmessage = async (message): Promise<void> => {
         const fill: FillLogResult = JSON.parse(message.data);
         if (fill.market !== marketAddress) {
           return;
@@ -65,9 +65,14 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
           takerSide: fill.takerIsBuy ? 'bid' : 'ask',
           signature: fill.signature,
           slot: fill.slot,
+          dateString: await slotToTimestamp(fill.slot),
         };
 
-        setFills((prevFills) => [...prevFills, fillUi]);
+        setFills((prevFills) =>
+          [fillUi, ...prevFills].filter((value, index, self) => {
+            return self.indexOf(value) === index;
+          }),
+        );
       };
 
       ws.onclose = (message): void => {
@@ -81,12 +86,33 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     }
   });
 
+  async function slotToTimestamp(slot: number): Promise<string> {
+    // Local storage isnt necessary here, but if we do ever start saving fills
+    // for page refresh, it will be.
+    try {
+      if (localStorage.getItem(slot.toString())) {
+        return localStorage.getItem(slot.toString())!;
+      } else {
+        const timestamp: number = (await conn.getBlockTime(slot))!;
+        const dateString: string = new Date(timestamp * 1_000)
+          .toTimeString()
+          .slice(0, 9);
+        localStorage.setItem(slot.toString(), dateString);
+        return dateString;
+      }
+    } catch (e) {
+      console.error('getBlockTime:', e);
+    }
+    return '';
+  }
+
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
       <pre className="bg-gray-800 p-4 rounded-lg text-sm">
         <table className="table-auto w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-700">
+              <th className="pb-2">Timestamp</th>
               <th className="pb-2">Price</th>
               <th className="pb-2">Base Tokens</th>
               <th className="pb-2">Maker</th>
@@ -96,8 +122,9 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
             </tr>
           </thead>
           <tbody>
-            {fills.map((fill, i) => (
+            {fills.map((fill: FillResultUi, i) => (
               <tr key={i} className="border-b border-gray-700">
+                <td className="py-2">{fill.dateString}</td>
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
                 <td className="py-2">
@@ -108,12 +135,13 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
                   <SolscanAddrLink address={fill.taker} />
                 </td>
                 <td className="py-2">{fill.takerSide}</td>
-                {/* Uses the public block explorer because the enhanced one does not have a good public RPC */}
                 <td className="py-2">
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={'https://explorer.solana.com/tx/' + fill.signature}
+                    href={
+                      'https://explorer.manifest.trade/tx/' + fill.signature
+                    }
                   >
                     {fill.signature.substring(0, 5) + '...'}
                   </a>
