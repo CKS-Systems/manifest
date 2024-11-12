@@ -120,6 +120,7 @@ export class ManifestStatsServer {
       this.lastFillSlot = slot;
 
       fills.inc({ market });
+      console.log('Got fill', fill);
 
       if (this.markets.get(market) == undefined) {
         this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -209,6 +210,12 @@ export class ManifestStatsServer {
     this.resetWebsocket();
 
     this.markets.forEach((value: Market, market: string) => {
+      console.log(
+        'Saving checkpoints for market',
+        market,
+        'base since last',
+        this.baseVolumeAtomsSinceLastCheckpoint.get(market),
+      );
       this.baseVolumeAtomsCheckpoints.set(market, [
         ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
         this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
