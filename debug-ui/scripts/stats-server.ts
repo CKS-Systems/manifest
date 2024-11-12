@@ -80,6 +80,8 @@ export class ManifestStatsServer {
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
 
+  private lastFillSlot: number = 0;
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
@@ -105,7 +107,14 @@ export class ManifestStatsServer {
 
     this.ws.on('message', async (message) => {
       const fill: FillLogResult = JSON.parse(message.toString());
-      const { market, baseAtoms, quoteAtoms, price } = fill;
+      const { market, baseAtoms, quoteAtoms, price, slot } = fill;
+
+      // Do not accept old spurious messages.
+      if (this.lastFillSlot > slot) {
+        return;
+      }
+      this.lastFillSlot = slot;
+
       fills.inc({ market });
 
       if (this.markets.get(market) == undefined) {
