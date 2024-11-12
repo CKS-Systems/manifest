@@ -55,7 +55,7 @@ const lastPrice: promClient.Gauge<'market'> = new promClient.Gauge({
 const depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'> =
   new promClient.Gauge({
     name: 'depth',
-    help: 'Number of tokens in orders at a given depth by trader',
+    help: 'Notional in orders at a given depth by trader',
     labelNames: ['depth_bps', 'market', 'trader'] as const,
   });
 
@@ -280,7 +280,7 @@ export class ManifestStatsServer {
             return;
           }
 
-          const mid: number =
+          const midTokens: number =
             (bids[bids.length - 1].tokenPrice +
               asks[asks.length - 1].tokenPrice) /
             2;
@@ -288,12 +288,12 @@ export class ManifestStatsServer {
           DEPTHS_BPS.forEach((depthBps: number) => {
             const bidsAtDepth: RestingOrder[] = bids.filter(
               (bid: RestingOrder) => {
-                return bid.tokenPrice > mid * (1 - depthBps * 0.0001);
+                return bid.tokenPrice > midTokens * (1 - depthBps * 0.0001);
               },
             );
             const asksAtDepth: RestingOrder[] = asks.filter(
               (ask: RestingOrder) => {
-                return ask.tokenPrice < mid * (1 + depthBps * 0.0001);
+                return ask.tokenPrice < midTokens * (1 + depthBps * 0.0001);
               },
             );
 
@@ -326,7 +326,7 @@ export class ManifestStatsServer {
                     market: marketPk.toBase58(),
                     trader: trader,
                   },
-                  Math.min(bidTokensAtDepth, askTokensAtDepth),
+                  Math.min(bidTokensAtDepth, askTokensAtDepth) * midTokens,
                 );
               }
             });
