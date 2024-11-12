@@ -65,7 +65,7 @@ const depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'> =
  */
 export class ManifestStatsServer {
   private connection: Connection;
-  private ws: WebSocket;
+  private ws: WebSocket | null = null;
   // Base and quote volume
   private baseVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
   private quoteVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
@@ -84,29 +84,33 @@ export class ManifestStatsServer {
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
-    this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
     this.resetWebsocket();
   }
 
   private resetWebsocket() {
     // Allow old one to timeout.
+    if (this.ws != null) {
+      try {
+        this.ws.close();
+      } catch (err) {}
+    }
+
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
 
-    this.ws.on('open', () => {});
+    this.ws.onopen = () => {};
 
-    this.ws.on('close', () => {
-      // Rely on the next iteration to force a reset.
-      console.log('Disconnected. Reconnecting');
+    this.ws.onclose = () => {
+      // Rely on the next iteration to force a reconnect. This happens without a
+      // keep-alive.
       reconnects.inc();
-    });
-    this.ws.on('error', () => {
-      // Rely on the next iteration to force a reset.
-      console.log('Error. Reconnecting');
+    };
+    this.ws.onerror = () => {
+      // Rely on the next iteration to force a reconnect.
       reconnects.inc();
-    });
+    };
 
-    this.ws.on('message', async (message) => {
-      const fill: FillLogResult = JSON.parse(message.toString());
+    this.ws.onmessage = async (message) => {
+      const fill: FillLogResult = JSON.parse(message.data.toString());
       const { market, baseAtoms, quoteAtoms, price, slot } = fill;
 
       // Do not accept old spurious messages.
@@ -116,6 +120,7 @@ export class ManifestStatsServer {
       this.lastFillSlot = slot;
 
       fills.inc({ market });
+      console.log('Got fill', fill);
 
       if (this.markets.get(market) == undefined) {
         this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -156,7 +161,7 @@ export class ManifestStatsServer {
         this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
           Number(quoteAtoms),
       );
-    });
+    };
   }
 
   /**
@@ -205,6 +210,12 @@ export class ManifestStatsServer {
     this.resetWebsocket();
 
     this.markets.forEach((value: Market, market: string) => {
+      console.log(
+        'Saving checkpoints for market',
+        market,
+        'base since last',
+        this.baseVolumeAtomsSinceLastCheckpoint.get(market),
+      );
       this.baseVolumeAtomsCheckpoints.set(market, [
         ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
         this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
