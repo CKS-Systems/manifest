@@ -95,13 +95,13 @@ export class ManifestStatsServer {
     this.ws.on('open', () => {});
 
     this.ws.on('close', () => {
+      // Rely on the next iteration to force a reset.
       console.log('Disconnected. Reconnecting');
-      this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
       reconnects.inc();
     });
     this.ws.on('error', () => {
+      // Rely on the next iteration to force a reset.
       console.log('Error. Reconnecting');
-      this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
       reconnects.inc();
     });
 
