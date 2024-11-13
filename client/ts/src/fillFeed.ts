@@ -72,7 +72,7 @@ export class FillFeed {
   public async parseLogs(endEarly?: boolean) {
     // Start with a hopefully recent signature.
     let lastSignature: string | undefined = (
-      await this.connection.getSignaturesForAddress(PROGRAM_ID)
+      await this.connection.getSignaturesForAddress(PROGRAM_ID, { limit: 1 })
     )[0].signature;
 
     // End early is 30 seconds, used for testing.
