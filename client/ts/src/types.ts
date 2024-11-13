@@ -12,8 +12,8 @@ export type FillLogResult = {
   baseAtoms: string;
   /** Number of quote atoms traded. */
   quoteAtoms: string;
-  /** Price as float. Quote atoms per base atom. */
-  price: number;
+  /** Price as float. Quote atoms per base atom. Client is responsible for translating to tokens. */
+  priceAtoms: number;
   /** Boolean to indicate which side the trade was. */
   takerIsBuy: boolean;
   /** Boolean to indicate whether the maker side is global. */

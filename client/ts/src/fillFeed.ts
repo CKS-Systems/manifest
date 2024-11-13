@@ -213,7 +213,7 @@ function toFillLogResult(
     taker: fillLog.taker.toBase58(),
     baseAtoms: fillLog.baseAtoms.inner.toString(),
     quoteAtoms: fillLog.quoteAtoms.inner.toString(),
-    price: convertU128(fillLog.price.inner),
+    priceAtoms: convertU128(fillLog.price.inner),
     takerIsBuy: fillLog.takerIsBuy,
     isMakerGlobal: fillLog.isMakerGlobal,
     makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
