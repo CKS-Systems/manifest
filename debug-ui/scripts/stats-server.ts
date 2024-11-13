@@ -74,7 +74,7 @@ export class ManifestStatsServer {
   private baseVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
   private quoteVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
 
-  // Last price by market
+  // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
 
   // Market objects used for mints and decimals.
