@@ -71,9 +71,15 @@ export class FillFeed {
    */
   public async parseLogs(endEarly?: boolean) {
     // Start with a hopefully recent signature.
-    let lastSignature: string | undefined = (
-      await this.connection.getSignaturesForAddress(PROGRAM_ID, { limit: 1 })
-    )[0].signature;
+    const lastSignatureStatus = (
+      await this.connection.getSignaturesForAddress(
+        PROGRAM_ID,
+        { limit: 1 },
+        'finalized',
+      )
+    )[0];
+    let lastSignature: string | undefined = lastSignatureStatus.signature;
+    let lastSlot: number = lastSignatureStatus.slot;
 
     // End early is 30 seconds, used for testing.
     const endTime: Date = endEarly
@@ -84,19 +90,39 @@ export class FillFeed {
     while (!this.shouldEnd && new Date(Date.now()) < endTime) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
-        await this.connection.getSignaturesForAddress(PROGRAM_ID, {
-          until: lastSignature,
-        });
+        await this.connection.getSignaturesForAddress(
+          PROGRAM_ID,
+          {
+            until: lastSignature,
+          },
+          'finalized',
+        );
       // Flip it so we do oldest first.
       signatures.reverse();
-      if (signatures.length == 0) {
+
+      // If there is only 1, do not use it because it could get stuck on the same sig.
+      if (signatures.length <= 1) {
         continue;
       }
-      lastSignature = signatures[signatures.length - 1].signature;
-
       for (const signature of signatures) {
+        // Separately track the last slot. This is necessary because sometimes
+        // gsfa ignores the until param and just gives 1_000 signatures.
+        if (signature.slot < lastSlot) {
+          continue;
+        }
         await this.handleSignature(signature);
       }
+
+      console.log(
+        'New last signature:',
+        signatures[signatures.length - 1].signature,
+        'New last signature slot:',
+        signatures[signatures.length - 1].slot,
+        'num sigs',
+        signatures.length,
+      );
+      lastSignature = signatures[signatures.length - 1].signature;
+      lastSlot = signatures[signatures.length - 1].slot;
 
       this.lastUpdateUnix = Date.now();
     }
@@ -111,7 +137,7 @@ export class FillFeed {
    * notification.
    */
   private async handleSignature(signature: ConfirmedSignatureInfo) {
-    console.log('Handling', signature.signature);
+    console.log('Handling', signature.signature, 'slot', signature.slot);
     const tx = await this.connection.getTransaction(signature.signature, {
       maxSupportedTransactionVersion: 0,
     });
@@ -120,7 +146,7 @@ export class FillFeed {
       return;
     }
     if (tx.meta.err != null) {
-      console.log('Skipping failed tx');
+      console.log('Skipping failed tx', signature.signature);
       return;
     }
 
