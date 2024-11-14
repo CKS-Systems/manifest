@@ -53,6 +53,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
           Number(fill.baseAtoms) /
           10 ** Number(marketRef.current?.baseDecimals() || 0);
 
+        // Price is the actual price which factors in rounding, not the limit price.
         const priceTokens = Number((quoteTokens / baseTokens).toFixed(4));
         const fillUi: FillResultUi = {
           market: fill.market,
