@@ -74,7 +74,7 @@ export class ManifestStatsServer {
   private baseVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
   private quoteVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
 
-  // Last price by market
+  // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
 
   // Market objects used for mints and decimals.
@@ -111,7 +111,7 @@ export class ManifestStatsServer {
 
     this.ws.onmessage = async (message) => {
       const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, price, slot } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, slot } = fill;
 
       // Do not accept old spurious messages.
       if (this.lastFillSlot > slot) {
@@ -144,13 +144,13 @@ export class ManifestStatsServer {
       }
       lastPrice.set(
         { market },
-        price *
+        priceAtoms *
           10 **
             (this.markets.get(market)!.baseDecimals() -
               this.markets.get(market)!.quoteDecimals()),
       );
 
-      this.lastPriceByMarket.set(market, price);
+      this.lastPriceByMarket.set(market, priceAtoms);
       this.baseVolumeAtomsSinceLastCheckpoint.set(
         market,
         this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
