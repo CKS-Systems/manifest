@@ -107,6 +107,20 @@ export class Global {
     return toNum(deposit.balanceAtoms) / 10 ** decimals;
   }
 
+  getGlobalBalanceTokensWithDecimals(
+    trader: PublicKey,
+    decimals: number,
+  ): number {
+    const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find(
+      (seat) => seat.trader.equals(trader),
+    );
+    if (!deposit) {
+      return 0;
+    } else {
+      return toNum(deposit.balanceAtoms) / 10 ** decimals;
+    }
+  }
+
   tokenMint(): PublicKey {
     return this.data.mint;
   }
