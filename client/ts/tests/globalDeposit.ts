@@ -53,6 +53,10 @@ async function testGlobalDeposit(): Promise<void> {
       10,
     'deposit global balance check',
   );
+  assert(
+    global.getGlobalBalanceTokensWithDecimals(payerKeypair.publicKey, 9) == 10,
+    'deposit global balance with decimals check',
+  );
   global.prettyPrint();
 }
 
