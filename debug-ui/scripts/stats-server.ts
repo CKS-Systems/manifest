@@ -382,61 +382,66 @@ export class ManifestStatsServer {
    * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0#heading=h.vgzsfbx8rvps
    */
   async getOrderbook(tickerId: string, depth: number) {
-    const market: Market = await Market.loadFromAddress({
-      connection: this.connection,
-      address: new PublicKey(tickerId),
-    });
-    if (depth == 0) {
+    try {
+      const market: Market = await Market.loadFromAddress({
+        connection: this.connection,
+        address: new PublicKey(tickerId),
+      });
+      if (depth == 0) {
+        return {
+          ticker_id: tickerId,
+          bids: market
+            .bids()
+            .reverse()
+            .map((restingOrder: RestingOrder) => {
+              return [
+                restingOrder.tokenPrice,
+                Number(restingOrder.numBaseTokens),
+              ];
+            }),
+          asks: market
+            .asks()
+            .reverse()
+            .map((restingOrder: RestingOrder) => {
+              return [
+                restingOrder.tokenPrice,
+                Number(restingOrder.numBaseTokens),
+              ];
+            }),
+        };
+      }
+      const bids: RestingOrder[] = market.bids().reverse();
+      const asks: RestingOrder[] = market.asks().reverse();
+      const bidsUpToDepth: RestingOrder[] = [];
+      const asksUpToDepth: RestingOrder[] = [];
+      let bidTokens: number = 0;
+      let askTokens: number = 0;
+      bids.forEach((bid: RestingOrder) => {
+        if (bidTokens < depth) {
+          bidTokens += Number(bid.numBaseTokens);
+          bidsUpToDepth.push(bid);
+        }
+      });
+      asks.forEach((ask: RestingOrder) => {
+        if (askTokens < depth) {
+          askTokens += Number(ask.numBaseTokens);
+          asksUpToDepth.push(ask);
+        }
+      });
+
       return {
         ticker_id: tickerId,
-        bids: market
-          .bids()
-          .reverse()
-          .map((restingOrder: RestingOrder) => {
-            return [
-              restingOrder.tokenPrice,
-              Number(restingOrder.numBaseTokens),
-            ];
-          }),
-        asks: market
-          .asks()
-          .reverse()
-          .map((restingOrder: RestingOrder) => {
-            return [
-              restingOrder.tokenPrice,
-              Number(restingOrder.numBaseTokens),
-            ];
-          }),
+        bids: bidsUpToDepth.map((restingOrder: RestingOrder) => {
+          return [restingOrder.tokenPrice, Number(restingOrder.numBaseTokens)];
+        }),
+        asks: asksUpToDepth.reverse().map((restingOrder: RestingOrder) => {
+          return [restingOrder.tokenPrice, Number(restingOrder.numBaseTokens)];
+        }),
       };
+    } catch (err) {
+      console.log('Error getOrderbook', tickerId, depth, err);
+      return {};
     }
-    const bids: RestingOrder[] = market.bids().reverse();
-    const asks: RestingOrder[] = market.asks().reverse();
-    const bidsUpToDepth: RestingOrder[] = [];
-    const asksUpToDepth: RestingOrder[] = [];
-    let bidTokens: number = 0;
-    let askTokens: number = 0;
-    bids.forEach((bid: RestingOrder) => {
-      if (bidTokens < depth) {
-        bidTokens += Number(bid.numBaseTokens);
-        bidsUpToDepth.push(bid);
-      }
-    });
-    asks.forEach((ask: RestingOrder) => {
-      if (askTokens < depth) {
-        askTokens += Number(ask.numBaseTokens);
-        asksUpToDepth.push(ask);
-      }
-    });
-
-    return {
-      ticker_id: tickerId,
-      bids: bidsUpToDepth.map((restingOrder: RestingOrder) => {
-        return [restingOrder.tokenPrice, Number(restingOrder.numBaseTokens)];
-      }),
-      asks: asksUpToDepth.reverse().map((restingOrder: RestingOrder) => {
-        return [restingOrder.tokenPrice, Number(restingOrder.numBaseTokens)];
-      }),
-    };
   }
 
   /**
