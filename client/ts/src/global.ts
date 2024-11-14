@@ -107,7 +107,10 @@ export class Global {
     return toNum(deposit.balanceAtoms) / 10 ** decimals;
   }
 
-  getGlobalBalanceTokensWithDecimals(trader: PublicKey, decimals: number): number {
+  getGlobalBalanceTokensWithDecimals(
+    trader: PublicKey,
+    decimals: number,
+  ): number {
     const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find(
       (seat) => seat.trader.equals(trader),
     );
