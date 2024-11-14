@@ -1,5 +1,6 @@
 export * from './client';
 export * from './market';
+export * from './global';
 export * from './types';
 export * as manifest from './manifest';
 export * as utils from './utils';
