@@ -9,8 +9,14 @@ import 'react-toggle/style.css';
 
 const Home = (): ReactElement => {
   const readOnly = process.env.NEXT_PUBLIC_READ_ONLY === 'true';
-  const { marketAddrs, loading, labelsByAddr, marketVolumes, activeByAddr } =
-    useAppState();
+  const {
+    marketAddrs,
+    loading,
+    labelsByAddr,
+    marketVolumes,
+    activeByAddr,
+    dailyVolumes,
+  } = useAppState();
   const [showAll, setShowAll] = useState<boolean>(false);
 
   function handleShowAllChange(event: { target: { checked: any } }) {
@@ -53,7 +59,11 @@ const Home = (): ReactElement => {
                         {addrToLabel(market, labelsByAddr)}
                       </Link>
                       {marketVolumes[market] != 0
-                        ? ': $' + marketVolumes[market]?.toFixed(2)
+                        ? 'lifetime: $' + marketVolumes[market]?.toFixed(2)
+                        : ''}
+                      {dailyVolumes[market] != 0 &&
+                      dailyVolumes[market] !== undefined
+                        ? ', daily $' + dailyVolumes[market]?.toFixed(2)
                         : ''}
                     </li>
                   ),
