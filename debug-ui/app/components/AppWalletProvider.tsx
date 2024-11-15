@@ -196,7 +196,7 @@ const AppWalletProvider = ({
         );
         setActiveByAddr(activeByAddr);
 
-        fetchAndSetMfxAddrLabels(conn, marketAddrs, setLabelsByAddr);
+        fetchAndSetMfxAddrLabels(conn, marketProgramAccounts, setLabelsByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
         toast.error(`placeOrder: ${ensureError(e).message}`);
