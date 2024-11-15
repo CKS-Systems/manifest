@@ -59,7 +59,7 @@ const Home = (): ReactElement => {
                         {addrToLabel(market, labelsByAddr)}
                       </Link>
                       {marketVolumes[market] != 0
-                        ? 'lifetime: $' + marketVolumes[market]?.toFixed(2)
+                        ? ' lifetime: $' + marketVolumes[market]?.toFixed(2)
                         : ''}
                       {dailyVolumes[market] != 0 &&
                       dailyVolumes[market] !== undefined
