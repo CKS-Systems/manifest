@@ -27,6 +27,7 @@
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
     "@solana/web3.js": "^1.95.0",
+    "cors": "^2.8.5",
     "express": "^4.21.0",
     "express-prom-bundle": "^7.0.0",
     "lightweight-charts": "^4.2.0",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@solana/spl-token": "^0.4.8",
+    "@types/cors": "^2.8.17",
     "@types/node": "^22.7.8",
     "@types/react": "^18",
     "@types/react-dom": "^18",

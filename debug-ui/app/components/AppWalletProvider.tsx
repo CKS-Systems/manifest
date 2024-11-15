@@ -46,6 +46,7 @@ interface AppStateContextValue {
   labelsByAddr: LabelsByAddr;
   activeByAddr: ActiveByAddr;
   marketVolumes: VolumeByAddr;
+  dailyVolumes: VolumeByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
   setActiveByAddr: Dispatch<SetStateAction<ActiveByAddr>>;
@@ -72,6 +73,7 @@ const AppWalletProvider = ({
   const [network, setNetwork] = useState<WalletAdapterNetwork | null>(null);
   const [marketAddrs, setMarketAddrs] = useState<string[]>([]);
   const [marketVolumes, setMarketVolumes] = useState<VolumeByAddr>({});
+  const [dailyVolumes, setDailyVolumes] = useState<VolumeByAddr>({});
   const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
   const [activeByAddr, setActiveByAddr] = useState<ActiveByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -197,6 +199,15 @@ const AppWalletProvider = ({
         setActiveByAddr(activeByAddr);
 
         fetchAndSetMfxAddrLabels(conn, marketProgramAccounts, setLabelsByAddr);
+
+        const tickers = await fetch(
+          'https://mfx-stats-mainnet.fly.dev/tickers',
+        );
+        const dailyVolumeByAddr: VolumeByAddr = {};
+        (await tickers.json()).forEach((ticker: any) => {
+          dailyVolumeByAddr[ticker['ticker_id']] = ticker['target_volume'];
+        });
+        setDailyVolumes(dailyVolumeByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
         toast.error(`placeOrder: ${ensureError(e).message}`);
@@ -234,6 +245,7 @@ const AppWalletProvider = ({
               setMarketAddrs,
               setMarketVolumes,
               setActiveByAddr,
+              dailyVolumes,
               loading,
             }}
           >
