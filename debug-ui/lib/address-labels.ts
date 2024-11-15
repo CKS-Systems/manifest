@@ -1,4 +1,4 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, GetProgramAccountsResponse, PublicKey } from '@solana/web3.js';
 import { Metaplex } from '@metaplex-foundation/js';
 import { ENV, TokenInfo, TokenListProvider } from '@solana/spl-token-registry';
 import { Market } from '@cks-systems/manifest-sdk';
@@ -38,22 +38,20 @@ export const getTokenSymbol = async (
 
 export const fetchAndSetMfxAddrLabels = async (
   conn: Connection,
-  marketAddrs: Array<string>,
+  marketProgramAccounts: GetProgramAccountsResponse,
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>,
 ): Promise<Set<string>> => {
   const mints = new Set<string>();
   const markets: Market[] = [];
-  await Promise.all(
-    marketAddrs.map(async (ma) => {
-      const m = await Market.loadFromAddress({
-        connection: conn,
-        address: new PublicKey(ma),
-      });
-      markets.push(m);
-      mints.add(m.quoteMint().toBase58());
-      mints.add(m.baseMint().toBase58());
-    }),
-  );
+  marketProgramAccounts.forEach((gpaResponse) => {
+    const market: Market = Market.loadFromBuffer({
+      address: gpaResponse.pubkey,
+      buffer: gpaResponse.account.data,
+    });
+    markets.push(market);
+    mints.add(market.quoteMint().toBase58());
+    mints.add(market.baseMint().toBase58());
+  });
 
   const mintLabels: LabelsByAddr = {};
   await Promise.all(
