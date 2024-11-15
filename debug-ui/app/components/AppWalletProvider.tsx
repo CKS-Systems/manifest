@@ -198,7 +198,7 @@ const AppWalletProvider = ({
         );
         setActiveByAddr(activeByAddr);
 
-        fetchAndSetMfxAddrLabels(conn, marketAddrs, setLabelsByAddr);
+        fetchAndSetMfxAddrLabels(conn, marketProgramAccounts, setLabelsByAddr);
 
         const tickers = await fetch(
           'https://mfx-stats-mainnet.fly.dev/tickers',
