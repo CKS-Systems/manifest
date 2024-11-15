@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
 import * as promClient from 'prom-client';
+import cors from 'cors';
 import express, { RequestHandler } from 'express';
 import promBundle from 'express-prom-bundle';
 import {
@@ -557,6 +558,7 @@ const run = async () => {
     res.send(await statsServer.getVolume());
   };
   const app = express();
+  app.use(cors());
   app.get('/tickers', tickersHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
