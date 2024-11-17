@@ -50,7 +50,7 @@ const Orderbook = ({
         const asks: RestingOrder[] = market.asks();
         const bids: RestingOrder[] = market.bids();
         setBids(bids.reverse().slice(0, MAX_ORDERS_TO_SHOW));
-        setAsks(asks.slice(0, MAX_ORDERS_TO_SHOW));
+        setAsks(asks.reverse().slice(0, MAX_ORDERS_TO_SHOW).reverse());
       }
     } catch (e) {
       console.error('updateOrderbook:', e);
