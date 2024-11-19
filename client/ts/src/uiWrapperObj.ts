@@ -216,8 +216,12 @@ export class UiWrapper {
 
   public settleIx(
     market: Market,
-    platformTokenAccount: PublicKey,
-    referrerTokenAccount: PublicKey,
+    accounts: {
+      platformTokenAccount: PublicKey;
+      referrerTokenAccount: PublicKey;
+      baseTokenProgram?: PublicKey;
+      quoteTokenProgram?: PublicKey;
+    },
     params: SettleFundsInstructionArgs,
   ): TransactionInstruction {
     const { owner } = this.data;
@@ -246,11 +250,11 @@ export class UiWrapper {
         vaultQuote,
         mintBase,
         mintQuote,
-        tokenProgramBase: TOKEN_PROGRAM_ID,
-        tokenProgramQuote: TOKEN_PROGRAM_ID,
+        tokenProgramBase: accounts.baseTokenProgram || TOKEN_PROGRAM_ID,
+        tokenProgramQuote: accounts.quoteTokenProgram || TOKEN_PROGRAM_ID,
         manifestProgram: MANIFEST_PROGRAM_ID,
-        platformTokenAccount,
-        referrerTokenAccount,
+        platformTokenAccount: accounts.platformTokenAccount,
+        referrerTokenAccount: accounts.referrerTokenAccount,
       },
       params,
     );
