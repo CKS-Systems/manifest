@@ -363,14 +363,26 @@ export class UiWrapper {
 
   public placeOrderIx(
     market: Market,
-    accounts: { payer?: PublicKey },
+    accounts: {
+      payer?: PublicKey;
+      baseTokenProgram?: PublicKey;
+      quoteTokenProgram?: PublicKey;
+    },
     args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ) {
     const { owner } = this.data;
     const payer = accounts.payer ?? owner;
     const { isBid } = args;
     const mint = isBid ? market.quoteMint() : market.baseMint();
-    const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
+    const traderTokenProgram = isBid
+      ? accounts.quoteTokenProgram
+      : accounts.baseTokenProgram;
+    const traderTokenAccount = getAssociatedTokenAddressSync(
+      mint,
+      owner,
+      true,
+      traderTokenProgram,
+    );
     const vault = getVaultAddress(market.address, mint);
     const clientOrderId = args.orderId ?? Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
@@ -411,12 +423,12 @@ export class UiWrapper {
         baseGlobal,
         baseGlobalVault,
         baseMarketVault: getVaultAddress(market.address, market.baseMint()),
-        baseTokenProgram: TOKEN_PROGRAM_ID,
+        baseTokenProgram: accounts.baseTokenProgram || TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
         quoteGlobalVault,
         quoteMarketVault: getVaultAddress(market.address, market.quoteMint()),
-        quoteTokenProgram: TOKEN_PROGRAM_ID,
+        quoteTokenProgram: accounts.quoteTokenProgram || TOKEN_PROGRAM_ID,
       },
       {
         params: {
@@ -464,6 +476,8 @@ export class UiWrapper {
     owner: PublicKey,
     payer: PublicKey,
     args: { isBid: boolean; amount: number; price: number; orderId?: number },
+    baseTokenProgram = TOKEN_PROGRAM_ID,
+    quoteTokenProgram = TOKEN_PROGRAM_ID,
   ): Promise<{ ixs: TransactionInstruction[]; signers: Signer[] }> {
     const ixs: TransactionInstruction[] = [];
     const signers: Signer[] = [];
@@ -507,14 +521,22 @@ export class UiWrapper {
         address: wrapper.pubkey,
         buffer: wrapper.account.data,
       });
-      const placeIx = wrapperParsed.placeOrderIx(market, { payer }, args);
+      const placeIx = wrapperParsed.placeOrderIx(
+        market,
+        { payer, baseTokenProgram, quoteTokenProgram },
+        args,
+      );
       ixs.push(placeIx);
     } else {
       const placeIx = await this.placeIx_(
         market,
-        wrapperPk!,
-        owner,
-        payer,
+        {
+          wrapper: wrapperPk!,
+          owner,
+          payer,
+          baseTokenProgram,
+          quoteTokenProgram,
+        },
         args,
       );
       ixs.push(...placeIx.ixs);
@@ -564,14 +586,26 @@ export class UiWrapper {
       baseDecimals: () => number;
       quoteDecimals: () => number;
     },
-    wrapper: PublicKey,
-    owner: PublicKey,
-    payer: PublicKey,
+    accounts: {
+      wrapper: PublicKey;
+      owner: PublicKey;
+      payer: PublicKey;
+      baseTokenProgram?: PublicKey;
+      quoteTokenProgram?: PublicKey;
+    },
     args: { isBid: boolean; amount: number; price: number; orderId?: number },
   ): { ixs: TransactionInstruction[]; signers: Signer[] } {
     const { isBid } = args;
     const mint = isBid ? market.quoteMint() : market.baseMint();
-    const traderTokenAccount = getAssociatedTokenAddressSync(mint, owner);
+    const traderTokenProgram = isBid
+      ? accounts.quoteTokenProgram
+      : accounts.baseTokenProgram;
+    const traderTokenAccount = getAssociatedTokenAddressSync(
+      mint,
+      accounts.owner,
+      true,
+      traderTokenProgram,
+    );
     const vault = getVaultAddress(market.address, mint);
     const clientOrderId = args.orderId ?? Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
@@ -608,24 +642,24 @@ export class UiWrapper {
 
     const placeIx = createPlaceOrderInstruction(
       {
-        wrapperState: wrapper,
-        owner,
+        wrapperState: accounts.wrapper,
+        owner: accounts.owner,
         traderTokenAccount,
         market: market.address,
         vault,
         mint,
         manifestProgram: MANIFEST_PROGRAM_ID,
-        payer,
+        payer: accounts.payer,
         baseMint: market.baseMint(),
         baseGlobal,
         baseGlobalVault,
         baseMarketVault,
-        baseTokenProgram: TOKEN_PROGRAM_ID,
+        baseTokenProgram: accounts.baseTokenProgram || TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
         quoteGlobalVault,
         quoteMarketVault,
-        quoteTokenProgram: TOKEN_PROGRAM_ID,
+        quoteTokenProgram: accounts.quoteTokenProgram || TOKEN_PROGRAM_ID,
       },
       {
         params: {
