@@ -3,7 +3,7 @@ use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, ManifestError},
+    program::{expand_market_if_needed, invoke, ManifestError},
     require,
     state::MarketFixed,
     utils::create_account,
@@ -11,15 +11,16 @@ use crate::{
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, program_pack::Pack,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
+    rent::Rent, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{
-        mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
-        BaseStateWithExtensions, StateWithExtensions,
+        mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
+        BaseStateWithExtensions, ExtensionType, PodStateWithExtensions, StateWithExtensions,
     },
-    state::Mint,
+    pod::PodMint,
+    state::{Account, Mint},
 };
 
 pub(crate) fn process_create_market(
@@ -56,18 +57,23 @@ pub(crate) fn process_create_market(
             // Closable mints can be replaced with different ones, breaking some saved info on the market.
             if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
                 let close_authority: Option<Pubkey> = extension.close_authority.into();
-                require!(
-                    close_authority.is_none(),
-                    ManifestError::InvalidMint,
-                    "Closable mints are not allowed",
-                )?;
+                if close_authority.is_some() {
+                    solana_program::msg!(
+                        "Warning, you are creating a market with a close authority."
+                    );
+                }
             }
-            // Transfer fees make the amounts on withdraw and deposit not match what is expected.
-            require!(
-                pool_mint.get_extension::<TransferFeeConfig>().is_err(),
-                ManifestError::InvalidMint,
-                "Transfer fee mints are not allowed",
-            )?;
+            // Permanent delegates can steal your tokens. This will break all
+            // accounting in the market, so there is no assertion of security
+            // against loss of funds on these markets.
+            if let Ok(extension) = pool_mint.get_extension::<PermanentDelegate>() {
+                let permanent_delegate: Option<Pubkey> = extension.delegate.into();
+                if permanent_delegate.is_some() {
+                    solana_program::msg!(
+                        "Warning, you are creating a market with a permanent delegate. There is no loss of funds protection for funds on this market"
+                    );
+                }
+            }
         }
     }
 
@@ -87,23 +93,32 @@ pub(crate) fn process_create_market(
             };
 
             let (_vault_key, bump) = get_vault_address(market.key, mint.key);
-            let space: usize = spl_token::state::Account::LEN;
             let seeds: Vec<Vec<u8>> = vec![
                 b"vault".to_vec(),
                 market.key.as_ref().to_vec(),
                 mint.key.as_ref().to_vec(),
                 vec![bump],
             ];
-            create_account(
-                payer.as_ref(),
-                token_account,
-                system_program.as_ref(),
-                &token_program_for_mint,
-                &rent,
-                space as u64,
-                seeds,
-            )?;
+
             if is_mint_22 {
+                let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+                let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
+                    PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
+                let mint_extensions: Vec<ExtensionType> =
+                    mint_with_extension.get_extension_types()?;
+                let required_extensions: Vec<ExtensionType> =
+                    ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                let space: usize =
+                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)?;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    seeds,
+                )?;
                 invoke(
                     &spl_token_2022::instruction::initialize_account3(
                         &token_program_for_mint,
@@ -119,6 +134,16 @@ pub(crate) fn process_create_market(
                     ],
                 )?;
             } else {
+                let space: usize = spl_token::state::Account::LEN;
+                create_account(
+                    payer.as_ref(),
+                    token_account,
+                    system_program.as_ref(),
+                    &token_program_for_mint,
+                    &rent,
+                    space as u64,
+                    seeds,
+                )?;
                 invoke(
                     &spl_token::instruction::initialize_account3(
                         &token_program_for_mint,
@@ -155,6 +180,8 @@ pub(crate) fn process_create_market(
         emit_stack(CreateMarketLog {
             market: *market.key,
             creator: *payer.key,
+            base_mint: *base_mint.info.key,
+            quote_mint: *quote_mint.info.key,
         })?;
     }
 

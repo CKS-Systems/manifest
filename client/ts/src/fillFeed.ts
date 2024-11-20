@@ -4,14 +4,27 @@ import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
-import bs58 from 'bs58';
-import keccak256 from 'keccak256';
+import { genAccDiscriminator } from './utils/discriminator';
+import * as promClient from 'prom-client';
+import { FillLogResult } from './types';
+
+// For live monitoring of the fill feed. For a more complete look at fill
+// history stats, need to index all trades.
+const fills = new promClient.Counter({
+  name: 'fills',
+  help: 'Number of fills',
+  labelNames: ['market', 'isGlobal', 'takerIsBuy'] as const,
+});
 
 /**
  * FillFeed example implementation.
  */
 export class FillFeed {
   private wss: WebSocket.Server;
+  private shouldEnd: boolean = false;
+  private ended: boolean = false;
+  private lastUpdateUnix: number = Date.now();
+
   constructor(private connection: Connection) {
     this.wss = new WebSocket.Server({ port: 1234 });
 
@@ -28,38 +41,95 @@ export class FillFeed {
     });
   }
 
+  public msSinceLastUpdate() {
+    return Date.now() - this.lastUpdateUnix;
+  }
+
+  public async stopParseLogs() {
+    this.shouldEnd = true;
+    const start = Date.now();
+    while (!this.ended) {
+      const timeout = 30_000;
+      const pollInterval = 500;
+
+      if (Date.now() - start > timeout) {
+        return Promise.reject(
+          new Error(
+            `failed to stop parseLogs after ${timeout / 1_000} seconds`,
+          ),
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+
+    return Promise.resolve();
+  }
+
   /**
    * Parse logs in an endless loop.
    */
   public async parseLogs(endEarly?: boolean) {
     // Start with a hopefully recent signature.
-    let lastSignature: string | undefined = (
-      await this.connection.getSignaturesForAddress(PROGRAM_ID)
-    )[0].signature;
+    const lastSignatureStatus = (
+      await this.connection.getSignaturesForAddress(
+        PROGRAM_ID,
+        { limit: 1 },
+        'finalized',
+      )
+    )[0];
+    let lastSignature: string | undefined = lastSignatureStatus.signature;
+    let lastSlot: number = lastSignatureStatus.slot;
 
     // End early is 30 seconds, used for testing.
     const endTime: Date = endEarly
       ? new Date(Date.now() + 30_000)
       : new Date(Date.now() + 1_000_000_000_000);
 
-    while (new Date(Date.now()) < endTime) {
+    // TODO: remove endTime in favor of stopParseLogs for testing
+    while (!this.shouldEnd && new Date(Date.now()) < endTime) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
-        await this.connection.getSignaturesForAddress(PROGRAM_ID, {
-          until: lastSignature,
-        });
+        await this.connection.getSignaturesForAddress(
+          PROGRAM_ID,
+          {
+            until: lastSignature,
+          },
+          'finalized',
+        );
       // Flip it so we do oldest first.
       signatures.reverse();
-      if (signatures.length == 0) {
+
+      // If there is only 1, do not use it because it could get stuck on the same sig.
+      if (signatures.length <= 1) {
         continue;
       }
-      lastSignature = signatures[signatures.length - 1].signature;
-
       for (const signature of signatures) {
+        // Separately track the last slot. This is necessary because sometimes
+        // gsfa ignores the until param and just gives 1_000 signatures.
+        if (signature.slot < lastSlot) {
+          continue;
+        }
         await this.handleSignature(signature);
       }
+
+      console.log(
+        'New last signature:',
+        signatures[signatures.length - 1].signature,
+        'New last signature slot:',
+        signatures[signatures.length - 1].slot,
+        'num sigs',
+        signatures.length,
+      );
+      lastSignature = signatures[signatures.length - 1].signature;
+      lastSlot = signatures[signatures.length - 1].slot;
+
+      this.lastUpdateUnix = Date.now();
     }
+
+    console.log('ended loop');
     this.wss.close();
+    this.ended = true;
   }
 
   /**
@@ -67,14 +137,16 @@ export class FillFeed {
    * notification.
    */
   private async handleSignature(signature: ConfirmedSignatureInfo) {
-    console.log('Handling', signature.signature);
-    const tx = await this.connection.getTransaction(signature.signature)!;
+    console.log('Handling', signature.signature, 'slot', signature.slot);
+    const tx = await this.connection.getTransaction(signature.signature, {
+      maxSupportedTransactionVersion: 0,
+    });
     if (!tx?.meta?.logMessages) {
       console.log('No log messages');
       return;
     }
     if (tx.meta.err != null) {
-      console.log('Skipping failed tx');
+      console.log('Skipping failed tx', signature.signature);
       return;
     }
 
@@ -94,95 +166,59 @@ export class FillFeed {
         c.charCodeAt(0),
       );
       const buffer = Buffer.from(byteArray);
-      // Hack to fix the difference in caching on the CI action.
-      if (
-        !buffer.subarray(0, 8).equals(fillDiscriminant) &&
-        !buffer
-          .subarray(0, 8)
-          .equals(Buffer.from([52, 81, 147, 82, 119, 191, 72, 172]))
-      ) {
+      if (!buffer.subarray(0, 8).equals(fillDiscriminant)) {
         continue;
       }
       const deserializedFillLog: FillLog = FillLog.deserialize(
         buffer.subarray(8),
       )[0];
-      console.log(
-        'Got a fill',
-        JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
+      const resultString: string = JSON.stringify(
+        toFillLogResult(
+          deserializedFillLog,
+          signature.slot,
+          signature.signature,
+        ),
       );
+      console.log('Got a fill', resultString);
+      fills.inc({
+        market: deserializedFillLog.market.toString(),
+        isGlobal: deserializedFillLog.isMakerGlobal.toString(),
+        takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
+      });
       this.wss.clients.forEach((client) => {
         client.send(
-          JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
+          JSON.stringify(
+            toFillLogResult(
+              deserializedFillLog,
+              signature.slot,
+              signature.signature,
+            ),
+          ),
         );
       });
     }
   }
 }
 
-/**
- * Run a fill feed as a websocket server that clients can connect to and get
- * notifications of fills for all manifest markets.
- */
-export async function runFillFeed() {
-  const connection: Connection = new Connection(
-    process.env.RPC_URL || 'http://127.0.0.1:8899',
-    'confirmed',
-  );
-  const fillFeed: FillFeed = new FillFeed(connection);
-  await fillFeed.parseLogs();
-}
+const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
-/**
- * Helper function for getting account discriminator that matches how anchor
- * generates discriminators.
- */
-function genAccDiscriminator(accName: string) {
-  return keccak256(
-    Buffer.concat([
-      Buffer.from(bs58.decode(PROGRAM_ID.toBase58())),
-      Buffer.from('manifest::logs::'),
-      Buffer.from(accName),
-    ]),
-  ).subarray(0, 8);
-}
-const fillDiscriminant = genAccDiscriminator('FillLog');
-
-/**
- * FillLogResult is the message sent to subscribers of the FillFeed
- */
-export type FillLogResult = {
-  /** Public key for the market as base58. */
-  market: string;
-  /** Public key for the maker as base58. */
-  maker: string;
-  /** Public key for the taker as base58. */
-  taker: string;
-  /** Number of base atoms traded. */
-  baseAtoms: string;
-  /** Number of quote atoms traded. */
-  quoteAtoms: string;
-  /** Price as float. Quote atoms per base atom. */
-  price: number;
-  /** Boolean to indicate which side the trade was. */
-  takerIsBuy: boolean;
-  /** Sequential number for every order placed / matched wraps around at u64::MAX */
-  makerSequenceNumber: string;
-  /** Sequential number for every order placed / matched wraps around at u64::MAX */
-  takerSequenceNumber: string;
-  /** Slot number of the fill. */
-  slot: number;
-};
-function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
+function toFillLogResult(
+  fillLog: FillLog,
+  slot: number,
+  signature: string,
+): FillLogResult {
   return {
     market: fillLog.market.toBase58(),
     maker: fillLog.maker.toBase58(),
     taker: fillLog.taker.toBase58(),
     baseAtoms: fillLog.baseAtoms.inner.toString(),
     quoteAtoms: fillLog.quoteAtoms.inner.toString(),
-    price: convertU128(fillLog.price.inner),
+    priceAtoms: convertU128(fillLog.price.inner),
     takerIsBuy: fillLog.takerIsBuy,
+    isMakerGlobal: fillLog.isMakerGlobal,
     makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
     takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
+    signature,
     slot,
   };
 }

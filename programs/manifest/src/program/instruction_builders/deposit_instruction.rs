@@ -3,12 +3,12 @@ use crate::{
     validation::get_vault_address,
 };
 use borsh::BorshSerialize;
+use hypertree::DataIndex;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
 };
 
-// TODO: would be nice it it had a trader index hint as well
 pub fn deposit_instruction(
     market: &Pubkey,
     payer: &Pubkey,
@@ -16,6 +16,7 @@ pub fn deposit_instruction(
     amount_atoms: u64,
     trader_token_account: &Pubkey,
     token_program: Pubkey,
+    trader_index_hint: Option<DataIndex>,
 ) -> Instruction {
     let (vault_address, _) = get_vault_address(market, mint);
 
@@ -31,7 +32,9 @@ pub fn deposit_instruction(
         ],
         data: [
             ManifestInstruction::Deposit.to_vec(),
-            DepositParams::new(amount_atoms).try_to_vec().unwrap(),
+            DepositParams::new(amount_atoms, trader_index_hint)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     }

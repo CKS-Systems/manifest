@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.4",
   "name": "manifest",
   "instructions": [
     {
@@ -176,6 +176,12 @@
           "type": {
             "defined": "DepositParams"
           }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
+          }
         }
       ],
       "discriminant": {
@@ -240,6 +246,12 @@
           "name": "params",
           "type": {
             "defined": "WithdrawParams"
+          }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
           }
         }
       ],
@@ -311,14 +323,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Base mint, only inlcuded if base is Token22, otherwise not required"
+            "Base mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
           "name": "tokenProgramQuote",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22) quote. Optional. Only include if different from base"
           ]
@@ -327,8 +341,9 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Quote mint, only inlcuded if base is Token22, otherwise not required"
+            "Quote mint, only included if base is Token22, otherwise not required"
           ]
         },
         {
@@ -428,14 +443,16 @@
           "name": "baseMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
-            "Mint for the global global account"
+            "Mint for the base global account"
           ]
         },
         {
           "name": "baseGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global account"
           ]
@@ -444,6 +461,7 @@
           "name": "baseGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base global vault"
           ]
@@ -452,6 +470,7 @@
           "name": "baseMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Base market vault"
           ]
@@ -460,6 +479,7 @@
           "name": "baseTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]
@@ -468,6 +488,7 @@
           "name": "quoteMint",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Mint for this global account"
           ]
@@ -476,6 +497,7 @@
           "name": "quoteGlobal",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global account"
           ]
@@ -484,6 +506,7 @@
           "name": "quoteGlobalVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote global vault"
           ]
@@ -492,6 +515,7 @@
           "name": "quoteMarketVault",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Quote market vault"
           ]
@@ -500,6 +524,7 @@
           "name": "quoteTokenProgram",
           "isMut": false,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Token program(22)"
           ]
@@ -647,7 +672,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -712,7 +737,7 @@
         },
         {
           "name": "traderToken",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "docs": [
             "Trader token account"
@@ -876,6 +901,14 @@
           {
             "name": "creator",
             "type": "publicKey"
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
           }
         ]
       }
@@ -962,6 +995,14 @@
             "type": "publicKey"
           },
           {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
+          },
+          {
             "name": "price",
             "type": {
               "defined": "QuoteAtomsPerBaseAtom"
@@ -992,11 +1033,15 @@
             "type": "bool"
           },
           {
+            "name": "isMakerGlobal",
+            "type": "bool"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                15
+                14
               ]
             }
           }
@@ -1207,6 +1252,34 @@
       }
     },
     {
+      "name": "GlobalCleanupLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "cleaner",
+            "type": "publicKey"
+          },
+          {
+            "name": "maker",
+            "type": "publicKey"
+          },
+          {
+            "name": "amountDesired",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          },
+          {
+            "name": "amountDeposited",
+            "type": {
+              "defined": "GlobalAtoms"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "QuoteAtoms",
       "type": {
         "kind": "struct",
@@ -1339,25 +1412,6 @@
       }
     },
     {
-      "name": "BatchUpdateReturn",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "orders",
-            "type": {
-              "vec": {
-                "tuple": [
-                  "u64",
-                  "u32"
-                ]
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "DepositParams",
       "type": {
         "kind": "struct",
@@ -1365,6 +1419,12 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
           }
         ]
       }
@@ -1449,6 +1509,299 @@
           {
             "name": "amountAtoms",
             "type": "u64"
+          },
+          {
+            "name": "traderIndexHint",
+            "type": {
+              "option": "u32"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimedSeat",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseWithdrawableBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteWithdrawableBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalFixed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "discriminant",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "globalTradersRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "globalDepositsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "globalDepositsMaxIndex",
+            "type": "u32"
+          },
+          {
+            "name": "freeListHeadIndex",
+            "type": "u32"
+          },
+          {
+            "name": "numBytesAllocated",
+            "type": "u32"
+          },
+          {
+            "name": "vaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "globalBump",
+            "type": "u8"
+          },
+          {
+            "name": "numSeatsClaimed",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalTrader",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "depositIndex",
+            "type": "u32"
+          },
+          {
+            "name": "padding",
+            "type": "u32"
+          },
+          {
+            "name": "padding2",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trader",
+            "type": "publicKey"
+          },
+          {
+            "name": "balanceAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketFixed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "discriminant",
+            "type": "u64"
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "baseMintDecimals",
+            "type": "u8"
+          },
+          {
+            "name": "quoteMintDecimals",
+            "type": "u8"
+          },
+          {
+            "name": "baseVaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "quoteVaultBump",
+            "type": "u8"
+          },
+          {
+            "name": "padding1",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          },
+          {
+            "name": "baseMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "baseVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "quoteVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "orderSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "numBytesAllocated",
+            "type": "u32"
+          },
+          {
+            "name": "bidsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "bidsBestIndex",
+            "type": "u32"
+          },
+          {
+            "name": "asksRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "asksBestIndex",
+            "type": "u32"
+          },
+          {
+            "name": "claimedSeatsRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "freeListHeadIndex",
+            "type": "u32"
+          },
+          {
+            "name": "padding2",
+            "type": {
+              "array": [
+                "u32",
+                1
+              ]
+            }
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "padding3",
+            "type": {
+              "array": [
+                "u64",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RestingOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price",
+            "type": "u128"
+          },
+          {
+            "name": "numBaseAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "sequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "traderIndex",
+            "type": "u32"
+          },
+          {
+            "name": "lastValidSlot",
+            "type": "u32"
+          },
+          {
+            "name": "isBid",
+            "type": "bool"
+          },
+          {
+            "name": "orderType",
+            "type": {
+              "defined": "OrderType"
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                22
+              ]
+            }
           }
         ]
       }
@@ -1606,11 +1959,23 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "creator",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1629,11 +1994,13 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1652,19 +2019,23 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "mint",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "amountAtoms",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1683,19 +2054,23 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "mint",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "amountAtoms",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1714,54 +2089,83 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "maker",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "taker",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "baseMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "quoteMint",
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "price",
           "type": {
             "defined": "QuoteAtomsPerBaseAtom"
-          }
+          },
+          "index": false
         },
         {
           "name": "baseAtoms",
           "type": {
             "defined": "BaseAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "quoteAtoms",
           "type": {
             "defined": "QuoteAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "makerSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "takerSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "takerIsBuy",
-          "type": "bool"
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
+        },
+        {
+          "name": "isMakerGlobal",
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
         },
         {
           "name": "padding",
           "type": {
             "array": [
               "u8",
-              15
+              14
             ]
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -1780,45 +2184,56 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "price",
           "type": {
             "defined": "QuoteAtomsPerBaseAtom"
-          }
+          },
+          "index": false
         },
         {
           "name": "baseAtoms",
           "type": {
             "defined": "BaseAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "orderSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         },
         {
           "name": "orderIndex",
-          "type": "u32"
+          "type": "u32",
+          "index": false
         },
         {
           "name": "lastValidSlot",
-          "type": "u32"
+          "type": "u32",
+          "index": false
         },
         {
           "name": "orderType",
           "type": {
             "defined": "OrderType"
-          }
+          },
+          "index": false
         },
         {
           "name": "isBid",
-          "type": "bool"
+          "type": {
+            "defined": "PodBool"
+          },
+          "index": false
         },
         {
           "name": "padding",
@@ -1827,7 +2242,8 @@
               "u8",
               6
             ]
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -1846,15 +2262,18 @@
       "fields": [
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "orderSequenceNumber",
-          "type": "u64"
+          "type": "u64",
+          "index": false
         }
       ]
     },
@@ -1873,11 +2292,13 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "creator",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1896,11 +2317,13 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1919,15 +2342,18 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "market",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -1946,17 +2372,20 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "globalAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -1975,17 +2404,20 @@
       "fields": [
         {
           "name": "global",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "trader",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "globalAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         }
       ]
     },
@@ -2004,23 +2436,66 @@
       "fields": [
         {
           "name": "evictor",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "evictee",
-          "type": "publicKey"
+          "type": "publicKey",
+          "index": false
         },
         {
           "name": "evictorAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
         },
         {
           "name": "evicteeAtoms",
           "type": {
             "defined": "GlobalAtoms"
-          }
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "GlobalCleanupLog",
+      "discriminator": [
+        193,
+        249,
+        115,
+        186,
+        42,
+        126,
+        196,
+        82
+      ],
+      "fields": [
+        {
+          "name": "cleaner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "maker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amountDesired",
+          "type": {
+            "defined": "GlobalAtoms"
+          },
+          "index": false
+        },
+        {
+          "name": "amountDeposited",
+          "type": {
+            "defined": "GlobalAtoms"
+          },
+          "index": false
         }
       ]
     }

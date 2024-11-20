@@ -61,10 +61,10 @@ pub fn batch_update_instruction(
         program_id: crate::id(),
         accounts: account_metas,
         data: [
-                ManifestInstruction::BatchUpdate.to_vec(),
-                BatchUpdateParams::new(trader_index_hint, cancels, orders)
-                    .try_to_vec()
-                    .unwrap(),
+            ManifestInstruction::BatchUpdate.to_vec(),
+            BatchUpdateParams::new(trader_index_hint, cancels, orders)
+                .try_to_vec()
+                .unwrap(),
         ]
         .concat(),
     }

@@ -8,12 +8,10 @@ use crate::state::{
 use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode, NIL};
 use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 
-use {
-    crate::certora::utils::{alloc_havoced, memhavoc},
-    calltrace::cvt_cex_print_u64,
-    cvt::{cvt_assert, cvt_assume},
-    nondet::nondet,
-};
+use crate::certora::utils::{alloc_havoced, memhavoc};
+use calltrace::cvt_cex_print_u64;
+use cvt::{cvt_assert, cvt_assume};
+use nondet::nondet;
 
 const NUM_BLOCKS: usize = 10;
 // -- must be big enough so that all INDEX global variables are a legal index
@@ -21,7 +19,7 @@ const NUM_BLOCKS: usize = 10;
 const GLOBAL_DATA_LEN: usize = NUM_BLOCKS * MARKET_BLOCK_SIZE;
 
 const MAIN_SEAT_INDEX: u64 = 0;
-const SECOND_SEAT_INDEX: u64 = MARKET_BLOCK_SIZE as u64; 
+const SECOND_SEAT_INDEX: u64 = MARKET_BLOCK_SIZE as u64;
 
 static mut MAIN_SEAT_PK: *mut Pubkey = std::ptr::null_mut();
 static mut IS_MAIN_SEAT_TAKEN: u64 = 0;
@@ -78,7 +76,7 @@ pub fn main_trader_pk() -> &'static Pubkey {
 }
 
 pub fn main_trader_index() -> DataIndex {
-    unsafe { MAIN_SEAT_INDEX as DataIndex}
+    unsafe { MAIN_SEAT_INDEX as DataIndex }
 }
 
 pub fn second_trader_pk() -> &'static Pubkey {

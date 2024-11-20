@@ -11,6 +11,8 @@ import { createMarket } from './createMarket';
 import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
+import { depositGlobal } from './globalDeposit';
+import { createGlobal } from './createGlobal';
 
 async function testBatchUpdate(): Promise<void> {
   const connection: Connection = new Connection(
@@ -53,6 +55,53 @@ async function testBatchUpdate(): Promise<void> {
   assert(market.bids().length == 0, 'place bids did not work');
 }
 
+async function testBatchUpdateWithGlobal(): Promise<void> {
+  const connection: Connection = new Connection(
+    'http://127.0.0.1:8899',
+    'confirmed',
+  );
+  const payerKeypair: Keypair = Keypair.generate();
+
+  const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
+  const market: Market = await Market.loadFromAddress({
+    connection,
+    address: marketAddress,
+  });
+
+  await createGlobal(connection, payerKeypair, market.quoteMint());
+  await depositGlobal(
+    connection,
+    payerKeypair,
+    market.quoteMint(),
+    10,
+    payerKeypair,
+  );
+  await batchUpdate(
+    connection,
+    payerKeypair,
+    marketAddress,
+    1,
+    1,
+    true,
+    OrderType.Global,
+    0,
+  );
+
+  await market.reload(connection);
+  market.prettyPrint();
+
+  assert(market.bids().length == 1, 'batch update did not work for global');
+  assert(
+    Number(market.bids()[0].numBaseTokens) == 1,
+    'ask top of book wrong size',
+  );
+  assert(
+    market.bids()[0].tokenPrice == 1,
+    `ask top of book wrong price ${market.bids()[0].tokenPrice}`,
+  );
+  assert(market.asks().length == 0, 'place asks did not work');
+}
+
 async function batchUpdate(
   connection: Connection,
   payerKeypair: Keypair,
@@ -62,7 +111,6 @@ async function batchUpdate(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -79,7 +127,6 @@ async function batchUpdate(
         isBid,
         lastValidSlot: lastValidSlot,
         orderType: orderType,
-        minOutTokens,
         clientOrderId,
       },
     ],
@@ -98,5 +145,8 @@ async function batchUpdate(
 describe('Batch update test', () => {
   it('BatchUpdate', async () => {
     await testBatchUpdate();
+  });
+  it('BatchUpdateWithGlobal', async () => {
+    await testBatchUpdateWithGlobal();
   });
 });

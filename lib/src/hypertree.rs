@@ -9,33 +9,40 @@ pub const NIL: DataIndex = 0x7F_FF_FF_FF;
 #[cfg(feature = "certora")]
 #[macro_export]
 macro_rules! is_not_nil {
-    ($v: expr) => { $v < NIL };
+    ($v: expr) => {
+        $v < NIL
+    };
 }
-
 
 #[cfg(feature = "certora")]
 #[macro_export]
 macro_rules! is_nil {
-    ($v: expr) => { $v >= NIL };
+    ($v: expr) => {
+        $v >= NIL
+    };
 }
 
 #[cfg(not(feature = "certora"))]
 #[macro_export]
 macro_rules! is_not_nil {
-    ($v: expr) => { $v != NIL };
+    ($v: expr) => {
+        $v != NIL
+    };
 }
 
 #[cfg(not(feature = "certora"))]
 #[macro_export]
 macro_rules! is_nil {
-    ($v: expr) => { $v == NIL };
+    ($v: expr) => {
+        $v == NIL
+    };
 }
-
-
 
 #[macro_export]
 macro_rules! eq_nil {
-    ($v: expr) => { $v == NIL };
+    ($v: expr) => {
+        $v == NIL
+    };
 }
 
 pub trait Payload: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}

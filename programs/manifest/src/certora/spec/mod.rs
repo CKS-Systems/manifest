@@ -1,14 +1,14 @@
-pub mod swap_checks;
-pub mod rbtree_checks;
-pub mod deposit_checks;
-pub mod market_checks;
-pub mod funds_checks;
-pub mod withdraw_checks;
-pub mod place_order_checks;
-pub mod no_funds_loss_util;
-pub mod cancel_order_checks;
 pub mod batch_update_checks;
+pub mod cancel_order_checks;
+pub mod deposit_checks;
+pub mod funds_checks;
+pub mod market_checks;
 pub mod matching_checks;
+pub mod no_funds_loss_util;
+pub mod place_order_checks;
+pub mod rbtree_checks;
+pub mod swap_checks;
+pub mod withdraw_checks;
 
 /// Utility functions for verification.
 pub(crate) mod verification_utils {
@@ -25,5 +25,7 @@ pub(crate) mod verification_utils {
 
 #[macro_export]
 macro_rules! cvt_static_initializer {
-    () => { crate::certora::spec::verification_utils::init_static(); }
+    () => {
+        crate::certora::spec::verification_utils::init_static();
+    };
 }

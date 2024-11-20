@@ -17,6 +17,7 @@ import * as beetSolana from '@metaplex-foundation/beet-solana';
 export type PlatformFeeLogArgs = {
   market: web3.PublicKey;
   user: web3.PublicKey;
+  mint: web3.PublicKey;
   platformTokenAccount: web3.PublicKey;
   platformFee: beet.bignum;
 };
@@ -31,6 +32,7 @@ export class PlatformFeeLog implements PlatformFeeLogArgs {
   private constructor(
     readonly market: web3.PublicKey,
     readonly user: web3.PublicKey,
+    readonly mint: web3.PublicKey,
     readonly platformTokenAccount: web3.PublicKey,
     readonly platformFee: beet.bignum,
   ) {}
@@ -42,6 +44,7 @@ export class PlatformFeeLog implements PlatformFeeLogArgs {
     return new PlatformFeeLog(
       args.market,
       args.user,
+      args.mint,
       args.platformTokenAccount,
       args.platformFee,
     );
@@ -149,6 +152,7 @@ export class PlatformFeeLog implements PlatformFeeLogArgs {
     return {
       market: this.market.toBase58(),
       user: this.user.toBase58(),
+      mint: this.mint.toBase58(),
       platformTokenAccount: this.platformTokenAccount.toBase58(),
       platformFee: (() => {
         const x = <{ toNumber: () => number }>this.platformFee;
@@ -176,6 +180,7 @@ export const platformFeeLogBeet = new beet.BeetStruct<
   [
     ['market', beetSolana.publicKey],
     ['user', beetSolana.publicKey],
+    ['mint', beetSolana.publicKey],
     ['platformTokenAccount', beetSolana.publicKey],
     ['platformFee', beet.u64],
   ],

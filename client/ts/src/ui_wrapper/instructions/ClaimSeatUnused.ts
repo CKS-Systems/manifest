@@ -10,14 +10,14 @@ import * as web3 from '@solana/web3.js';
 
 /**
  * @category Instructions
- * @category ClaimSeat
+ * @category ClaimSeatUnused
  * @category generated
  */
-export const ClaimSeatStruct = new beet.BeetArgsStruct<{
+export const ClaimSeatUnusedStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number;
-}>([['instructionDiscriminator', beet.u8]], 'ClaimSeatInstructionArgs');
+}>([['instructionDiscriminator', beet.u8]], 'ClaimSeatUnusedInstructionArgs');
 /**
- * Accounts required by the _ClaimSeat_ instruction
+ * Accounts required by the _ClaimSeatUnused_ instruction
  *
  * @property [] manifestProgram
  * @property [_writable_, **signer**] owner
@@ -25,10 +25,10 @@ export const ClaimSeatStruct = new beet.BeetArgsStruct<{
  * @property [_writable_, **signer**] payer
  * @property [_writable_] wrapperState
  * @category Instructions
- * @category ClaimSeat
+ * @category ClaimSeatUnused
  * @category generated
  */
-export type ClaimSeatInstructionAccounts = {
+export type ClaimSeatUnusedInstructionAccounts = {
   manifestProgram: web3.PublicKey;
   owner: web3.PublicKey;
   market: web3.PublicKey;
@@ -37,22 +37,22 @@ export type ClaimSeatInstructionAccounts = {
   wrapperState: web3.PublicKey;
 };
 
-export const claimSeatInstructionDiscriminator = 1;
+export const claimSeatUnusedInstructionDiscriminator = 1;
 
 /**
- * Creates a _ClaimSeat_ instruction.
+ * Creates a _ClaimSeatUnused_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @category Instructions
- * @category ClaimSeat
+ * @category ClaimSeatUnused
  * @category generated
  */
-export function createClaimSeatInstruction(
-  accounts: ClaimSeatInstructionAccounts,
+export function createClaimSeatUnusedInstruction(
+  accounts: ClaimSeatUnusedInstructionAccounts,
   programId = new web3.PublicKey('UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh'),
 ) {
-  const [data] = ClaimSeatStruct.serialize({
-    instructionDiscriminator: claimSeatInstructionDiscriminator,
+  const [data] = ClaimSeatUnusedStruct.serialize({
+    instructionDiscriminator: claimSeatUnusedInstructionDiscriminator,
   });
   const keys: web3.AccountMeta[] = [
     {

@@ -24,13 +24,16 @@ export type FillLogArgs = {
   market: web3.PublicKey;
   maker: web3.PublicKey;
   taker: web3.PublicKey;
+  baseMint: web3.PublicKey;
+  quoteMint: web3.PublicKey;
   price: QuoteAtomsPerBaseAtom;
   baseAtoms: BaseAtoms;
   quoteAtoms: QuoteAtoms;
   makerSequenceNumber: beet.bignum;
   takerSequenceNumber: beet.bignum;
   takerIsBuy: boolean;
-  padding: number[] /* size: 15 */;
+  isMakerGlobal: boolean;
+  padding: number[] /* size: 14 */;
 };
 /**
  * Holds the data for the {@link FillLog} Account and provides de/serialization
@@ -44,13 +47,16 @@ export class FillLog implements FillLogArgs {
     readonly market: web3.PublicKey,
     readonly maker: web3.PublicKey,
     readonly taker: web3.PublicKey,
+    readonly baseMint: web3.PublicKey,
+    readonly quoteMint: web3.PublicKey,
     readonly price: QuoteAtomsPerBaseAtom,
     readonly baseAtoms: BaseAtoms,
     readonly quoteAtoms: QuoteAtoms,
     readonly makerSequenceNumber: beet.bignum,
     readonly takerSequenceNumber: beet.bignum,
     readonly takerIsBuy: boolean,
-    readonly padding: number[] /* size: 15 */,
+    readonly isMakerGlobal: boolean,
+    readonly padding: number[] /* size: 14 */,
   ) {}
 
   /**
@@ -61,12 +67,15 @@ export class FillLog implements FillLogArgs {
       args.market,
       args.maker,
       args.taker,
+      args.baseMint,
+      args.quoteMint,
       args.price,
       args.baseAtoms,
       args.quoteAtoms,
       args.makerSequenceNumber,
       args.takerSequenceNumber,
       args.takerIsBuy,
+      args.isMakerGlobal,
       args.padding,
     );
   }
@@ -174,6 +183,8 @@ export class FillLog implements FillLogArgs {
       market: this.market.toBase58(),
       maker: this.maker.toBase58(),
       taker: this.taker.toBase58(),
+      baseMint: this.baseMint.toBase58(),
+      quoteMint: this.quoteMint.toBase58(),
       price: this.price,
       baseAtoms: this.baseAtoms,
       quoteAtoms: this.quoteAtoms,
@@ -200,6 +211,7 @@ export class FillLog implements FillLogArgs {
         return x;
       })(),
       takerIsBuy: this.takerIsBuy,
+      isMakerGlobal: this.isMakerGlobal,
       padding: this.padding,
     };
   }
@@ -214,13 +226,16 @@ export const fillLogBeet = new beet.BeetStruct<FillLog, FillLogArgs>(
     ['market', beetSolana.publicKey],
     ['maker', beetSolana.publicKey],
     ['taker', beetSolana.publicKey],
+    ['baseMint', beetSolana.publicKey],
+    ['quoteMint', beetSolana.publicKey],
     ['price', quoteAtomsPerBaseAtomBeet],
     ['baseAtoms', baseAtomsBeet],
     ['quoteAtoms', quoteAtomsBeet],
     ['makerSequenceNumber', beet.u64],
     ['takerSequenceNumber', beet.u64],
     ['takerIsBuy', beet.bool],
-    ['padding', beet.uniformFixedSizeArray(beet.u8, 15)],
+    ['isMakerGlobal', beet.bool],
+    ['padding', beet.uniformFixedSizeArray(beet.u8, 14)],
   ],
   FillLog.fromArgs,
   'FillLog',

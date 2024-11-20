@@ -23,4 +23,3 @@ export const fetchMarket = async (
   });
   return market;
 };
-

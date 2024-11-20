@@ -1,18 +1,17 @@
-use std::cell::RefMut;
+use std::cell::{Ref, RefMut};
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{get_mut_helper, DataIndex, RBNode};
+use hypertree::{get_mut_helper, trace, DataIndex, RBNode};
 use manifest::{
     logs::emit_stack,
-    program::{get_mut_dynamic_account, withdraw_instruction},
+    program::{get_dynamic_account, get_mut_dynamic_account, invoke, withdraw_instruction},
     quantities::{QuoteAtoms, WrapperU64},
-    state::{DynamicAccount, MarketFixed},
+    state::{DynamicAccount, MarketFixed, MarketRef},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
@@ -71,8 +70,7 @@ pub(crate) fn process_settle_funds(
     check_signer(&wrapper_state, owner.key);
     let market_info_index: DataIndex = get_market_info_index_for_market(&wrapper_state, market.key);
 
-    // Do an initial sync to get all existing orders and balances fresh. This is
-    // needed for modifying user orders for insufficient funds.
+    // Do an initial sync to update withdrawable balances and volume traded for fee calculation.
     sync_fast(&wrapper_state, &market, market_info_index)?;
 
     let mut wrapper_data: RefMut<&mut [u8]> = wrapper_state.info.try_borrow_mut_data()?;
@@ -82,6 +80,7 @@ pub(crate) fn process_settle_funds(
     let market_info: &mut MarketInfo =
         get_mut_helper::<RBNode<MarketInfo>>(&mut wrapper.dynamic, market_info_index)
             .get_mut_value();
+    let trader_index: DataIndex = market_info.trader_index;
 
     let WrapperSettleFundsParams {
         fee_mantissa,
@@ -114,7 +113,15 @@ pub(crate) fn process_settle_funds(
 
     drop(wrapper_data);
 
-    // settle base
+    let quote_mint_decimals = {
+        let market_data: Ref<&mut [u8]> = market.try_borrow_data()?;
+        let dynamic_account: MarketRef = get_dynamic_account(&market_data);
+        dynamic_account.fixed.get_quote_mint_decimals()
+    };
+
+    trace!("base_balance:{base_balance:?} quote_balance:{quote_balance:?} fee_atoms:{fee_atoms} quote_volume_paid:{quote_volume_paid:?}");
+
+    // Settle withdrawable base tokens.
     invoke(
         &withdraw_instruction(
             market.key,
@@ -123,6 +130,7 @@ pub(crate) fn process_settle_funds(
             base_balance.as_u64(),
             trader_token_account_base.key,
             *token_program_base.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -135,7 +143,7 @@ pub(crate) fn process_settle_funds(
         ],
     )?;
 
-    // settle quote
+    // Settle withdrawable quote tokens.
     invoke(
         &withdraw_instruction(
             market.key,
@@ -144,6 +152,7 @@ pub(crate) fn process_settle_funds(
             quote_balance.as_u64(),
             trader_token_account_quote.key,
             *token_program_quote.key,
+            Some(trader_index),
         ),
         &[
             market.info.clone(),
@@ -156,22 +165,39 @@ pub(crate) fn process_settle_funds(
         ],
     )?;
 
-    // pay fees
-
-    if *vault_quote.owner == spl_token_2022::id() {
-        unimplemented!("token2022 not yet supported")
-        // TODO: make sure to use least amount of transfers possible to avoid transfer fee
+    // limits:
+    // fee_atoms = [0..u64::MAX]
+    // platform_fee_atoms = [0..fee_atoms]
+    // intermediate results can extend above u64
+    let platform_fee_atoms = if referrer_token_account.is_ok() {
+        (fee_atoms * platform_fee_percent.min(100) as u128 / 100) as u64
     } else {
-        // limits:
-        // fee_atoms = [0..u64::MAX]
-        // platform_fee_atoms = [0..fee_atoms]
-        // intermediate results can extend above u64
-        let platform_fee_atoms = if referrer_token_account.is_ok() {
-            (fee_atoms * platform_fee_percent.min(100) as u128 / 100) as u64
-        } else {
-            fee_atoms as u64
-        };
+        fee_atoms as u64
+    };
 
+    trace!("platform_fee_atoms:{platform_fee_atoms}");
+
+    if *token_program_quote.key == spl_token_2022::id() {
+        invoke(
+            &spl_token_2022::instruction::transfer_checked(
+                token_program_quote.key,
+                trader_token_account_quote.key,
+                mint_quote.key,
+                platform_token_account.key,
+                owner.key,
+                &[],
+                platform_fee_atoms,
+                quote_mint_decimals,
+            )?,
+            &[
+                token_program_quote.as_ref().clone(),
+                trader_token_account_quote.as_ref().clone(),
+                mint_quote.as_ref().clone(),
+                platform_token_account.as_ref().clone(),
+                owner.as_ref().clone(),
+            ],
+        )?;
+    } else {
         invoke(
             &spl_token::instruction::transfer(
                 token_program_quote.key,
@@ -188,18 +214,41 @@ pub(crate) fn process_settle_funds(
                 owner.info.clone(),
             ],
         )?;
+    }
 
-        emit_stack(PlatformFeeLog {
-            market: *market.key,
-            user: *owner.key,
-            platform_token_account: *platform_token_account.key,
-            platform_fee: platform_fee_atoms,
-        })?;
+    emit_stack(PlatformFeeLog {
+        market: *market.key,
+        user: *owner.key,
+        mint: *mint_quote.key,
+        platform_token_account: *platform_token_account.key,
+        platform_fee: platform_fee_atoms,
+    })?;
 
-        if let Ok(referrer_token_account) = referrer_token_account {
-            // saturating_sub not needed, but doesn't hurt
-            let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms);
+    if let Ok(referrer_token_account) = referrer_token_account {
+        // saturating_sub not needed, but doesn't hurt
+        let referrer_fee_atoms = (fee_atoms as u64).saturating_sub(platform_fee_atoms);
 
+        if *token_program_quote.key == spl_token_2022::id() {
+            invoke(
+                &spl_token_2022::instruction::transfer_checked(
+                    token_program_quote.key,
+                    trader_token_account_quote.key,
+                    mint_quote.key,
+                    referrer_token_account.key,
+                    owner.key,
+                    &[],
+                    referrer_fee_atoms,
+                    quote_mint_decimals,
+                )?,
+                &[
+                    token_program_quote.as_ref().clone(),
+                    trader_token_account_quote.as_ref().clone(),
+                    mint_quote.as_ref().clone(),
+                    referrer_token_account.as_ref().clone(),
+                    owner.as_ref().clone(),
+                ],
+            )?;
+        } else {
             invoke(
                 &spl_token::instruction::transfer(
                     token_program_quote.key,
@@ -216,17 +265,18 @@ pub(crate) fn process_settle_funds(
                     owner.info.clone(),
                 ],
             )?;
-
-            emit_stack(ReferrerFeeLog {
-                market: *market.key,
-                user: *owner.key,
-                referrer_token_account: *referrer_token_account.key,
-                referrer_fee: referrer_fee_atoms,
-            })?;
         }
+
+        emit_stack(ReferrerFeeLog {
+            market: *market.key,
+            user: *owner.key,
+            mint: *mint_quote.key,
+            referrer_token_account: *referrer_token_account.key,
+            referrer_fee: referrer_fee_atoms,
+        })?;
     }
 
-    // Sync to get the balance correct and remove any expired orders.
+    // Sync to update the remaining balances post settlement.
     sync_fast(&wrapper_state, &market, market_info_index)?;
 
     Ok(())

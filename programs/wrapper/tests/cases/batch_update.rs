@@ -1,11 +1,12 @@
 use std::{mem::size_of, rc::Rc};
 
-use hypertree::{get_helper, DataIndex, HyperTreeReadOperations, RBNode, NIL};
-use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType};
-use solana_program_test::tokio;
-use solana_sdk::{
-    account::Account, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer,
+use hypertree::{
+    get_helper, DataIndex, HyperTreeReadOperations, HyperTreeValueIteratorTrait, RBNode, NIL,
 };
+use manifest::state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, OrderType, RestingOrder};
+use solana_program::instruction::Instruction;
+use solana_program_test::tokio;
+use solana_sdk::{account::Account, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use wrapper::{
     instruction_builders::{batch_update_instruction, create_wrapper_instructions},
     market_info::MarketInfo,
@@ -42,9 +43,7 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -69,9 +68,7 @@ async fn wrapper_batch_update_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -109,7 +106,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -119,7 +115,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 true,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -129,7 +124,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
             WrapperPlaceOrderParams::new(
                 0,
@@ -139,10 +133,8 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
                 false,
                 NO_EXPIRATION_LAST_VALID_SLOT,
                 OrderType::Limit,
-                0,
             ),
         ],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -160,7 +152,6 @@ async fn wrapper_batch_update_reuse_client_order_id_test() -> anyhow::Result<()>
         vec![WrapperCancelOrderParams::new(0)],
         false,
         vec![],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -254,9 +245,7 @@ async fn sync_remove_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -280,9 +269,7 @@ async fn sync_remove_test() -> anyhow::Result<()> {
             true,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -299,7 +286,6 @@ async fn sync_remove_test() -> anyhow::Result<()> {
         vec![],
         false,
         vec![],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -363,9 +349,7 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -382,7 +366,6 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
         vec![],
         true,
         vec![],
-        None,
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -423,10 +406,13 @@ async fn wrapper_batch_update_cancel_all_test() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
+async fn wrapper_ignore_post_only() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
-    test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+    test_fixture.deposit(Token::SOL, 2 * SOL_UNIT_SIZE).await?;
+    test_fixture
+        .deposit(Token::USDC, 2 * USDC_UNIT_SIZE)
+        .await?;
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
@@ -435,7 +421,7 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
         &test_fixture.market.key,
         &payer,
         &test_fixture.wrapper.key,
-        vec![WrapperCancelOrderParams::new(0)],
+        vec![],
         false,
         vec![WrapperPlaceOrderParams::new(
             0,
@@ -445,9 +431,7 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
             false,
             NO_EXPIRATION_LAST_VALID_SLOT,
             OrderType::Limit,
-            0,
         )],
-        Some(0),
     );
     send_tx_with_retry(
         Rc::clone(&test_fixture.context),
@@ -456,6 +440,43 @@ async fn wrapper_batch_update_trader_index_hint_test() -> anyhow::Result<()> {
         &[&payer_keypair],
     )
     .await?;
+
+    // This post only will cross, so it should not get placed.
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market.key,
+        &payer,
+        &test_fixture.wrapper.key,
+        vec![],
+        false,
+        vec![WrapperPlaceOrderParams::new(
+            0,
+            1 * SOL_UNIT_SIZE,
+            2,
+            0,
+            true,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::PostOnly,
+        )],
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    test_fixture.market.reload().await;
+    // There is just one ask and did not match due to post only.
+    assert_eq!(
+        test_fixture
+            .market
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .count(),
+        1
+    );
 
     Ok(())
 }

@@ -1,11 +1,9 @@
 // #![allow(unused_imports)]
-use {
-    crate::*,
-    calltrace::*,
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::*,
-};
+use crate::*;
+use calltrace::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
 
 use certora::hooks::last_called_remove_order_from_tree_and_free;
 use solana_program::account_info::AccountInfo;
@@ -13,16 +11,18 @@ use solana_program::account_info::AccountInfo;
 use certora::spec::place_order_checks::place_single_order_nondet_inputs;
 use state::get_helper_order;
 
-use crate::certora::spec::no_funds_loss_util::{*};
-use crate::program::get_mut_dynamic_account;
-use crate::quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64};
-use crate::state::market::market_helpers::{
-    AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx,
+use crate::{
+    certora::spec::no_funds_loss_util::*,
+    program::get_mut_dynamic_account,
+    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    state::{
+        market::market_helpers::{AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx},
+        DynamicAccount, MarketRefMut, RestingOrder,
+    },
 };
-use crate::state::{DynamicAccount, MarketRefMut, RestingOrder};
 use hypertree::DataIndex;
 
-// Rules to check if a matching order exists in the book, 
+// Rules to check if a matching order exists in the book,
 // then matching will happen
 pub fn matching_if_maker_order_exists<const IS_BID: bool>() {
     cvt_static_initializer!();
@@ -35,7 +35,7 @@ pub fn matching_if_maker_order_exists<const IS_BID: bool>() {
     let vault_base_token = &acc_infos[8];
     let vault_quote_token = &acc_infos[9];
 
-    // -- market preconditions 
+    // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
         market_info,
         trader,
@@ -46,7 +46,6 @@ pub fn matching_if_maker_order_exists<const IS_BID: bool>() {
 
     let (args, remaining_base_atoms, now_slot) =
         place_single_order_nondet_inputs::<IS_BID>(market_info);
-
 
     // -- assumptions that maker_order is not expired and it matches on price
     let dynamic: &mut [u8; 8] = &mut [0; 8];
@@ -60,7 +59,7 @@ pub fn matching_if_maker_order_exists<const IS_BID: bool>() {
     } else {
         cvt_assume!(maker_order_price >= args.price);
     }
-    
+
     // -- call to place_single_order
     let (res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
         market_info,
@@ -69,7 +68,7 @@ pub fn matching_if_maker_order_exists<const IS_BID: bool>() {
         now_slot,
         maker_order_index
     );
-    
+
     // -- assert to make sure that the order matched partially or fully
     cvt_assert!(res.status == AddOrderStatus::PartialFill || res.status == AddOrderStatus::Filled);
 
@@ -98,7 +97,7 @@ pub fn crossed_prices_if_matched<const IS_BID: bool>() {
     let vault_base_token = &acc_infos[8];
     let vault_quote_token = &acc_infos[9];
 
-    // -- market preconditions 
+    // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
         market_info,
         trader,
@@ -115,7 +114,7 @@ pub fn crossed_prices_if_matched<const IS_BID: bool>() {
     let maker_order: &RestingOrder = get_helper_order(dynamic, maker_order_index).get_value();
     let maker_order_price = maker_order.get_price();
     let args_price = args.price;
-    
+
     // -- call to place_single_order
     let (res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
         market_info,
@@ -126,8 +125,8 @@ pub fn crossed_prices_if_matched<const IS_BID: bool>() {
     );
     // -- assume that the order matched partially or fully
     cvt_assume!(res.status == AddOrderStatus::PartialFill || res.status == AddOrderStatus::Filled);
-    
-    // -- assert to check that the orders must have matched on price 
+
+    // -- assert to check that the orders must have matched on price
     if IS_BID {
         cvt_assert!(maker_order_price <= args_price);
     } else {
@@ -171,7 +170,8 @@ pub fn place_single_order_full_match_balances<const IS_BID: bool>() {
 
     // -- record trader balances before place_single_order
     let (trader_base_old, trader_quote_old) = get_trader_balance!(market_info, trader.key);
-    let (maker_trader_base_old, maker_trader_quote_old) = get_trader_balance!(market_info, maker_trader.key);
+    let (maker_trader_base_old, maker_trader_quote_old) =
+        get_trader_balance!(market_info, maker_trader.key);
 
     // -- compute base_atoms_traded and quote_atoms_traded
     let dynamic = [0u8; 8];
@@ -179,7 +179,8 @@ pub fn place_single_order_full_match_balances<const IS_BID: bool>() {
     let base_atoms_traded: BaseAtoms = maker_order.get_num_base_atoms();
     let matched_price: QuoteAtomsPerBaseAtom = maker_order.get_price();
     let quote_atoms_traded: QuoteAtoms = matched_price
-        .checked_quote_for_base(base_atoms_traded, IS_BID != true).unwrap();
+        .checked_quote_for_base(base_atoms_traded, IS_BID != true)
+        .unwrap();
 
     let (args, remaining_base_atoms, now_slot) =
         place_single_order_nondet_inputs::<IS_BID>(market_info);
@@ -196,9 +197,10 @@ pub fn place_single_order_full_match_balances<const IS_BID: bool>() {
 
     // -- record trader balances after place_single_order
     let (trader_base_new, trader_quote_new) = get_trader_balance!(market_info, trader.key);
-    let (maker_trader_base_new, maker_trader_quote_new) = get_trader_balance!(market_info, maker_trader.key);
+    let (maker_trader_base_new, maker_trader_quote_new) =
+        get_trader_balance!(market_info, maker_trader.key);
 
-    // -- asserts to establish that trader balances changed as expected  
+    // -- asserts to establish that trader balances changed as expected
     if IS_BID {
         cvt_assert!(trader_base_new == trader_base_old + base_atoms_traded.as_u64());
         cvt_assert!(trader_quote_new == trader_quote_old - quote_atoms_traded.as_u64());
@@ -248,7 +250,8 @@ pub fn place_single_order_partial_match_balances<const IS_BID: bool>() {
 
     // -- record trader balances before place_single_order
     let (trader_base_old, trader_quote_old) = get_trader_balance!(market_info, trader.key);
-    let (maker_trader_base_old, maker_trader_quote_old) = get_trader_balance!(market_info, maker_trader.key);
+    let (maker_trader_base_old, maker_trader_quote_old) =
+        get_trader_balance!(market_info, maker_trader.key);
 
     let (args, remaining_base_atoms, now_slot) =
         place_single_order_nondet_inputs::<IS_BID>(market_info);
@@ -259,8 +262,8 @@ pub fn place_single_order_partial_match_balances<const IS_BID: bool>() {
     let base_atoms_traded: BaseAtoms = remaining_base_atoms;
     let matched_price: QuoteAtomsPerBaseAtom = maker_order.get_price();
     let quote_atoms_traded: QuoteAtoms = matched_price
-        .checked_quote_for_base(base_atoms_traded, IS_BID != false).unwrap();
-
+        .checked_quote_for_base(base_atoms_traded, IS_BID != false)
+        .unwrap();
 
     // -- call to place_single_order
     let (res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
@@ -274,9 +277,10 @@ pub fn place_single_order_partial_match_balances<const IS_BID: bool>() {
 
     // -- record trader balances after place_single_order
     let (trader_base_new, trader_quote_new) = get_trader_balance!(market_info, trader.key);
-    let (maker_trader_base_new, maker_trader_quote_new) = get_trader_balance!(market_info, maker_trader.key);
+    let (maker_trader_base_new, maker_trader_quote_new) =
+        get_trader_balance!(market_info, maker_trader.key);
 
-    // -- asserts to establish that trader balances changed as expected  
+    // -- asserts to establish that trader balances changed as expected
     if IS_BID {
         cvt_assert!(trader_base_new == trader_base_old + base_atoms_traded.as_u64());
         cvt_assert!(trader_quote_new == trader_quote_old - quote_atoms_traded.as_u64());
@@ -289,7 +293,7 @@ pub fn place_single_order_partial_match_balances<const IS_BID: bool>() {
 
         // maker may receive a bonus quote atom due to rounding
         cvt_assert!(maker_trader_quote_old <= maker_trader_quote_new);
-        cvt_assert!(maker_trader_quote_new <= maker_trader_quote_old+1);
+        cvt_assert!(maker_trader_quote_new <= maker_trader_quote_old + 1);
     }
 
     cvt_vacuity_check!();
@@ -304,7 +308,6 @@ pub fn rule_place_single_order_partial_match_balances_bid() {
 pub fn rule_place_single_order_partial_match_balances_ask() {
     place_single_order_partial_match_balances::<false /* IS_BID */>();
 }
-
 
 // Rules to check if the maker_order is fully matched, then it is removed
 pub fn matching_order_removed_if_fully_matched<const IS_BID: bool>() {
@@ -357,7 +360,7 @@ pub fn rule_matching_order_removed_if_fully_matched_ask() {
     matching_order_removed_if_fully_matched::<false /* IS_BID */>();
 }
 
-// Rules to check if the maker_order was (i) not expired (ii) matched on price removed 
+// Rules to check if the maker_order was (i) not expired (ii) matched on price removed
 // and (iii) removed from the tree; then it must have been fully_matched
 pub fn matching_fully_matched_if_order_removed<const IS_BID: bool>() {
     cvt_static_initializer!();
@@ -381,14 +384,14 @@ pub fn matching_fully_matched_if_order_removed<const IS_BID: bool>() {
     );
 
     let (args, remaining_base_atoms, now_slot) =
-    place_single_order_nondet_inputs::<IS_BID>(market_info);
+        place_single_order_nondet_inputs::<IS_BID>(market_info);
 
     // -- assumptions that maker_order is not expired and it matches on price
     let dynamic: &mut [u8; 8] = &mut [0; 8];
     let maker_order: &RestingOrder = get_helper_order(dynamic, maker_order_index).get_value();
     // -- maker_order is not expired
     cvt_assume!(!maker_order.is_expired(now_slot));
-    
+
     // -- call to place_single_order
     let (res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
         market_info,
@@ -397,7 +400,7 @@ pub fn matching_fully_matched_if_order_removed<const IS_BID: bool>() {
         now_slot,
         maker_order_index
     );
-    
+
     // -- assume that remove_order_from_tree_and_free was called
     cvt_assume!(last_called_remove_order_from_tree_and_free());
 

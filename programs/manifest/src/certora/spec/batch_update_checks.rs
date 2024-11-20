@@ -1,32 +1,27 @@
-
+use certora::hooks::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::{acc_infos_with_mem_layout, nondet};
+use state::{main_ask_order_index, main_bid_order_index, main_trader_index};
 use std::cell::RefMut;
-use {
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::{acc_infos_with_mem_layout, nondet},
-    vectors::cvt_no_resizable_vec,
-    certora::hooks::{*},
-    state::{
-        main_trader_index, main_ask_order_index, main_bid_order_index
-    },
-};
+use vectors::cvt_no_resizable_vec;
 
-use {
-    crate::*,
-    crate::program::batch_update::{*},
-    crate::program::get_mut_dynamic_account,
-    crate::state::{*},
-    hypertree::DataIndex,
-
+use crate::{
+    program::{batch_update::*, get_mut_dynamic_account},
+    state::*,
+    *,
 };
+use hypertree::DataIndex;
 
 // helper to prepare a cancel order
-fn prepare_cancel_order<const IS_BID: bool>(order_sequence_number:u64) -> CancelOrderParams {
+fn prepare_cancel_order<const IS_BID: bool>(order_sequence_number: u64) -> CancelOrderParams {
     return CancelOrderParams::new(order_sequence_number);
 }
 
 // helper to prepare a cancel order with hint
-fn prepare_cancel_order_with_hint<const IS_BID: bool>(order_sequence_number:u64) -> CancelOrderParams {
+fn prepare_cancel_order_with_hint<const IS_BID: bool>(
+    order_sequence_number: u64,
+) -> CancelOrderParams {
     // -- we assume an order is present in the main order slot
     if IS_BID {
         cvt_assume!(!is_bid_order_free());
@@ -34,7 +29,11 @@ fn prepare_cancel_order_with_hint<const IS_BID: bool>(order_sequence_number:u64)
         cvt_assume!(!is_ask_order_free());
     }
 
-    let order_index = if IS_BID { main_bid_order_index() } else { main_ask_order_index() };
+    let order_index = if IS_BID {
+        main_bid_order_index()
+    } else {
+        main_ask_order_index()
+    };
     // -- needed as an argument to get_helper_order, but is not used
     let dynamic = &mut [0; 8];
     let order: RestingOrder = get_helper_order(dynamic, order_index).value;
@@ -54,7 +53,14 @@ fn prepare_place_order<const IS_BID: bool>() -> PlaceOrderParams {
     }
 
     // The type of order doesn't really matter because we use a mock for place order
-    return PlaceOrderParams::new(nondet(), nondet(), nondet(), IS_BID, OrderType::Limit, nondet());
+    return PlaceOrderParams::new(
+        nondet(),
+        nondet(),
+        nondet(),
+        IS_BID,
+        OrderType::Limit,
+        nondet(),
+    );
 }
 
 // Parametric rule
@@ -81,13 +87,13 @@ pub fn rule_integrity_of_batch_update_cancel<const IS_BID: bool>() {
 
 macro_rules! get_order {
     ($market_acc_info:expr, $order_index:expr) => {{
-         let market_data: &mut RefMut<&mut [u8]> = &mut $market_acc_info.try_borrow_mut_data().unwrap();
-         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-         let order: &RestingOrder = dynamic_account.get_order_by_index($order_index);
-         *order
+        let market_data: &mut RefMut<&mut [u8]> =
+            &mut $market_acc_info.try_borrow_mut_data().unwrap();
+        let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        let order: &RestingOrder = dynamic_account.get_order_by_index($order_index);
+        *order
     }};
 }
-
 
 // Parametric rule
 pub fn rule_integrity_of_batch_update_cancel_hint<const IS_BID: bool>() {
@@ -102,7 +108,6 @@ pub fn rule_integrity_of_batch_update_cancel_hint<const IS_BID: bool>() {
     cvt_assert!(order_params.order_index_hint().is_some());
     let order_index = order_params.order_index_hint().unwrap();
     let order: RestingOrder = get_order!(market_info, order_index);
-
 
     let cancels = cvt_no_resizable_vec!([order_params]; 10);
     // No place orders
@@ -146,8 +151,6 @@ pub fn rule_integrity_of_batch_update_place_order<const IS_BID: bool>() {
     cvt_assert!(last_called_place_order());
     cvt_vacuity_check!();
 }
-
-
 
 #[rule]
 pub fn rule_integrity_of_batch_update_cancel_bid() {

@@ -7,16 +7,15 @@ use solana_program::{
     system_program,
 };
 
-use crate::wrapper_state::ManifestWrapperStateFixed;
+use crate::{loader::WrapperStateAccountInfo, wrapper_state::ManifestWrapperStateFixed};
 
-use super::shared::{expand_wrapper_if_needed, WrapperStateAccountInfo};
+use super::shared::expand_wrapper_if_needed;
 
 pub(crate) fn process_create_wrapper(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
     _data: &[u8],
 ) -> ProgramResult {
-    // Load account infos
     let account_iter: &mut std::slice::Iter<AccountInfo> = &mut accounts.iter();
     let owner: Signer = Signer::new(next_account_info(account_iter)?)?;
     let system_program: Program =

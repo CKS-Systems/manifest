@@ -1,30 +1,27 @@
 #![allow(unused_imports)]
-use {
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    calltrace::{*},
-    nondet::{*},
-};
+use calltrace::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
 
-use {
-    crate::{*},
-    solana_program::account_info::AccountInfo,
-};
+use crate::*;
+use solana_program::account_info::AccountInfo;
 
 use solana_cvt::token::spl_token_account_get_amount;
-use state::{cvt_assume_main_trader_has_seat, second_trader_pk, is_second_seat_taken};
+use state::{cvt_assume_main_trader_has_seat, is_second_seat_taken, second_trader_pk};
 
-use crate::program::withdraw::WithdrawParams;
-use crate::program::withdraw::process_withdraw_core;
-use crate::program::{get_dynamic_account, get_mut_dynamic_account};
-use crate::state::{DynamicAccount, MarketRefMut};
-use crate::state::MarketFixed;
-use crate::state::claimed_seat::ClaimedSeat;
-use hypertree::{get_mut_helper, get_helper, RBNode};
+use crate::{
+    program::{
+        get_dynamic_account, get_mut_dynamic_account,
+        withdraw::{process_withdraw_core, WithdrawParams},
+    },
+    state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRefMut},
+};
+use hypertree::{get_helper, get_mut_helper, RBNode};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-// verifies when we use the fixed summary for the token2022 transfer, 
+// verifies when we use the fixed summary for the token2022 transfer,
 // fails with a counterexample showing the transfer happening in the wrong direction otherwise,
 // as long as we don't use the market initialization
 #[rule]
@@ -49,7 +46,8 @@ pub fn rule_withdraw_withdraws() {
     cvt_assume!(is_second_seat_taken());
 
     let (trader_base_old, trader_quote_old) = get_trader_balance!(market, trader.key);
-    let (unrelated_trader_base_old, unrelated_trader_quote_old) = get_trader_balance!(market, unrelated_trader.key);
+    let (unrelated_trader_base_old, unrelated_trader_quote_old) =
+        get_trader_balance!(market, unrelated_trader.key);
 
     let trader_amount_old = spl_token_account_get_amount(trader_token);
     let vault_amount_old = spl_token_account_get_amount(vault_token);
@@ -70,9 +68,10 @@ pub fn rule_withdraw_withdraws() {
     cvt_assert!(trader_diff == amount);
     cvt_assert!(vault_diff == amount);
 
-    let (trader_base, trader_quote ) = get_trader_balance!(market, trader.key);
+    let (trader_base, trader_quote) = get_trader_balance!(market, trader.key);
 
-    let (unrelated_trader_base, unrelated_trader_quote ) = get_trader_balance!(market, unrelated_trader.key);
+    let (unrelated_trader_base, unrelated_trader_quote) =
+        get_trader_balance!(market, unrelated_trader.key);
 
     cvt_assert!(trader_base_old >= trader_base);
     cvt_assert!(trader_quote_old >= trader_quote);
@@ -83,7 +82,10 @@ pub fn rule_withdraw_withdraws() {
     cvt_assert!(trader_base_diff + trader_quote_diff == amount);
     cvt_assert!(trader_base_diff == 0 || trader_quote_diff == 0);
 
-    cvt_assert!(unrelated_trader_base == unrelated_trader_base_old && unrelated_trader_quote == unrelated_trader_quote_old);
+    cvt_assert!(
+        unrelated_trader_base == unrelated_trader_base_old
+            && unrelated_trader_quote == unrelated_trader_quote_old
+    );
 
     cvt_vacuity_check!();
 }

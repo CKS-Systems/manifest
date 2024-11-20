@@ -18,7 +18,6 @@ export type WrapperBatchUpdateParams = {
   cancels: WrapperCancelOrderParams[];
   cancelAll: boolean;
   orders: WrapperPlaceOrderParams[];
-  traderIndexHint: beet.COption<number>;
 };
 
 /**
@@ -31,7 +30,6 @@ export const wrapperBatchUpdateParamsBeet =
       ['cancels', beet.array(wrapperCancelOrderParamsBeet)],
       ['cancelAll', beet.bool],
       ['orders', beet.array(wrapperPlaceOrderParamsBeet)],
-      ['traderIndexHint', beet.coption(beet.u32)],
     ],
     'WrapperBatchUpdateParams',
   );

@@ -3,6 +3,7 @@
 
 pub mod instruction;
 pub mod instruction_builders;
+pub mod loader;
 pub mod market_info;
 pub mod open_order;
 pub mod processors;
@@ -66,6 +67,12 @@ pub fn process_instruction(
             process_withdraw(program_id, accounts, data)?;
         }
         ManifestWrapperInstruction::BatchUpdate => {
+            process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::BatchUpdateBaseGlobal => {
+            process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::BatchUpdateQuoteGlobal => {
             process_batch_update(program_id, accounts, data)?;
         }
     }

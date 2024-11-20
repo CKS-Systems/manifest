@@ -76,23 +76,23 @@ mod free_addr_helpers {
     use crate::state::{
         constants::MARKET_BLOCK_SIZE,
         market::{MarketFixed, MarketUnusedFreeListPadding},
-   };
-    
+    };
+
+    use super::{is_main_seat_free, is_second_seat_free, main_trader_index, second_trader_index};
     use hypertree::DataIndex;
-    use super::{main_trader_index, is_main_seat_free, second_trader_index, is_second_seat_free};
 
     pub fn get_free_address_on_market_fixed_for_seat(
         _fixed: &mut MarketFixed,
-        _dynamic: &mut [u8]
-    ) -> DataIndex  {
+        _dynamic: &mut [u8],
+    ) -> DataIndex {
         // -- return slot of the first available trader
         if is_main_seat_free() {
             main_trader_index()
-        } else if  is_second_seat_free() {
+        } else if is_second_seat_free() {
             second_trader_index()
-        } else { 
+        } else {
             cvt::cvt_assert!(false);
-            crate::state::market::NIL 
+            crate::state::market::NIL
         }
     }
 
@@ -124,20 +124,23 @@ mod free_addr_helpers {
         _fixed: &mut MarketFixed,
         _dynamic: &mut [u8],
         _index: DataIndex,
-    ) { } 
-    
+    ) {
+    }
+
     pub fn release_address_on_market_fixed_for_bid_order(
         _fixed: &mut MarketFixed,
         _dynamic: &mut [u8],
         _index: DataIndex,
-    )  { }
+    ) {
+    }
 
     pub fn release_address_on_market_fixed_for_ask_order(
         _fixed: &mut MarketFixed,
         _dynamic: &mut [u8],
         _index: DataIndex,
-    ) { }
- }
+    ) {
+    }
+}
 
 pub use free_addr_helpers::*;
 
@@ -231,7 +234,7 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 ..Default::default()
             });
         }
-        
+
         // Stop trying to match if price no longer satisfies limit.
         if (is_bid && other_order.get_price() > price)
             || (!is_bid && other_order.get_price() < price)
@@ -242,7 +245,7 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 ..Default::default()
             });
         }
-        
+
         // Got a match. First make sure we are allowed to match. We check
         // inside the matching rather than skipping the matching altogether
         // because post only orders should fail, not produce a crossed book.
@@ -299,7 +302,7 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                     global_trade_accounts_opts,
                 )?;
                 return Ok(AddOrderToMarketInnerResult {
-                    next_order_index: next_order_index,
+                    next_order_index,
                     status: AddOrderStatus::GlobalSkip,
                     ..Default::default()
                 });
@@ -361,10 +364,10 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
             )?;
         }
 
-        // Certora : the manifest code first increased the maker for the matched amount, 
+        // Certora : the manifest code first increased the maker for the matched amount,
         // then decreased the taker. This causes an overflow on withdrawable_balances.
-        // Thus, we changed it to first decrease the taker, and then increase the maker. 
-        
+        // Thus, we changed it to first decrease the taker, and then increase the maker.
+
         // Decrease taker
         update_balance(
             fixed,
@@ -419,7 +422,11 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
             maker_sequence_number,
             taker_sequence_number: fixed.order_sequence_number,
             taker_is_buy: PodBool::from(is_bid),
-            _padding: [0; 15],
+            base_mint: *fixed.get_base_mint(),
+            quote_mint: *fixed.get_quote_mint(),
+            // TODO: Fix this
+            is_maker_global: PodBool::from(false),
+            _padding: [0; 14],
         })?;
 
         if did_fully_match_resting_order {
@@ -429,15 +436,17 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 .get_order_type()
                 == OrderType::Global
             {
-                #[cfg(not(feature = "certora"))] {
+                #[cfg(not(feature = "certora"))]
+                {
                     let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
                         &global_trade_accounts_opts[0]
                     } else {
                         &global_trade_accounts_opts[1]
                     };
-                    remove_from_global(&global_trade_accounts_opt, &maker)?;
+                    remove_from_global(&global_trade_accounts_opt)?;
                 }
-                #[cfg(feature = "certora")] {
+                #[cfg(feature = "certora")]
+                {
                     if is_bid {
                         remove_from_global(&global_trade_accounts_opts[0], &maker)?;
                     } else {
@@ -471,7 +480,10 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
     }
 }
 
-pub fn place_order_helper<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOrBorrowMut<[u8]>>(
+pub fn place_order_helper<
+    Fixed: DerefOrBorrowMut<MarketFixed> + DerefOrBorrow<MarketFixed>,
+    Dynamic: DerefOrBorrowMut<[u8]> + DerefOrBorrow<[u8]>,
+>(
     self_: &mut DynamicAccount<Fixed, Dynamic>,
     args: AddOrderToMarketArgs,
 ) -> Result<AddOrderToMarketResult, ProgramError> {
@@ -507,7 +519,6 @@ pub fn place_order_helper<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOr
     let mut ctx = AddSingleOrderCtx::new(args, fixed, dynamic, remaining_base_atoms, now_slot);
 
     while remaining_base_atoms > BaseAtoms::ZERO && is_not_nil!(current_order_index) {
-        
         // one step of placing an order
         let AddOrderToMarketInnerResult {
             next_order_index,
@@ -515,7 +526,7 @@ pub fn place_order_helper<Fixed: DerefOrBorrowMut<MarketFixed>, Dynamic: DerefOr
         } = ctx.place_single_order(current_order_index)?;
 
         // update global state based on the context
-        // this ensures that each iteration of the loop updates all 
+        // this ensures that each iteration of the loop updates all
         // variables in scope just as it did originally.
         current_order_index = next_order_index;
         remaining_base_atoms = ctx.remaining_base_atoms;

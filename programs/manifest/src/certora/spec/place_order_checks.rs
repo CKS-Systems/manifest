@@ -1,38 +1,38 @@
 #![allow(unused_imports)]
-use {
-    crate::*,
-    calltrace::*,
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::*,
-};
+use crate::*;
+use calltrace::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
 
-use {crate::*, solana_program::account_info::AccountInfo};
+use crate::*;
+use solana_program::account_info::AccountInfo;
 
 use program::withdraw;
 use solana_cvt::token::spl_token_account_get_amount;
 use state::{
-    is_ask_order_free, is_bid_order_free, cvt_assume_second_trader_has_seat,
-    get_helper_bid_order, get_helper_order, get_helper_seat, main_trader_index,
-    order_type_can_rest, second_trader_index,
+    cvt_assume_second_trader_has_seat, get_helper_bid_order, get_helper_order, get_helper_seat,
+    is_ask_order_free, is_bid_order_free, main_trader_index, order_type_can_rest,
+    second_trader_index,
 };
 
-use crate::certora::spec::no_funds_loss_util::{*};
-use crate::certora::spec::verification_utils::*;
-use crate::program::{get_dynamic_account, get_mut_dynamic_account};
-use crate::quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64};
-use crate::state::claimed_seat::ClaimedSeat;
-use crate::state::market::market_helpers::{
-    AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx,
+use crate::{
+    certora::spec::{no_funds_loss_util::*, verification_utils::*},
+    program::{get_dynamic_account, get_mut_dynamic_account},
+    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    state::{
+        claimed_seat::ClaimedSeat,
+        market::market_helpers::{AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx},
+        AddOrderToMarketArgs, AddOrderToMarketResult, DerefOrBorrowMut, DynamicAccount,
+        MarketFixed, MarketRef, MarketRefMut, RestingOrder,
+    },
+    validation::loaders::GlobalTradeAccounts,
 };
-use crate::state::{AddOrderToMarketArgs, AddOrderToMarketResult, MarketFixed};
-use crate::state::{DerefOrBorrowMut, DynamicAccount, MarketRef, MarketRefMut, RestingOrder};
-use crate::validation::loaders::GlobalTradeAccounts;
 use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode};
 use state::main_trader_pk;
 
-pub fn place_single_order_nondet_inputs<const IS_BID:bool>(
-    market_info: &AccountInfo
+pub fn place_single_order_nondet_inputs<const IS_BID: bool>(
+    market_info: &AccountInfo,
 ) -> (AddOrderToMarketArgs<'static, 'static>, BaseAtoms, u32) {
     let args: AddOrderToMarketArgs = AddOrderToMarketArgs {
         market: *market_info.key,
@@ -141,7 +141,7 @@ pub fn place_single_order_unmatched_check<const IS_BID: bool>() {
         maker_trader,
     );
 
-    // -- record balances 
+    // -- record balances
 
     let balances_old = record_all_balances(
         market_info,
@@ -258,10 +258,10 @@ pub fn place_single_order_full_match_check<const IS_BID: bool>() {
 
     // -- additional asserts
     cvt_assert_place_single_order_full_match_extra::<IS_BID>(
-        balances_old, 
-        balances_new, 
-        total_base_atoms_traded, 
-        total_quote_atoms_traded
+        balances_old,
+        balances_new,
+        total_base_atoms_traded,
+        total_quote_atoms_traded,
     );
 
     cvt_vacuity_check!();
@@ -288,7 +288,7 @@ pub fn place_single_order_partial_match_check<const IS_BID: bool>() {
     let vault_base_token = &acc_infos[8];
     let vault_quote_token = &acc_infos[9];
 
-    // -- market preconditions 
+    // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
         market_info,
         trader,
@@ -337,10 +337,10 @@ pub fn place_single_order_partial_match_check<const IS_BID: bool>() {
 
     // -- additional asserts
     cvt_assert_place_single_order_partial_match_extra::<IS_BID>(
-        balances_old, 
-        balances_new, 
-        total_base_atoms_traded, 
-        total_quote_atoms_traded
+        balances_old,
+        balances_new,
+        total_base_atoms_traded,
+        total_quote_atoms_traded,
     );
 
     cvt_vacuity_check!();

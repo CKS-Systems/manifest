@@ -1,14 +1,13 @@
-use {
-    nondet::nondet,
-    hook_macro::cvt_hook_end,
-    crate::certora::hooks::{*},
-};
+use crate::certora::hooks::*;
+use hook_macro::cvt_hook_end;
+use nondet::nondet;
 
-use solana_program::entrypoint::ProgramResult;
-use solana_program::program_error::ProgramError;
+use crate::{
+    state::{AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut},
+    validation::loaders::GlobalTradeAccounts,
+};
 use hypertree::DataIndex;
-use crate::state::{AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut};
-use crate::validation::loaders::GlobalTradeAccounts;
+use solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
 
 #[cfg_attr(feature = "certora", cvt_hook_end(cancel_order_was_called()))]
 pub fn mock_cancel_order(
@@ -20,7 +19,6 @@ pub fn mock_cancel_order(
     Ok(())
 }
 
-
 #[cfg_attr(feature = "certora", cvt_hook_end(place_order_was_called()))]
 pub fn mock_place_order(
     _dynamic_account: &MarketRefMut,
@@ -30,6 +28,6 @@ pub fn mock_place_order(
         order_sequence_number: nondet(),
         order_index: nondet(),
         base_atoms_traded: nondet(),
-        quote_atoms_traded: nondet()
+        quote_atoms_traded: nondet(),
     })
 }

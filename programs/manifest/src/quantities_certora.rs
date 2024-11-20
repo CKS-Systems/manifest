@@ -100,11 +100,11 @@ impl QuoteAtomsPerBaseAtom {
         cvt::cvt_assert!(false);
         unreachable!();
     }
-    
+
     pub fn nondet_price_u32() -> Self {
         let x = ::nondet::nondet();
         cvt::cvt_assume!(x <= u32::MAX as u64);
-        Self { inner : [x, 0] }
+        Self { inner: [x, 0] }
         // Self { inner : [::nondet::nondet(), ::nondet::nondet()] }
     }
 }

@@ -12,6 +12,9 @@ import {
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import { toast } from 'react-toastify';
+import { useAppState } from './AppWalletProvider';
+import { addrToLabel } from '@/lib/address-labels';
 
 const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -19,7 +22,11 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const marketRef = useRef<Market | null>(null); // To track the latest market value
 
+  const { labelsByAddr } = useAppState();
+
   const [chartEntries, setChartEntries] = useState<CandlestickData[]>([]);
+  const [marketName, setMarketName] = useState<string>(marketAddress);
+
   const { connection: conn } = useConnection();
 
   useEffect(() => {
@@ -31,14 +38,24 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       console.log('got market', m);
       marketRef.current = m;
     });
-  }, [conn, marketAddress]);
+
+    setMarketName(addrToLabel(marketAddress, labelsByAddr));
+  }, [conn, marketAddress, labelsByAddr]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:1234');
+    const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
+    if (!feedUrl) {
+      toast.error('NEXT_PUBLIC_FEED_URL not set');
+      throw new Error('NEXT_PUBLIC_FEED_URL not set');
+    }
+    const ws = new WebSocket(feedUrl);
     let fillsInCurrentInterval: CandlestickData | null = null;
 
     ws.onmessage = async (message): Promise<void> => {
       const fill: FillLogResult = JSON.parse(message.data);
+      if (fill.market !== marketAddress) {
+        return;
+      }
 
       const aggregateFillData = async (
         fill: FillLogResult,
@@ -50,10 +67,11 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         const timestamp = Math.floor(time / 60) * 60; // Group by minute
 
         const quoteTokens =
-          fill.quoteAtoms /
+          Number(fill.quoteAtoms) /
           10 ** Number(marketRef.current?.quoteDecimals() || 0);
         const baseTokens =
-          fill.baseAtoms / 10 ** Number(marketRef.current?.baseDecimals() || 0);
+          Number(fill.baseAtoms) /
+          10 ** Number(marketRef.current?.baseDecimals() || 0);
 
         const price = Number((quoteTokens / baseTokens).toFixed(4));
 
@@ -108,7 +126,7 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     return (): void => {
       ws.close();
     };
-  }, [chartEntries, conn]);
+  }, [chartEntries, conn, marketAddress]);
 
   useEffect(() => {
     if (chartContainerRef.current) {
@@ -171,6 +189,10 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg w-full">
+      <h2 className="text-xl font-semibold text-gray-200 mb-4 text-center">
+        {marketName}
+      </h2>
+
       <div ref={chartContainerRef} className="w-full h-96" />
     </div>
   );

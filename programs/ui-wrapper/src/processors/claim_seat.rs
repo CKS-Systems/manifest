@@ -8,11 +8,8 @@ use hypertree::{
     HyperTreeWriteOperations, RBNode, NIL,
 };
 use manifest::{
-    program::{
-        claim_seat_instruction, expand_market_instruction, get_dynamic_account,
-        get_mut_dynamic_account,
-    },
-    state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef, MarketRefMut},
+    program::{claim_seat_instruction, expand_market_instruction, get_dynamic_account, invoke},
+    state::{claimed_seat::ClaimedSeat, MarketFixed, MarketRef},
     validation::ManifestAccountInfo,
 };
 
@@ -21,7 +18,6 @@ use manifest::validation::{Program, Signer};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program::invoke,
     pubkey::Pubkey,
     system_program,
 };
@@ -49,11 +45,10 @@ pub(crate) fn process_claim_seat(
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
 
-    // TODO: check if seat already exists if no create it:
     let trader_index: DataIndex = {
         let trader_index: DataIndex = {
-            let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+            let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+            let dynamic_account: MarketRef = get_dynamic_account(market_data);
             dynamic_account.get_trader_index(owner.key)
         };
 
@@ -86,8 +81,8 @@ pub(crate) fn process_claim_seat(
             )?;
 
             // fetch newly assigned trader index after claiming core seat
-            let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
-            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+            let market_data: &Ref<&mut [u8]> = &mut market.try_borrow_data()?;
+            let dynamic_account: MarketRef = get_dynamic_account(market_data);
             dynamic_account.get_trader_index(owner.key)
         }
     };

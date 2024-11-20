@@ -1,31 +1,24 @@
 #![allow(unused_imports)]
-use {
-    super::verification_utils::init_static,
-    crate::{
-        claim_seat, create_empty_market, cvt_assert_is_nil, deposit, get_trader_balance,
-        get_trader_index,
-    },
-    calltrace::cvt_cex_print_u64,
-    cvt::{cvt_assert, cvt_vacuity_check, cvt_assume},
-    cvt_macros::rule,
-    nondet::{acc_infos_with_mem_layout, nondet},
+use super::verification_utils::init_static;
+use crate::{
+    claim_seat, create_empty_market, cvt_assert_is_nil, deposit, get_trader_balance,
+    get_trader_index,
 };
+use calltrace::cvt_cex_print_u64;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::{acc_infos_with_mem_layout, nondet};
 
-use {
-    crate::program::get_mut_dynamic_account,
-    crate::state::{MarketFixed, MarketRefMut, MARKET_BLOCK_SIZE},
-    hypertree::{get_mut_helper, is_nil, NIL},
-    solana_program::{account_info::AccountInfo, pubkey::Pubkey},
+use crate::{
+    program::get_mut_dynamic_account,
+    state::{
+        is_main_seat_free, is_main_seat_taken, is_second_seat_free, main_trader_index,
+        main_trader_pk, second_trader_index, second_trader_pk, MarketFixed, MarketRefMut,
+        MARKET_BLOCK_SIZE,
+    },
 };
-use crate::state::{
-    main_trader_index, 
-    main_trader_pk, 
-    is_main_seat_free, 
-    is_main_seat_taken, 
-    second_trader_index, 
-    second_trader_pk, 
-    is_second_seat_free 
-};
+use hypertree::{get_mut_helper, is_nil, NIL};
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 #[rule]
 pub fn rule_market_empty() {
@@ -155,4 +148,3 @@ pub fn rule_market_release_seat() {
     cvt_assert!(is_main_seat_free());
     cvt_vacuity_check!();
 }
-

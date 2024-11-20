@@ -1,23 +1,24 @@
 #![allow(unused_imports)]
-use {
-    crate::*,
-    calltrace::*,
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::*,
-};
+use crate::*;
+use calltrace::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
 
 use hypertree::DataIndex;
 use solana_program::account_info::AccountInfo;
 use state::claimed_seat::ClaimedSeat;
 
-use crate::program::get_mut_dynamic_account;
-use crate::quantities::{BaseAtoms, QuoteAtoms, WrapperU64};
-use crate::state::{get_helper_order, DynamicAccount, MarketRefMut, RestingOrder};
+use crate::{
+    program::get_mut_dynamic_account,
+    quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
+    state::{get_helper_order, DynamicAccount, MarketRefMut, RestingOrder},
+};
 use solana_cvt::token::spl_token_account_get_amount;
 
 use state::{
-    is_ask_order_free, is_ask_order_taken, is_bid_order_free, is_bid_order_taken, dynamic_account, get_helper_seat, main_ask_order_index, main_bid_order_index, main_trader_index,
+    dynamic_account, get_helper_seat, is_ask_order_free, is_ask_order_taken, is_bid_order_free,
+    is_bid_order_taken, main_ask_order_index, main_bid_order_index, main_trader_index,
 };
 
 use crate::certora::spec::no_funds_loss_util::cvt_assume_market_preconditions;
@@ -44,7 +45,11 @@ pub fn cancel_order_by_index_trader_integrity_check<const IS_BID: bool>() {
     assume_main_order_is_present::<IS_BID>();
 
     // Index of the order that has to be cancelled.
-    let order_index = if IS_BID { main_bid_order_index() } else { main_ask_order_index() };
+    let order_index = if IS_BID {
+        main_bid_order_index()
+    } else {
+        main_ask_order_index()
+    };
 
     // Needed as an argument to get_helper_order, but is not used
     let dynamic = &mut [0; 8];
@@ -84,7 +89,7 @@ fn rule_cancel_order_trader_integrity_ask() {
 }
 
 pub fn cancel_order_by_index_no_revert<const IS_BID: bool>() {
-    // IS_BID = true sets up the rule such that the order to 
+    // IS_BID = true sets up the rule such that the order to
     // be canceled is ask, and vice-versa
 
     cvt_static_initializer!();
@@ -119,12 +124,7 @@ pub fn cancel_order_by_index_no_revert<const IS_BID: bool>() {
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
     let trader_index = crate::state::second_trader_index();
     let order_index = maker_order_index;
-    let result = 
-        dynamic_account.cancel_order_by_index(
-            trader_index, 
-            order_index, 
-            &[None, None]
-        );
+    let result = dynamic_account.cancel_order_by_index(trader_index, order_index, &[None, None]);
     cvt_assert!(result.is_ok());
 
     cvt_vacuity_check!();

@@ -65,7 +65,7 @@ pub const RBTREE_OVERHEAD_BYTES: usize = 16;
 //    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
 //    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
 //    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
-//    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+//    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
 //    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 // trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>>
 //    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
@@ -198,8 +198,6 @@ impl<'a, T> RedBlackTreeReadOperationsHelpers<'a> for T
 where
     T: GetRedBlackTreeReadOnlyData<'a>,
 {
-    // TODO: Make unchecked versions of these to avoid unnecessary NIL checks
-    // when we already know the index is not NIL.
     fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V {
         debug_assert_ne!(index, NIL);
         let node: &RBNode<V> = get_helper::<RBNode<V>>(self.data(), index);
@@ -245,8 +243,6 @@ where
     }
 
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool {
-        // TODO: Explore if we can store is_left_child and is_right_child in the
-        // empty bits after color to avoid the compute of checking the parent.
         if index == self.root_index() {
             return false;
         }
@@ -307,7 +303,7 @@ pub trait RedBlackTreeWriteOperationsHelpers<'a> {
     fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
     fn rotate_left<V: Payload>(&mut self, index: DataIndex);
     fn rotate_right<V: Payload>(&mut self, index: DataIndex);
-    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
     fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
 }
 impl<'a, T> RedBlackTreeWriteOperationsHelpers<'a> for T
@@ -358,7 +354,6 @@ where
 
         let g_index: DataIndex = index;
         let p_index: DataIndex = self.get_right_index::<V>(g_index);
-        let x_index: DataIndex = self.get_right_index::<V>(p_index);
         let y_index: DataIndex = self.get_left_index::<V>(p_index);
         let gg_index: DataIndex = self.get_parent_index::<V>(index);
 
@@ -368,7 +363,6 @@ where
             let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
             p_node.parent = gg_index;
             p_node.left = g_index;
-            p_node.right = x_index;
         }
 
         // Y
@@ -415,7 +409,6 @@ where
 
         let g_index: DataIndex = index;
         let p_index: DataIndex = self.get_left_index::<V>(g_index);
-        let x_index: DataIndex = self.get_left_index::<V>(p_index);
         let y_index: DataIndex = self.get_right_index::<V>(p_index);
         let gg_index: DataIndex = self.get_parent_index::<V>(index);
 
@@ -424,7 +417,6 @@ where
             // Does not use the helpers to avoid redundant NIL checks.
             let p_node: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(self.data(), p_index);
             p_node.parent = gg_index;
-            p_node.left = x_index;
             p_node.right = g_index;
         }
 
@@ -459,7 +451,7 @@ where
         }
     }
 
-    fn swap_nodes<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex) {
+    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex) {
         let parent_0: DataIndex = self.get_parent_index::<V>(index_0);
         let parent_1: DataIndex = self.get_parent_index::<V>(index_1);
         let left_0: DataIndex = self.get_left_index::<V>(index_0);
@@ -495,7 +487,6 @@ where
         self.set_parent_index::<V>(right_0, index_1);
         self.set_parent_index::<V>(right_1, index_0);
 
-        // Edge case of swapping with successor.
         if parent_1 == index_0 {
             self.set_parent_index::<V>(index_0, index_1);
             self.set_parent_index::<V>(index_1, parent_0);
@@ -637,27 +628,16 @@ where
     }
 
     /// Get the next index. This walks the tree, so does not care about equal
-    /// keys. Used in swapping when insert/delete requires an internal node.
+    /// keys. Used to swap an internal node with the next leaf, when insert
+    /// or delete points at an internal node.
+    /// It should never be called on leaf nodes.
     fn get_next_higher_index<V: Payload>(&'a self, index: DataIndex) -> DataIndex {
-        if index == NIL {
-            return NIL;
+        debug_assert!(index != NIL);
+        debug_assert!(self.get_right_index::<V>(index) != NIL);
+        let mut current_index: DataIndex = self.get_right_index::<V>(index);
+        while self.get_left_index::<V>(current_index) != NIL {
+            current_index = self.get_left_index::<V>(current_index);
         }
-        // Successor is below us.
-        if self.get_right_index::<V>(index) != NIL {
-            let mut current_index: DataIndex = self.get_right_index::<V>(index);
-            while self.get_left_index::<V>(current_index) != NIL {
-                current_index = self.get_left_index::<V>(current_index);
-            }
-            return current_index;
-        }
-
-        // Successor is above, keep going up while we are the right child
-        let mut current_index: DataIndex = index;
-        while self.is_right_child::<V>(current_index) {
-            current_index = self.get_parent_index::<V>(current_index);
-        }
-        current_index = self.get_parent_index::<V>(current_index);
-
         current_index
     }
 }
@@ -1073,7 +1053,7 @@ impl<'a, V: Payload> HyperTreeWriteOperations<'a, V> for RedBlackTree<'a, V> {
         if self.is_internal::<V>(index) {
             // Swap nodes
             let successor_index: DataIndex = self.get_next_higher_index::<V>(index);
-            self.swap_nodes::<V>(index, successor_index);
+            self.swap_node_with_successor::<V>(index, successor_index);
         }
 
         // Now we are guaranteed that the node to delete is either a leaf or has
@@ -1133,7 +1113,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.remove_by_index(index);
     }
 
-    pub fn remove_fix(
+    fn remove_fix(
         &mut self,
         current_index: DataIndex,
         parent_index: DataIndex,
@@ -1172,7 +1152,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             if self.get_color::<V>(sibling_right_child_index) == Color::Red
                 && self.is_left_child::<V>(sibling_index)
             {
-                self.set_color::<V>(sibling_right_child_index, Color::Red);
+                self.set_color::<V>(sibling_right_child_index, parent_color);
                 self.set_color::<V>(parent_index, Color::Black);
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_left::<V>(sibling_index);
@@ -1193,7 +1173,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             if self.get_color::<V>(sibling_left_child_index) == Color::Red
                 && self.is_right_child::<V>(sibling_index)
             {
-                self.set_color::<V>(sibling_left_child_index, Color::Red);
+                self.set_color::<V>(sibling_left_child_index, parent_color);
                 self.set_color::<V>(parent_index, Color::Black);
                 self.set_color::<V>(sibling_index, Color::Black);
                 self.rotate_right::<V>(sibling_index);
@@ -1289,7 +1269,7 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
     }
 
-    pub fn insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {
+    fn insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {
         if self.root_index == index_to_fix {
             self.set_color::<V>(index_to_fix, Color::Black);
             return NIL;
@@ -1331,7 +1311,6 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         }
 
         let grandparent_color: Color = self.get_color::<V>(grandparent_index);
-        let parent_color: Color = self.get_color::<V>(parent_index);
         let parent_is_left: bool = self.is_left_child::<V>(parent_index);
         let current_is_left: bool = self.is_left_child::<V>(index_to_fix);
 
@@ -1342,28 +1321,28 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             return NIL;
         }
 
+        let index_to_fix_color: Color = self.get_color::<V>(index_to_fix);
         // Case II: Uncle is black, left left
         if parent_is_left && current_is_left {
             self.rotate_right::<V>(grandparent_index);
             self.set_color::<V>(grandparent_index, parent_color);
             self.set_color::<V>(parent_index, grandparent_color);
         }
-        let index_to_fix_color: Color = self.get_color::<V>(index_to_fix);
         // Case III: Uncle is black, left right
-        if parent_is_left && !current_is_left {
+        else if parent_is_left && !current_is_left {
             self.rotate_left::<V>(parent_index);
             self.rotate_right::<V>(grandparent_index);
             self.set_color::<V>(index_to_fix, grandparent_color);
             self.set_color::<V>(grandparent_index, index_to_fix_color);
         }
         // Case IV: Uncle is black, right right
-        if !parent_is_left && !current_is_left {
+        else if !parent_is_left && !current_is_left {
             self.rotate_left::<V>(grandparent_index);
             self.set_color::<V>(grandparent_index, parent_color);
             self.set_color::<V>(parent_index, grandparent_color);
         }
         // Case V: Uncle is black, right left
-        if !parent_is_left && current_is_left {
+        else if !parent_is_left && current_is_left {
             self.rotate_right::<V>(parent_index);
             self.rotate_left::<V>(grandparent_index);
             self.set_color::<V>(index_to_fix, grandparent_color);
@@ -2264,6 +2243,334 @@ pub(crate) mod test {
     }
 
     #[test]
+    fn test_regression_5() {
+        let mut data: [u8; 100000] = [0; 100000];
+        *get_mut_helper(&mut data, 1 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 2 * TEST_BLOCK_WIDTH,
+            right: 3 * TEST_BLOCK_WIDTH,
+            parent: NIL,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(1),
+        };
+        *get_mut_helper(&mut data, 2 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 4 * TEST_BLOCK_WIDTH,
+            right: 22 * TEST_BLOCK_WIDTH,
+            parent: 1 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(2),
+        };
+        *get_mut_helper(&mut data, 3 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 29 * TEST_BLOCK_WIDTH,
+            right: 5 * TEST_BLOCK_WIDTH,
+            parent: 1 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(3),
+        };
+        *get_mut_helper(&mut data, 4 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 6 * TEST_BLOCK_WIDTH,
+            right: 7 * TEST_BLOCK_WIDTH,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(4),
+        };
+        *get_mut_helper(&mut data, 5 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 8 * TEST_BLOCK_WIDTH,
+            right: 9 * TEST_BLOCK_WIDTH,
+            parent: 3 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(5),
+        };
+        *get_mut_helper(&mut data, 6 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 10 * TEST_BLOCK_WIDTH,
+            right: 20 * TEST_BLOCK_WIDTH,
+            parent: 4 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(6),
+        };
+        *get_mut_helper(&mut data, 7 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 11 * TEST_BLOCK_WIDTH,
+            right: 12 * TEST_BLOCK_WIDTH,
+            parent: 4 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(7),
+        };
+        *get_mut_helper(&mut data, 8 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 13 * TEST_BLOCK_WIDTH,
+            right: 21 * TEST_BLOCK_WIDTH,
+            parent: 5 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(8),
+        };
+        *get_mut_helper(&mut data, 9 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 14 * TEST_BLOCK_WIDTH,
+            right: 15 * TEST_BLOCK_WIDTH,
+            parent: 5 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(9),
+        };
+        *get_mut_helper(&mut data, 10 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 6 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(10),
+        };
+        *get_mut_helper(&mut data, 11 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 16 * TEST_BLOCK_WIDTH,
+            right: 17 * TEST_BLOCK_WIDTH,
+            parent: 7 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(11),
+        };
+        *get_mut_helper(&mut data, 12 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 7 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(12),
+        };
+        *get_mut_helper(&mut data, 13 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 8 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(13),
+        };
+        *get_mut_helper(&mut data, 14 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 18 * TEST_BLOCK_WIDTH,
+            right: 19 * TEST_BLOCK_WIDTH,
+            parent: 9 * TEST_BLOCK_WIDTH,
+            color: Color::Red,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(14),
+        };
+        *get_mut_helper(&mut data, 15 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 9 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(15),
+        };
+        *get_mut_helper(&mut data, 16 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 11 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(16),
+        };
+        *get_mut_helper(&mut data, 17 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 11 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(17),
+        };
+        *get_mut_helper(&mut data, 18 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 14 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(18),
+        };
+        *get_mut_helper(&mut data, 19 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 14 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(19),
+        };
+        *get_mut_helper(&mut data, 20 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 6 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(20),
+        };
+        *get_mut_helper(&mut data, 21 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 8 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(21),
+        };
+        *get_mut_helper(&mut data, 22 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 23 * TEST_BLOCK_WIDTH,
+            right: 24 * TEST_BLOCK_WIDTH,
+            parent: 2 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(22),
+        };
+        *get_mut_helper(&mut data, 23 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 25 * TEST_BLOCK_WIDTH,
+            right: 26 * TEST_BLOCK_WIDTH,
+            parent: 22 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(23),
+        };
+        *get_mut_helper(&mut data, 24 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 27 * TEST_BLOCK_WIDTH,
+            right: 28 * TEST_BLOCK_WIDTH,
+            parent: 22 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(24),
+        };
+        *get_mut_helper(&mut data, 25 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 23 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(25),
+        };
+        *get_mut_helper(&mut data, 26 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 23 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(26),
+        };
+        *get_mut_helper(&mut data, 27 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 24 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(27),
+        };
+        *get_mut_helper(&mut data, 28 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 24 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(28),
+        };
+        *get_mut_helper(&mut data, 29 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 30 * TEST_BLOCK_WIDTH,
+            right: 31 * TEST_BLOCK_WIDTH,
+            parent: 3 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(29),
+        };
+        *get_mut_helper(&mut data, 30 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 32 * TEST_BLOCK_WIDTH,
+            right: 33 * TEST_BLOCK_WIDTH,
+            parent: 29 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(30),
+        };
+        *get_mut_helper(&mut data, 31 * TEST_BLOCK_WIDTH) = RBNode {
+            left: 34 * TEST_BLOCK_WIDTH,
+            right: 35 * TEST_BLOCK_WIDTH,
+            parent: 29 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(31),
+        };
+        *get_mut_helper(&mut data, 32 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 30 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(32),
+        };
+        *get_mut_helper(&mut data, 33 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 30 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(33),
+        };
+        *get_mut_helper(&mut data, 34 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 31 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(34),
+        };
+        *get_mut_helper(&mut data, 35 * TEST_BLOCK_WIDTH) = RBNode {
+            left: NIL,
+            right: NIL,
+            parent: 31 * TEST_BLOCK_WIDTH,
+            color: Color::Black,
+            payload_type: 0,
+            _unused_padding: 0,
+            value: TestOrderBid::new(35),
+        };
+
+        let mut tree: RedBlackTree<TestOrderBid> =
+            RedBlackTree::new(&mut data, 1 * TEST_BLOCK_WIDTH, 15 * TEST_BLOCK_WIDTH);
+        tree.verify_rb_tree::<TestOrderBid>();
+
+        tree.remove_by_index(6 * TEST_BLOCK_WIDTH);
+
+        tree.verify_rb_tree::<TestOrderBid>();
+    }
+
+    #[test]
     fn test_read_only() {
         let mut data: [u8; 100000] = [0; 100000];
         let mut tree: RedBlackTree<TestOrderBid> = RedBlackTree::new(&mut data, NIL, NIL);
@@ -2349,20 +2656,5 @@ pub(crate) mod test {
         tree.lookup_index(&TestOrder2::new(1_000, 1234));
         tree.lookup_index(&TestOrder2::new(1_000, 4567));
         tree.lookup_index(&TestOrder2::new(1_000, 7890));
-    }
-
-    // Get next higher index
-    #[test]
-    fn test_get_next_higher_index() {
-        let mut data: [u8; 100000] = [0; 100000];
-        let tree: RedBlackTree<TestOrderBid> = init_simple_tree(&mut data);
-        tree.pretty_print::<TestOrderBid>();
-        for i in 1..11 {
-            assert_eq!(
-                tree.get_next_higher_index::<TestOrderBid>(TEST_BLOCK_WIDTH * i),
-                TEST_BLOCK_WIDTH * (i + 1)
-            );
-        }
-        assert_eq!(tree.get_next_higher_index::<TestOrderBid>(NIL), NIL);
     }
 }

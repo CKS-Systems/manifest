@@ -398,25 +398,6 @@ impl QuoteAtomsPerBaseAtom {
         self.checked_quote_for_base_(other, round_up)
             .map(|r| QuoteAtoms::new(r as u64))
     }
-
-    #[inline(always)]
-    pub fn checked_effective_price(
-        self,
-        num_base_atoms: BaseAtoms,
-        is_bid: bool,
-    ) -> Result<QuoteAtomsPerBaseAtom, ProgramError> {
-        if BaseAtoms::ZERO == num_base_atoms {
-            return Ok(self);
-        }
-        let quote_matched_atoms = self.checked_quote_for_base_(num_base_atoms, !is_bid)?;
-        // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let quote_matched_d18 = quote_matched_atoms.wrapping_mul(D18);
-        // no special case rounding needed because effective price is just a value used to compare for order
-        let inner = quote_matched_d18.div(num_base_atoms.inner as u128);
-        Ok(QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(inner),
-        })
-    }
 }
 
 impl Ord for QuoteAtomsPerBaseAtom {
@@ -531,7 +512,7 @@ impl BaseAtoms {
     }
 }
 
-#[cfg(feature = "certora")] 
+#[cfg(feature = "certora")]
 mod nondet {
     use super::*;
 
@@ -549,14 +530,12 @@ mod nondet {
 
     impl ::nondet::Nondet for QuoteAtomsPerBaseAtom {
         fn nondet() -> Self {
-            Self { inner : [::nondet::nondet(), ::nondet::nondet()] }
+            Self {
+                inner: [::nondet::nondet(), ::nondet::nondet()],
+            }
         }
     }
 }
-
-
-
-
 
 #[test]
 fn test_new_constructor_macro() {
@@ -614,6 +593,38 @@ fn test_wrapping_add() {
 }
 
 #[test]
+fn test_checked_base_for_quote_edge_cases() {
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(0, 0);
+    assert_eq!(
+        quote_atoms_per_base_atom
+            .checked_base_for_quote(QuoteAtoms::new(1), false)
+            .unwrap(),
+        BaseAtoms::new(0)
+    );
+
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom =
+        QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, -18);
+    assert!(quote_atoms_per_base_atom
+        .checked_base_for_quote(QuoteAtoms::new(u64::MAX), false)
+        .is_err(),);
+}
+
+#[test]
+fn test_checked_quote_for_base_edge_cases() {
+    // edge case is where u64MAX * 10**18  < product < u128MAX
+    let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom::MAX;
+    assert!(quote_atoms_per_base_atom
+        .checked_quote_for_base(BaseAtoms::new(u64::MAX - 1), false)
+        .is_err(),);
+}
+
+#[test]
+fn test_quote_atoms_per_base_atom_edge_case() {
+    assert!(QuoteAtomsPerBaseAtom::try_from(f64::NAN).is_err());
+}
+
+#[test]
 fn test_multiply_macro() {
     let base_atoms: BaseAtoms = BaseAtoms::new(5);
     let quote_atoms_per_base_atom: QuoteAtomsPerBaseAtom = QuoteAtomsPerBaseAtom {
@@ -650,6 +661,7 @@ fn test_price_limits() {
     )
     .is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from(0f64).is_ok());
+    assert!(QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(0, 0).is_ok());
     assert!(QuoteAtomsPerBaseAtom::try_from(
         u32::MAX as f64 * 10f64.powi(QuoteAtomsPerBaseAtom::MAX_EXP as i32)
     )
@@ -684,10 +696,7 @@ fn test_alignment() {
     let mut t = AlignmentTest::default();
     t.price = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(u32::MAX, 0);
     let mut s = t.clone();
-    t.price = s
-        .price
-        .checked_effective_price(BaseAtoms::new(u32::MAX as u64), true)
-        .unwrap();
+    t.price = s.price.clone();
     let q = t
         .price
         .checked_base_for_quote(QuoteAtoms::new(u32::MAX as u64), true)

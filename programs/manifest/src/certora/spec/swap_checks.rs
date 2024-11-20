@@ -1,30 +1,22 @@
-use {
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    solana_cvt::token::spl_token_account_get_amount,
-    cvt_macros::rule,
-    nondet::*,
-    super::verification_utils::init_static,
-    crate::certora::spec::no_funds_loss_util::{
-        cvt_assume_funds_invariants,
-        cvt_assume_basic_market_preconditions,
-        cvt_assert_funds_invariants,
-        record_all_balances_without_order,
+use super::verification_utils::init_static;
+use crate::{
+    certora::spec::no_funds_loss_util::{
+        cvt_assert_funds_invariants, cvt_assume_basic_market_preconditions,
+        cvt_assume_funds_invariants, record_all_balances_without_order,
     },
-    crate::{
-        cvt_static_initializer,
-    },
-    crate::create_empty_market,
+    create_empty_market, cvt_static_initializer,
 };
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
+use solana_cvt::token::spl_token_account_get_amount;
 
-use {
-    solana_program::account_info::AccountInfo,
-    crate::state::MarketFixed,
-    crate::program::{
-        process_swap_core,
-        SwapParams
-    },
-    hypertree::get_mut_helper,
+use crate::{
+    program::{process_swap_core, SwapParams},
+    state::MarketFixed,
 };
+use hypertree::get_mut_helper;
+use solana_program::account_info::AccountInfo;
 
 #[rule]
 /// This rule can be further refined if additional specifications are given on the arguments to swap
@@ -91,7 +83,7 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
     cvt_assume!(trader_quote_token.key != vault_quote_token.key);
 
     // -- basic market assumptions
-   cvt_assume_basic_market_preconditions(
+    cvt_assume_basic_market_preconditions(
         market,
         trader,
         vault_base_token,
@@ -115,15 +107,19 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
     let out_atoms: u64 = nondet();
     // -- in_atoms does not overflow ghost aggregate
     if IS_BASE {
-        cvt_assume!(in_atoms.checked_add(old_balances.withdrawable_base).is_some());
+        cvt_assume!(in_atoms
+            .checked_add(old_balances.withdrawable_base)
+            .is_some());
     } else {
-        cvt_assume!(in_atoms.checked_add(old_balances.withdrawable_quote).is_some());
+        cvt_assume!(in_atoms
+            .checked_add(old_balances.withdrawable_quote)
+            .is_some());
     }
 
     let params = SwapParams::new(in_atoms, out_atoms, IS_BASE, IS_EXACT);
     process_swap_core(&crate::id(), &used_acc_infos, params).unwrap();
 
-   let new_balances = record_all_balances_without_order(
+    let new_balances = record_all_balances_without_order(
         market,
         vault_base_token,
         vault_quote_token,
@@ -136,7 +132,6 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
 
     cvt_vacuity_check!();
 }
-
 
 #[rule]
 pub fn rule_swap_base_exact() {

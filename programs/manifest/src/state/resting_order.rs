@@ -1,8 +1,8 @@
 use std::mem::size_of;
 
-use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
 #[cfg(feature = "certora")]
-use crate::quantities::{QuoteAtoms, WrapperU64};
+use crate::quantities::QuoteAtoms;
+use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};
@@ -56,7 +56,7 @@ pub fn order_type_can_take(order_type: OrderType) -> bool {
 }
 
 #[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Debug, Copy, Clone, Zeroable, Pod, ShankType)]
 pub struct RestingOrder {
     price: QuoteAtomsPerBaseAtom,
     num_base_atoms: BaseAtoms,
@@ -129,7 +129,6 @@ impl RestingOrder {
 
     #[cfg(feature = "certora")]
     pub fn is_global(&self) -> bool {
-        // self.order_type == OrderType::Global
         false
     }
 
@@ -153,7 +152,7 @@ impl RestingOrder {
     // compute the "value" of an order, i.e. the tokens that are reserved for the trade and
     // that will be returned when it is cancelled.
     #[cfg(feature = "certora")]
-    pub fn get_orderbook_atoms(&self) -> Result<(BaseAtoms,QuoteAtoms), ProgramError> {
+    pub fn get_orderbook_atoms(&self) -> Result<(BaseAtoms, QuoteAtoms), ProgramError> {
         if self.is_global() {
             return Ok((BaseAtoms::new(0), QuoteAtoms::new(0)));
         } else if self.get_is_bid() {
@@ -192,7 +191,7 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.price) == (other.price)
+        (self.sequence_number) == (other.sequence_number)
     }
 }
 
@@ -207,6 +206,7 @@ impl std::fmt::Display for RestingOrder {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::quantities::WrapperU64;
 
     #[test]
     fn test_default() {
@@ -244,7 +244,7 @@ mod test {
             0,
             BaseAtoms::new(1_000_000_000),
             QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
-            0,
+            1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             true,
             OrderType::Limit,
@@ -267,7 +267,7 @@ mod test {
             0,
             BaseAtoms::new(1_000_000_000),
             QuoteAtomsPerBaseAtom::try_from(1.01).unwrap(),
-            0,
+            1,
             NO_EXPIRATION_LAST_VALID_SLOT,
             false,
             OrderType::Limit,

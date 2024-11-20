@@ -1,6 +1,6 @@
 [package]
 name = "manifest"
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -62,6 +62,7 @@ solana_cvt = { workspace = true, optional = true}
 vectors = { workspace = true, optional = true}
 hook_macro = { workspace = true, optional = true}
 arrayref = { workspace = true}
+solana-invoke = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

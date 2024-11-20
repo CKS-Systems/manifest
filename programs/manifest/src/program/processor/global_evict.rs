@@ -2,9 +2,7 @@
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 use crate::{
     global_vault_seeds_with_bump,
@@ -16,6 +14,8 @@ use crate::{
     validation::{get_global_vault_address, loaders::GlobalEvictContext},
 };
 use solana_program::program::invoke_signed;
+
+use super::invoke;
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalEvictParams {

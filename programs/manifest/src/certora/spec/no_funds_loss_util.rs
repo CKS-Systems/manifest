@@ -1,25 +1,24 @@
 #![allow(unused_imports)]
-use {
-    calltrace::*,
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::*,
-};
+use calltrace::*;
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::*;
 
 use crate::*;
 use solana_program::account_info::AccountInfo;
 use state::{
-    is_ask_order_taken, is_bid_order_taken, main_ask_order_index,
-    main_bid_order_index, OrderType,
+    is_ask_order_taken, is_bid_order_taken, main_ask_order_index, main_bid_order_index, OrderType,
 };
 // use program::withdraw;
-use crate::program::{get_dynamic_account, get_mut_dynamic_account};
-use crate::quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64};
-use crate::state::{
-    is_ask_order_free, is_bid_order_free, cvt_assume_second_trader_has_seat,
-    get_helper_bid_order, get_helper_order, get_helper_seat, main_trader_index,
-    order_type_can_rest, second_trader_index, DerefOrBorrowMut, DynamicAccount, MarketRef,
-    MarketRefMut, RestingOrder,
+use crate::{
+    program::{get_dynamic_account, get_mut_dynamic_account},
+    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    state::{
+        cvt_assume_second_trader_has_seat, get_helper_bid_order, get_helper_order, get_helper_seat,
+        is_ask_order_free, is_bid_order_free, main_trader_index, order_type_can_rest,
+        second_trader_index, DerefOrBorrowMut, DynamicAccount, MarketRef, MarketRefMut,
+        RestingOrder,
+    },
 };
 use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode};
 use solana_cvt::token::spl_token_account_get_amount;
@@ -108,7 +107,6 @@ pub fn record_all_balances_without_order(
     )
 }
 
-
 /// Extract all relevant balances from all accounts and a maker order
 pub fn record_all_balances(
     market: &AccountInfo,
@@ -118,7 +116,13 @@ pub fn record_all_balances(
     maker_trader: &AccountInfo,
     maker_order_index: DataIndex,
 ) -> AllBalances {
-    let mut all_balances = record_all_balances_without_order(market, vault_base_token, vault_quote_token, trader, maker_trader);
+    let mut all_balances = record_all_balances_without_order(
+        market,
+        vault_base_token,
+        vault_quote_token,
+        trader,
+        maker_trader,
+    );
     let (maker_order_base, maker_order_quote) = get_order_atoms!(maker_order_index);
     all_balances.maker_order_base = maker_order_base.as_u64();
     all_balances.maker_order_quote = maker_order_quote.as_u64();
@@ -203,9 +207,7 @@ pub fn cvt_assume_market_preconditions<const IS_BID: bool>(
     maker_order_index
 }
 
-pub fn cvt_assume_funds_invariants(
-    balances: AllBalances
-) {
+pub fn cvt_assume_funds_invariants(balances: AllBalances) {
     let AllBalances {
         vault_base,
         vault_quote,
@@ -232,11 +234,9 @@ pub fn cvt_assume_funds_invariants(
     // -- vaults have enough funds to cover all obligations
     cvt_assume!(vault_base == withdrawable_base.checked_add(orderbook_base).unwrap());
     cvt_assume!(vault_quote == withdrawable_quote.checked_add(orderbook_quote).unwrap());
-
 }
 
 pub fn cvt_assert_funds_invariants(balances: AllBalances) {
-
     let AllBalances {
         vault_base,
         vault_quote,
@@ -263,9 +263,9 @@ pub fn cvt_assert_funds_invariants(balances: AllBalances) {
     cvt_assert!(vault_quote == withdrawable_quote.saturating_add(orderbook_quote));
 }
 
-pub fn cvt_assert_place_single_order_canceled_extra<const IS_BID:bool>(
-    balances_old: AllBalances, 
-    balances_new: AllBalances
+pub fn cvt_assert_place_single_order_canceled_extra<const IS_BID: bool>(
+    balances_old: AllBalances,
+    balances_new: AllBalances,
 ) {
     let AllBalances {
         vault_base: vault_base_old,
@@ -310,9 +310,9 @@ pub fn cvt_assert_place_single_order_canceled_extra<const IS_BID:bool>(
     );
 }
 
-pub fn cvt_assert_place_single_order_unmatched_extra<const IS_BID:bool>(
-    balances_old: AllBalances, 
-    balances_new: AllBalances
+pub fn cvt_assert_place_single_order_unmatched_extra<const IS_BID: bool>(
+    balances_old: AllBalances,
+    balances_new: AllBalances,
 ) {
     let AllBalances {
         vault_base: vault_base_old,
@@ -361,8 +361,8 @@ pub fn cvt_assert_place_single_order_unmatched_extra<const IS_BID:bool>(
     );
 }
 
-pub fn cvt_assert_place_single_order_full_match_extra<const IS_BID:bool>(
-    balances_old: AllBalances, 
+pub fn cvt_assert_place_single_order_full_match_extra<const IS_BID: bool>(
+    balances_old: AllBalances,
     balances_new: AllBalances,
     total_base_atoms_traded: BaseAtoms,
     total_quote_atoms_traded: QuoteAtoms,
@@ -440,11 +440,10 @@ pub fn cvt_assert_place_single_order_full_match_extra<const IS_BID:bool>(
         withdrawable_quote_old.saturating_add(orderbook_quote_old)
             == withdrawable_quote_new.saturating_add(orderbook_quote_new)
     );
-
 }
 
-pub fn cvt_assert_place_single_order_partial_match_extra<const IS_BID:bool>(
-    balances_old: AllBalances, 
+pub fn cvt_assert_place_single_order_partial_match_extra<const IS_BID: bool>(
+    balances_old: AllBalances,
     balances_new: AllBalances,
     total_base_atoms_traded: BaseAtoms,
     total_quote_atoms_traded: QuoteAtoms,
@@ -524,14 +523,13 @@ pub fn cvt_assert_place_single_order_partial_match_extra<const IS_BID:bool>(
         withdrawable_quote_old.saturating_add(orderbook_quote_old)
             == withdrawable_quote_new.saturating_add(orderbook_quote_new)
     );
-
 }
 
 pub fn cvt_assert_deposit_extra<const IS_BASE: bool>(
     balances_old: AllBalances,
     balances_new: AllBalances,
-    amount: u64
-){
+    amount: u64,
+) {
     let AllBalances {
         vault_base: vault_base_old,
         vault_quote: vault_quote_old,
@@ -582,8 +580,8 @@ pub fn cvt_assert_deposit_extra<const IS_BASE: bool>(
 pub fn cvt_assert_withdraw_extra<const IS_BASE: bool>(
     balances_old: AllBalances,
     balances_new: AllBalances,
-    amount: u64
-){
+    amount: u64,
+) {
     let AllBalances {
         vault_base: vault_base_old,
         vault_quote: vault_quote_old,

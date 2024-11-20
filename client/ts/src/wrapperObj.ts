@@ -1,10 +1,17 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
-import { marketInfoBeet, openOrderBeet } from './utils/beet';
 import { FIXED_WRAPPER_HEADER_SIZE, NIL } from './constants';
 import { OrderType } from './manifest';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
+import {
+  MarketInfo,
+  WrapperOpenOrder as WrapperOpenOrderRaw,
+  marketInfoBeet,
+  wrapperOpenOrderBeet,
+} from './wrapper/types';
+import { convertU128 } from './utils/numbers';
+import BN from 'bn.js';
 
 /**
  * All data stored on a wrapper account.
@@ -13,71 +20,49 @@ export interface WrapperData {
   /** Public key for the trader that owns this wrapper. */
   trader: PublicKey;
   /** Array of market infos that have been parsed. */
-  marketInfos: MarketInfoParsed[];
+  marketInfos: WrapperMarketInfo[];
 }
 
 /**
  * Parsed market info on a wrapper. Accurate to the last sync.
  */
-export interface MarketInfoParsed {
+export interface WrapperMarketInfo {
   /** Public key for market. */
   market: PublicKey;
   /** Base balance in atoms. */
   baseBalanceAtoms: bignum;
   /** Quote balance in atoms. */
   quoteBalanceAtoms: bignum;
+  /** Quote volume in atoms. */
+  quoteVolumeAtoms: bignum;
   /** Open orders. */
-  orders: OpenOrder[];
+  orders: WrapperOpenOrder[];
   /** Last update slot number. */
   lastUpdatedSlot: number;
 }
 
 /**
- * Raw market info on a wrapper.
- */
-export interface MarketInfoRaw {
-  market: PublicKey;
-  openOrdersRootIndex: number;
-  traderIndex: number;
-  baseBalanceAtoms: bignum;
-  quoteBalanceAtoms: bignum;
-  quoteVolumeAtoms: bignum;
-  lastUpdatedSlot: number;
-  padding: number; // 3 bytes
-}
-
-/**
  * OpenOrder on a wrapper. Accurate as of the latest sync.
  */
-export interface OpenOrder {
+export interface WrapperOpenOrder {
+  /** Price as float in atoms of quote per atoms of base. */
+  price: number;
   /** Client order id used for cancelling orders. Does not need to be unique. */
   clientOrderId: bignum;
   /** Exchange defined id for an order. */
   orderSequenceNumber: bignum;
-  /** Price as float in atoms of quote per atoms of base. */
-  price: number;
   /** Number of base atoms in the order. */
   numBaseAtoms: bignum;
   /** Hint for the location of the order in the manifest dynamic data. */
-  dataIndex: number;
+  marketDataIndex: number;
   /** Last slot before this order is invalid and will be removed. */
   lastValidSlot: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
-}
-
-export interface OpenOrderInternal {
-  price: Uint8Array;
-  clientOrderId: bignum;
-  orderSequenceNumber: bignum;
-  numBaseAtoms: bignum;
-  dataIndex: number;
-  lastValidSlot: number;
-  isBid: boolean;
-  orderType: number;
-  padding: bignum[]; // 30 bytes
+  /** unused */
+  padding: number[];
 }
 
 /**
@@ -168,9 +153,9 @@ export class Wrapper {
    *
    * @return MarketInfoParsed
    */
-  public marketInfoForMarket(marketPk: PublicKey): MarketInfoParsed | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public marketInfoForMarket(marketPk: PublicKey): WrapperMarketInfo | null {
+    const filtered: WrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: WrapperMarketInfo) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       },
     );
@@ -185,11 +170,11 @@ export class Wrapper {
    *
    * @param marketPk PublicKey for the market
    *
-   * @return OpenOrder[]
+   * @return WrapperOpenOrder[]
    */
-  public openOrdersForMarket(marketPk: PublicKey): OpenOrder[] | null {
-    const filtered: MarketInfoParsed[] = this.data.marketInfos.filter(
-      (marketInfo: MarketInfoParsed) => {
+  public openOrdersForMarket(marketPk: PublicKey): WrapperOpenOrder[] | null {
+    const filtered: WrapperMarketInfo[] = this.data.marketInfos.filter(
+      (marketInfo: WrapperMarketInfo) => {
         return marketInfo.market.toBase58() == marketPk.toBase58();
       },
     );
@@ -210,14 +195,14 @@ export class Wrapper {
     console.log(`Wrapper: ${this.address.toBase58()}`);
     console.log(`========================`);
     console.log(`Trader: ${this.data.trader.toBase58()}`);
-    this.data.marketInfos.forEach((marketInfo: MarketInfoParsed) => {
+    this.data.marketInfos.forEach((marketInfo: WrapperMarketInfo) => {
       console.log(`------------------------`);
       console.log(`Market: ${marketInfo.market}`);
       console.log(`Last updated slot: ${marketInfo.lastUpdatedSlot}`);
       console.log(
         `BaseAtoms: ${marketInfo.baseBalanceAtoms} QuoteAtoms: ${marketInfo.quoteBalanceAtoms}`,
       );
-      marketInfo.orders.forEach((order: OpenOrder) => {
+      marketInfo.orders.forEach((order: WrapperOpenOrder) => {
         console.log(
           `OpenOrder: ClientOrderId: ${order.clientOrderId} ${order.numBaseAtoms}@${order.price} SeqNum: ${order.orderSequenceNumber} LastValidSlot: ${order.lastValidSlot} IsBid: ${order.isBid}`,
         );
@@ -258,7 +243,7 @@ export class Wrapper {
     const _padding = data.readUInt32LE(offset);
     offset += 12;
 
-    const marketInfos: MarketInfoRaw[] =
+    const marketInfos: MarketInfo[] =
       marketInfosRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_WRAPPER_HEADER_SIZE),
@@ -267,31 +252,32 @@ export class Wrapper {
           )
         : [];
 
-    const parsedMarketInfos: MarketInfoParsed[] = marketInfos.map(
-      (marketInfoRaw: MarketInfoRaw) => {
-        const rootIndex: number = marketInfoRaw.openOrdersRootIndex;
-        const parsedOpenOrders: OpenOrderInternal[] =
+    const parsedMarketInfos: WrapperMarketInfo[] = marketInfos.map(
+      (marketInfoRaw: MarketInfo) => {
+        const rootIndex: number = marketInfoRaw.ordersRootIndex;
+        const rawOpenOrders: WrapperOpenOrderRaw[] =
           rootIndex != NIL
             ? deserializeRedBlackTree(
                 data.subarray(FIXED_WRAPPER_HEADER_SIZE),
                 rootIndex,
-                openOrderBeet,
+                wrapperOpenOrderBeet,
               )
             : [];
 
-        const parsedOpenOrdersWithPrice: OpenOrder[] = parsedOpenOrders.map(
-          (openOrder: OpenOrderInternal) => {
+        const parsedOpenOrdersWithPrice: WrapperOpenOrder[] = rawOpenOrders.map(
+          (openOrder: WrapperOpenOrderRaw) => {
             return {
               ...openOrder,
-              price: 0,
+              price: convertU128(new BN(openOrder.price, 10, 'le')),
             };
           },
         );
 
         return {
           market: marketInfoRaw.market,
-          baseBalanceAtoms: marketInfoRaw.baseBalanceAtoms,
-          quoteBalanceAtoms: marketInfoRaw.quoteBalanceAtoms,
+          baseBalanceAtoms: marketInfoRaw.baseBalance,
+          quoteBalanceAtoms: marketInfoRaw.quoteBalance,
+          quoteVolumeAtoms: marketInfoRaw.quoteVolume,
           orders: parsedOpenOrdersWithPrice,
           lastUpdatedSlot: marketInfoRaw.lastUpdatedSlot,
         };

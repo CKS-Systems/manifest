@@ -4,8 +4,8 @@
 // To avoid creating Strings when printing messages
 
 macro_rules! msg {
-    ($msg:expr) => { };
-    ($($arg:tt)*) => { };
+    ($msg:expr) => {};
+    ($($arg:tt)*) => {};
 }
 
 pub(crate) use msg;

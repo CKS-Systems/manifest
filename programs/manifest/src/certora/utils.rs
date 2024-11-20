@@ -1,11 +1,7 @@
 #![allow(unused_macros)]
 #![allow(unused_imports)]
 
-use {
-    solana_program::{account_info::AccountInfo,
-                     pubkey::Pubkey,
-    },
-};
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::program::get_dynamic_account;
 
@@ -17,11 +13,11 @@ use crate::program::get_dynamic_account;
 #[macro_export]
 macro_rules! create_empty_market {
     ($market_acc_info:expr) => {{
-      let empty_market_fixed: MarketFixed = MarketFixed::new_nondet();
-      //cvt_cex_print_tag!(1);
-      let mut market_bytes = $market_acc_info.data.try_borrow_mut().unwrap();
-      //cvt_cex_print_tag!(2);
-      *get_mut_helper::<MarketFixed>(*market_bytes, 0_u32) = empty_market_fixed;
+        let empty_market_fixed: MarketFixed = MarketFixed::new_nondet();
+        //cvt_cex_print_tag!(1);
+        let mut market_bytes = $market_acc_info.data.try_borrow_mut().unwrap();
+        //cvt_cex_print_tag!(2);
+        *get_mut_helper::<MarketFixed>(*market_bytes, 0_u32) = empty_market_fixed;
     }};
 }
 
@@ -60,7 +56,15 @@ macro_rules! update_balance {
         let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let DynamicAccount { fixed, dynamic } = dynamic_account;
-        crate::state::update_balance(fixed, dynamic, $trader_index, $is_base, $is_increase, $amount).unwrap();
+        crate::state::update_balance(
+            fixed,
+            dynamic,
+            $trader_index,
+            $is_base,
+            $is_increase,
+            $amount,
+        )
+        .unwrap();
     }};
 }
 
@@ -76,7 +80,9 @@ macro_rules! deposit {
     ($market_acc_info:expr, $trader_key: expr, $in_atoms: expr, $is_base_in: expr) => {{
         let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let mut dynamic_account = get_mut_dynamic_account(market_data);
-        dynamic_account.deposit($trader_key, $in_atoms, $is_base_in).unwrap();
+        dynamic_account
+            .deposit($trader_key, $in_atoms, $is_base_in)
+            .unwrap();
     }};
 }
 
@@ -154,74 +160,67 @@ macro_rules! get_order_atoms {
 
 #[macro_export]
 macro_rules! rest_remaining {
-    ($market_acc_info:expr, 
-    $args:expr, 
-    $remaining_base_atoms: expr, 
-    $order_sequence_number: expr, 
+    ($market_acc_info:expr,
+    $args:expr,
+    $remaining_base_atoms: expr,
+    $order_sequence_number: expr,
     $total_base_atoms_traded: expr,
-    $total_quote_atoms_traded: expr) => 
-        {{
-            let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
-            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-            // let DynamicAccount { fixed, .. } = dynamic_account;
-            dynamic_account.rest_remaining(
-                $args, 
-                $remaining_base_atoms, 
-                $order_sequence_number, 
-                $total_base_atoms_traded, 
-                $total_quote_atoms_traded
-            ).unwrap()
-        }};
+    $total_quote_atoms_traded: expr) => {{
+        let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        // let DynamicAccount { fixed, .. } = dynamic_account;
+        dynamic_account
+            .rest_remaining(
+                $args,
+                $remaining_base_atoms,
+                $order_sequence_number,
+                $total_base_atoms_traded,
+                $total_quote_atoms_traded,
+            )
+            .unwrap()
+    }};
 }
 
 #[macro_export]
 macro_rules! cancel_order_by_index {
     (
-        $market_acc_info:expr, 
-        $trader_index:expr, 
+        $market_acc_info:expr,
+        $trader_index:expr,
         $order_index:expr
-    ) => 
-        {{
-            let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
-            let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-            dynamic_account.cancel_order_by_index(
-                $trader_index,
-                $order_index,
-                &[None, None]
-            ).unwrap();
-        }};
+    ) => {{
+        let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        dynamic_account
+            .cancel_order_by_index($trader_index, $order_index, &[None, None])
+            .unwrap();
+    }};
 }
-
 
 #[macro_export]
 macro_rules! place_single_order {
     (
-        $market_acc_info:expr, 
-        $args:expr, 
-        $remaining_base_atoms: expr, 
+        $market_acc_info:expr,
+        $args:expr,
+        $remaining_base_atoms: expr,
         $now_slot: expr,
         $current_order_index: expr
-    ) => 
-        {{
-            let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
-            let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-            let DynamicAccount { fixed, dynamic } = dynamic_account;
-            
-            let mut ctx: AddSingleOrderCtx = AddSingleOrderCtx::new(
-                $args,
-                fixed,
-                dynamic,
-                $remaining_base_atoms,
-                $now_slot
-            );
-            
-            let res: AddOrderToMarketInnerResult = ctx.place_single_order(
-                $current_order_index
-            ).unwrap();
-            (res, ctx.total_base_atoms_traded, ctx.total_quote_atoms_traded)
-        }};
-}
+    ) => {{
+        let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
+        let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+        let DynamicAccount { fixed, dynamic } = dynamic_account;
 
+        let mut ctx: AddSingleOrderCtx =
+            AddSingleOrderCtx::new($args, fixed, dynamic, $remaining_base_atoms, $now_slot);
+
+        let res: AddOrderToMarketInnerResult =
+            ctx.place_single_order($current_order_index).unwrap();
+        (
+            res,
+            ctx.total_base_atoms_traded,
+            ctx.total_quote_atoms_traded,
+        )
+    }};
+}
 
 extern "C" {
     fn memhavoc_c(data: *mut u8, sz: usize) -> ();
@@ -232,8 +231,8 @@ pub fn memhavoc(data: *mut u8, size: usize) {
     }
 }
 
-pub fn alloc_havoced<T: Sized> () -> *mut T {
-    use std::alloc::{Layout, alloc};
+pub fn alloc_havoced<T: Sized>() -> *mut T {
+    use std::alloc::{alloc, Layout};
     let layout = Layout::new::<T>();
     unsafe {
         let ptr = std::alloc::alloc(layout);
@@ -241,4 +240,3 @@ pub fn alloc_havoced<T: Sized> () -> *mut T {
         ptr as *mut T
     }
 }
-

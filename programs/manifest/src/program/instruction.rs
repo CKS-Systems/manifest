@@ -51,9 +51,9 @@ pub enum ManifestInstruction {
     #[account(4, writable, name = "base_vault", desc = "Base vault PDA, seeds are [b'vault', market_address, base_mint]")]
     #[account(5, writable, name = "quote_vault", desc = "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]")]
     #[account(6, name = "token_program_base", desc = "Token program(22) base")]
-    #[account(7, name = "base_mint", desc = "Base mint, only inlcuded if base is Token22, otherwise not required")]
-    #[account(8, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
-    #[account(9, name = "quote_mint", desc = "Quote mint, only inlcuded if base is Token22, otherwise not required")]
+    #[account(7, optional, name = "base_mint", desc = "Base mint, only included if base is Token22, otherwise not required")]
+    #[account(8, optional, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
+    #[account(9, optional, name = "quote_mint", desc = "Quote mint, only included if base is Token22, otherwise not required")]
     #[account(10, writable, optional, name = "global", desc = "Global account")]
     #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
     Swap = 4,
@@ -72,16 +72,16 @@ pub enum ManifestInstruction {
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "market", desc = "Account holding all market state")]
     #[account(2, name = "system_program", desc = "System program")]
-    #[account(3, name = "base_mint", desc = "Mint for the global global account")]
-    #[account(4, writable, name = "base_global", desc = "Base global account")]
-    #[account(5, name = "base_global_vault", desc = "Base global vault")]
-    #[account(6, name = "base_market_vault", desc = "Base market vault")]
-    #[account(7, name = "base_token_program", desc = "Token program(22)")]
-    #[account(8, name = "quote_mint", desc = "Mint for this global account")]
-    #[account(9, writable, name = "quote_global", desc = "Quote global account")]
-    #[account(10, name = "quote_global_vault", desc = "Quote global vault")]
-    #[account(11, name = "quote_market_vault", desc = "Quote market vault")]
-    #[account(12, name = "quote_token_program", desc = "Token program(22)")]
+    #[account(3, optional, name = "base_mint", desc = "Mint for the base global account")]
+    #[account(4, optional, writable, name = "base_global", desc = "Base global account")]
+    #[account(5, optional, name = "base_global_vault", desc = "Base global vault")]
+    #[account(6, optional, name = "base_market_vault", desc = "Base market vault")]
+    #[account(7, optional, name = "base_token_program", desc = "Token program(22)")]
+    #[account(8, optional, name = "quote_mint", desc = "Mint for this global account")]
+    #[account(9, optional, writable, name = "quote_global", desc = "Quote global account")]
+    #[account(10, optional, name = "quote_global_vault", desc = "Quote global vault")]
+    #[account(11, optional, name = "quote_market_vault", desc = "Quote market vault")]
+    #[account(12, optional, name = "quote_token_program", desc = "Token program(22)")]
     BatchUpdate = 6,
 
     /// Create global account for a given token.
@@ -104,16 +104,16 @@ pub enum ManifestInstruction {
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalDeposit = 9,
 
-    /// Deposit into global account for a given token.
+    /// Withdraw from global account for a given token.
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "global", desc = "Global account")]
     #[account(2, name = "mint", desc = "Mint for this global account")]
     #[account(3, writable, name = "global_vault", desc = "Global vault")]
-    #[account(4, name = "trader_token", desc = "Trader token account")]
+    #[account(4, writable, name = "trader_token", desc = "Trader token account")]
     #[account(5, name = "token_program", desc = "Token program(22)")]
     GlobalWithdraw = 10,
 

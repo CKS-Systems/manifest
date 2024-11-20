@@ -5,31 +5,30 @@ import {
   Keypair,
   Signer,
   SystemProgram,
+  RpcResponseAndContext,
+  AccountInfo,
 } from '@solana/web3.js';
 import { bignum } from '@metaplex-foundation/beet';
-import { claimedSeatBeet, publicKeyBeet, restingOrderBeet } from './utils/beet';
+import { publicKeyBeet } from './utils/beet';
 import { publicKey as beetPublicKey } from '@metaplex-foundation/beet-solana';
 import { deserializeRedBlackTree } from './utils/redBlackTree';
 import { convertU128, toNum } from './utils/numbers';
-import { FIXED_MANIFEST_HEADER_SIZE, NIL } from './constants';
-import { createCreateMarketInstruction, PROGRAM_ID } from './manifest';
+import {
+  FIXED_MANIFEST_HEADER_SIZE,
+  NIL,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+} from './constants';
+import {
+  claimedSeatBeet,
+  ClaimedSeat as ClaimedSeatRaw,
+  createCreateMarketInstruction,
+  OrderType,
+  PROGRAM_ID,
+  restingOrderBeet,
+  RestingOrder as RestingOrderRaw,
+} from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
-
-/**
- * Internal use only. Needed because shank doesnt handle f64 and because the
- * client doesnt need to know about padding.
- */
-export type RestingOrderInternal = {
-  traderIndex: bignum;
-  numBaseAtoms: bignum;
-  lastValidSlot: bignum;
-  sequenceNumber: bignum;
-  // Deserializes to UInt8Array, but we then convert it to number.
-  price: bignum;
-  effectivePrice: bignum;
-  padding: bignum[]; // 16 bytes
-};
 
 /**
  * RestingOrder on the market.
@@ -45,6 +44,8 @@ export type RestingOrder = {
   sequenceNumber: bignum;
   /** Price as float in tokens of quote per tokens of base. */
   tokenPrice: number;
+  /** OrderType: 🌎 or Limit or PostOnly */
+  orderType: OrderType;
 };
 
 /**
@@ -83,6 +84,8 @@ export interface MarketData {
   asks: RestingOrder[];
   /** Array of all claimed seats. */
   claimedSeats: ClaimedSeat[];
+  /** Quote volume in atoms. */
+  quoteVolumeAtoms: bigint;
 }
 
 /**
@@ -93,6 +96,8 @@ export class Market {
   address: PublicKey;
   /** Deserialized data. */
   private data: MarketData;
+  /** Last updated slot. */
+  private slot: number;
 
   /**
    * Constructs a Market object.
@@ -103,12 +108,15 @@ export class Market {
   private constructor({
     address,
     data,
+    slot,
   }: {
     address: PublicKey;
     data: MarketData;
+    slot: number;
   }) {
     this.address = address;
     this.data = data;
+    this.slot = slot;
   }
 
   /**
@@ -120,12 +128,22 @@ export class Market {
   static loadFromBuffer({
     address,
     buffer,
+    slot,
   }: {
     address: PublicKey;
     buffer: Buffer;
+    slot?: number;
   }): Market {
-    const marketData = Market.deserializeMarketBuffer(buffer);
-    return new Market({ address, data: marketData });
+    const marketData = Market.deserializeMarketBuffer(
+      buffer,
+      slot ?? NO_EXPIRATION_LAST_VALID_SLOT,
+    );
+    // When we are not given a slot, pretend it is time zero to show everything.
+    return new Market({
+      address,
+      data: marketData,
+      slot: slot ?? NO_EXPIRATION_LAST_VALID_SLOT,
+    });
   }
 
   /**
@@ -141,14 +159,23 @@ export class Market {
     connection: Connection;
     address: PublicKey;
   }): Promise<Market> {
-    const buffer = await connection
-      .getAccountInfo(address)
-      .then((accountInfo) => accountInfo?.data);
+    const [buffer, slot]: [Buffer | undefined, number] = await connection
+      .getAccountInfoAndContext(address)
+      .then(
+        (
+          getAccountInfoAndContext: RpcResponseAndContext<AccountInfo<Buffer> | null>,
+        ) => {
+          return [
+            getAccountInfoAndContext.value?.data,
+            getAccountInfoAndContext.context.slot,
+          ];
+        },
+      );
 
     if (buffer === undefined) {
       throw new Error(`Failed to load ${address}`);
     }
-    return Market.loadFromBuffer({ address, buffer });
+    return Market.loadFromBuffer({ address, buffer, slot });
   }
 
   /**
@@ -157,13 +184,23 @@ export class Market {
    * @param connection The Solana `Connection` object
    */
   public async reload(connection: Connection): Promise<void> {
-    const buffer = await connection
-      .getAccountInfo(this.address)
-      .then((accountInfo) => accountInfo?.data);
+    const [buffer, slot]: [Buffer | undefined, number] = await connection
+      .getAccountInfoAndContext(this.address)
+      .then(
+        (
+          getAccountInfoAndContext: RpcResponseAndContext<AccountInfo<Buffer> | null>,
+        ) => {
+          return [
+            getAccountInfoAndContext.value?.data,
+            getAccountInfoAndContext.context.slot,
+          ];
+        },
+      );
     if (buffer === undefined) {
       throw new Error(`Failed to load ${this.address}`);
     }
-    this.data = Market.deserializeMarketBuffer(buffer);
+    this.slot = slot;
+    this.data = Market.deserializeMarketBuffer(buffer, slot);
   }
 
   /**
@@ -191,6 +228,63 @@ export class Market {
       ? toNum(seat.baseBalance) / 10 ** this.baseDecimals()
       : toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
     return withdrawableBalance;
+  }
+
+  /**
+   * Get the amount in tokens of balance that is deposited on this market, split
+   * by base, quote, and whether in orders or not.
+   *
+   * @param trader PublicKey of the trader to check balance of
+   *
+   * @returns {
+   *    baseWithdrawableBalanceTokens: number,
+   *    quoteWithdrawableBalanceTokens: number,
+   *    baseOpenOrdersBalanceTokens: number,
+   *    quoteOpenOrdersBalanceTokens: number
+   * }
+   */
+  public getBalances(trader: PublicKey): {
+    baseWithdrawableBalanceTokens: number;
+    quoteWithdrawableBalanceTokens: number;
+    baseOpenOrdersBalanceTokens: number;
+    quoteOpenOrdersBalanceTokens: number;
+  } {
+    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
+      return claimedSeat.publicKey.equals(trader);
+    });
+    // No seat claimed.
+    if (filteredSeats.length == 0) {
+      return {
+        baseWithdrawableBalanceTokens: 0,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 0,
+        quoteOpenOrdersBalanceTokens: 0,
+      };
+    }
+    const seat: ClaimedSeat = filteredSeats[0];
+
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.asks();
+    const baseOpenOrdersBalanceTokens: number = asks
+      .filter((ask) => ask.trader.equals(trader))
+      .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
+    const quoteOpenOrdersBalanceTokens: number = bids
+      .filter((bid) => bid.trader.equals(trader))
+      .reduce(
+        (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
+        0,
+      );
+
+    const quoteWithdrawableBalanceTokens: number =
+      toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    const baseWithdrawableBalanceTokens: number =
+      toNum(seat.baseBalance) / 10 ** this.baseDecimals();
+    return {
+      baseWithdrawableBalanceTokens,
+      quoteWithdrawableBalanceTokens,
+      baseOpenOrdersBalanceTokens,
+      quoteOpenOrdersBalanceTokens,
+    };
   }
 
   /**
@@ -262,12 +356,57 @@ export class Market {
   }
 
   /**
+   * Get the most competitive bid price
+   *
+   * @returns number | undefined
+   */
+  public bestBidPrice(): number | undefined {
+    return this.data.bids[this.data.bids.length - 1]?.tokenPrice;
+  }
+
+  /**
+   * Get the most competitive ask price.
+   *
+   * @returns number | undefined
+   */
+  public bestAskPrice(): number | undefined {
+    return this.data.asks[this.data.asks.length - 1]?.tokenPrice;
+  }
+
+  /**
+   * Get all open bids on the market ordered from most competitive to least.
+   *
+   * @returns RestingOrder[]
+   */
+  public bidsL2(): RestingOrder[] {
+    return this.data.bids.slice().reverse();
+  }
+
+  /**
+   * Get all open asks on the market ordered from most competitive to least.
+   *
+   * @returns RestingOrder[]
+   */
+  public asksL2(): RestingOrder[] {
+    return this.data.asks.slice().reverse();
+  }
+
+  /**
    * Get all open orders on the market.
    *
    * @returns RestingOrder[]
    */
   public openOrders(): RestingOrder[] {
     return [...this.data.bids, ...this.data.asks];
+  }
+
+  /**
+   * Gets the quote volume traded over the lifetime of the market.
+   *
+   * @returns bigint
+   */
+  public quoteVolume(): bigint {
+    return this.data.quoteVolumeAtoms;
   }
 
   /**
@@ -310,8 +449,12 @@ export class Market {
    * https://github.com/CKS-Systems/manifest/blob/main/programs/manifest/src/state/market.rs
    *
    * @param data The data buffer to deserialize
+   * @param currentSlot Number that is the cutoff for order expiration.
    */
-  static deserializeMarketBuffer(data: Buffer): MarketData {
+  static deserializeMarketBuffer(
+    data: Buffer,
+    currentSlot: number,
+  ): MarketData {
     let offset = 0;
     // Deserialize the market header
     const _discriminant = data.readBigUInt64LE(0);
@@ -361,7 +504,12 @@ export class Market {
     const _freeListHeadIndex = data.readUInt32LE(offset);
     offset += 4;
 
-    // _padding2: [u32; 3],
+    const _padding2 = data.readUInt32LE(offset);
+    offset += 4;
+
+    const quoteVolumeAtoms: bigint = data.readBigUInt64LE(offset);
+    offset += 8;
+
     // _padding3: [u64; 8],
 
     const bids: RestingOrder[] =
@@ -370,27 +518,34 @@ export class Market {
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             bidsRootIndex,
             restingOrderBeet,
-          ).map((restingOrderInternal: RestingOrderInternal) => {
-            return {
-              trader: publicKeyBeet.deserialize(
-                data.subarray(
-                  Number(restingOrderInternal.traderIndex) +
-                    16 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                  Number(restingOrderInternal.traderIndex) +
-                    48 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                ),
-              )[0].publicKey,
-              numBaseTokens:
-                toNum(restingOrderInternal.numBaseAtoms) /
-                10 ** baseMintDecimals,
-              tokenPrice:
-                convertU128(restingOrderInternal.price) *
-                10 ** (baseMintDecimals - quoteMintDecimals),
-              ...restingOrderInternal,
-            };
-          })
+          )
+            .map((restingOrderInternal: RestingOrderRaw) => {
+              return {
+                trader: publicKeyBeet.deserialize(
+                  data.subarray(
+                    Number(restingOrderInternal.traderIndex) +
+                      16 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                    Number(restingOrderInternal.traderIndex) +
+                      48 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                  ),
+                )[0].publicKey,
+                numBaseTokens:
+                  toNum(restingOrderInternal.numBaseAtoms) /
+                  10 ** baseMintDecimals,
+                tokenPrice:
+                  convertU128(restingOrderInternal.price) *
+                  10 ** (baseMintDecimals - quoteMintDecimals),
+                ...restingOrderInternal,
+              };
+            })
+            .filter((bid: RestingOrder) => {
+              return (
+                bid.lastValidSlot == NO_EXPIRATION_LAST_VALID_SLOT ||
+                Number(bid.lastValidSlot) > currentSlot
+              );
+            })
         : [];
 
     const asks: RestingOrder[] =
@@ -399,36 +554,49 @@ export class Market {
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             asksRootIndex,
             restingOrderBeet,
-          ).map((restingOrderInternal: RestingOrderInternal) => {
-            return {
-              trader: publicKeyBeet.deserialize(
-                data.subarray(
-                  Number(restingOrderInternal.traderIndex) +
-                    16 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                  Number(restingOrderInternal.traderIndex) +
-                    48 +
-                    FIXED_MANIFEST_HEADER_SIZE,
-                ),
-              )[0].publicKey,
-              numBaseTokens:
-                toNum(restingOrderInternal.numBaseAtoms) /
-                10 ** baseMintDecimals,
-              tokenPrice:
-                convertU128(restingOrderInternal.price) *
-                10 ** (baseMintDecimals - quoteMintDecimals),
-              ...restingOrderInternal,
-            };
-          })
+          )
+            .map((restingOrderInternal: RestingOrderRaw) => {
+              return {
+                trader: publicKeyBeet.deserialize(
+                  data.subarray(
+                    Number(restingOrderInternal.traderIndex) +
+                      16 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                    Number(restingOrderInternal.traderIndex) +
+                      48 +
+                      FIXED_MANIFEST_HEADER_SIZE,
+                  ),
+                )[0].publicKey,
+                numBaseTokens:
+                  toNum(restingOrderInternal.numBaseAtoms) /
+                  10 ** baseMintDecimals,
+                tokenPrice:
+                  convertU128(restingOrderInternal.price) *
+                  10 ** (baseMintDecimals - quoteMintDecimals),
+                ...restingOrderInternal,
+              };
+            })
+            .filter((ask: RestingOrder) => {
+              return (
+                ask.lastValidSlot == NO_EXPIRATION_LAST_VALID_SLOT ||
+                Number(ask.lastValidSlot) > currentSlot
+              );
+            })
         : [];
 
-    const claimedSeats =
+    const claimedSeats: ClaimedSeat[] =
       claimedSeatsRootIndex != NIL
         ? deserializeRedBlackTree(
             data.subarray(FIXED_MANIFEST_HEADER_SIZE),
             claimedSeatsRootIndex,
             claimedSeatBeet,
-          )
+          ).map((claimedSeatInternal: ClaimedSeatRaw) => {
+            return {
+              publicKey: claimedSeatInternal.trader,
+              baseBalance: claimedSeatInternal.baseWithdrawableBalance,
+              quoteBalance: claimedSeatInternal.quoteWithdrawableBalance,
+            };
+          })
         : [];
 
     return {
@@ -442,6 +610,7 @@ export class Market {
       bids,
       asks,
       claimedSeats,
+      quoteVolumeAtoms,
     };
   }
 

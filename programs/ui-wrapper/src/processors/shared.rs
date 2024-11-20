@@ -14,7 +14,7 @@ use hypertree::{
     RedBlackTreeReadOnly, NIL,
 };
 use manifest::{
-    program::get_dynamic_account,
+    program::{get_dynamic_account, invoke},
     quantities::BaseAtoms,
     require,
     state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
@@ -24,7 +24,6 @@ use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
     entrypoint::ProgramResult,
-    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_instruction,
@@ -41,8 +40,8 @@ pub const EXPECTED_ORDER_BATCH_SIZE: usize = 16;
 #[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
 pub struct UnusedWrapperFreeListPadding {
-    _padding: [u64; 9],
-    _padding2: [u32; 5],
+    _padding: [u64; 11],
+    _padding2: [u32; 1],
 }
 pub const FREE_LIST_HEADER_SIZE: usize = 4;
 // Assert that the free list blocks take up the same size as regular blocks.
@@ -90,7 +89,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         );
         #[cfg(feature = "fuzz")]
         {
-            invoke(
+            solana_program::program::invoke(
                 &system_instruction::allocate(wrapper_state.key, new_size as u64),
                 &[wrapper_state.clone(), system_program.info.clone()],
             )?;

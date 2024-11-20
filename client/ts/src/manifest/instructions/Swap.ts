@@ -43,9 +43,9 @@ export const SwapStruct = new beet.BeetArgsStruct<
  * @property [_writable_] baseVault
  * @property [_writable_] quoteVault
  * @property [] tokenProgramBase
- * @property [] baseMint
- * @property [] tokenProgramQuote
- * @property [] quoteMint
+ * @property [] baseMint (optional)
+ * @property [] tokenProgramQuote (optional)
+ * @property [] quoteMint (optional)
  * @property [_writable_] global (optional)
  * @property [_writable_] globalVault (optional)
  * @category Instructions
@@ -60,9 +60,9 @@ export type SwapInstructionAccounts = {
   baseVault: web3.PublicKey;
   quoteVault: web3.PublicKey;
   tokenProgramBase: web3.PublicKey;
-  baseMint: web3.PublicKey;
-  tokenProgramQuote: web3.PublicKey;
-  quoteMint: web3.PublicKey;
+  baseMint?: web3.PublicKey;
+  tokenProgramQuote?: web3.PublicKey;
+  quoteMint?: web3.PublicKey;
   global?: web3.PublicKey;
   globalVault?: web3.PublicKey;
 };
@@ -129,24 +129,49 @@ export function createSwapInstruction(
       isWritable: false,
       isSigner: false,
     },
-    {
+  ];
+
+  if (accounts.baseMint != null) {
+    keys.push({
       pubkey: accounts.baseMint,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.tokenProgramQuote != null) {
+    if (accounts.baseMint == null) {
+      throw new Error(
+        "When providing 'tokenProgramQuote' then 'accounts.baseMint' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.tokenProgramQuote,
       isWritable: false,
       isSigner: false,
-    },
-    {
+    });
+  }
+  if (accounts.quoteMint != null) {
+    if (accounts.baseMint == null || accounts.tokenProgramQuote == null) {
+      throw new Error(
+        "When providing 'quoteMint' then 'accounts.baseMint', 'accounts.tokenProgramQuote' need(s) to be provided as well.",
+      );
+    }
+    keys.push({
       pubkey: accounts.quoteMint,
       isWritable: false,
       isSigner: false,
-    },
-  ];
-
+    });
+  }
   if (accounts.global != null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.tokenProgramQuote == null ||
+      accounts.quoteMint == null
+    ) {
+      throw new Error(
+        "When providing 'global' then 'accounts.baseMint', 'accounts.tokenProgramQuote', 'accounts.quoteMint' need(s) to be provided as well.",
+      );
+    }
     keys.push({
       pubkey: accounts.global,
       isWritable: true,
@@ -154,9 +179,14 @@ export function createSwapInstruction(
     });
   }
   if (accounts.globalVault != null) {
-    if (accounts.global == null) {
+    if (
+      accounts.baseMint == null ||
+      accounts.tokenProgramQuote == null ||
+      accounts.quoteMint == null ||
+      accounts.global == null
+    ) {
       throw new Error(
-        "When providing 'globalVault' then 'accounts.global' need(s) to be provided as well.",
+        "When providing 'globalVault' then 'accounts.baseMint', 'accounts.tokenProgramQuote', 'accounts.quoteMint', 'accounts.global' need(s) to be provided as well.",
       );
     }
     keys.push({

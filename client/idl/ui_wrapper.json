@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.4",
   "name": "ui_wrapper",
   "instructions": [
     {
@@ -45,7 +45,7 @@
       }
     },
     {
-      "name": "ClaimSeat",
+      "name": "ClaimSeatUnused",
       "accounts": [
         {
           "name": "manifestProgram",
@@ -281,7 +281,168 @@
     },
     {
       "name": "EditOrder",
-      "accounts": [],
+      "accounts": [
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "Owner of the Manifest account"
+          ]
+        },
+        {
+          "name": "traderTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader token account"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Vault PDA, seeds are [b'vault', market_address, mint_address]"
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Mint of trader token account"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program owning trader token account"
+          ]
+        },
+        {
+          "name": "manifestProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Manifest program"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer of rent and gas"
+          ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Base mint"
+          ]
+        },
+        {
+          "name": "baseGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global account"
+          ]
+        },
+        {
+          "name": "baseGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base global vault"
+          ]
+        },
+        {
+          "name": "baseMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base market vault"
+          ]
+        },
+        {
+          "name": "baseTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base token program"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Quote mint"
+          ]
+        },
+        {
+          "name": "quoteGlobal",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global account"
+          ]
+        },
+        {
+          "name": "quoteGlobalVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote global vault"
+          ]
+        },
+        {
+          "name": "quoteMarketVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote market vault"
+          ]
+        },
+        {
+          "name": "quoteTokenProgram",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote token program"
+          ]
+        }
+      ],
       "args": [],
       "discriminant": {
         "type": "u8",
@@ -488,6 +649,7 @@
           "name": "referrerTokenAccount",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Referrer fee token account"
           ]
@@ -522,6 +684,10 @@
             "type": "publicKey"
           },
           {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
             "name": "platformTokenAccount",
             "type": "publicKey"
           },
@@ -546,6 +712,10 @@
             "type": "publicKey"
           },
           {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
             "name": "referrerTokenAccount",
             "type": "publicKey"
           },
@@ -558,6 +728,106 @@
     }
   ],
   "types": [
+    {
+      "name": "MarketInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "publicKey"
+          },
+          {
+            "name": "ordersRootIndex",
+            "type": "u32"
+          },
+          {
+            "name": "traderIndex",
+            "type": "u32"
+          },
+          {
+            "name": "baseBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteBalance",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolume",
+            "type": "u64"
+          },
+          {
+            "name": "quoteVolumeUnpaid",
+            "type": "u64"
+          },
+          {
+            "name": "lastUpdatedSlot",
+            "type": "u32"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u32",
+                1
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrapperOpenOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price",
+            "type": "u128"
+          },
+          {
+            "name": "clientOrderId",
+            "type": "u64"
+          },
+          {
+            "name": "orderSequenceNumber",
+            "type": "u64"
+          },
+          {
+            "name": "numBaseAtoms",
+            "type": "u64"
+          },
+          {
+            "name": "marketDataIndex",
+            "type": "u32"
+          },
+          {
+            "name": "lastValidSlot",
+            "type": "u32"
+          },
+          {
+            "name": "isBid",
+            "type": "bool"
+          },
+          {
+            "name": "orderType",
+            "type": {
+              "defined": "OrderType"
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                30
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "WrapperCancelOrderParams",
       "type": {
@@ -640,6 +910,13 @@
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 0,
+      "name": "InvalidDepositAccounts",
+      "msg": "Invalid deposit accounts error"
     }
   ],
   "metadata": {

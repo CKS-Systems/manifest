@@ -1,7 +1,5 @@
 import 'dotenv/config';
 
-// TODO: merge rando-bots into single instance
-
 import {
   PublicKey,
   Connection,
@@ -106,31 +104,43 @@ class DummyTrader {
 
       const randomFunction =
         this.commands[Math.floor(Math.random() * this.commands.length)];
+
+      // Try catch all of the functions because they could fail in
+      // getAccountInfo due to transient RPC errors.
       switch (randomFunction) {
         case 'DEPOSIT': {
           console.log(`${this.name} trying to deposit`);
-          await this.deposit();
+          try {
+            await this.deposit();
+          } catch (err) {}
           break;
         }
         case 'WITHDRAW': {
           console.log(`${this.name} trying to withdraw`);
-          await this.withdraw();
+          try {
+            await this.withdraw();
+          } catch (err) {}
           break;
         }
         case 'PLACE_ORDER': {
           console.log(`${this.name} trying to place order`);
-          await this.placeOrder();
-          //await this.placeOrder();
+          try {
+            await this.placeOrder();
+          } catch (err) {}
           break;
         }
         case 'SWAP': {
           console.log(`${this.name} trying to swap`);
-          await this.swap();
+          try {
+            await this.swap();
+          } catch (err) {}
           break;
         }
         case 'CANCEL_ORDER': {
           console.log(`${this.name} trying to cancel order`);
-          await this.cancelOrder();
+          try {
+            await this.cancelOrder();
+          } catch (err) {}
           break;
         }
       }
@@ -155,11 +165,8 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const walletTokens: number = Number(
-      (
-        await this.connection.getTokenAccountBalance(
-          traderTokenAccount,
-        )
-      ).value.uiAmount,
+      (await this.connection.getTokenAccountBalance(traderTokenAccount)).value
+        .uiAmount,
     );
     // Deposit at most half
     const depositAmountTokens: number = Math.floor(
@@ -345,11 +352,8 @@ class DummyTrader {
       this.keypair.publicKey,
     );
     const balanceTokens: number = Number(
-      (
-        await this.connection.getTokenAccountBalance(
-          traderTokenAccount,
-        )
-      ).value.uiAmount,
+      (await this.connection.getTokenAccountBalance(traderTokenAccount)).value
+        .uiAmount,
     );
     if (balanceTokens == 0) {
       console.log('No balance for placing order from wallet');
@@ -444,7 +448,7 @@ async function createMarket(
     ),
     programId: PROGRAM_ID,
   });
-  const createMarketIx = ManifestClient.createMarketIx(
+  const createMarketIx = ManifestClient['createMarketIx'](
     keypair.publicKey,
     baseMint,
     quoteMint,
@@ -460,17 +464,16 @@ async function createMarket(
     'market',
     marketKeypair.publicKey.toBase58(),
   );
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    tx,
-    [keypair, marketKeypair],
-  );
+  const signature = await sendAndConfirmTransaction(connection, tx, [
+    keypair,
+    marketKeypair,
+  ]);
   console.log(`Created market at ${marketKeypair.publicKey} in ${signature}`);
   return marketKeypair.publicKey;
 }
 
 async function main() {
-  const connection: Connection = new Connection(RPC_URL as string, "confirmed");
+  const connection: Connection = new Connection(RPC_URL as string, 'confirmed');
 
   const creatorKeypair: Keypair = process.env.MARKET_CREATOR_PRIVATE_KEY
     ? Keypair.fromSecretKey(

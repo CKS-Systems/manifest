@@ -1,19 +1,17 @@
 #![allow(unused_imports)]
 
+use super::verification_utils::init_static;
 use bytemuck::{Pod, Zeroable};
 use calltrace::{cvt_cex_print_tag, cvt_cex_print_u64};
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
 pub use hypertree::red_black_tree::*;
 use hypertree::{
     get_helper, get_mut_helper, DataIndex, HyperTreeReadOperations, HyperTreeWriteOperations, NIL,
 };
+use nondet::*;
 use solana_program::account_info::AccountInfo;
 use std::{cmp::Ordering, fmt::Display};
-use {
-    super::verification_utils::init_static,
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::*,
-};
 
 #[derive(Copy, Clone, Pod, Zeroable, Debug)]
 #[repr(C)]
@@ -3402,7 +3400,7 @@ macro_rules! build_tree_9 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet_with(|i:&DataIndex| *i != index_0 && *i != index_1),
+            nondet_with(|i: &DataIndex| *i != index_0 && *i != index_1),
             index_0,
             NIL,
             Color::Black,
@@ -3411,7 +3409,7 @@ macro_rules! build_tree_9 {
 
         // 0
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
-            nondet_with(|i:&DataIndex| *i != index_2 && *i != index_1),
+            nondet_with(|i: &DataIndex| *i != index_2 && *i != index_1),
             index_1,
             index_2,
             Color::Black,
@@ -3507,13 +3505,8 @@ macro_rules! build_tree_9_1 {
         );
 
         // 0
-        *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
-            NIL,
-            index_1,
-            index_2,
-            Color::Black,
-            TestOrder::new($val_0)
-        );
+        *get_mut_helper(&mut $data, index_0) =
+            mk_rb_node!(NIL, index_1, index_2, Color::Black, TestOrder::new($val_0));
 
         // 1
         *get_mut_helper(&mut $data, index_1) =
@@ -4357,13 +4350,8 @@ macro_rules! build_tree_17 {
         );
 
         // 3
-        *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            index_4,
-            index_5,
-            index_1,
-            $c3,
-            TestOrder::new(nondet())
-        );
+        *get_mut_helper(&mut $data, index_3) =
+            mk_rb_node!(index_4, index_5, index_1, $c3, TestOrder::new(nondet()));
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
@@ -4565,13 +4553,8 @@ macro_rules! build_tree_19 {
         );
 
         // 3
-        *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            index_2,
-            index_1,
-            index_0,
-            $c3,
-            TestOrder::new(nondet())
-        );
+        *get_mut_helper(&mut $data, index_3) =
+            mk_rb_node!(index_2, index_1, index_0, $c3, TestOrder::new(nondet()));
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
@@ -4672,13 +4655,8 @@ macro_rules! build_tree_20 {
         );
 
         // 3
-        *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            index_1,
-            index_2,
-            index_0,
-            $c3,
-            TestOrder::new(nondet())
-        );
+        *get_mut_helper(&mut $data, index_3) =
+            mk_rb_node!(index_1, index_2, index_0, $c3, TestOrder::new(nondet()));
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(

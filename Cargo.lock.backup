@@ -2004,12 +2004,12 @@ dependencies = [
 
 [[package]]
 name = "jupiter-amm-interface"
-version = "0.1.1"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a07d892e79ae4ad8f0947f30633188269287967ceb0b2c182f894745f49952"
+checksum = "be954b20150b666b2bc328d1e490294a1c096e545f985d852f53c941209b2649"
 dependencies = [
  "anyhow",
- "borsh 0.9.3",
+ "borsh 0.10.3",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -2162,14 +2162,15 @@ dependencies = [
 
 [[package]]
 name = "manifest"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
  "bytemuck",
  "hypertree",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
+ "solana-invoke",
  "solana-logger",
  "solana-program",
  "solana-program-test",
@@ -2487,9 +2488,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.5.9"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d829733185c1ca374f17e52b762f24f535ec625d2cc1f070e34c8a9068f341b"
+checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
 dependencies = [
  "num_enum_derive 0.5.11",
 ]
@@ -4096,6 +4097,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-invoke"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca2c69ba8e4618f866917f0a23437aab9a43f5713536a5f5c6fe0f1135cd2458"
+dependencies = [
+ "solana-nostd-entrypoint",
+ "solana-program",
+]
+
+[[package]]
 name = "solana-loader-v4-program"
 version = "1.18.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4171,6 +4182,16 @@ name = "solana-nohash-hasher"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b8a731ed60e89177c8a7ab05fe0f1511cedd3e70e773f288f9de33a9cfdc21e"
+
+[[package]]
+name = "solana-nostd-entrypoint"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39bffcabf17b7c3fac8dba63918f39badc1d7b69d5800c74a5c9c90da170d913"
+dependencies = [
+ "arrayvec",
+ "solana-program",
+]
 
 [[package]]
 name = "solana-perf"
@@ -5114,7 +5135,7 @@ dependencies = [
  "bytemuck",
  "num-derive 0.3.3",
  "num-traits",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "solana-program",
  "thiserror",
 ]
@@ -5892,15 +5913,16 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "ui-wrapper"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
  "bytemuck",
  "hypertree",
  "manifest",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
+ "solana-invoke",
  "solana-logger",
  "solana-program",
  "solana-program-test",
@@ -6366,21 +6388,23 @@ dependencies = [
 
 [[package]]
 name = "wrapper"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
  "bytemuck",
  "hypertree",
  "manifest",
- "num_enum 0.5.9",
+ "num_enum 0.5.11",
  "shank",
+ "solana-invoke",
  "solana-logger",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
  "solana-security-txt",
  "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
  "static_assertions",
  "thiserror",
  "tokio",

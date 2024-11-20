@@ -19,10 +19,22 @@ import {
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import WalletConnection from './WalletConnection';
-import { ManifestClient } from '@cks-systems/manifest-sdk';
-import { Connection } from '@solana/web3.js';
+import { ManifestClient, Market } from '@cks-systems/manifest-sdk';
+import {
+  AccountInfo,
+  Connection,
+  GetProgramAccountsResponse,
+  PublicKey,
+} from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
+import {
+  Cluster,
+  getClusterFromConnection,
+} from '@cks-systems/manifest-sdk/utils/solana';
+import NavBar from './NavBar';
+import { ActiveByAddr, LabelsByAddr, VolumeByAddr } from '@/lib/types';
+import { fetchAndSetMfxAddrLabels } from '@/lib/address-labels';
 
 require('react-toastify/dist/ReactToastify.css');
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -31,7 +43,14 @@ interface AppStateContextValue {
   loading: boolean;
   network: WalletAdapterNetwork | null;
   marketAddrs: string[];
+  labelsByAddr: LabelsByAddr;
+  activeByAddr: ActiveByAddr;
+  marketVolumes: VolumeByAddr;
+  dailyVolumes: VolumeByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
+  setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
+  setActiveByAddr: Dispatch<SetStateAction<ActiveByAddr>>;
+  setMarketVolumes: Dispatch<SetStateAction<VolumeByAddr>>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
@@ -53,22 +72,38 @@ const AppWalletProvider = ({
 }): ReactElement => {
   const [network, setNetwork] = useState<WalletAdapterNetwork | null>(null);
   const [marketAddrs, setMarketAddrs] = useState<string[]>([]);
+  const [marketVolumes, setMarketVolumes] = useState<VolumeByAddr>({});
+  const [dailyVolumes, setDailyVolumes] = useState<VolumeByAddr>({});
+  const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
+  const [activeByAddr, setActiveByAddr] = useState<ActiveByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
   const setupRun = useRef(false);
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
   if (!rpcUrl) {
-    toast.error('RPC_URL not set');
-    throw new Error('RPC_URL not set');
+    toast.error('NEXT_PUBLIC_RPC_URL not set');
+    throw new Error('NEXT_PUBLIC_RPC_URL not set');
   }
 
-  const determineNetworkFromRpcUrl = (url: string): WalletAdapterNetwork => {
+  const determineNetworkFromRpcUrl = async (
+    url: string,
+  ): Promise<WalletAdapterNetwork> => {
     if (url.includes('mainnet')) {
       return WalletAdapterNetwork.Mainnet;
     } else if (url.includes('devnet')) {
       return WalletAdapterNetwork.Devnet;
     } else if (url.includes('testnet')) {
       return WalletAdapterNetwork.Testnet;
+    }
+
+    // Try to determine the network from the genesis hash.
+    const cluster: Cluster = await getClusterFromConnection(
+      new Connection(url),
+    );
+    if (cluster == 'mainnet-beta') {
+      return WalletAdapterNetwork.Mainnet;
+    } else if (cluster == 'devnet') {
+      return WalletAdapterNetwork.Devnet;
     }
 
     toast.error('determineNetworkFromRpcUrl: Unknown network');
@@ -84,17 +119,95 @@ const AppWalletProvider = ({
 
     const fetchState = async (): Promise<void> => {
       try {
-        console.log('loading initial state');
-        const detectedNetwork = determineNetworkFromRpcUrl(rpcUrl);
+        const detectedNetwork = await determineNetworkFromRpcUrl(rpcUrl);
         setNetwork(detectedNetwork);
 
-        const conn = new Connection(rpcUrl, "confirmed");
-        const marketPubs = await ManifestClient.listMarketPublicKeys(conn);
-        const marketAddrs = marketPubs.map((p) => p.toBase58());
-        const filteredAddrs = marketAddrs.filter(
-          (a) => a !== '6XdExjwhzXMHmKLCJS2YKvpVhGswa4K84NNY2L4c2eks',
+        const conn: Connection = new Connection(rpcUrl, 'confirmed');
+        const marketProgramAccounts: GetProgramAccountsResponse =
+          await ManifestClient.getMarketProgramAccounts(conn);
+        const marketPubs: PublicKey[] = marketProgramAccounts.map(
+          (a) => a.pubkey,
         );
-        setMarketAddrs(filteredAddrs);
+        const marketAddrs: string[] = marketPubs.map((p) => p.toBase58());
+        const volumeByAddr: VolumeByAddr = {};
+        marketProgramAccounts.forEach(
+          (
+            a: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
+          ) => {
+            const market: Market = Market.loadFromBuffer({
+              address: a.pubkey,
+              buffer: a.account.data,
+            });
+            if (
+              market.quoteMint().toBase58() ==
+              'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+            ) {
+              volumeByAddr[market.address.toBase58()] =
+                Number(market.quoteVolume()) / 10 ** 6;
+            } else {
+              volumeByAddr[market.address.toBase58()] = 0;
+            }
+          },
+        );
+        marketAddrs.sort((addr1: string, addr2: string) => {
+          return volumeByAddr[addr2] - volumeByAddr[addr1];
+        });
+        setMarketAddrs(marketAddrs);
+        setMarketVolumes(volumeByAddr);
+
+        // Fine to do an N^2 search until the number of markets gets too big.
+        const activeByAddr: ActiveByAddr = {};
+        marketProgramAccounts.forEach(
+          (
+            acct1: Readonly<{
+              account: AccountInfo<Buffer>;
+              pubkey: PublicKey;
+            }>,
+          ) => {
+            const market: Market = Market.loadFromBuffer({
+              address: acct1.pubkey,
+              buffer: acct1.account.data,
+            });
+            let foundBigger: boolean = false;
+
+            marketProgramAccounts.forEach(
+              (
+                acct2: Readonly<{
+                  account: AccountInfo<Buffer>;
+                  pubkey: PublicKey;
+                }>,
+              ) => {
+                const market2: Market = Market.loadFromBuffer({
+                  address: acct2.pubkey,
+                  buffer: acct2.account.data,
+                });
+                if (
+                  market.baseMint().toString() ==
+                    market2.baseMint().toString() &&
+                  market.quoteMint().toString() ==
+                    market2.quoteMint().toString() &&
+                  volumeByAddr[market2.address.toBase58()] >
+                    volumeByAddr[market.address.toBase58()]
+                ) {
+                  foundBigger = true;
+                }
+              },
+            );
+            activeByAddr[market.address.toBase58()] = !foundBigger;
+          },
+        );
+        setActiveByAddr(activeByAddr);
+
+        fetchAndSetMfxAddrLabels(conn, marketProgramAccounts, setLabelsByAddr);
+
+        const tickers = await fetch(
+          'https://mfx-stats-mainnet.fly.dev/tickers',
+        );
+        const dailyVolumeByAddr: VolumeByAddr = {};
+        (await tickers.json()).forEach((ticker: any) => {
+          dailyVolumeByAddr[ticker['ticker_id']] = ticker['target_volume'];
+        });
+        setDailyVolumes(dailyVolumeByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
         toast.error(`placeOrder: ${ensureError(e).message}`);
@@ -122,9 +235,22 @@ const AppWalletProvider = ({
       <WalletProvider wallets={wallets}>
         <WalletModalProvider>
           <AppStateContext.Provider
-            value={{ network, marketAddrs, setMarketAddrs, loading }}
+            value={{
+              network,
+              marketAddrs,
+              marketVolumes,
+              activeByAddr,
+              labelsByAddr,
+              setLabelsByAddr,
+              setMarketAddrs,
+              setMarketVolumes,
+              setActiveByAddr,
+              dailyVolumes,
+              loading,
+            }}
           >
             <WalletConnection />
+            <NavBar />
             {children}
             <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 pointer-events-none">
               {network ? `connected to ${network}` : 'loading network...'}

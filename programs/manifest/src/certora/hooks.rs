@@ -23,19 +23,19 @@ pub fn initialize_hooks() {
 
 // Setters
 
-pub fn cancel_order_was_called()  {
+pub fn cancel_order_was_called() {
     unsafe {
         LAST_ORDER_EXECUTED = CvtManifestOrder::CancelOrder;
     }
 }
 
-pub fn cancel_order_by_index_was_called()  {
+pub fn cancel_order_by_index_was_called() {
     unsafe {
         LAST_ORDER_EXECUTED = CvtManifestOrder::CancelOrderByIndex;
     }
 }
 
-pub fn place_order_was_called()  {
+pub fn place_order_was_called() {
     unsafe {
         LAST_ORDER_EXECUTED = CvtManifestOrder::PlaceOrder;
     }

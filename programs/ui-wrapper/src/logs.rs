@@ -8,6 +8,7 @@ use solana_program::pubkey::Pubkey;
 pub struct PlatformFeeLog {
     pub market: Pubkey,
     pub user: Pubkey,
+    pub mint: Pubkey,
     pub platform_token_account: Pubkey,
     pub platform_fee: u64,
 }
@@ -17,6 +18,7 @@ pub struct PlatformFeeLog {
 pub struct ReferrerFeeLog {
     pub market: Pubkey,
     pub user: Pubkey,
+    pub mint: Pubkey,
     pub referrer_token_account: Pubkey,
     pub referrer_fee: u64,
 }

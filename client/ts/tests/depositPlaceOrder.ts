@@ -4,6 +4,7 @@ import {
   sendAndConfirmTransaction,
   PublicKey,
   Transaction,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
 import { OrderType } from '../src/manifest/types';
@@ -94,6 +95,22 @@ async function testDepositPlaceOrder(): Promise<void> {
     market.getWithdrawableBalanceTokens(payerKeypair.publicKey, false) == 0,
     'withdraw withdrawable balance check quote',
   );
+
+  assert(
+    JSON.stringify(market.getBalances(payerKeypair.publicKey)) ==
+      JSON.stringify({
+        baseWithdrawableBalanceTokens: 6,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 4,
+        quoteOpenOrdersBalanceTokens: 20,
+      }),
+    `getBalances failed expected ${JSON.stringify({
+      baseWithdrawableBalanceTokens: 6,
+      quoteWithdrawableBalanceTokens: 0,
+      baseOpenOrdersBalanceTokens: 4,
+      quoteOpenOrdersBalanceTokens: 20,
+    })} actual ${JSON.stringify(market.getBalances(payerKeypair.publicKey))}`,
+  );
 }
 
 export async function depositPlaceOrder(
@@ -105,7 +122,6 @@ export async function depositPlaceOrder(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutTokens: number = 0,
   lastValidSlot: number = 0,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
@@ -114,18 +130,15 @@ export async function depositPlaceOrder(
     payerKeypair,
   );
 
-  const depositPlaceOrderIx = client.placeOrderWithRequiredDepositIx(
-    payerKeypair.publicKey,
-    {
+  const depositPlaceOrderIx: TransactionInstruction[] =
+    await client.placeOrderWithRequiredDepositIx(payerKeypair.publicKey, {
       numBaseTokens,
       tokenPrice,
       isBid,
       lastValidSlot: lastValidSlot,
       orderType: orderType,
-      minOutTokens,
       clientOrderId,
-    },
-  );
+    });
 
   const signature = await sendAndConfirmTransaction(
     connection,

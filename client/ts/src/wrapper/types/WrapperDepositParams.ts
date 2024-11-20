@@ -6,7 +6,7 @@
  */
 
 import * as beet from '@metaplex-foundation/beet';
-export type WithdrawParams = {
+export type WrapperDepositParams = {
   amountAtoms: beet.bignum;
 };
 
@@ -14,7 +14,8 @@ export type WithdrawParams = {
  * @category userTypes
  * @category generated
  */
-export const withdrawParamsBeet = new beet.BeetArgsStruct<WithdrawParams>(
-  [['amountAtoms', beet.u64]],
-  'WithdrawParams',
-);
+export const wrapperDepositParamsBeet =
+  new beet.BeetArgsStruct<WrapperDepositParams>(
+    [['amountAtoms', beet.u64]],
+    'WrapperDepositParams',
+  );

@@ -1,45 +1,38 @@
 #![allow(unused_imports)]
-use {
-    crate::{
-        claim_seat, create_empty_market, get_trader_balance,
-        get_trader_index,
-    },
-    cvt::{cvt_assert, cvt_assume, cvt_vacuity_check},
-    cvt_macros::rule,
-    nondet::{acc_infos_with_mem_layout, nondet},
-};
+use crate::{claim_seat, create_empty_market, get_trader_balance, get_trader_index};
+use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt_macros::rule;
+use nondet::{acc_infos_with_mem_layout, nondet};
 
-use {
-    crate::*,
-    solana_program::account_info::AccountInfo,
-};
+use crate::*;
+use solana_program::account_info::AccountInfo;
 
 use solana_cvt::token::spl_token_account_get_amount;
 
-use crate::validation::loaders::DepositContext;
-use crate::program::deposit::DepositParams;
-use crate::program::deposit::process_deposit_core;
-use crate::program::{get_dynamic_account, get_mut_dynamic_account};
-use crate::state::{DynamicAccount, MarketRefMut};
-use crate::state::MarketFixed;
-use crate::state::claimed_seat::ClaimedSeat;
-use hypertree::{get_mut_helper, get_helper, RBNode};
-use crate::quantities::{BaseAtoms, QuoteAtoms, WrapperU64};
-use state::main_trader_pk;
-use state::cvt_assume_main_trader_has_seat;
+use crate::{
+    program::{
+        deposit::{process_deposit_core, DepositParams},
+        get_dynamic_account, get_mut_dynamic_account,
+    },
+    quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
+    state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRefMut},
+    validation::loaders::DepositContext,
+};
+use hypertree::{get_helper, get_mut_helper, RBNode};
+use state::{cvt_assume_main_trader_has_seat, main_trader_pk};
 
 #[rule]
 pub fn rule_update_balance() {
     crate::certora::spec::verification_utils::init_static();
-    
+
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
     let trader = &acc_infos[0];
     let market = &acc_infos[1];
 
     cvt_assume_main_trader_has_seat(trader.key);
 
-    let (base_atoms_old, _quote_atoms_old ) = get_trader_balance!(market, &trader.key);
-    
+    let (base_atoms_old, _quote_atoms_old) = get_trader_balance!(market, &trader.key);
+
     let trader_index = get_trader_index!(market, &trader.key);
     // cvt_assert!(trader_index == MAIN_TRADER_INDEX);
 
@@ -47,16 +40,15 @@ pub fn rule_update_balance() {
 
     update_balance!(market, trader_index, true, true, amount);
 
-    let (base_atoms, _quote_atoms ) = get_trader_balance!(market, &trader.key);
+    let (base_atoms, _quote_atoms) = get_trader_balance!(market, &trader.key);
     cvt_assert!(base_atoms == base_atoms_old + amount);
 
     cvt_vacuity_check!();
-
 }
 
 #[rule]
 pub fn rule_deposit_deposits() {
-    use state::{cvt_assume_main_trader_has_seat, second_trader_pk, is_second_seat_taken};
+    use state::{cvt_assume_main_trader_has_seat, is_second_seat_taken, second_trader_pk};
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
     let used_acc_infos = &acc_infos[..6];
@@ -81,8 +73,9 @@ pub fn rule_deposit_deposits() {
     let amount: u64 = nondet();
 
     // Old seat balances
-    let (trader_base_old, trader_quote_old ) = get_trader_balance!(market, trader.key);
-    let (unrelated_trader_base_old, unrelated_trader_quote_old ) = get_trader_balance!(market, unrelated_trader.key);
+    let (trader_base_old, trader_quote_old) = get_trader_balance!(market, trader.key);
+    let (unrelated_trader_base_old, unrelated_trader_quote_old) =
+        get_trader_balance!(market, unrelated_trader.key);
 
     // Old SPL balances
     let trader_amount_old = spl_token_account_get_amount(trader_token);
@@ -90,7 +83,7 @@ pub fn rule_deposit_deposits() {
 
     // Call to deposit
     process_deposit_core(&crate::id(), &used_acc_infos, DepositParams::new(amount)).unwrap();
- 
+
     // New SPL balances
     let trader_amount = spl_token_account_get_amount(trader_token);
     let vault_amount = spl_token_account_get_amount(vault_token);
@@ -106,8 +99,9 @@ pub fn rule_deposit_deposits() {
     cvt_assert!(vault_diff == amount);
 
     // New seat balances
-    let (trader_base, trader_quote ) = get_trader_balance!(market, trader.key);
-    let (unrelated_trader_base, unrelated_trader_quote ) = get_trader_balance!(market, unrelated_trader.key);
+    let (trader_base, trader_quote) = get_trader_balance!(market, trader.key);
+    let (unrelated_trader_base, unrelated_trader_quote) =
+        get_trader_balance!(market, unrelated_trader.key);
 
     // Diffs in base/quote seat balance
     let trader_base_diff = trader_base - trader_base_old;
@@ -118,7 +112,10 @@ pub fn rule_deposit_deposits() {
     cvt_assert!(trader_base_diff == 0 || trader_quote_diff == 0);
 
     // The balances of an unrelated trader are not changed
-    cvt_assert!(unrelated_trader_base == unrelated_trader_base_old && unrelated_trader_quote == unrelated_trader_quote_old);
+    cvt_assert!(
+        unrelated_trader_base == unrelated_trader_base_old
+            && unrelated_trader_quote == unrelated_trader_quote_old
+    );
 
     cvt_vacuity_check!();
 }

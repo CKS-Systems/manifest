@@ -41,6 +41,8 @@ pub fn emit_stack<T: bytemuck::Pod + Discriminant>(_e: T) -> Result<(), ProgramE
 pub struct CreateMarketLog {
     pub market: Pubkey,
     pub creator: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
 }
 
 #[repr(C)]
@@ -74,13 +76,16 @@ pub struct FillLog {
     pub market: Pubkey,
     pub maker: Pubkey,
     pub taker: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
     pub price: QuoteAtomsPerBaseAtom,
     pub base_atoms: BaseAtoms,
     pub quote_atoms: QuoteAtoms,
     pub maker_sequence_number: u64,
     pub taker_sequence_number: u64,
     pub taker_is_buy: PodBool,
-    pub _padding: [u8; 15],
+    pub is_maker_global: PodBool,
+    pub _padding: [u8; 14],
 }
 
 #[repr(C)]
@@ -153,6 +158,15 @@ pub struct GlobalEvictLog {
     pub evictee_atoms: GlobalAtoms,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+pub struct GlobalCleanupLog {
+    pub cleaner: Pubkey,
+    pub maker: Pubkey,
+    pub amount_desired: GlobalAtoms,
+    pub amount_deposited: GlobalAtoms,
+}
+
 pub trait Discriminant {
     fn discriminant() -> [u8; 8];
 }
@@ -188,6 +202,7 @@ const GLOBAL_CLAIM_SEAT_LOG_DISCRIMINANT: [u8; 8] = [164, 46, 227, 175, 3, 143, 
 const GLOBAL_DEPOSIT_LOG_DISCRIMINANT: [u8; 8] = [16, 26, 72, 1, 145, 232, 182, 71];
 const GLOBAL_WITHDRAW_LOG_DISCRIMINANT: [u8; 8] = [206, 118, 67, 64, 124, 109, 157, 201];
 const GLOBAL_EVICT_LOG_DISCRIMINANT: [u8; 8] = [250, 180, 155, 38, 98, 223, 82, 223];
+const GLOBAL_CLEANUP_LOG_DISCRIMINANT: [u8; 8] = [193, 249, 115, 186, 42, 126, 196, 82];
 
 discriminant!(
     CreateMarketLog,
@@ -241,4 +256,9 @@ discriminant!(
     GlobalEvictLog,
     GLOBAL_EVICT_LOG_DISCRIMINANT,
     test_global_evict_log
+);
+discriminant!(
+    GlobalCleanupLog,
+    GLOBAL_CLEANUP_LOG_DISCRIMINANT,
+    test_global_cleanup_log
 );

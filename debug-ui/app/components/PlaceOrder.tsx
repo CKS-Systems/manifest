@@ -7,10 +7,8 @@ import {
   TransactionInstruction,
   PublicKey,
 } from '@solana/web3.js';
-import {
-  OrderType,
-  WrapperPlaceOrderParamsExternal,
-} from '@cks-systems/manifest-sdk';
+import { WrapperPlaceOrderParamsExternal } from '@cks-systems/manifest-sdk';
+import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import { useAppState } from './AppWalletProvider';
 import { toast } from 'react-toastify';
@@ -70,7 +68,6 @@ const PlaceOrder = ({
       isBid: side == 'buy',
       lastValidSlot: 0,
       orderType: OrderType.Limit,
-      minOutTokens: 0,
       clientOrderId: Number(clientOrderId),
     };
 

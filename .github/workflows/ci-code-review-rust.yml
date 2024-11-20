@@ -3,10 +3,10 @@ on:
   push:
     branches: ['main']
   pull_request:
-    branches: ['main']
     paths:
       [
         'programs/**',
+        'client/rust/**',
         'lib/**',
         'Cargo.toml',
         'Cargo.lock',
@@ -118,22 +118,3 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  sca:
-    name: Dependency Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Fail the job on critical vulnerabilities with fix available
-      - name: Fail on critical vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: 'Cargo.lock'
-          ignore-unfixed: true
-          hide-progress: true
-          format: 'table'
-          severity: 'CRITICAL'
-          exit-code: '1'

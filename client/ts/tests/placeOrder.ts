@@ -11,6 +11,7 @@ import { createMarket } from './createMarket';
 import { deposit } from './deposit';
 import { Market } from '../src/market';
 import { assert } from 'chai';
+import { NO_EXPIRATION_LAST_VALID_SLOT } from '../src/constants';
 
 async function testPlaceOrder(): Promise<void> {
   const connection: Connection = new Connection(
@@ -72,8 +73,7 @@ export async function placeOrder(
   isBid: boolean,
   orderType: OrderType,
   clientOrderId: number,
-  minOutTokens: number = 0,
-  lastValidSlot: number = 0,
+  lastValidSlot: number = NO_EXPIRATION_LAST_VALID_SLOT,
 ): Promise<void> {
   const client: ManifestClient = await ManifestClient.getClientForMarket(
     connection,
@@ -85,9 +85,8 @@ export async function placeOrder(
     numBaseTokens,
     tokenPrice,
     isBid,
-    lastValidSlot: lastValidSlot,
-    orderType: orderType,
-    minOutTokens,
+    lastValidSlot,
+    orderType,
     clientOrderId,
   });
 
