@@ -227,8 +227,10 @@ parser.add_argument(
     "-r", "--rules",
     help="Path to the JSON configuration file with the rules specification.",
     type=str,
-    default="rules.json"
+    #default="rules.json"
+    default="rules-rb-tree.json"
 )
+args = parser.parse_args()
 
 rules = Rule.list_from_json(args.rules)
 runner = VerificationRunner()
