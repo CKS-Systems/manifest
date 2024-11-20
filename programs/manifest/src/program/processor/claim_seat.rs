@@ -9,6 +9,10 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubke
 
 use super::shared::{expand_market_if_needed, get_mut_dynamic_account};
 
+#[cfg(feature = "certora")]
+use early_panic::early_panic;
+
+#[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_claim_seat(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -29,6 +33,7 @@ pub(crate) fn process_claim_seat(
     Ok(())
 }
 
+#[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_claim_seat_internal<'a, 'info>(
     market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
     payer: &Signer<'a, 'info>,

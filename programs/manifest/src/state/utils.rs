@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::cell::RefMut;
 
 use crate::{
@@ -39,6 +40,7 @@ pub(crate) fn get_now_slot() -> u32 {
     now_slot as u32
 }
 
+#[inline(always)]
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
     global_trade_owner: &Pubkey,

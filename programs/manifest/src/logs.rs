@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -18,6 +19,8 @@ use crate::{
 /// because the goal of this program is to minimize the number of input
 /// accounts, so including the signer for the self CPI is not worth it.
 /// Also, be compatible with anchor parsing clients.
+
+#[cfg(not(feature = "certora"))]
 #[inline(never)] // ensure fresh stack frame
 pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramError> {
     // stack buffer, stack frames are 4kb
@@ -26,6 +29,10 @@ pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramEr
     *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + size_of::<T>()]) = e;
 
     solana_program::log::sol_log_data(&[&buffer[..(size_of::<T>() + 8)]]);
+    Ok(())
+}
+#[cfg(feature = "certora")]
+pub fn emit_stack<T: bytemuck::Pod + Discriminant>(_e: T) -> Result<(), ProgramError> {
     Ok(())
 }
 

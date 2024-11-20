@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::{cell::RefMut, mem::size_of};
 
 use crate::{
@@ -6,18 +7,27 @@ use crate::{
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
-        claimed_seat::ClaimedSeat, utils::get_now_slot, AddOrderToMarketArgs,
-        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        claimed_seat::ClaimedSeat, get_helper_seat, utils::get_now_slot, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE
     },
     validation::loaders::BatchUpdateContext,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+
 use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data, pubkey::Pubkey,
 };
+use solana_program::program_error::ProgramError;
 
 use super::{expand_market_if_needed, shared::get_mut_dynamic_account};
+
+#[cfg(feature = "certora")]
+use {
+    early_panic::early_panic,
+    vectors::no_resizable_vec::NoResizableVec,
+    crate::certora::mocks_batch_update::{mock_place_order, mock_cancel_order},
+};
+use crate::validation::loaders::GlobalTradeAccounts;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct CancelOrderParams {
@@ -99,15 +109,28 @@ impl PlaceOrderParams {
 pub struct BatchUpdateParams {
     /// Optional hint for what index the trader's ClaimedSeat is at.
     pub trader_index_hint: Option<DataIndex>,
+    #[cfg(not(feature = "certora"))]
     pub cancels: Vec<CancelOrderParams>,
+    #[cfg(feature = "certora")]
+    pub cancels: NoResizableVec<CancelOrderParams>,
+    #[cfg(not(feature = "certora"))]
     pub orders: Vec<PlaceOrderParams>,
+    #[cfg(feature = "certora")]
+    pub orders: NoResizableVec<PlaceOrderParams>,
+
 }
 
 impl BatchUpdateParams {
     pub fn new(
         trader_index_hint: Option<DataIndex>,
+        #[cfg(not(feature = "certora"))]
         cancels: Vec<CancelOrderParams>,
+        #[cfg(feature = "certora")]
+        cancels: NoResizableVec<CancelOrderParams>,
+        #[cfg(not(feature = "certora"))]
         orders: Vec<PlaceOrderParams>,
+        #[cfg(feature = "certora")]
+        orders: NoResizableVec<PlaceOrderParams>,
     ) -> Self {
         BatchUpdateParams {
             trader_index_hint,
@@ -120,7 +143,10 @@ impl BatchUpdateParams {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct BatchUpdateReturn {
     /// Vector of tuples of (order_sequence_number, DataIndex)
+    //#[cfg(not(feature = "certora"))]
     pub orders: Vec<(u64, DataIndex)>,
+    //#[cfg(feature = "certora")]
+    //pub orders: NoResizableVec<(u64, DataIndex)>,
 }
 
 #[repr(u8)]
@@ -132,11 +158,67 @@ pub enum MarketDataTreeNodeType {
 }
 
 pub(crate) fn process_batch_update(
-    _program_id: &Pubkey,
+    program_id: &Pubkey,
     accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
+    let params = BatchUpdateParams::try_from_slice(data)?;
+    process_batch_update_core(program_id, accounts, params)
+}
+
+#[cfg(not(feature = "certora"))]
+fn batch_cancel_order(
+    dynamic_account: &mut MarketRefMut,
+    trader_index: DataIndex,
+    order_sequence_number: u64,
+    global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+) -> ProgramResult {
+    dynamic_account.cancel_order(
+        trader_index,
+        order_sequence_number,
+        &global_trade_accounts_opts,
+    )
+}
+
+#[cfg(feature = "certora")]
+fn batch_cancel_order(
+    dynamic_account: &mut MarketRefMut,
+    trader_index: DataIndex,
+    order_sequence_number: u64,
+    global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+) -> ProgramResult {
+    mock_cancel_order(&dynamic_account,
+                      trader_index,
+                      order_sequence_number,
+                      &global_trade_accounts_opts,
+    )
+}
+
+#[cfg(not(feature = "certora"))]
+fn batch_place_order(
+    dynamic_account: &mut MarketRefMut,
+    args: AddOrderToMarketArgs,
+) -> Result<AddOrderToMarketResult, ProgramError> {
+  dynamic_account.place_order(args)
+}
+
+#[cfg(feature = "certora")]
+fn batch_place_order(
+    dynamic_account: &mut MarketRefMut,
+    args: AddOrderToMarketArgs,
+) -> Result<AddOrderToMarketResult, ProgramError> {
+    mock_place_order(dynamic_account, args)
+}
+
+#[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
+pub(crate) fn process_batch_update_core(
+    _program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    params: BatchUpdateParams,
+) -> ProgramResult {
+
     let batch_update_context: BatchUpdateContext = BatchUpdateContext::load(accounts)?;
+
     let BatchUpdateContext {
         market,
         payer,
@@ -148,7 +230,7 @@ pub(crate) fn process_batch_update(
         trader_index_hint,
         cancels,
         orders,
-    } = BatchUpdateParams::try_from_slice(data)?;
+    } = params;
 
     let current_slot: Option<u32> = Some(get_now_slot());
 
@@ -157,7 +239,6 @@ pub(crate) fn process_batch_update(
     let trader_index: DataIndex = {
         let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-
         let trader_index: DataIndex = match trader_index_hint {
             None => {
                 let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
@@ -171,7 +252,7 @@ pub(crate) fn process_batch_update(
                     hinted_index,
                 )?;
                 require!(
-                    get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
+                    get_helper_seat(&dynamic_account.dynamic, hinted_index)
                         .get_payload_type()
                         == MarketDataTreeNodeType::ClaimedSeat as u8,
                     ManifestError::WrongIndexHintParams,
@@ -197,10 +278,10 @@ pub(crate) fn process_batch_update(
             match cancel.order_index_hint() {
                 None => {
                     // Cancels must succeed otherwise we fail the tx.
-                    dynamic_account.cancel_order(
-                        trader_index,
-                        cancel.order_sequence_number(),
-                        &global_trade_accounts_opts,
+                    batch_cancel_order(&mut dynamic_account,
+                                       trader_index,
+                                       cancel.order_sequence_number(),
+                                       &global_trade_accounts_opts
                     )?;
                 }
                 Some(hinted_cancel_index) => {
@@ -256,7 +337,10 @@ pub(crate) fn process_batch_update(
     };
 
     // Result is a vector of (order_sequence_number, data_index)
+    #[cfg(not(feature = "certora"))]
     let mut result: Vec<(u64, DataIndex)> = Vec::with_capacity(orders.len());
+    #[cfg(feature = "certora")]
+    let mut result = NoResizableVec::<(u64, DataIndex)>::new(10);
     for place_order in orders {
         {
             let base_atoms: BaseAtoms = BaseAtoms::new(place_order.base_atoms());
@@ -269,17 +353,17 @@ pub(crate) fn process_batch_update(
             let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
             let add_order_to_market_result: AddOrderToMarketResult =
-                dynamic_account.place_order(AddOrderToMarketArgs {
-                    market: *market.key,
-                    trader_index,
-                    num_base_atoms: base_atoms,
-                    price,
-                    is_bid: place_order.is_bid(),
-                    last_valid_slot,
-                    order_type,
-                    global_trade_accounts_opts: &global_trade_accounts_opts,
-                    current_slot,
-                })?;
+                    batch_place_order(&mut dynamic_account, AddOrderToMarketArgs {
+                        market: *market.key,
+                        trader_index,
+                        num_base_atoms: base_atoms,
+                        price,
+                        is_bid: place_order.is_bid(),
+                        last_valid_slot,
+                        order_type,
+                        global_trade_accounts_opts: &global_trade_accounts_opts,
+                        current_slot,
+                    })?;
 
             let AddOrderToMarketResult {
                 order_index,
@@ -304,11 +388,13 @@ pub(crate) fn process_batch_update(
         expand_market_if_needed(&payer, &market, &system_program)?;
     }
 
-    let mut buffer: Vec<u8> =
+    #[cfg(not(feature = "certora"))] {
+        let mut buffer: Vec<u8> =
         Vec::with_capacity(size_of::<BatchUpdateReturn>() + result.len() * 2 * size_of::<u64>());
-    let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
-    return_data.serialize(&mut buffer).unwrap();
-    set_return_data(&buffer[..]);
+        let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
+        return_data.serialize(&mut buffer).unwrap();
+        set_return_data(&buffer[..]);
+    }
 
     Ok(())
 }

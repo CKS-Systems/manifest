@@ -12,9 +12,12 @@ use crate::{
 use bytemuck::Pod;
 use hypertree::{get_helper, get_mut_helper, trace, Get};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke, rent::Rent,
+    account_info::AccountInfo, entrypoint::ProgramResult, rent::Rent,
     system_instruction, sysvar::Sysvar,
 };
+
+#[cfg(not(feature = "certora"))]
+use solana_program::program::invoke;
 
 pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
@@ -56,6 +59,16 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     Ok(())
 }
 
+#[cfg(feature = "certora")]
+fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
+    _payer: &Signer<'a, 'info>,
+    _manifest_account: &ManifestAccountInfo<'a, 'info, T>,
+    _system_program: &Program<'a, 'info>,
+    _block_size: usize,
+) -> ProgramResult {
+    Ok(())
+}
+#[cfg(not(feature = "certora"))]
 fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,

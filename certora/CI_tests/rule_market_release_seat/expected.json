@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_market_release_seat": "SUCCESS"
+       }
+}

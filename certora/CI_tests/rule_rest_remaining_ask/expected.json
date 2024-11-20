@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_rest_remaining_ask": "SUCCESS"
+       }
+}
