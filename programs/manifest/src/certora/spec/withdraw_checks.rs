@@ -54,7 +54,7 @@ pub fn rule_withdraw_withdraws() {
 
     let amount: u64 = nondet();
 
-    process_withdraw_core(&crate::id(), &used_acc_infos, WithdrawParams::new(amount)).unwrap();
+    process_withdraw_core(&crate::id(), &used_acc_infos, WithdrawParams::new(amount, None)).unwrap();
 
     let trader_amount = spl_token_account_get_amount(trader_token);
     let vault_amount = spl_token_account_get_amount(vault_token);
@@ -101,7 +101,7 @@ pub fn rule_withdraw_does_not_revert() {
     cvt_assume_main_trader_has_seat(trader.key);
 
     let amount: u64 = nondet();
-    let result = process_withdraw_core(&crate::id(), &used_acc_infos, WithdrawParams::new(amount));
+    let result = process_withdraw_core(&crate::id(), &used_acc_infos, WithdrawParams::new(amount, None));
     cvt_assert!(result.is_ok());
 
     cvt_vacuity_check!();

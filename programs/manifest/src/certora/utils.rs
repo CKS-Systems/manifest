@@ -33,8 +33,8 @@ macro_rules! claim_seat {
 #[macro_export]
 macro_rules! get_trader_index {
     ($market_acc_info:expr, $trader_key: expr) => {{
-        let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
-        let mut dynamic_account = get_mut_dynamic_account(market_data);
+        let market_data = &$market_acc_info.try_borrow_data().unwrap();
+        let dynamic_account = get_dynamic_account(market_data);
         dynamic_account.get_trader_index($trader_key)
     }};
 }
@@ -185,13 +185,12 @@ macro_rules! rest_remaining {
 macro_rules! cancel_order_by_index {
     (
         $market_acc_info:expr,
-        $trader_index:expr,
         $order_index:expr
     ) => {{
         let market_data = &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         dynamic_account
-            .cancel_order_by_index($trader_index, $order_index, &[None, None])
+            .cancel_order_by_index($order_index, &[None, None])
             .unwrap();
     }};
 }

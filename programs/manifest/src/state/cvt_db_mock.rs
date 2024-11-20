@@ -268,16 +268,16 @@ pub fn release_ask_order() {
 }
 
 pub struct CvtClaimedSeatTreeReadOnly<'a> {
-    root_index: DataIndex,
-    max_index: DataIndex,
+    _root_index: DataIndex,
+    _max_index: DataIndex,
     phantom: std::marker::PhantomData<&'a [u8]>,
 }
 
 impl<'a> CvtClaimedSeatTreeReadOnly<'a> {
-    pub fn new(_data: &'a [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
+    pub fn new(_data: &'a [u8], _root_index: DataIndex, _max_index: DataIndex) -> Self {
         Self {
-            root_index,
-            max_index,
+            _root_index,
+            _max_index,
             phantom: PhantomData,
         }
     }
@@ -304,15 +304,15 @@ impl<'a> CvtClaimedSeatTreeReadOnly<'a> {
 
 pub struct CvtClaimedSeatTree<'a> {
     root_index: DataIndex,
-    max_index: DataIndex,
+    _max_index: DataIndex,
     phantom: std::marker::PhantomData<&'a mut [u8]>,
 }
 
 impl<'a> CvtClaimedSeatTree<'a> {
-    pub fn new(_data: &'a mut [u8], root_index: DataIndex, max_index: DataIndex) -> Self {
+    pub fn new(_data: &'a mut [u8], root_index: DataIndex, _max_index: DataIndex) -> Self {
         Self {
             root_index,
-            max_index,
+            _max_index,
             phantom: PhantomData,
         }
     }

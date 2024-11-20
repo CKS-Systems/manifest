@@ -82,7 +82,7 @@ pub fn rule_deposit_deposits() {
     let vault_amount_old = spl_token_account_get_amount(vault_token);
 
     // Call to deposit
-    process_deposit_core(&crate::id(), &used_acc_infos, DepositParams::new(amount)).unwrap();
+    process_deposit_core(&crate::id(), &used_acc_infos, DepositParams::new(amount, None)).unwrap();
 
     // New SPL balances
     let trader_amount = spl_token_account_get_amount(trader_token);

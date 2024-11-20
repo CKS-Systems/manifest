@@ -1,6 +1,4 @@
-// #![allow(unused_imports)]
 use crate::*;
-use calltrace::*;
 use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
 use nondet::*;

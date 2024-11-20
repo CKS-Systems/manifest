@@ -311,9 +311,9 @@ impl QuoteAtomsPerBaseAtom {
         -10 -> [18] -> D08
         -18 -> [26] ->  D0
         */
-        let offset = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
+        let offset: usize = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
         // can not overflow 10^26 * u32::MAX < u128::MAX
-        let inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
+        let inner: u128 = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         }

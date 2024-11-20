@@ -1113,6 +1113,16 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.remove_by_index(index);
     }
 
+    // Only publicly visible for formal verification.
+    #[cfg(feature = "certora")]
+    pub fn certora_remove_fix(
+        &mut self,
+        current_index: DataIndex,
+        parent_index: DataIndex,
+    ) -> (DataIndex, DataIndex) {
+        self.remove_fix(current_index, parent_index)
+    }
+
     fn remove_fix(
         &mut self,
         current_index: DataIndex,
@@ -1267,6 +1277,12 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             *new_node = node_to_insert;
             new_node.parent = current_parent_index;
         }
+    }
+
+    // Only publicly visible for formal verification.
+    #[cfg(feature = "certora")]
+    pub fn certora_insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {
+        self.insert_fix(index_to_fix)
     }
 
     fn insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {

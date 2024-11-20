@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use super::verification_utils::init_static;
 use crate::{
     claim_seat, create_empty_market, cvt_assert_is_nil, deposit, get_trader_balance,
@@ -7,17 +6,16 @@ use crate::{
 use calltrace::cvt_cex_print_u64;
 use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
-use nondet::{acc_infos_with_mem_layout, nondet};
+use nondet::nondet;
 
 use crate::{
-    program::get_mut_dynamic_account,
+    program::{get_dynamic_account, get_mut_dynamic_account},
     state::{
         is_main_seat_free, is_main_seat_taken, is_second_seat_free, main_trader_index,
         main_trader_pk, second_trader_index, second_trader_pk, MarketFixed, MarketRefMut,
-        MARKET_BLOCK_SIZE,
     },
 };
-use hypertree::{get_mut_helper, is_nil, NIL};
+use hypertree::{get_mut_helper, is_nil, NIL, DataIndex};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 #[rule]
@@ -118,9 +116,10 @@ pub fn rule_market_deposit() {
 
     cvt_assert_is_nil!(get_trader_index!(market_info, &trader_key));
     claim_seat!(market_info, &trader_key);
-    cvt_assert!(get_trader_index!(market_info, &trader_key) == main_trader_index());
+    let trader_index: DataIndex = get_trader_index!(market_info, &trader_key);
+    cvt_assert!(trader_index == main_trader_index());
 
-    deposit!(market_info, &trader_key, 100, true);
+    deposit!(market_info, trader_index, 100, true);
     let (base_atoms, quote_atoms) = get_trader_balance!(market_info, &trader_key);
     cvt_cex_print_u64!(1, u64::from(base_atoms), u64::from(quote_atoms));
     cvt_assert!(u64::from(base_atoms) == 100);

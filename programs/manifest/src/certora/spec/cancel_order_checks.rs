@@ -68,7 +68,7 @@ pub fn cancel_order_by_index_trader_integrity_check<const IS_BID: bool>() {
     let trader_who_placed_order = order_to_cancel.get_trader_index();
 
     // Call cancel_order_by_index
-    cancel_order_by_index!(market_info, trader_who_cancels, order_index);
+    cancel_order_by_index!(market_info, order_index);
 
     // If the cancel order terminates correctly, then the trader who
     // originally placed the order has to be the trader who issued the
@@ -124,7 +124,7 @@ pub fn cancel_order_by_index_no_revert<const IS_BID: bool>() {
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
     let trader_index = crate::state::second_trader_index();
     let order_index = maker_order_index;
-    let result = dynamic_account.cancel_order_by_index(trader_index, order_index, &[None, None]);
+    let result = dynamic_account.cancel_order_by_index(order_index, &[None, None]);
     cvt_assert!(result.is_ok());
 
     cvt_vacuity_check!();

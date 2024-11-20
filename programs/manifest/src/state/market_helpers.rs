@@ -448,9 +448,9 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 #[cfg(feature = "certora")]
                 {
                     if is_bid {
-                        remove_from_global(&global_trade_accounts_opts[0], &maker)?;
+                        remove_from_global(&global_trade_accounts_opts[0])?;
                     } else {
-                        remove_from_global(&global_trade_accounts_opts[1], &maker)?;
+                        remove_from_global(&global_trade_accounts_opts[1])?;
                     }
                 }
             }

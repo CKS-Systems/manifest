@@ -880,7 +880,7 @@ pub fn rule_insert_fix_matches_reference_no_parent() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_0!(data, val_0, val_1, val_2);
 
     // Node 3 is the one that has to be fixed, since its parent 1 is red as well
-    let next_to_fix_index = tree.insert_fix(index_0);
+    let next_to_fix_index = tree.certora_insert_fix(index_0);
 
     cvt_assert!(next_to_fix_index == NIL);
 
@@ -1076,7 +1076,7 @@ pub fn rule_insert_fix_matches_reference_case1_left_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_1!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 3 is the one that has to be fixed, since its parent 1 is red as well
-    let next_to_fix_index = tree.insert_fix(index_3);
+    let next_to_fix_index = tree.certora_insert_fix(index_3);
 
     cvt_assert!(next_to_fix_index == index_0);
 
@@ -1296,7 +1296,7 @@ pub fn rule_insert_fix_matches_reference_case2_left_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_2!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 4 is the one that has to be fixed, since its parent 1 is red as well
-    let next_to_fix_index = tree.insert_fix(index_4);
+    let next_to_fix_index = tree.certora_insert_fix(index_4);
 
     cvt_assert!(next_to_fix_index == NIL);
 
@@ -1516,7 +1516,7 @@ pub fn rule_insert_fix_matches_reference_case3_left_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_3!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 3 is the one that has to be fixed, since its parent 1 is red as well
-    let next_to_fix_index = tree.insert_fix(index_3);
+    let next_to_fix_index = tree.certora_insert_fix(index_3);
 
     cvt_assert!(next_to_fix_index == NIL);
 
@@ -1736,7 +1736,7 @@ pub fn rule_insert_fix_matches_reference_case1_right_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_4!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 4 is the one that has to be fixed, since its parent 2 is red as well
-    let next_to_fix_index = tree.insert_fix(index_4);
+    let next_to_fix_index = tree.certora_insert_fix(index_4);
 
     cvt_assert!(next_to_fix_index == index_0);
 
@@ -1956,7 +1956,7 @@ pub fn rule_insert_fix_matches_reference_case2_right_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_5!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 3 is the one that has to be fixed, since its parent 2 is red as well
-    let next_to_fix_index = tree.insert_fix(index_3);
+    let next_to_fix_index = tree.certora_insert_fix(index_3);
 
     cvt_assert!(next_to_fix_index == NIL);
 
@@ -2176,7 +2176,7 @@ pub fn rule_insert_fix_matches_reference_case3_right_child() {
     let mut tree: RedBlackTree<TestOrder> = build_tree_6!(data, val_0, val_1, val_2, val_3, val_4);
 
     // Node 4 is the one that has to be fixed, since its parent 2 is red as well
-    let next_to_fix_index = tree.insert_fix(index_4);
+    let next_to_fix_index = tree.certora_insert_fix(index_4);
 
     cvt_assert!(next_to_fix_index == NIL);
 
@@ -2412,7 +2412,7 @@ macro_rules! build_tree_shape_2 {
     }};
 }
 
-// We verify that the `remove_fix` implementation matches the `RB-Insert-Fixup`
+// We verify that the `certora_remove_fix` implementation matches the `RB-Insert-Fixup`
 // implementation in the 4th edition of "Introduction to Algorithms", ISBN
 // 026204630X.
 // The pseudo-code of the function is at page 339.
@@ -2494,7 +2494,7 @@ pub fn rule_remove_fix_matches_reference_case1_left_child() {
         nondet(),            // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_1, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_1, index_0);
 
     // In the reference implementation they recolor the sibling and the parent,
     // and then they perform a rotation. After that, they keep considering the
@@ -2600,7 +2600,7 @@ pub fn rule_remove_fix_matches_reference_case1_right_child() {
         nondet(),            // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_2, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_2, index_0);
 
     // In the reference implementation they recolor the sibling and the parent,
     // and then they perform a rotation. After that, they keep considering the
@@ -2705,7 +2705,7 @@ pub fn rule_remove_fix_matches_reference_case2_left_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_1, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_1, index_0);
 
     if zero_initial_color == Color::Red {
         // If node 0 was red, the procedure should stop.
@@ -2814,7 +2814,7 @@ pub fn rule_remove_fix_matches_reference_case2_right_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_2, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_2, index_0);
 
     if zero_initial_color == Color::Red {
         // If node 0 was red, the procedure should stop.
@@ -2926,7 +2926,7 @@ pub fn rule_remove_fix_matches_reference_case3_left_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_1, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_1, index_0);
 
     // Nothing to fix in this case.
     cvt_assert!(next_to_fix_index == NIL);
@@ -3025,7 +3025,7 @@ pub fn rule_remove_fix_matches_reference_case3_right_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_2, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_2, index_0);
 
     // Nothing to fix in this case.
     cvt_assert!(next_to_fix_index == NIL);
@@ -3123,7 +3123,7 @@ pub fn rule_remove_fix_matches_reference_case4_left_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_1, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_1, index_0);
 
     // Nothing to fix in this case.
     cvt_assert!(next_to_fix_index == NIL);
@@ -3221,7 +3221,7 @@ pub fn rule_remove_fix_matches_reference_case4_right_child() {
         nondet(),           // 11
     );
 
-    let (next_to_fix_index, next_to_fix_index_parent) = tree.remove_fix(index_2, index_0);
+    let (next_to_fix_index, next_to_fix_index_parent) = tree.certora_remove_fix(index_2, index_0);
 
     // Nothing to fix in this case.
     cvt_assert!(next_to_fix_index == NIL);
@@ -3647,7 +3647,7 @@ pub fn rule_swap_internal_nodes_left_children() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_10!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -3771,7 +3771,7 @@ pub fn rule_swap_internal_nodes_right_children() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_11!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -3886,7 +3886,7 @@ pub fn rule_swap_internal_nodes_first_is_root() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_12!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -4003,7 +4003,7 @@ pub fn rule_swap_internal_nodes_second_is_root() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_13!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -4109,7 +4109,7 @@ pub fn rule_swap_nodes_with_one_child_left_right() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_14!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -4213,7 +4213,7 @@ pub fn rule_swap_nodes_with_one_child_right_left() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_15!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -4299,7 +4299,7 @@ pub fn rule_swap_leaves() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_16!(data, initial_color_1, initial_color_5);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_5);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_5);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_5);
     cvt_assert!(tree.get_color::<TestOrder>(index_5) == initial_color_1);
@@ -4397,7 +4397,7 @@ pub fn rule_swap_parent_right_child() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_17!(data, initial_color_1, initial_color_3);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_3);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_3);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_3);
     cvt_assert!(tree.get_color::<TestOrder>(index_3) == initial_color_1);
@@ -4499,7 +4499,7 @@ pub fn rule_swap_parent_left_child() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_18!(data, initial_color_1, initial_color_3);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_3);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_3);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_3);
     cvt_assert!(tree.get_color::<TestOrder>(index_3) == initial_color_1);
@@ -4601,7 +4601,7 @@ pub fn rule_swap_right_child_parent() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_19!(data, initial_color_1, initial_color_3);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_3);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_3);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_3);
     cvt_assert!(tree.get_color::<TestOrder>(index_3) == initial_color_1);
@@ -4703,7 +4703,7 @@ pub fn rule_swap_left_child_parent() {
 
     let mut tree: RedBlackTree<TestOrder> = build_tree_20!(data, initial_color_1, initial_color_3);
 
-    tree.swap_nodes::<TestOrder>(index_1, index_3);
+    tree.swap_node_with_successor::<TestOrder>(index_1, index_3);
 
     cvt_assert!(tree.get_color::<TestOrder>(index_1) == initial_color_3);
     cvt_assert!(tree.get_color::<TestOrder>(index_3) == initial_color_1);

@@ -100,7 +100,7 @@ pub fn rule_deposit_check<const IS_BASE: bool>() {
     process_deposit_core(
         &crate::id(),
         &used_acc_infos,
-        DepositParams::new(amount_arg),
+        DepositParams::new(amount_arg, None),
     )
     .unwrap();
 
@@ -211,7 +211,7 @@ pub fn rule_withdraw_check<const IS_BASE: bool>() {
     process_withdraw_core(
         &crate::id(),
         &used_acc_infos,
-        WithdrawParams::new(amount_arg),
+        WithdrawParams::new(amount_arg, None),
     )
     .unwrap();
 
@@ -373,7 +373,7 @@ pub fn cancel_order_by_index_check<const IS_BID: bool>() {
     // -- call to cancel_order_by_index
     let trader_index = second_trader_index();
     let order_index = maker_order_index;
-    cancel_order_by_index!(market_info, trader_index, order_index);
+    cancel_order_by_index!(market_info, order_index);
 
     let balances_new = record_all_balances(
         market_info,

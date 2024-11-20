@@ -499,7 +499,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
             )?;
 
             // Stop walking if missing the needed global account.
-            if self.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
+            if self.is_missing_global_account(&resting_order, is_bid, global_trade_accounts_opts) {
                 break;
             }
 
@@ -537,14 +537,12 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
     pub fn impact_base_atoms(
         &self,
         is_bid: bool,
-        round_up: bool,
         limit_quote_atoms: QuoteAtoms,
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
         impact_base_atoms(
             self,
             is_bid,
-            round_up,
             limit_quote_atoms,
             global_trade_accounts_opts,
         )
@@ -1141,9 +1139,9 @@ impl<
                     #[cfg(feature = "certora")]
                     {
                         if is_bid {
-                            remove_from_global(&global_trade_accounts_opts[0], &maker)?;
+                            remove_from_global(&global_trade_accounts_opts[0])?;
                         } else {
-                            remove_from_global(&global_trade_accounts_opts[1], &maker)?;
+                            remove_from_global(&global_trade_accounts_opts[1])?;
                         }
                     }
                 }
@@ -1170,7 +1168,7 @@ impl<
                         .get_mut_value();
                 maker_order.reduce(base_atoms_traded)?;
                 #[cfg(feature = "certora")]
-                add_to_orderbook_balance(fixed, dynamic, current_order_index);
+                add_to_orderbook_balance(fixed, dynamic, current_maker_order_index);
                 remaining_base_atoms = BaseAtoms::ZERO;
                 break;
             }
@@ -1416,7 +1414,6 @@ impl<
             }
             #[cfg(feature = "certora")]
             {
-                let trader: &Pubkey = &get_helper_seat(dynamic, trader_index).get_value().trader;
                 if is_bid {
                     return remove_from_global(&global_trade_accounts_opts[1]);
                 } else {
@@ -1714,14 +1711,10 @@ fn remove_and_update_balances(
         }
         #[cfg(feature = "certora")]
         {
-            let maker: &Pubkey =
-                &get_helper_seat(dynamic, resting_order_to_remove.get_trader_index())
-                    .get_value()
-                    .trader;
             if order_to_remove_is_bid {
-                remove_from_global(&global_trade_accounts_opts[1], maker)?;
+                remove_from_global(&global_trade_accounts_opts[1])?;
             } else {
-                remove_from_global(&global_trade_accounts_opts[0], maker)?;
+                remove_from_global(&global_trade_accounts_opts[0])?;
             }
         }
     } else {
