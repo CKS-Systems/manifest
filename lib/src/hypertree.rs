@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::DataIndex;
+use crate::{DataIndex, RedBlackTreeRangeIterator};
 
 pub const NIL: DataIndex = DataIndex::MAX;
 
@@ -16,6 +16,7 @@ impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload fo
 // work with it in the same trait.
 pub trait HyperTreeReadOperations<'a> {
     fn lookup_index<V: Payload>(&'a self, value: &V) -> DataIndex;
+    fn range<V: Payload>(&'a self, min: &V, max: &V) -> RedBlackTreeRangeIterator<'a, Self, V>;
     fn lookup_max_index<V: Payload>(&'a self) -> DataIndex;
     fn get_max_index(&self) -> DataIndex;
     fn get_root_index(&self) -> DataIndex;

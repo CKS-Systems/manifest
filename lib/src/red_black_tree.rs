@@ -133,6 +133,47 @@ impl<'a, V: Payload> RedBlackTreeReadOnly<'a, V> {
     }
 }
 
+pub struct RedBlackTreeRangeIterator<'a, T: GetRedBlackTreeReadOnlyData<'a>, V: Payload> {
+    pub(crate) tree: &'a T,
+    pub(crate) min: &'a V,
+    pub(crate) max: &'a V,
+    pub(crate) current_index: DataIndex,
+    pub(crate) phantom: std::marker::PhantomData<&'a V>,
+}
+
+impl<'a, T, V> Iterator for RedBlackTreeRangeIterator<'a, T, V>
+where
+    T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
+    V: Payload,
+{
+    type Item = (DataIndex, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_index != NIL {
+            let current_value = self.tree.get_value::<V>(self.current_index);
+
+            if current_value >= self.min && current_value <= self.max {
+                // Store the current index to return
+                let result_index = self.current_index;
+                let result_value = current_value;
+
+                // Move to the next lower index
+                self.current_index = self.tree.get_next_lower_index::<V>(self.current_index);
+
+                return Some((result_index, result_value));
+            }
+
+            // If the current value is out of range, move to the next relevant node
+            if current_value < self.min {
+                self.current_index = self.tree.get_next_higher_index::<V>(self.current_index);
+            } else {
+                self.current_index = self.tree.get_next_lower_index::<V>(self.current_index);
+            }
+        }
+        None
+    }
+}
+
 // Specific to red black trees and not all data structures. Implementing this
 // gets a lot of other stuff for free.
 pub trait GetRedBlackTreeReadOnlyData<'a> {
@@ -576,6 +617,21 @@ where
             }
         }
         current_index
+    }
+
+    fn range<V: Payload>(&'a self, min: &V, max: &V) -> RedBlackTreeRangeIterator<'a, T, V> {
+        let root = self.get_root_index();
+        RedBlackTreeRangeIterator {
+            tree: self,
+            min,
+            max,
+            current_index: if root != NIL {
+                self.lookup_index(min)
+            } else {
+                NIL
+            },
+            phantom: std::marker::PhantomData,
+        }
     }
 
     fn lookup_max_index<V: Payload>(&'a self) -> DataIndex {
