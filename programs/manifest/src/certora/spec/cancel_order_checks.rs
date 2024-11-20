@@ -122,7 +122,6 @@ pub fn cancel_order_by_index_no_revert<const IS_BID: bool>() {
     // -- call to cancel_order_by_index
     let market_data = &mut market_info.try_borrow_mut_data().unwrap();
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-    let trader_index = crate::state::second_trader_index();
     let order_index = maker_order_index;
     let result = dynamic_account.cancel_order_by_index(order_index, &[None, None]);
     cvt_assert!(result.is_ok());

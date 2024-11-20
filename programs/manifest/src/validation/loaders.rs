@@ -466,7 +466,11 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
         let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
-
+        // Certora version is not mutable.
+        #[cfg(feature = "certora")]
+        let global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2] =
+            [None, None];
+        #[cfg(not(feature = "certora"))]
         let mut global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2] =
             [None, None];
 

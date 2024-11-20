@@ -11,7 +11,6 @@ use hypertree::{
     get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
-
 use shank::ShankType;
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;

@@ -446,7 +446,7 @@ pub fn matching_decrease_maker_order_atoms<const IS_BID: bool>() {
         place_single_order_nondet_inputs::<IS_BID>(market_info);
 
     // -- call to place_single_order
-    let (res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
+    let (_res, _total_base_atoms_traded, _total_quote_atoms_traded) = place_single_order!(
         market_info,
         args,
         remaining_base_atoms,

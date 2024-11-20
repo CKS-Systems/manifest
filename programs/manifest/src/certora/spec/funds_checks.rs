@@ -371,7 +371,6 @@ pub fn cancel_order_by_index_check<const IS_BID: bool>() {
     cvt_assume_funds_invariants(balances_old);
 
     // -- call to cancel_order_by_index
-    let trader_index = second_trader_index();
     let order_index = maker_order_index;
     cancel_order_by_index!(market_info, order_index);
 
