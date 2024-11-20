@@ -381,6 +381,7 @@ export class UiWrapper {
     const traderTokenProgram = isBid
       ? accounts.quoteTokenProgram
       : accounts.baseTokenProgram;
+
     const traderTokenAccount = getAssociatedTokenAddressSync(
       mint,
       owner,
@@ -423,6 +424,7 @@ export class UiWrapper {
         mint,
         manifestProgram: MANIFEST_PROGRAM_ID,
         payer,
+        tokenProgram: traderTokenProgram,
         baseMint: market.baseMint(),
         baseGlobal,
         baseGlobalVault,
@@ -604,6 +606,7 @@ export class UiWrapper {
     const traderTokenProgram = isBid
       ? accounts.quoteTokenProgram
       : accounts.baseTokenProgram;
+
     const traderTokenAccount = getAssociatedTokenAddressSync(
       mint,
       accounts.owner,
@@ -658,6 +661,7 @@ export class UiWrapper {
         baseGlobal,
         baseGlobalVault,
         baseMarketVault,
+        tokenProgram: traderTokenProgram,
         baseTokenProgram: accounts.baseTokenProgram || TOKEN_PROGRAM_ID,
         quoteMint: market.quoteMint(),
         quoteGlobal,
