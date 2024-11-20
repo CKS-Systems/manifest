@@ -424,6 +424,7 @@ export class UiWrapper {
         mint,
         manifestProgram: MANIFEST_PROGRAM_ID,
         payer,
+        tokenProgram: traderTokenProgram,
         baseMint: market.baseMint(),
         baseGlobal,
         baseGlobalVault,
