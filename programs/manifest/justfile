@@ -125,6 +125,7 @@ verify-remote RULE *OPTS: build-sbf
 
 clean:
 	rm -f *.dot *.png *.svg
+	rm -f log_verification*
 	rm -Rf emv-*
 	rm -Rf .certora_internal
 	rm -f log.txt

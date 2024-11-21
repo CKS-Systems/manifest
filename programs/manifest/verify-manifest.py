@@ -217,8 +217,6 @@ class VerificationRunner:
         ''' Call `just clean`. '''
         subprocess.run(["just", "clean"], check=True, capture_output=True)
 
-# TODO: @phreppo - should sanity rules be added?
-
 
 # Parse the CLI options
 parser = argparse.ArgumentParser(

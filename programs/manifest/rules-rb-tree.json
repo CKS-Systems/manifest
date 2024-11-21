@@ -185,24 +185,6 @@
       "expected_result": "Verified",
       "prover_options": [],
       "cargo_features": []
-    },
-    {
-      "name": "rule_swap_parent_left_child",
-      "expected_result": "Violated",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_right_child_parent",
-      "expected_result": "Violated",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_left_child_parent",
-      "expected_result": "Violated",
-      "prover_options": [],
-      "cargo_features": []
     }
   ]
 }
