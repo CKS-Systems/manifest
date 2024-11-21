@@ -1,5 +1,4 @@
-#![allow(unused_imports)]
-use crate::{claim_seat, create_empty_market, get_trader_balance, get_trader_index};
+use crate::{get_trader_balance, get_trader_index};
 use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
 use nondet::{acc_infos_with_mem_layout, nondet};
@@ -12,29 +11,26 @@ use solana_cvt::token::spl_token_account_get_amount;
 use crate::{
     program::{
         deposit::{process_deposit_core, DepositParams},
-        get_dynamic_account, get_mut_dynamic_account,
+        get_mut_dynamic_account,
     },
-    quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
-    state::{claimed_seat::ClaimedSeat, DynamicAccount, MarketFixed, MarketRefMut},
-    validation::loaders::DepositContext,
+    state::{DynamicAccount, MarketRefMut},
 };
-use hypertree::{get_helper, get_mut_helper, RBNode};
-use state::{cvt_assume_main_trader_has_seat, main_trader_pk};
+use hypertree::DataIndex;
+use state::cvt_assume_main_trader_has_seat;
 
 #[rule]
 pub fn rule_update_balance() {
     crate::certora::spec::verification_utils::init_static();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market = &acc_infos[1];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market: &AccountInfo = &acc_infos[1];
 
     cvt_assume_main_trader_has_seat(trader.key);
 
     let (base_atoms_old, _quote_atoms_old) = get_trader_balance!(market, &trader.key);
 
-    let trader_index = get_trader_index!(market, &trader.key);
-    // cvt_assert!(trader_index == MAIN_TRADER_INDEX);
+    let trader_index: DataIndex = get_trader_index!(market, &trader.key);
 
     let amount: u64 = nondet();
 
@@ -51,14 +47,14 @@ pub fn rule_deposit_deposits() {
     use state::{cvt_assume_main_trader_has_seat, is_second_seat_taken, second_trader_pk};
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..6];
-    let trader = &used_acc_infos[0];
-    let market = &used_acc_infos[1];
-    let trader_token = &used_acc_infos[2];
-    let vault_token = &used_acc_infos[3];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..6];
+    let trader: &AccountInfo = &used_acc_infos[0];
+    let market: &AccountInfo = &used_acc_infos[1];
+    let trader_token: &AccountInfo = &used_acc_infos[2];
+    let vault_token: &AccountInfo = &used_acc_infos[3];
 
     // Unrelated trader
-    let unrelated_trader = &acc_infos[7];
+    let unrelated_trader: &AccountInfo = &acc_infos[7];
 
     cvt_assume_main_trader_has_seat(trader.key);
 
@@ -82,17 +78,22 @@ pub fn rule_deposit_deposits() {
     let vault_amount_old = spl_token_account_get_amount(vault_token);
 
     // Call to deposit
-    process_deposit_core(&crate::id(), &used_acc_infos, DepositParams::new(amount, None)).unwrap();
+    process_deposit_core(
+        &crate::id(),
+        &used_acc_infos,
+        DepositParams::new(amount, None),
+    )
+    .unwrap();
 
     // New SPL balances
-    let trader_amount = spl_token_account_get_amount(trader_token);
-    let vault_amount = spl_token_account_get_amount(vault_token);
+    let trader_amount: u64 = spl_token_account_get_amount(trader_token);
+    let vault_amount: u64 = spl_token_account_get_amount(vault_token);
 
     // Difference in SPL balances
     cvt_assert!(trader_amount_old >= trader_amount);
     cvt_assert!(vault_amount >= vault_amount_old);
-    let trader_diff = trader_amount_old - trader_amount;
-    let vault_diff = vault_amount - vault_amount_old;
+    let trader_diff: u64 = trader_amount_old - trader_amount;
+    let vault_diff: u64 = vault_amount - vault_amount_old;
 
     // Diffs must equal the amount
     cvt_assert!(trader_diff == amount);
@@ -104,8 +105,8 @@ pub fn rule_deposit_deposits() {
         get_trader_balance!(market, unrelated_trader.key);
 
     // Diffs in base/quote seat balance
-    let trader_base_diff = trader_base - trader_base_old;
-    let trader_quote_diff = trader_quote - trader_quote_old;
+    let trader_base_diff: u64 = trader_base - trader_base_old;
+    let trader_quote_diff: u64 = trader_quote - trader_quote_old;
 
     // One of the diffs should be amount, the other zero
     cvt_assert!(trader_base_diff + trader_quote_diff == amount);

@@ -1,8 +1,8 @@
 use std::mem::size_of;
 
+use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
 #[cfg(feature = "certora")]
 use crate::quantities::{QuoteAtoms, WrapperU64};
-use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};

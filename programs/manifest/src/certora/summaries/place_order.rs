@@ -1,4 +1,3 @@
-#![allow(unused)]
 use crate::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
     state::{
@@ -10,25 +9,6 @@ use hypertree::DataIndex;
 use nondet::nondet;
 use solana_program::program_error::ProgramError;
 
-/// This summary places no order and assumes no side effects
-pub fn place_no_order(
-    _market: &mut MarketRefMut,
-    args: AddOrderToMarketArgs,
-) -> Result<AddOrderToMarketResult, ProgramError> {
-    let base_atoms_traded = BaseAtoms::new(nondet());
-    let quote_atoms_traded = QuoteAtoms::new(nondet());
-    let order_sequence_number: u64 = nondet();
-    let order_index: DataIndex = nondet();
-    cvt::cvt_assume!(base_atoms_traded <= args.num_base_atoms);
-
-    Ok(AddOrderToMarketResult {
-        order_sequence_number,
-        order_index,
-        base_atoms_traded,
-        quote_atoms_traded,
-    })
-}
-
 /// This summary for place_order assumes that there is a matched order with a trader,
 /// and its price is 1:1
 #[cfg(feature = "certora")]
@@ -36,12 +16,12 @@ pub fn place_fully_match_order_with_same_base_and_quote(
     market: &mut MarketRefMut,
     args: AddOrderToMarketArgs,
 ) -> Result<AddOrderToMarketResult, ProgramError> {
-    let is_bid = args.is_bid;
-    let num_base_atoms = args.num_base_atoms;
+    let is_bid: bool = args.is_bid;
+    let num_base_atoms: BaseAtoms = args.num_base_atoms;
     let base_traded: u64 = nondet();
     let quote_traded: u64 = nondet();
-    let base_atoms_traded = BaseAtoms::new(base_traded);
-    let quote_atoms_traded = QuoteAtoms::new(quote_traded);
+    let base_atoms_traded: BaseAtoms = BaseAtoms::new(base_traded);
+    let quote_atoms_traded: QuoteAtoms = QuoteAtoms::new(quote_traded);
 
     ////////////////////////////////////////
     // -- Assumptions for this summary
@@ -55,8 +35,8 @@ pub fn place_fully_match_order_with_same_base_and_quote(
     // Condition specific to this summary: we fix price 1:1
     cvt::cvt_assume!(base_traded == quote_traded);
 
-    let trader_index = main_trader_index();
-    let maker_trader_index = second_trader_index();
+    let trader_index: DataIndex = main_trader_index();
+    let maker_trader_index: DataIndex = second_trader_index();
 
     update_balance(
         market.fixed,

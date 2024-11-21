@@ -76,7 +76,7 @@ pub fn main_trader_pk() -> &'static Pubkey {
 }
 
 pub fn main_trader_index() -> DataIndex {
-    unsafe { MAIN_SEAT_INDEX as DataIndex }
+    MAIN_SEAT_INDEX as DataIndex
 }
 
 pub fn second_trader_pk() -> &'static Pubkey {
@@ -84,7 +84,7 @@ pub fn second_trader_pk() -> &'static Pubkey {
 }
 
 pub fn second_trader_index() -> DataIndex {
-    unsafe { SECOND_SEAT_INDEX as DataIndex }
+    SECOND_SEAT_INDEX as DataIndex
 }
 
 /// Read a `RBNode<ClaimedSeat>` in an array of data at a given index.
@@ -148,11 +148,11 @@ pub fn release_second_seat() {
 }
 
 pub fn main_bid_order_index() -> DataIndex {
-    unsafe { MAIN_BID_ORDER_INDEX as DataIndex }
+    MAIN_BID_ORDER_INDEX as DataIndex
 }
 
 pub fn main_ask_order_index() -> DataIndex {
-    unsafe { MAIN_ASK_ORDER_INDEX as DataIndex }
+    MAIN_ASK_ORDER_INDEX as DataIndex
 }
 
 fn init_mock_orders() {

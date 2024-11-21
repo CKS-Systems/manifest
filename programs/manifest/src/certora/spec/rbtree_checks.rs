@@ -1,8 +1,5 @@
-#![allow(unused_imports)]
-
 use super::verification_utils::init_static;
 use bytemuck::{Pod, Zeroable};
-use calltrace::{cvt_cex_print_tag, cvt_cex_print_u64};
 use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
 pub use hypertree::red_black_tree::*;
@@ -3623,6 +3620,7 @@ macro_rules! build_tree_10 {
     }};
 }
 
+// TODO: Remove the rules that are expected to fail
 /// Checks that `swap_nodes` behaves as expected in the case that the two nodes
 /// are internal nodes, and both are left children.
 #[rule]

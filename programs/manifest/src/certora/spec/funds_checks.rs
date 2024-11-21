@@ -1,51 +1,42 @@
-#![allow(unused_imports)]
-use std::result;
-
 use crate::*;
-use calltrace::*;
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
 use nondet::*;
 
-use crate::*;
 use solana_program::account_info::AccountInfo;
 
 use crate::{
     program::{
         deposit::{process_deposit_core, DepositParams},
-        get_dynamic_account, get_mut_dynamic_account,
+        get_mut_dynamic_account,
         withdraw::{process_withdraw_core, WithdrawParams},
     },
-    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, QuoteAtoms},
     state::{
-        claimed_seat::ClaimedSeat, get_helper_order, AddOrderToMarketArgs, AddOrderToMarketResult,
-        DynamicAccount, MarketFixed, MarketRefMut, RestingOrder,
+        get_helper_order, AddOrderToMarketArgs,
+        DynamicAccount, MarketRefMut, RestingOrder,
     },
-    validation::loaders::{DepositContext, GlobalTradeAccounts},
 };
-use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode};
-use solana_cvt::token::spl_token_account_get_amount;
+use hypertree::DataIndex;
 
-use crate::certora::spec::{no_funds_loss_util::*, verification_utils::*};
+use crate::certora::spec::no_funds_loss_util::*;
 use state::{
-    dynamic_account, is_ask_order_free, is_bid_order_free, main_ask_order_index,
-    main_bid_order_index, main_trader_index, main_trader_pk, second_trader_index,
+    main_trader_index, second_trader_index,
 };
 
-// #[rule]
-pub fn rule_deposit_check<const IS_BASE: bool>() {
+fn rule_deposit_check<const IS_BASE: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..6];
-    let trader = &used_acc_infos[0];
-    let market_info = &used_acc_infos[1];
-    let trader_token = &used_acc_infos[2];
-    let vault_token = &used_acc_infos[3];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..6];
+    let trader: &AccountInfo = &used_acc_infos[0];
+    let market_info: &AccountInfo = &used_acc_infos[1];
+    let trader_token: &AccountInfo = &used_acc_infos[2];
+    let vault_token: &AccountInfo = &used_acc_infos[3];
 
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market preconditions
     // the parameter true below implies there is a bid order,
@@ -58,10 +49,10 @@ pub fn rule_deposit_check<const IS_BASE: bool>() {
         maker_trader,
     );
     // -- additional precondition for deposit
-    let market_base_vault_pk = get_base_vault!(market_info);
-    let market_quote_vault_pk = get_quote_vault!(market_info);
+    let market_base_vault_pk: Pubkey = get_base_vault!(market_info);
+    let market_quote_vault_pk: Pubkey = get_quote_vault!(market_info);
     // -- vault_token is either eqauls base vault or quote vault
-    let vault_pk = if IS_BASE {
+    let vault_pk: Pubkey = if IS_BASE {
         market_base_vault_pk
     } else {
         market_quote_vault_pk
@@ -72,7 +63,7 @@ pub fn rule_deposit_check<const IS_BASE: bool>() {
 
     // if IS_BASE, then vault_base amount comes from vault_token
     // otherwise, vault_quote amount comes from vault_token
-    let balances_old = if IS_BASE {
+    let balances_old: AllBalances = if IS_BASE {
         record_all_balances(
             market_info,
             vault_token,
@@ -104,7 +95,7 @@ pub fn rule_deposit_check<const IS_BASE: bool>() {
     )
     .unwrap();
 
-    let balances_new = if IS_BASE {
+    let balances_new: AllBalances = if IS_BASE {
         record_all_balances(
             market_info,
             vault_token,
@@ -143,20 +134,19 @@ pub fn rule_deposit_quote() {
     rule_deposit_check::<false>();
 }
 
-// #[rule]
-pub fn rule_withdraw_check<const IS_BASE: bool>() {
+fn rule_withdraw_check<const IS_BASE: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..6];
-    let trader = &used_acc_infos[0];
-    let market_info = &used_acc_infos[1];
-    let trader_token = &used_acc_infos[2];
-    let vault_token = &used_acc_infos[3];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..6];
+    let trader: &AccountInfo = &used_acc_infos[0];
+    let market_info: &AccountInfo = &used_acc_infos[1];
+    let trader_token: &AccountInfo = &used_acc_infos[2];
+    let vault_token: &AccountInfo = &used_acc_infos[3];
 
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market preconditions
     // the parameter true below implies there is a bid order,
@@ -169,10 +159,10 @@ pub fn rule_withdraw_check<const IS_BASE: bool>() {
         maker_trader,
     );
     // -- additional precondition for deposit
-    let market_base_vault_pk = get_base_vault!(market_info);
-    let market_quote_vault_pk = get_quote_vault!(market_info);
+    let market_base_vault_pk: Pubkey = get_base_vault!(market_info);
+    let market_quote_vault_pk: Pubkey = get_quote_vault!(market_info);
     // -- vault_token is either eqauls base vault or quote vault
-    let vault_pk = if IS_BASE {
+    let vault_pk: Pubkey = if IS_BASE {
         market_base_vault_pk
     } else {
         market_quote_vault_pk
@@ -183,7 +173,7 @@ pub fn rule_withdraw_check<const IS_BASE: bool>() {
 
     // if IS_BASE, then vault_base amount comes from vault_token
     // otherwise, vault_quote amount comes from vault_token
-    let balances_old = if IS_BASE {
+    let balances_old: AllBalances = if IS_BASE {
         record_all_balances(
             market_info,
             vault_token,
@@ -215,7 +205,7 @@ pub fn rule_withdraw_check<const IS_BASE: bool>() {
     )
     .unwrap();
 
-    let balances_new = if IS_BASE {
+    let balances_new: AllBalances = if IS_BASE {
         record_all_balances(
             market_info,
             vault_token,
@@ -254,15 +244,15 @@ pub fn rule_withdraw_quote() {
     rule_withdraw_check::<false>();
 }
 
-pub fn rest_remaining_check<const IS_BID: bool>() {
+fn rest_remaining_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
@@ -273,7 +263,7 @@ pub fn rest_remaining_check<const IS_BID: bool>() {
         maker_trader,
     );
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -311,7 +301,7 @@ pub fn rest_remaining_check<const IS_BID: bool>() {
         total_quote_atoms_traded_arg
     );
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -343,11 +333,11 @@ pub fn cancel_order_by_index_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
-    let maker_trader = &acc_infos[2];
-    let vault_base_token = &acc_infos[3];
-    let vault_quote_token = &acc_infos[4];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
+    let maker_trader: &AccountInfo = &acc_infos[2];
+    let vault_base_token: &AccountInfo = &acc_infos[3];
+    let vault_quote_token: &AccountInfo = &acc_infos[4];
 
     // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
@@ -358,7 +348,7 @@ pub fn cancel_order_by_index_check<const IS_BID: bool>() {
         maker_trader,
     );
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -371,10 +361,10 @@ pub fn cancel_order_by_index_check<const IS_BID: bool>() {
     cvt_assume_funds_invariants(balances_old);
 
     // -- call to cancel_order_by_index
-    let order_index = maker_order_index;
+    let order_index: DataIndex = maker_order_index;
     cancel_order_by_index!(market_info, order_index);
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -408,11 +398,11 @@ pub fn cancel_order_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
-    let maker_trader = &acc_infos[2];
-    let vault_base_token = &acc_infos[3];
-    let vault_quote_token = &acc_infos[4];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
+    let maker_trader: &AccountInfo = &acc_infos[2];
+    let vault_base_token: &AccountInfo = &acc_infos[3];
+    let vault_quote_token: &AccountInfo = &acc_infos[4];
 
     // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
@@ -423,7 +413,7 @@ pub fn cancel_order_check<const IS_BID: bool>() {
         maker_trader,
     );
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -436,21 +426,22 @@ pub fn cancel_order_check<const IS_BID: bool>() {
     cvt_assume_funds_invariants(balances_old);
 
     // -- call to cancel_order_by_index
-    let trader_index = second_trader_index();
-    let order_index = maker_order_index;
+    let trader_index: DataIndex = second_trader_index();
+    let order_index: DataIndex = maker_order_index;
     // -- needed as an argument to get_helper_order, but is not used
-    let dynamic = &mut [0; 8];
+    let dynamic: &mut [u8; 8] = &mut [0; 8];
     let resting_order: &RestingOrder = get_helper_order(dynamic, order_index).get_value();
-    let order_sequence_number = resting_order.get_sequence_number();
+    let order_sequence_number: u64 = resting_order.get_sequence_number();
     {
-        let market_data = &mut market_info.try_borrow_mut_data().unwrap();
+        let market_data: &mut std::cell::RefMut<&mut [u8]> =
+            &mut market_info.try_borrow_mut_data().unwrap();
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         dynamic_account
             .cancel_order(trader_index, order_sequence_number, &[None, None])
             .unwrap();
     };
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,

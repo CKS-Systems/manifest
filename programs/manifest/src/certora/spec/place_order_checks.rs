@@ -1,35 +1,23 @@
-#![allow(unused_imports)]
 use crate::*;
-use calltrace::*;
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assume, cvt_vacuity_check};
 use cvt_macros::rule;
 use nondet::*;
 
-use crate::*;
 use solana_program::account_info::AccountInfo;
 
-use program::withdraw;
-use solana_cvt::token::spl_token_account_get_amount;
-use state::{
-    cvt_assume_second_trader_has_seat, get_helper_bid_order, get_helper_order, get_helper_seat,
-    is_ask_order_free, is_bid_order_free, main_trader_index, order_type_can_rest,
-    second_trader_index,
-};
+use state::main_trader_index;
 
 use crate::{
-    certora::spec::{no_funds_loss_util::*, verification_utils::*},
-    program::{get_dynamic_account, get_mut_dynamic_account},
-    quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    certora::spec::no_funds_loss_util::*,
+    program::get_mut_dynamic_account,
+    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
     state::{
-        claimed_seat::ClaimedSeat,
         market::market_helpers::{AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx},
-        AddOrderToMarketArgs, AddOrderToMarketResult, DerefOrBorrowMut, DynamicAccount,
-        MarketFixed, MarketRef, MarketRefMut, RestingOrder,
+        AddOrderToMarketArgs, DynamicAccount,
+        MarketRefMut,
     },
-    validation::loaders::GlobalTradeAccounts,
 };
-use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode};
-use state::main_trader_pk;
+use hypertree::DataIndex;
 
 pub fn place_single_order_nondet_inputs<const IS_BID: bool>(
     market_info: &AccountInfo,
@@ -54,11 +42,11 @@ pub fn place_single_order_canceled_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
@@ -69,7 +57,7 @@ pub fn place_single_order_canceled_check<const IS_BID: bool>() {
         maker_trader,
     );
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -94,7 +82,7 @@ pub fn place_single_order_canceled_check<const IS_BID: bool>() {
     );
     cvt_assume!(res.status == AddOrderStatus::Canceled);
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -126,12 +114,12 @@ pub fn place_single_order_unmatched_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
 
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
         market_info,
@@ -143,7 +131,7 @@ pub fn place_single_order_unmatched_check<const IS_BID: bool>() {
 
     // -- record balances
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -168,7 +156,7 @@ pub fn place_single_order_unmatched_check<const IS_BID: bool>() {
     );
     cvt_assume!(res.status == AddOrderStatus::Unmatched);
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -200,12 +188,12 @@ pub fn place_single_order_full_match_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
 
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market assumptions
 
@@ -219,7 +207,7 @@ pub fn place_single_order_full_match_check<const IS_BID: bool>() {
 
     // -- record balances before place_single_order
 
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -244,7 +232,7 @@ pub fn place_single_order_full_match_check<const IS_BID: bool>() {
     );
     cvt_assume!(res.status == AddOrderStatus::Filled);
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -281,12 +269,12 @@ pub fn place_single_order_partial_match_check<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let trader = &acc_infos[0];
-    let market_info = &acc_infos[1];
+    let trader: &AccountInfo = &acc_infos[0];
+    let market_info: &AccountInfo = &acc_infos[1];
 
-    let maker_trader = &acc_infos[7];
-    let vault_base_token = &acc_infos[8];
-    let vault_quote_token = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[7];
+    let vault_base_token: &AccountInfo = &acc_infos[8];
+    let vault_quote_token: &AccountInfo = &acc_infos[9];
 
     // -- market preconditions
     let maker_order_index: DataIndex = cvt_assume_market_preconditions::<IS_BID>(
@@ -298,7 +286,7 @@ pub fn place_single_order_partial_match_check<const IS_BID: bool>() {
     );
 
     // -- record balances before place_single_order
-    let balances_old = record_all_balances(
+    let balances_old: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,
@@ -323,7 +311,7 @@ pub fn place_single_order_partial_match_check<const IS_BID: bool>() {
     );
     cvt_assume!(res.status == AddOrderStatus::PartialFill);
 
-    let balances_new = record_all_balances(
+    let balances_new: AllBalances = record_all_balances(
         market_info,
         vault_base_token,
         vault_quote_token,

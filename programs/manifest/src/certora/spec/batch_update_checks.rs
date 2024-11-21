@@ -4,7 +4,7 @@ use cvt_macros::rule;
 use nondet::{acc_infos_with_mem_layout, nondet};
 use state::{main_ask_order_index, main_bid_order_index, main_trader_index};
 use std::cell::RefMut;
-use vectors::cvt_no_resizable_vec;
+use vectors::{cvt_no_resizable_vec, no_resizable_vec::NoResizableVec};
 
 use crate::{
     program::{batch_update::*, get_mut_dynamic_account},
@@ -29,13 +29,13 @@ fn prepare_cancel_order_with_hint<const IS_BID: bool>(
         cvt_assume!(!is_ask_order_free());
     }
 
-    let order_index = if IS_BID {
+    let order_index: DataIndex = if IS_BID {
         main_bid_order_index()
     } else {
         main_ask_order_index()
     };
     // -- needed as an argument to get_helper_order, but is not used
-    let dynamic = &mut [0; 8];
+    let dynamic: &mut [u8; 8] = &mut [0; 8];
     let order: RestingOrder = get_helper_order(dynamic, order_index).value;
     // -- make sure the order is consistent with our IS_BID and IS_GLOBAL
     cvt_assume!(order.get_is_bid() == IS_BID);
@@ -68,16 +68,17 @@ pub fn rule_integrity_of_batch_update_cancel<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..3];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..3];
 
     // one cancel order without hint
-    let cancels = cvt_no_resizable_vec!([prepare_cancel_order::<IS_BID>(nondet())]; 10);
+    let cancels: NoResizableVec<CancelOrderParams> =
+        cvt_no_resizable_vec!([prepare_cancel_order::<IS_BID>(nondet())]; 10);
     // no place orders
-    let orders = cvt_no_resizable_vec!([]; 10);
-    let trader_index = main_trader_index();
-    let params = BatchUpdateParams::new(Some(trader_index), cancels, orders);
+    let orders: NoResizableVec<PlaceOrderParams> = cvt_no_resizable_vec!([]; 10);
+    let trader_index: DataIndex = main_trader_index();
+    let params: BatchUpdateParams = BatchUpdateParams::new(Some(trader_index), cancels, orders);
 
-    let program_id = &crate::id();
+    let program_id: &Pubkey = &crate::id();
     // Important: by passing only three accounts, we won't have global trade accounts
     process_batch_update_core(&program_id, &used_acc_infos, params).unwrap();
 
@@ -100,22 +101,22 @@ pub fn rule_integrity_of_batch_update_cancel_hint<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..3];
-    let market_info = &used_acc_infos[1];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..3];
+    let market_info: &AccountInfo = &used_acc_infos[1];
 
     // One cancel order with hint
-    let order_params = prepare_cancel_order_with_hint::<IS_BID>(nondet());
+    let order_params: CancelOrderParams = prepare_cancel_order_with_hint::<IS_BID>(nondet());
     cvt_assert!(order_params.order_index_hint().is_some());
-    let order_index = order_params.order_index_hint().unwrap();
+    let order_index: DataIndex = order_params.order_index_hint().unwrap();
     let order: RestingOrder = get_order!(market_info, order_index);
 
-    let cancels = cvt_no_resizable_vec!([order_params]; 10);
+    let cancels: NoResizableVec<CancelOrderParams> = cvt_no_resizable_vec!([order_params]; 10);
     // No place orders
-    let orders = cvt_no_resizable_vec!([]; 10);
-    let trader_index = main_trader_index();
+    let orders: NoResizableVec<PlaceOrderParams> = cvt_no_resizable_vec!([]; 10);
+    let trader_index: DataIndex = main_trader_index();
     let params = BatchUpdateParams::new(Some(trader_index), cancels, orders);
 
-    let program_id = &crate::id();
+    let program_id: &Pubkey = &crate::id();
     // Important: by passing only three accounts, we won't have global trade accounts
     process_batch_update_core(&program_id, &used_acc_infos, params).unwrap();
 
@@ -135,16 +136,17 @@ pub fn rule_integrity_of_batch_update_place_order<const IS_BID: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..3];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..3];
 
     // no cancel orders
-    let cancels = cvt_no_resizable_vec!([]; 10);
+    let cancels: NoResizableVec<CancelOrderParams> = cvt_no_resizable_vec!([]; 10);
     // one place order
-    let orders = cvt_no_resizable_vec!([prepare_place_order::<IS_BID>()]; 10);
-    let trader_index = main_trader_index();
-    let params = BatchUpdateParams::new(Some(trader_index), cancels, orders);
+    let orders: NoResizableVec<PlaceOrderParams> =
+        cvt_no_resizable_vec!([prepare_place_order::<IS_BID>()]; 10);
+    let trader_index: DataIndex = main_trader_index();
+    let params: BatchUpdateParams = BatchUpdateParams::new(Some(trader_index), cancels, orders);
 
-    let program_id = &crate::id();
+    let program_id: &Pubkey = &crate::id();
     // Important: by passing only three accounts, we won't have global trade accounts
     process_batch_update_core(&program_id, &used_acc_infos, params).unwrap();
 

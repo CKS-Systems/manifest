@@ -259,20 +259,3 @@ fn spl_token_2022_transfer_from_vault_to_trader_fixed<'a, 'info>(
 ) -> ProgramResult {
     spl_token_2022_transfer(vault.info, trader_token.info, vault.info, amount_atoms)
 }
-
-#[cfg(feature = "certora")]
-/** (Summary) Transfer from base (quote) vault to base (quote) trader using SPL Token 2022 **/
-fn spl_token_2022_transfer_from_vault_to_trader_original<'a, 'info>(
-    _token_program: &TokenProgram<'a, 'info>,
-    _mint: Option<MintAccountInfo<'a, 'info>>,
-    _mint_key: &Pubkey,
-    vault: &TokenAccountInfo<'a, 'info>,
-    trader_token: &TokenAccountInfo<'a, 'info>,
-    amount_atoms: u64,
-    _decimals: u8,
-    _market_key: &Pubkey,
-    _bump: u8,
-    payer: &AccountInfo<'info>,
-) -> ProgramResult {
-    spl_token_2022_transfer(trader_token.info, vault.info, payer, amount_atoms)
-}

@@ -3,6 +3,7 @@ use crate::{
     certora::spec::no_funds_loss_util::{
         cvt_assert_funds_invariants, cvt_assume_basic_market_preconditions,
         cvt_assume_funds_invariants, record_all_balances_without_order,
+        AllBalances,
     },
     create_empty_market, cvt_static_initializer,
 };
@@ -24,38 +25,34 @@ pub fn rule_integrity_swap() {
     init_static();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..8];
-    let market_info = &used_acc_infos[1];
-    let trader_base_info = &used_acc_infos[2];
-    let trader_quote_info = &used_acc_infos[3];
-    let _base_vault_info = &used_acc_infos[4];
-    let _quote_vault_info = &used_acc_infos[5];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..8];
+    let market_info: &AccountInfo = &used_acc_infos[1];
+    let trader_base_info: &AccountInfo = &used_acc_infos[2];
+    let trader_quote_info: &AccountInfo = &used_acc_infos[3];
+    let _base_vault_info: &AccountInfo = &used_acc_infos[4];
+    let _quote_vault_info: &AccountInfo = &used_acc_infos[5];
 
     // Create an empty market
     create_empty_market!(market_info);
 
-    // Add a trader
-    // let trader_key: Pubkey = nondet();
-    // claim_seat!(market_info, &trader_key);
-
     let params = SwapParams::new(nondet(), nondet(), true, true);
-    let in_atoms = params.in_atoms;
-    let _out_atoms = params.out_atoms;
-    let trader_base_amount_old = spl_token_account_get_amount(trader_base_info);
-    let trader_quote_amount_old = spl_token_account_get_amount(trader_quote_info);
+    let in_atoms: u64 = params.in_atoms;
+    let _out_atoms: u64 = params.out_atoms;
+    let trader_base_amount_old: u64 = spl_token_account_get_amount(trader_base_info);
+    let trader_quote_amount_old: u64 = spl_token_account_get_amount(trader_quote_info);
 
     process_swap_core(&crate::id(), &used_acc_infos, params).unwrap();
 
-    let trader_base_amount = spl_token_account_get_amount(trader_base_info);
-    let trader_quote_amount = spl_token_account_get_amount(trader_quote_info);
+    let trader_base_amount: u64 = spl_token_account_get_amount(trader_base_info);
+    let trader_quote_amount: u64 = spl_token_account_get_amount(trader_quote_info);
 
     // the trader pays with base
     cvt_assert!(trader_base_amount <= trader_base_amount_old);
-    let trader_out = trader_base_amount_old - trader_base_amount;
+    let trader_out: u64 = trader_base_amount_old - trader_base_amount;
 
     // the trader gets quote
     cvt_assert!(trader_quote_amount >= trader_quote_amount_old);
-    let _trader_in = trader_quote_amount - trader_quote_amount_old;
+    let _trader_in: u64 = trader_quote_amount - trader_quote_amount_old;
 
     cvt_assert!(trader_out <= in_atoms);
 
@@ -67,15 +64,15 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
     cvt_static_initializer!();
 
     let acc_infos: [AccountInfo; 16] = acc_infos_with_mem_layout!();
-    let used_acc_infos = &acc_infos[..8];
-    let trader = &used_acc_infos[0];
-    let market = &used_acc_infos[1];
-    let trader_base_token = &used_acc_infos[2];
-    let trader_quote_token = &used_acc_infos[3];
-    let vault_base_token = &used_acc_infos[4];
-    let vault_quote_token = &used_acc_infos[5];
+    let used_acc_infos: &[AccountInfo] = &acc_infos[..8];
+    let trader: &AccountInfo = &used_acc_infos[0];
+    let market: &AccountInfo = &used_acc_infos[1];
+    let trader_base_token: &AccountInfo = &used_acc_infos[2];
+    let trader_quote_token: &AccountInfo = &used_acc_infos[3];
+    let vault_base_token: &AccountInfo = &used_acc_infos[4];
+    let vault_quote_token: &AccountInfo = &used_acc_infos[5];
     // we only care about having a pubkey for the maker
-    let maker_trader = &acc_infos[9];
+    let maker_trader: &AccountInfo = &acc_infos[9];
 
     cvt_assume!(trader.key != vault_base_token.key);
     cvt_assume!(trader.key != vault_quote_token.key);
@@ -92,7 +89,7 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
     );
 
     // -- record balances before swap
-    let old_balances = record_all_balances_without_order(
+    let old_balances: AllBalances = record_all_balances_without_order(
         market,
         vault_base_token,
         vault_quote_token,
@@ -116,7 +113,7 @@ fn rule_swap_check<const IS_BASE: bool, const IS_EXACT: bool>() {
             .is_some());
     }
 
-    let params = SwapParams::new(in_atoms, out_atoms, IS_BASE, IS_EXACT);
+    let params: SwapParams = SwapParams::new(in_atoms, out_atoms, IS_BASE, IS_EXACT);
     process_swap_core(&crate::id(), &used_acc_infos, params).unwrap();
 
     let new_balances = record_all_balances_without_order(

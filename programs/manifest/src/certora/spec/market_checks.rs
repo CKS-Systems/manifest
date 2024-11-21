@@ -9,13 +9,13 @@ use cvt_macros::rule;
 use nondet::nondet;
 
 use crate::{
-    program::{get_dynamic_account, get_mut_dynamic_account},
+    program::get_mut_dynamic_account,
     state::{
         is_main_seat_free, is_main_seat_taken, is_second_seat_free, main_trader_index,
         main_trader_pk, second_trader_index, second_trader_pk, MarketFixed, MarketRefMut,
     },
 };
-use hypertree::{get_mut_helper, is_nil, NIL, DataIndex};
+use hypertree::{get_mut_helper, is_nil, DataIndex, NIL};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 #[rule]
@@ -139,8 +139,9 @@ pub fn rule_market_release_seat() {
     cvt_assume!(is_main_seat_taken());
 
     {
-        let market_data = &mut market_info.try_borrow_mut_data().unwrap();
-        let mut dynamic_account = get_mut_dynamic_account(market_data);
+        let market_data: &mut std::cell::RefMut<&mut [u8]> =
+            &mut market_info.try_borrow_mut_data().unwrap();
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         dynamic_account.release_seat(&trader_key).unwrap();
     }
 
