@@ -227,7 +227,7 @@ basic_u64!(GlobalAtoms);
 #[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
 #[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
-    pub inner: [u64; 2],
+    inner: [u64; 2],
 }
 
 // These conversions are necessary, bc. the compiler forces 16 byte alignment

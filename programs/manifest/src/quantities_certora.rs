@@ -1,16 +1,13 @@
 #![cfg(feature = "certora")]
-
 use super::*;
 
 impl QuoteAtomsPerBaseAtom {
     pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: [0; 2] };
     pub const MIN: Self = QuoteAtomsPerBaseAtom { inner: [1, 0] };
-    // -- AG: review what are the intended semantics, proably not correct
     pub const MAX: Self = QuoteAtomsPerBaseAtom {
         inner: [u32::MAX as u64, 0],
     };
 
-    // -- AG these are not used
     pub const MIN_EXP: i8 = -18;
     pub const MAX_EXP: i8 = 8;
 
@@ -105,6 +102,5 @@ impl QuoteAtomsPerBaseAtom {
         let x = ::nondet::nondet();
         cvt::cvt_assume!(x <= u32::MAX as u64);
         Self { inner: [x, 0] }
-        // Self { inner : [::nondet::nondet(), ::nondet::nondet()] }
     }
 }
