@@ -1,3 +1,4 @@
+#[cfg(not(feature = "certora"))]
 use crate::{
     program::{
         batch_update::{BatchUpdateParams, CancelOrderParams, PlaceOrderParams},
@@ -5,12 +6,21 @@ use crate::{
     },
     validation::{get_global_address, get_global_vault_address, get_vault_address},
 };
+#[cfg(feature = "certora")]
+use crate::program::batch_update::{CancelOrderParams, PlaceOrderParams};
+#[cfg(not(feature = "certora"))]
 use borsh::BorshSerialize;
 use hypertree::DataIndex;
+#[cfg(not(feature = "certora"))]
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program,
+};
+#[cfg(feature = "certora")]
+use solana_program::{
+    instruction::Instruction,
+    pubkey::Pubkey,
 };
 
 // Token programs are needed for global orders with token22. Only include if
@@ -82,5 +92,6 @@ pub fn batch_update_instruction(
     _quote_mint_opt: Option<Pubkey>,
     _quote_mint_token_program_opt: Option<Pubkey>,
 ) -> Instruction {
+    // Empty intentionally, just here so it compiles.
     todo!()
 }
