@@ -2,8 +2,7 @@ use super::verification_utils::init_static;
 use crate::{
     certora::spec::no_funds_loss_util::{
         cvt_assert_funds_invariants, cvt_assume_basic_market_preconditions,
-        cvt_assume_funds_invariants, record_all_balances_without_order,
-        AllBalances,
+        cvt_assume_funds_invariants, record_all_balances_without_order, AllBalances,
     },
     create_empty_market, cvt_static_initializer,
 };

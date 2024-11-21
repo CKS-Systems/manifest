@@ -1,23 +1,21 @@
 use cvt::{cvt_assert, cvt_assume};
 use nondet::*;
 
-use crate::*;
-use solana_program::account_info::AccountInfo;
-use state::{
-    is_ask_order_taken, is_bid_order_taken, main_ask_order_index, main_bid_order_index, OrderType,
-};
 use crate::{
     program::get_mut_dynamic_account,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        cvt_assume_second_trader_has_seat, get_helper_order,
-        is_ask_order_free, is_bid_order_free,
-        second_trader_index, DynamicAccount, MarketRefMut,
-        RestingOrder,
+        cvt_assume_second_trader_has_seat, get_helper_order, is_ask_order_free, is_bid_order_free,
+        second_trader_index, DynamicAccount, MarketRefMut, RestingOrder,
     },
+    *,
 };
 use hypertree::DataIndex;
 use solana_cvt::token::spl_token_account_get_amount;
+use solana_program::account_info::AccountInfo;
+use state::{
+    is_ask_order_taken, is_bid_order_taken, main_ask_order_index, main_bid_order_index, OrderType,
+};
 
 #[derive(Clone, Copy)]
 pub struct AllBalances {

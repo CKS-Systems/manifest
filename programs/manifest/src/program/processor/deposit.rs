@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use std::cell::RefMut;
 
 use crate::{
@@ -12,7 +11,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::DataIndex;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
-use super::{get_trader_index_with_hint, invoke, shared::get_mut_dynamic_account};
+use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
 
 #[cfg(feature = "certora")]
 use early_panic::early_panic;
@@ -135,7 +134,7 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
     payer: &Signer<'a, 'info>,
     amount: u64,
 ) -> ProgramResult {
-    invoke(
+    crate::program::invoke(
         &spl_token::instruction::transfer(
             token_program.key,
             trader_account.key,
@@ -176,7 +175,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
     amount: u64,
     decimals: u8,
 ) -> ProgramResult {
-    invoke(
+    crate::program::invoke(
         &spl_token_2022::instruction::transfer_checked(
             token_program.key,
             trader_account.key,

@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::{
-    program::ManifestError,
     require,
     state::{
         claimed_seat::ClaimedSeat, constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed,
@@ -13,25 +12,25 @@ use crate::{
     validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
 };
 use bytemuck::Pod;
-use hypertree::{get_helper, get_mut_helper, trace, DataIndex, Get, RBNode};
+use hypertree::{get_helper, get_mut_helper, DataIndex, Get, RBNode};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
     instruction::Instruction,
-    rent::Rent,
-    system_instruction,
-    sysvar::{slot_history::ProgramError, Sysvar},
+    sysvar::slot_history::ProgramError,
 };
+#[cfg(not(feature = "certora"))]
+use solana_program::sysvar::Sysvar;
 
 use super::batch_update::MarketDataTreeNodeType;
 
 pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
-    manifest_account: &ManifestAccountInfo<'a, 'info, T>,
+    market_account_info: &ManifestAccountInfo<'a, 'info, T>,
     system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
     let need_expand: bool = {
-        let market_data: &Ref<&mut [u8]> = &manifest_account.try_borrow_data()?;
+        let market_data: &Ref<&mut [u8]> = &market_account_info.try_borrow_data()?;
         let fixed: &MarketFixed = get_helper::<MarketFixed>(market_data, 0_u32);
         !fixed.has_free_block()
     };
@@ -39,7 +38,7 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
-    expand_market(payer, manifest_account, system_program)
+    expand_market(payer, market_account_info, system_program)
 }
 
 pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
@@ -86,7 +85,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let expandable_account: &AccountInfo = manifest_account.info;
     let new_size: usize = expandable_account.data_len() + block_size;
 
-    let rent: Rent = Rent::get()?;
+    let rent: solana_program::rent::Rent = solana_program::rent::Rent::get()?;
     let new_minimum_balance: u64 = rent.minimum_balance(new_size);
     let old_minimum_balance: u64 = rent.minimum_balance(expandable_account.data_len());
     let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
@@ -94,13 +93,8 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let payer: &AccountInfo = payer.info;
     let system_program: &AccountInfo = system_program.info;
 
-    trace!(
-        "expand_dynamic-> transfer {} {:?}",
-        lamports_diff,
-        expandable_account.key
-    );
     invoke(
-        &system_instruction::transfer(payer.key, expandable_account.key, lamports_diff),
+        &solana_program::system_instruction::transfer(payer.key, expandable_account.key, lamports_diff),
         &[
             payer.clone(),
             expandable_account.clone(),
@@ -108,15 +102,10 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
         ],
     )?;
 
-    trace!(
-        "expand_dynamic-> realloc {} {:?}",
-        new_size,
-        expandable_account.key
-    );
     #[cfg(feature = "fuzz")]
     {
         solana_program::program::invoke(
-            &system_instruction::allocate(expandable_account.key, new_size as u64),
+            &solana_program::system_instruction::allocate(expandable_account.key, new_size as u64),
             &[expandable_account.clone(), system_program.clone()],
         )?;
     }
@@ -201,7 +190,7 @@ fn verify_trader_index_hint(
 ) -> ProgramResult {
     require!(
         hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-        ManifestError::WrongIndexHintParams,
+        crate::program::ManifestError::WrongIndexHintParams,
         "Invalid trader hint index {} did not align",
         hinted_index,
     )?;
@@ -209,7 +198,7 @@ fn verify_trader_index_hint(
         get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
             .get_payload_type()
             == MarketDataTreeNodeType::ClaimedSeat as u8,
-        ManifestError::WrongIndexHintParams,
+        crate::program::ManifestError::WrongIndexHintParams,
         "Invalid trader hint index {} is not a ClaimedSeat",
         hinted_index,
     )?;
@@ -217,12 +206,14 @@ fn verify_trader_index_hint(
         payer
             .key
             .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
-        ManifestError::WrongIndexHintParams,
+        crate::program::ManifestError::WrongIndexHintParams,
         "Invalid trader hint index {} did not match payer",
         hinted_index
     )?;
     Ok(())
 }
+
+// TODO: Same for invoke_signed
 
 pub fn invoke(ix: &Instruction, account_infos: &[AccountInfo<'_>]) -> ProgramResult {
     #[cfg(target_os = "solana")]

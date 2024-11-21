@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use std::cell::RefMut;
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -6,7 +5,7 @@ use hypertree::{get_helper, trace, DataIndex, RBNode};
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 use crate::{
-    program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account, ManifestError},
+    program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     state::{utils::get_now_slot, GlobalRefMut, MarketRefMut, RestingOrder, MARKET_BLOCK_SIZE},
@@ -65,7 +64,7 @@ pub(crate) fn process_global_clean(
         // Sanity check on the order index
         require!(
             order_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-            ManifestError::WrongIndexHintParams,
+            crate::program::ManifestError::WrongIndexHintParams,
             "Invalid order index {}",
             order_index,
         )?;
@@ -73,7 +72,7 @@ pub(crate) fn process_global_clean(
             get_helper::<RBNode<RestingOrder>>(&market_dynamic_account.dynamic, order_index);
         require!(
             resting_order_node.get_payload_type() == MarketDataTreeNodeType::RestingOrder as u8,
-            ManifestError::WrongIndexHintParams,
+            crate::program::ManifestError::WrongIndexHintParams,
             "Invalid order index {}",
             order_index,
         )?;
@@ -89,7 +88,7 @@ pub(crate) fn process_global_clean(
         // Verify that the resting order uses the global account given.
         require!(
             *expected_global_mint == *global_mint,
-            ManifestError::InvalidClean,
+            crate::program::ManifestError::InvalidClean,
             "Wrong global provided",
         )?;
 
@@ -117,7 +116,7 @@ pub(crate) fn process_global_clean(
 
     require!(
         is_expired || maker_global_balance.as_u64() < required_global_atoms,
-        ManifestError::InvalidClean,
+        crate::program::ManifestError::InvalidClean,
         "Ineligible clean order index {}",
         order_index,
     )?;

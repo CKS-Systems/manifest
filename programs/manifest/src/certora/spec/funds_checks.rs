@@ -12,17 +12,12 @@ use crate::{
         withdraw::{process_withdraw_core, WithdrawParams},
     },
     quantities::{BaseAtoms, QuoteAtoms},
-    state::{
-        get_helper_order, AddOrderToMarketArgs,
-        DynamicAccount, MarketRefMut, RestingOrder,
-    },
+    state::{get_helper_order, AddOrderToMarketArgs, DynamicAccount, MarketRefMut, RestingOrder},
 };
 use hypertree::DataIndex;
 
 use crate::certora::spec::no_funds_loss_util::*;
-use state::{
-    main_trader_index, second_trader_index,
-};
+use state::{main_trader_index, second_trader_index};
 
 fn rule_deposit_check<const IS_BASE: bool>() {
     cvt_static_initializer!();

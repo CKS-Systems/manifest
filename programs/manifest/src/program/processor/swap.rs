@@ -1,11 +1,12 @@
-#![allow(unused_imports)]
+use std::cell::RefMut;
 
-use std::{borrow::BorrowMut, cell::RefMut};
-
+#[cfg(not(feature = "certora"))]
 use crate::{
-    logs::{emit_stack, PlaceOrderLog},
     market_vault_seeds_with_bump,
     program::{invoke, ManifestError},
+};
+use crate::{
+    logs::{emit_stack, PlaceOrderLog},
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -17,7 +18,7 @@ use crate::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{trace, DataIndex, NIL};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
 };
 
 use super::shared::get_mut_dynamic_account;
@@ -25,17 +26,11 @@ use super::shared::get_mut_dynamic_account;
 #[cfg(feature = "certora")]
 use {
     crate::certora::summaries::place_order::place_fully_match_order_with_same_base_and_quote,
-    crate::get_withdrawable_base_atoms,
-    crate::state::{get_helper_seat, update_balance},
     early_panic::early_panic,
-    nondet::nondet,
     solana_cvt::token::{spl_token_2022_transfer, spl_token_transfer},
 };
 
-use crate::{
-    state::claimed_seat::ClaimedSeat,
-    validation::{MintAccountInfo, Signer, TokenAccountInfo, TokenProgram},
-};
+use crate::validation::{MintAccountInfo, Signer, TokenAccountInfo, TokenProgram};
 use solana_program::program_error::ProgramError;
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -149,10 +144,10 @@ pub(crate) fn process_swap_core(
     // 4. Exact out base. Use the number of out atoms as the number of atoms to place_order against.
     let base_atoms: BaseAtoms = if is_exact_in {
         if is_base_in {
-            // input=max(base)* output=min(quote)
+            // input=desired(base) output=min(quote)
             BaseAtoms::new(in_atoms)
         } else {
-            // input=max(quote)* output=min(base)
+            // input=desired(quote)* output=min(base)
             // round down base amount to not cross quote limit
             dynamic_account.impact_base_atoms(
                 true,
@@ -162,7 +157,7 @@ pub(crate) fn process_swap_core(
         }
     } else {
         if is_base_in {
-            // input=max(base) output=min(quote)*
+            // input=max(base) output=desired(quote)
             // round up base amount to ensure not staying below quote limit
             dynamic_account.impact_base_atoms(
                 false,
@@ -170,7 +165,7 @@ pub(crate) fn process_swap_core(
                 &global_trade_accounts_opts,
             )?
         } else {
-            // input=max(quote) output=min(base)*
+            // input=max(quote) output=desired(base)
             BaseAtoms::new(out_atoms)
         }
     };
@@ -504,7 +499,7 @@ fn spl_token_transfer_from_vault_to_trader<'a, 'info>(
     vault_bump: u8,
     mint_pubkey: &Pubkey,
 ) -> ProgramResult {
-    invoke_signed(
+    solana_program::program::invoke_signed(
         &spl_token::instruction::transfer(
             token_program.key,
             vault.key,
@@ -549,7 +544,7 @@ fn spl_token_2022_transfer_from_vault_to_trader<'a, 'info>(
     market_key: &Pubkey,
     vault_bump: u8,
 ) -> ProgramResult {
-    invoke_signed(
+    solana_program::program::invoke_signed(
         &spl_token_2022::instruction::transfer_checked(
             token_program.key,
             vault.key,

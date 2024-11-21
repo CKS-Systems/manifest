@@ -13,8 +13,7 @@ use crate::{
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
     state::{
         market::market_helpers::{AddOrderStatus, AddOrderToMarketInnerResult, AddSingleOrderCtx},
-        AddOrderToMarketArgs, DynamicAccount,
-        MarketRefMut,
+        AddOrderToMarketArgs, DynamicAccount, MarketRefMut,
     },
 };
 use hypertree::DataIndex;

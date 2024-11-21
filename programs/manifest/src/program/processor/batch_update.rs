@@ -1,14 +1,13 @@
-#![allow(unused_imports)]
-use std::{cell::RefMut, mem::size_of};
+use std::cell::RefMut;
 
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
-    program::{get_trader_index_with_hint, ManifestError},
+    program::get_trader_index_with_hint,
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
-        claimed_seat::ClaimedSeat, get_helper_seat, utils::get_now_slot, AddOrderToMarketArgs,
-        AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder, MARKET_BLOCK_SIZE,
+        utils::get_now_slot, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
+        RestingOrder, MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -16,7 +15,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data,
+    account_info::AccountInfo, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey,
 };
 
@@ -139,10 +138,7 @@ impl BatchUpdateParams {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct BatchUpdateReturn {
     /// Vector of tuples of (order_sequence_number, DataIndex)
-    //#[cfg(not(feature = "certora"))]
     pub orders: Vec<(u64, DataIndex)>,
-    //#[cfg(feature = "certora")]
-    //pub orders: NoResizableVec<(u64, DataIndex)>,
 }
 
 #[repr(u8)]
@@ -261,7 +257,7 @@ pub(crate) fn process_batch_update_core(
                     // order owned by the payer inside the handler.
                     require!(
                         hinted_cancel_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-                        ManifestError::WrongIndexHintParams,
+                        crate::program::ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint index {}",
                         hinted_cancel_index,
                     )?;
@@ -272,7 +268,7 @@ pub(crate) fn process_batch_update_core(
                         )
                         .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder as u8,
-                        ManifestError::WrongIndexHintParams,
+                        crate::program::ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint index {}",
                         hinted_cancel_index,
                     )?;
@@ -280,13 +276,13 @@ pub(crate) fn process_batch_update_core(
                         dynamic_account.get_order_by_index(hinted_cancel_index);
                     require!(
                         trader_index == order.get_trader_index(),
-                        ManifestError::WrongIndexHintParams,
+                        crate::program::ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint index {}",
                         hinted_cancel_index,
                     )?;
                     require!(
                         cancel_order_params.order_sequence_number() == order.get_sequence_number(),
-                        ManifestError::WrongIndexHintParams,
+                        crate::program::ManifestError::WrongIndexHintParams,
                         "Invalid cancel hint sequence number index {}",
                         hinted_cancel_index,
                     )?;
@@ -358,14 +354,15 @@ pub(crate) fn process_batch_update_core(
         expand_market_if_needed(&payer, &market, &system_program)?;
     }
 
+    // Formal verification does not cover return values.
     #[cfg(not(feature = "certora"))]
     {
         let mut buffer: Vec<u8> = Vec::with_capacity(
-            size_of::<BatchUpdateReturn>() + result.len() * 2 * size_of::<u64>(),
+            std::mem::size_of::<BatchUpdateReturn>() + result.len() * 2 * std::mem::size_of::<u64>(),
         );
         let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
         return_data.serialize(&mut buffer).unwrap();
-        set_return_data(&buffer[..]);
+        solana_program::program::set_return_data(&buffer[..]);
     }
 
     Ok(())
