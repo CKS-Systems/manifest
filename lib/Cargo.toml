@@ -13,6 +13,9 @@ fuzz = []
 trace = []
 test = []
 
+# Certora feature exposes many of the internal implementation details, so should
+# only be used in formal verification. Ironically, the security testing makes
+# the code less secure.
 certora = ["dep:nondet", "dep:calltrace", "dep:cvt"]
 
 [dependencies]

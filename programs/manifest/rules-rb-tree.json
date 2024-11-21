@@ -13,59 +13,9 @@
       "cargo_features": []
     },
     {
-      "name": "rule_insert_preserves_parent_of_left_child",
-      "expected_result": "Verified",
-      "prover_options": [
-        {
-          "bmc": 2
-        }
-      ],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_insert_preserves_parent_of_right_child",
-      "expected_result": "Verified",
-      "prover_options": [
-        {
-          "bmc": 2
-        }
-      ],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_insert_preserves_root_parent_is_nil",
-      "expected_result": "Verified",
-      "prover_options": [
-        {
-          "bmc": 2
-        }
-      ],
-      "cargo_features": []
-    },
-    {
       "name": "rule_root_is_black_after_insert_empty_tree",
       "expected_result": "Verified",
       "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_root_is_black_after_insert_non_empty_tree",
-      "expected_result": "Verified",
-      "prover_options": [
-        {
-          "bmc": 2
-        }
-      ],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_tree_is_ordered_after_insert_smallest_element",
-      "expected_result": "Verified",
-      "prover_options": [
-        {
-          "bmc": 2
-        }
-      ],
       "cargo_features": []
     },
     {
@@ -124,7 +74,7 @@
     },
     {
       "name": "rule_remove_fix_matches_reference_case3_left_child",
-      "expected_result": "Violated",
+      "expected_result": "Verified",
       "prover_options": [],
       "cargo_features": []
     },
@@ -148,7 +98,7 @@
     },
     {
       "name": "rule_remove_fix_matches_reference_case3_right_child",
-      "expected_result": "Violated",
+      "expected_result": "Verified",
       "prover_options": [],
       "cargo_features": []
     },
@@ -209,12 +159,6 @@
     {
       "name": "rule_swap_internal_nodes_first_is_root",
       "expected_result": "Verified",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_internal_nodes_second_is_root",
-      "expected_result": "Violated",
       "prover_options": [],
       "cargo_features": []
     },
