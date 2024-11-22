@@ -13,14 +13,12 @@ use crate::{
 };
 use bytemuck::Pod;
 use hypertree::{get_helper, get_mut_helper, DataIndex, Get, RBNode};
-use solana_program::{
-    account_info::AccountInfo,
-    entrypoint::ProgramResult,
-    instruction::Instruction,
-    sysvar::slot_history::ProgramError,
-};
 #[cfg(not(feature = "certora"))]
 use solana_program::sysvar::Sysvar;
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
+    sysvar::slot_history::ProgramError,
+};
 
 use super::batch_update::MarketDataTreeNodeType;
 
@@ -94,7 +92,11 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let system_program: &AccountInfo = system_program.info;
 
     invoke(
-        &solana_program::system_instruction::transfer(payer.key, expandable_account.key, lamports_diff),
+        &solana_program::system_instruction::transfer(
+            payer.key,
+            expandable_account.key,
+            lamports_diff,
+        ),
         &[
             payer.clone(),
             expandable_account.clone(),

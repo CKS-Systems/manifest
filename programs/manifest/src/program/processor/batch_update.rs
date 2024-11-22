@@ -15,8 +15,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult,
-    program_error::ProgramError, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    pubkey::Pubkey,
 };
 
 use super::{expand_market_if_needed, shared::get_mut_dynamic_account};
@@ -358,7 +358,8 @@ pub(crate) fn process_batch_update_core(
     #[cfg(not(feature = "certora"))]
     {
         let mut buffer: Vec<u8> = Vec::with_capacity(
-            std::mem::size_of::<BatchUpdateReturn>() + result.len() * 2 * std::mem::size_of::<u64>(),
+            std::mem::size_of::<BatchUpdateReturn>()
+                + result.len() * 2 * std::mem::size_of::<u64>(),
         );
         let return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
         return_data.serialize(&mut buffer).unwrap();

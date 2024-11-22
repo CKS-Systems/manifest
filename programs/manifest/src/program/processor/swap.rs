@@ -1,10 +1,5 @@
 use std::cell::RefMut;
 
-#[cfg(not(feature = "certora"))]
-use crate::{
-    market_vault_seeds_with_bump,
-    program::{invoke, ManifestError},
-};
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
@@ -15,11 +10,14 @@ use crate::{
     },
     validation::loaders::SwapContext,
 };
+#[cfg(not(feature = "certora"))]
+use crate::{
+    market_vault_seeds_with_bump,
+    program::{invoke, ManifestError},
+};
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{trace, DataIndex, NIL};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
-};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 use super::shared::get_mut_dynamic_account;
 
