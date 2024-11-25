@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732261234901,
+  "lastUpdate": 1732550707196,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8483,6 +8483,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6092,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0689daebbec730daa5475aee1d10112f2dc61e94",
+          "message": "Sync audit formal verification (#294)\n\n* Certora's formal verification effort for Manifest (#259)\r\n\r\n* Certora's formal verification effort for Manifest\r\n- Verification rules are in `programs/manifest/src/certora/spec`\r\n- Mock for red-black tree in `cvt_db_mock.rs`\r\n- Mock for QuoteAtomsPerBaseAtoms in `quantities_certora.rs`\r\n- Uses conditional compilation with feature `certora` to plug in the mocks\r\n- See the accompanying audit report for additional details\r\n\r\n* specs: add rules for matching mechanism\r\n\r\n---------\r\n\r\nCo-authored-by: caballa <navasjorgea@gmail.com>\r\n\r\n* Fix build\r\n\r\n* More making certora compile\r\n\r\n* More fixes\r\n\r\n* add updated script\r\n\r\n* Fix verify\r\n\r\n* Update rbtree\r\n\r\n* Fix list of rules for violated rules\r\n\r\n* Remove expected to be violated rules\r\n\r\n* Cleanup\r\n\r\n* Update logs\r\n\r\n* comment on batch update\r\n\r\n* Processor\r\n\r\n* quantities\r\n\r\n* utils\r\n\r\n* Update github action\r\n\r\n* Fix lint\r\n\r\n* Fix unused\r\n\r\n* Unused\r\n\r\n* action remove with\r\n\r\n* remove container\r\n\r\n* remove container\r\n\r\n* Fix yml\r\n\r\n---------\r\n\r\nCo-authored-by: nisarg-certora <nisarg@certora.com>\r\nCo-authored-by: caballa <navasjorgea@gmail.com>",
+          "timestamp": "2024-11-25T10:38:22-05:00",
+          "tree_id": "7c4dbe377a3310d765cc78539da7411c64eab215",
+          "url": "https://github.com/CKS-Systems/manifest/commit/0689daebbec730daa5475aee1d10112f2dc61e94"
+        },
+        "date": 1732550705597,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3467,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5461,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6093,
             "unit": "CU",
             "range": "",
             "extra": ""
