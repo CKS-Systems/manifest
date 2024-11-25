@@ -1,15 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::state::{
-    market::{BaseAtoms, ClaimedSeat, MarketDataTreeNodeType, QuoteAtoms},
-    resting_order, ClaimedSeatTree, DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, MarketFixed,
-    RestingOrder, MARKET_BLOCK_SIZE,
-};
+use crate::state::{market::ClaimedSeat, RestingOrder, MARKET_BLOCK_SIZE};
 use hypertree::{get_helper, get_mut_helper, DataIndex, RBNode, NIL};
-use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
+use solana_program::pubkey::Pubkey;
 
-use crate::certora::utils::{alloc_havoced, memhavoc};
-use calltrace::cvt_cex_print_u64;
+use crate::certora::utils::alloc_havoced;
 use cvt::{cvt_assert, cvt_assume};
 use nondet::nondet;
 

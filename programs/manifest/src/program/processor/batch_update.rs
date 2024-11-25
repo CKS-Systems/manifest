@@ -156,7 +156,7 @@ pub(crate) fn process_batch_update(
     accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
-    let params = BatchUpdateParams::try_from_slice(data)?;
+    let params: BatchUpdateParams = BatchUpdateParams::try_from_slice(data)?;
     process_batch_update_core(program_id, accounts, params)
 }
 

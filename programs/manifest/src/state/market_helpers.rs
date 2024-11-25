@@ -73,10 +73,7 @@ mod free_addr_helpers {
 
 #[cfg(feature = "certora")]
 mod free_addr_helpers {
-    use crate::state::{
-        constants::MARKET_BLOCK_SIZE,
-        market::{MarketFixed, MarketUnusedFreeListPadding},
-    };
+    use crate::state::market::MarketFixed;
 
     use super::{is_main_seat_free, is_second_seat_free, main_trader_index, second_trader_index};
     use hypertree::DataIndex;
@@ -85,7 +82,7 @@ mod free_addr_helpers {
         _fixed: &mut MarketFixed,
         _dynamic: &mut [u8],
     ) -> DataIndex {
-        // -- return slot of the first available trader
+        // -- return index of the first available trader
         if is_main_seat_free() {
             main_trader_index()
         } else if is_second_seat_free() {
@@ -144,8 +141,6 @@ mod free_addr_helpers {
 
 pub use free_addr_helpers::*;
 
-use crate::state::dynamic_account;
-
 // Refactoring of place_order
 
 use super::*;
@@ -194,6 +189,7 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
             total_quote_atoms_traded: QuoteAtoms::ZERO,
         }
     }
+    // TODO: Clean this up or prove that it is the same as market::place_order
     pub fn place_single_order(
         &mut self,
         current_order_index: DataIndex,
@@ -339,10 +335,8 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
             // These are only used when is_bid, included up here for borrow checker reasons.
             let other_order: &RestingOrder =
                 get_helper_order(dynamic, current_order_index).get_value();
-            // The following creates a violation at some point.
             let previous_maker_quote_atoms_allocated: QuoteAtoms =
                 matched_price.checked_quote_for_base(other_order.get_num_base_atoms(), true)?;
-            // let previous_maker_quote_atoms_allocated = quote_atoms_traded;
             let new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
                 .checked_quote_for_base(
                     other_order
@@ -358,7 +352,6 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 true,
                 (previous_maker_quote_atoms_allocated
                     .checked_sub(new_maker_quote_atoms_allocated)?
-                    // .checked_sub(QuoteAtoms::new(0))?
                     .checked_sub(quote_atoms_traded)?)
                 .as_u64(),
             )?;
@@ -436,22 +429,10 @@ impl<'a, 'b, 'info> AddSingleOrderCtx<'a, 'b, 'info> {
                 .get_order_type()
                 == OrderType::Global
             {
-                #[cfg(not(feature = "certora"))]
-                {
-                    let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                        &global_trade_accounts_opts[0]
-                    } else {
-                        &global_trade_accounts_opts[1]
-                    };
-                    remove_from_global(&global_trade_accounts_opt)?;
-                }
-                #[cfg(feature = "certora")]
-                {
-                    if is_bid {
-                        remove_from_global(&global_trade_accounts_opts[0])?;
-                    } else {
-                        remove_from_global(&global_trade_accounts_opts[1])?;
-                    }
+                if is_bid {
+                    remove_from_global(&global_trade_accounts_opts[0])?;
+                } else {
+                    remove_from_global(&global_trade_accounts_opts[1])?;
                 }
             }
 
@@ -516,7 +497,8 @@ pub fn place_order_helper<
 
     let mut remaining_base_atoms: BaseAtoms = num_base_atoms;
 
-    let mut ctx = AddSingleOrderCtx::new(args, fixed, dynamic, remaining_base_atoms, now_slot);
+    let mut ctx: AddSingleOrderCtx =
+        AddSingleOrderCtx::new(args, fixed, dynamic, remaining_base_atoms, now_slot);
 
     while remaining_base_atoms > BaseAtoms::ZERO && is_not_nil!(current_order_index) {
         // one step of placing an order
@@ -540,7 +522,7 @@ pub fn place_order_helper<
         }
     }
     // move out args so that they can be used later
-    let args = ctx.args;
+    let args: AddOrderToMarketArgs = ctx.args;
     // ctx is dead from this point onward
 
     // Record volume on market

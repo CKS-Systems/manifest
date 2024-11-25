@@ -176,7 +176,7 @@ macro_rules! rest_remaining {
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         // let DynamicAccount { fixed, .. } = dynamic_account;
         dynamic_account
-            .rest_remaining(
+            .certora_rest_remaining(
                 $args,
                 $remaining_base_atoms,
                 $order_sequence_number,

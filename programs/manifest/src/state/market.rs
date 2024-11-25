@@ -1,18 +1,18 @@
-#![allow(unused_imports)]
 #[cfg(feature = "certora")]
 use {
-    crate::certora::hooks::*,
-    crate::certora::summaries::impact_base_atoms::impact_base_atoms,
-    calltrace::*,
-    hook_macro::cvt_hook_end,
-    nondet::{nondet, Nondet},
+    crate::certora::hooks::*, crate::certora::summaries::impact_base_atoms::impact_base_atoms,
+    hook_macro::cvt_hook_end, nondet::nondet,
 };
 
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
-    get_helper, get_mut_helper, is_not_nil, trace, DataIndex, FreeList, FreeListNode, Get,
-    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
-    RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
+    get_helper, get_mut_helper, is_not_nil, trace, DataIndex, FreeList, FreeListNode, Get, PodBool,
+    RBNode, NIL,
+};
+#[cfg(not(feature = "certora"))]
+use hypertree::{
+    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RedBlackTree,
+    RedBlackTreeReadOnly,
 };
 use shank::ShankType;
 use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
@@ -41,8 +41,8 @@ use super::{
         assert_already_has_seat, assert_not_already_expired, can_back_order, get_now_slot,
         try_to_add_to_global,
     },
-    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, CLAIMED_SEAT_SIZE,
-    MARKET_FIXED_DISCRIMINANT, MARKET_FREE_LIST_BLOCK_SIZE,
+    DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
+    MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
 #[path = "market_helpers.rs"]
@@ -184,6 +184,8 @@ pub struct MarketFixed {
     /// Use at your own risk.
     quote_volume: QuoteAtoms,
 
+    // These are not included in the normal usage because they are informational
+    // only and not worth the CU.
     #[cfg(feature = "certora")]
     /// Base tokens reserved for seats
     withdrawable_base_atoms: BaseAtoms,
@@ -255,9 +257,6 @@ impl MarketFixed {
             base_vault,
             quote_vault,
             order_sequence_number: 0,
-            #[cfg(not(feature = "certora"))]
-            num_bytes_allocated: 0,
-            #[cfg(feature = "certora")]
             num_bytes_allocated: 0,
             bids_root_index: NIL,
             bids_best_index: NIL,
@@ -532,7 +531,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         return Ok(total_matched_quote_atoms);
     }
 
-    /// How many base atoms you get when you trade in limit_quote_atoms.
+    // Simplified version for certora. Those checks are actually stronger than
+    // needed since it shows invariants hold on swap even when impact_base_atoms
+    // returns a wrong value.
     #[cfg(feature = "certora")]
     pub fn impact_base_atoms(
         &self,
@@ -543,6 +544,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         impact_base_atoms(self, is_bid, limit_quote_atoms, global_trade_accounts_opts)
     }
 
+    /// How many base atoms you get when you trade in limit_quote_atoms.
     #[cfg(not(feature = "certora"))]
     pub fn impact_base_atoms(
         &self,
@@ -1122,22 +1124,10 @@ impl<
                     .get_order_type()
                     == OrderType::Global
                 {
-                    #[cfg(not(feature = "certora"))]
-                    {
-                        let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                            &global_trade_accounts_opts[0]
-                        } else {
-                            &global_trade_accounts_opts[1]
-                        };
-                        remove_from_global(&global_trade_accounts_opt)?;
-                    }
-                    #[cfg(feature = "certora")]
-                    {
-                        if is_bid {
-                            remove_from_global(&global_trade_accounts_opts[0])?;
-                        } else {
-                            remove_from_global(&global_trade_accounts_opts[1])?;
-                        }
+                    if is_bid {
+                        remove_from_global(&global_trade_accounts_opts[0])?;
+                    } else {
+                        remove_from_global(&global_trade_accounts_opts[1])?;
                     }
                 }
 
@@ -1200,7 +1190,25 @@ impl<
     }
 
     /// Rest the remaining order onto the market in a RestingOrder.
-    pub fn rest_remaining(
+    #[cfg(feature = "certora")]
+    pub fn certora_rest_remaining(
+        &mut self,
+        args: AddOrderToMarketArgs,
+        remaining_base_atoms: BaseAtoms,
+        order_sequence_number: u64,
+        total_base_atoms_traded: BaseAtoms,
+        total_quote_atoms_traded: QuoteAtoms,
+    ) -> Result<AddOrderToMarketResult, ProgramError> {
+        self.rest_remaining(
+            args,
+            remaining_base_atoms,
+            order_sequence_number,
+            total_base_atoms_traded,
+            total_quote_atoms_traded,
+        )
+    }
+
+    fn rest_remaining(
         &mut self,
         args: AddOrderToMarketArgs,
         remaining_base_atoms: BaseAtoms,
@@ -1237,45 +1245,22 @@ impl<
         )?;
 
         if resting_order.is_global() {
-            #[cfg(not(feature = "certora"))]
-            {
-                let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                    &global_trade_accounts_opts[1]
-                } else {
-                    &global_trade_accounts_opts[0]
-                };
+            if is_bid {
+                let global_trade_account_opt = &global_trade_accounts_opts[1];
                 require!(
-                    global_trade_accounts_opt.is_some(),
+                    global_trade_account_opt.is_some(),
                     ManifestError::MissingGlobal,
                     "Missing global accounts when adding a global",
                 )?;
-                try_to_add_to_global(&global_trade_accounts_opt.as_ref().unwrap(), &resting_order)?;
-            }
-            #[cfg(feature = "certora")]
-            {
-                if is_bid {
-                    let global_trade_account_opt = &global_trade_accounts_opts[1];
-                    require!(
-                        global_trade_account_opt.is_some(),
-                        ManifestError::MissingGlobal,
-                        "Missing global accounts when adding a global",
-                    )?;
-                    try_to_add_to_global(
-                        &global_trade_account_opt.as_ref().unwrap(),
-                        &resting_order,
-                    )?;
-                } else {
-                    let global_trade_account_opt = &global_trade_accounts_opts[0];
-                    require!(
-                        global_trade_account_opt.is_some(),
-                        ManifestError::MissingGlobal,
-                        "Missing global accounts when adding a global",
-                    )?;
-                    try_to_add_to_global(
-                        &global_trade_account_opt.as_ref().unwrap(),
-                        &resting_order,
-                    )?;
-                }
+                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
+            } else {
+                let global_trade_account_opt = &global_trade_accounts_opts[0];
+                require!(
+                    global_trade_account_opt.is_some(),
+                    ManifestError::MissingGlobal,
+                    "Missing global accounts when adding a global",
+                )?;
+                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
             }
         } else {
             // Place the remaining.
@@ -1316,12 +1301,9 @@ impl<
 
         let mut index_to_remove: DataIndex = NIL;
 
-        // This is the first iteration of the loop that has been manually unrolled here
-        let tree: BooksideReadOnly = if false {
-            BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
-        } else {
-            BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
-        };
+        // One iteration to find the index to cancel in the ask side.
+        let tree: BooksideReadOnly =
+            BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
         for (index, resting_order) in tree.iter::<RestingOrder>() {
             if resting_order.get_sequence_number() == order_sequence_number {
                 require!(
@@ -1338,18 +1320,9 @@ impl<
             }
         }
 
-        if is_not_nil!(index_to_remove) {
-            // Cancel order by index will update balances.
-            self.cancel_order_by_index(index_to_remove, global_trade_accounts_opts)?;
-            return Ok(());
-        }
-
-        // This is the second iteration of the loop that has been manually unrolled here
-        let tree: BooksideReadOnly = if true {
-            BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
-        } else {
-            BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
-        };
+        // Second iteration to find the index to cancel in the bid side.
+        let tree: BooksideReadOnly =
+            BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
         for (index, resting_order) in tree.iter::<RestingOrder>() {
             if resting_order.get_sequence_number() == order_sequence_number {
                 require!(
@@ -1383,6 +1356,9 @@ impl<
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
+        // TODO: Undo expansion here when it was just
+        // remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)?;
+        // because the tracking for
 
         let resting_order: &RestingOrder = get_helper_order(dynamic, order_index).get_value();
         let is_bid: bool = resting_order.get_is_bid();
@@ -1398,23 +1374,19 @@ impl<
 
         // Update the accounting for the order that was just canceled.
         if resting_order.is_global() {
-            #[cfg(not(feature = "certora"))]
-            {
-                let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
-                    &global_trade_accounts_opts[1]
-                } else {
-                    &global_trade_accounts_opts[0]
-                };
-                remove_from_global(&global_trade_accounts_opt)?
+            if is_bid {
+                remove_from_global(&global_trade_accounts_opts[1])?;
+            } else {
+                remove_from_global(&global_trade_accounts_opts[0])?;
             }
+
+            // Certora version was equivalent except it returned early here.
+            // Thats a bug, but keeping the certora code as close to what they
+            // wrote as possible. Formal verification does not cover global, so
+            // that would explain why introducing this bug for formal
+            // verification does not cause failures.
             #[cfg(feature = "certora")]
-            {
-                if is_bid {
-                    return remove_from_global(&global_trade_accounts_opts[1]);
-                } else {
-                    return remove_from_global(&global_trade_accounts_opts[0]);
-                }
-            }
+            return Ok(());
         } else {
             update_balance(
                 fixed,
@@ -1431,13 +1403,6 @@ impl<
     }
 }
 
-#[cfg(not(feature = "certora"))]
-fn set_payload_order(dynamic: &mut [u8], free_address: DataIndex) {
-    get_mut_helper_order(dynamic, free_address)
-        .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
-}
-
-#[cfg(feature = "certora")]
 fn set_payload_order(dynamic: &mut [u8], free_address: DataIndex) {
     get_mut_helper_order(dynamic, free_address)
         .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
@@ -1525,6 +1490,7 @@ fn remove_order_from_tree_and_free(
     is_bids: bool,
 ) -> ProgramResult {
     remove_order_from_tree(fixed, dynamic, order_index, is_bids)?;
+    // Separate release functions because certora needs that.
     if is_bids {
         release_address_on_market_fixed_for_bid_order(fixed, dynamic, order_index);
     } else {
@@ -1551,9 +1517,6 @@ pub fn update_balance(
     // the new value to the sum.
     #[cfg(feature = "certora")]
     {
-        // We could assume that the sum is bigger than its part with these axioms.
-        //cvt_assume!(fixed.withdrawable_base_atoms >= claimed_seat.base_withdrawable_balance);
-        //cvt_assume!(fixed.withdrawable_quote_atoms >= claimed_seat.quote_withdrawable_balance);
         fixed.withdrawable_base_atoms = fixed
             .withdrawable_base_atoms
             .saturating_sub(claimed_seat.base_withdrawable_balance);
@@ -1694,23 +1657,10 @@ fn remove_and_update_balances(
 
     // Global order balances are accounted for on the global accounts, not on the market.
     if resting_order_to_remove.is_global() {
-        #[cfg(not(feature = "certora"))]
-        {
-            let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if order_to_remove_is_bid
-            {
-                &global_trade_accounts_opts[1]
-            } else {
-                &global_trade_accounts_opts[0]
-            };
-            remove_from_global(&global_trade_accounts_opt)?;
-        }
-        #[cfg(feature = "certora")]
-        {
-            if order_to_remove_is_bid {
-                remove_from_global(&global_trade_accounts_opts[1])?;
-            } else {
-                remove_from_global(&global_trade_accounts_opts[0])?;
-            }
+        if order_to_remove_is_bid {
+            remove_from_global(&global_trade_accounts_opts[1])?;
+        } else {
+            remove_from_global(&global_trade_accounts_opts[0])?;
         }
     } else {
         // Return the exact number of atoms if the resting order is an
