@@ -11,7 +11,6 @@ jobs:
   verification:
     name: Formal Verification
     runs-on: ubuntu-latest
-    container: public.ecr.aws/certora/cvt-image:2024.10.16-4480-c8870b3
 
     steps:
       - name: Checkout
