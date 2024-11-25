@@ -1,10 +1,3 @@
-#![allow(unused_macros)]
-#![allow(unused_imports)]
-
-use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
-
-use crate::program::get_dynamic_account;
-
 #[macro_export]
 macro_rules! create_empty_market {
     ($market_acc_info:expr) => {{
@@ -239,7 +232,7 @@ pub fn memhavoc(data: *mut u8, size: usize) {
 }
 
 pub fn alloc_havoced<T: Sized>() -> *mut T {
-    use std::alloc::{alloc, Layout};
+    use std::alloc::Layout;
     let layout = Layout::new::<T>();
     unsafe {
         let ptr = std::alloc::alloc(layout);
