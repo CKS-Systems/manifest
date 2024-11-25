@@ -18,15 +18,15 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v5
 
-      -name: Install certora CLI
+      - name: Install certora CLI
         run: pip install certora-cli
 
-      -name: Install solana
+      - name: Install solana
         run: |
-        sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
-        export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 
-      -name: Install certora platform tools
+      - name: Install certora platform tools
         run: |
           mkdir $HOME/platform-tools-certora
           wget https://github.com/Certora/certora-solana-platform-tools/releases/download/linux-x86_64-ubuntu-20.04-10-22-2024/platform-tools-linux-x86_64.tar.bz2
@@ -36,10 +36,10 @@ jobs:
           mv $PLATFORM_TOOLS_DIR/platform-tools $PLATFORM_TOOLS_DIR/platform-tools.backup
           ln -sf $HOME/platform-tools-certora $PLATFORM_TOOLS_DIR/platform-tools
 
-      -name: Install just
-        - uses: extractions/setup-just@v2
+      - name: Install just
+        uses: extractions/setup-just@v2
 
-      -name: Run formal verification
+      - name: Run formal verification
         run: |
           cd programs/manifest
           just build-sbf
