@@ -273,9 +273,33 @@
 <a href="#271" id="271">271</a>
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span><span class="kw">crate</span>::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span><span class="kw">crate</span>::quantities::{QuoteAtoms, WrapperU64};
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{DataIndex, PodBool};
@@ -400,7 +424,13 @@
         <span class="self">self</span>.order_type
     }
 
-    <span class="kw">pub fn </span>is_global(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>is_global(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="bool-val">false
+    </span>}
+
+    <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span><span class="kw">pub fn </span>is_global(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.order_type == OrderType::Global
     }
 
@@ -415,6 +445,20 @@
     <span class="kw">pub fn </span>get_is_bid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.is_bid.<span class="number">0 </span>== <span class="number">1
     </span>}
+
+    <span class="comment">// compute the "value" of an order, i.e. the tokens that are reserved for the trade and
+    // that will be returned when it is cancelled.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_orderbook_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(BaseAtoms, QuoteAtoms), ProgramError&gt; {
+        <span class="kw">if </span><span class="self">self</span>.is_global() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((BaseAtoms::new(<span class="number">0</span>), QuoteAtoms::new(<span class="number">0</span>)));
+        } <span class="kw">else if </span><span class="self">self</span>.get_is_bid() {
+            <span class="kw">let </span>quote_amount = <span class="self">self</span>.num_base_atoms.checked_mul(<span class="self">self</span>.price, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((BaseAtoms::new(<span class="number">0</span>), quote_amount));
+        } <span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="self">self</span>.num_base_atoms, QuoteAtoms::new(<span class="number">0</span>)));
+        }
+    }
 
     <span class="kw">pub fn </span>reduce(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: BaseAtoms) -&gt; ProgramResult {
         <span class="self">self</span>.num_base_atoms = <span class="self">self</span>.num_base_atoms.checked_sub(size)<span class="question-mark">?</span>;

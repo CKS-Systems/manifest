@@ -644,7 +644,6 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The global order state stores information about all global orders for a given token.
 ///
 /// The reason for global orders to be sharded by token is that it will make it
@@ -659,11 +658,10 @@
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 <span class="kw">use </span>shank::ShankType;
-<span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
+<span class="kw">use </span>solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 <span class="kw">use </span>static_assertions::const_assert_eq;
 
 <span class="kw">use crate</span>::{
-    program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{get_global_address, get_global_vault_address, ManifestAccount},
@@ -846,7 +844,7 @@
         <span class="comment">// Check the discriminant to make sure it is a global account.
         </span><span class="macro">require!</span>(
             <span class="self">self</span>.discriminant == GLOBAL_FIXED_DISCRIMINANT,
-            ProgramError::InvalidAccountData,
+            solana_program::program_error::ProgramError::InvalidAccountData,
             <span class="string">"Invalid market discriminant actual: {} expected: {}"</span>,
             <span class="self">self</span>.discriminant,
             GLOBAL_FIXED_DISCRIMINANT
@@ -916,7 +914,7 @@
             get_global_trader(fixed, dynamic, trader);
         <span class="macro">require!</span>(
             existing_global_trader_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global trader for {}"</span>,
             trader
         )<span class="question-mark">?</span>;
@@ -934,7 +932,7 @@
 
         <span class="macro">require!</span>(
             existing_deposit_index == fixed.global_deposits_max_index,
-            ManifestError::GlobalInsufficient,
+            <span class="kw">crate</span>::program::ManifestError::GlobalInsufficient,
             <span class="string">"Only can remove trader with lowest deposit"
         </span>)<span class="question-mark">?</span>;
 
@@ -957,7 +955,7 @@
 
         <span class="macro">require!</span>(
             fixed.free_list_head_index == NIL,
-            ManifestError::InvalidFreeList,
+            <span class="kw">crate</span>::program::ManifestError::InvalidFreeList,
             <span class="string">"Expected empty free list, but expand wasnt needed"</span>,
         )<span class="question-mark">?</span>;
 
@@ -978,7 +976,7 @@
             get_mut_global_deposit(fixed, dynamic, trader);
         <span class="macro">require!</span>(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global deposit for {}"</span>,
             trader
         )<span class="question-mark">?</span>;
@@ -999,7 +997,7 @@
 
         <span class="macro">require!</span>(
             global_trader_tree.lookup_index(<span class="kw-2">&amp;</span>global_trader) == NIL,
-            ManifestError::AlreadyClaimedSeat,
+            <span class="kw">crate</span>::program::ManifestError::AlreadyClaimedSeat,
             <span class="string">"Already claimed global trader seat"</span>,
         )<span class="question-mark">?</span>;
 
@@ -1007,7 +1005,7 @@
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
         <span class="macro">require!</span>(
             fixed.num_seats_claimed &lt; MAX_GLOBAL_SEATS,
-            ManifestError::TooManyGlobalSeats,
+            <span class="kw">crate</span>::program::ManifestError::TooManyGlobalSeats,
             <span class="string">"There is a strict limit on number of seats available in a global, use evict"</span>,
         )<span class="question-mark">?</span>;
 
@@ -1038,7 +1036,7 @@
             get_global_trader(fixed, dynamic, existing_trader);
         <span class="macro">require!</span>(
             existing_global_trader_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global trader for {}"</span>,
             existing_trader
         )<span class="question-mark">?</span>;
@@ -1048,7 +1046,7 @@
             get_mut_global_deposit(fixed, dynamic, existing_trader);
         <span class="macro">require!</span>(
             existing_global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global deposit for {}"</span>,
             existing_trader
         )<span class="question-mark">?</span>;
@@ -1057,7 +1055,7 @@
         <span class="kw">let </span>existing_global_atoms_deposited: GlobalAtoms = existing_global_deposit.balance_atoms;
         <span class="macro">require!</span>(
             existing_global_atoms_deposited == GlobalAtoms::ZERO,
-            ManifestError::GlobalInsufficient,
+            <span class="kw">crate</span>::program::ManifestError::GlobalInsufficient,
             <span class="string">"Error in emptying the existing global"</span>,
         )<span class="question-mark">?</span>;
 
@@ -1076,7 +1074,7 @@
                 GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
             <span class="macro">require!</span>(
                 existing_deposit_index == fixed.global_deposits_max_index,
-                ManifestError::GlobalInsufficient,
+                <span class="kw">crate</span>::program::ManifestError::GlobalInsufficient,
                 <span class="string">"Only can remove trader with lowest deposit"
             </span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>new_global_trader: GlobalTrader =
@@ -1087,7 +1085,7 @@
             <span class="comment">// Cannot claim an extra seat.
             </span><span class="macro">require!</span>(
                 global_trader_tree.lookup_index(<span class="kw-2">&amp;</span>new_global_trader) == NIL,
-                ManifestError::AlreadyClaimedSeat,
+                <span class="kw">crate</span>::program::ManifestError::AlreadyClaimedSeat,
                 <span class="string">"Already claimed global trader seat"</span>,
             )<span class="question-mark">?</span>;
 
@@ -1138,7 +1136,7 @@
                 get_mut_global_deposit(fixed, dynamic, global_trade_owner);
             <span class="macro">require!</span>(
                 global_deposit_opt.is_some(),
-                ManifestError::MissingGlobal,
+                <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
                 <span class="string">"Could not find global deposit for {}"</span>,
                 global_trade_owner
             )<span class="question-mark">?</span>;
@@ -1150,7 +1148,7 @@
             // an informational safety check.
             </span><span class="macro">require!</span>(
                 num_global_atoms &lt;= global_atoms_deposited,
-                ManifestError::GlobalInsufficient,
+                <span class="kw">crate</span>::program::ManifestError::GlobalInsufficient,
                 <span class="string">"Insufficient funds for global order needed {} has {}"</span>,
                 num_global_atoms,
                 global_atoms_deposited
@@ -1167,7 +1165,7 @@
             get_mut_global_deposit(fixed, dynamic, trader);
         <span class="macro">require!</span>(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global deposit for {}"</span>,
             trader
         )<span class="question-mark">?</span>;
@@ -1184,7 +1182,7 @@
             get_mut_global_deposit(fixed, dynamic, trader);
         <span class="macro">require!</span>(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Could not find global deposit for {}"</span>,
             trader
         )<span class="question-mark">?</span>;

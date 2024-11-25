@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["trace"],"mod":["free_list","hypertree","llrb","red_black_tree","utils"]};
+window.SIDEBAR_ITEMS = {"macro":["eq_nil","is_nil","is_not_nil","trace"],"mod":["free_list","hypertree","llrb","red_black_tree","utils"]};

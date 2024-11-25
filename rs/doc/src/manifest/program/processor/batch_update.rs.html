@@ -283,11 +283,98 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::RefMut, mem::size_of};
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
-    program::{get_trader_index_with_hint, ManifestError},
+    program::get_trader_index_with_hint,
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -297,12 +384,22 @@
     validation::loaders::BatchUpdateContext,
 };
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
+
 <span class="kw">use </span>hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
 <span class="kw">use </span>solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::set_return_data, pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    pubkey::Pubkey,
 };
 
 <span class="kw">use super</span>::{expand_market_if_needed, shared::get_mut_dynamic_account};
+
+<span class="kw">use </span><span class="kw">crate</span>::validation::loaders::GlobalTradeAccounts;
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>{
+    <span class="kw">crate</span>::certora::mocks_batch_update::{mock_cancel_order, mock_place_order},
+    early_panic::early_panic,
+    vectors::no_resizable_vec::NoResizableVec,
+};
 
 <span class="attr">#[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 </span><span class="kw">pub struct </span>CancelOrderParams {
@@ -384,15 +481,23 @@
 </span><span class="kw">pub struct </span>BatchUpdateParams {
     <span class="doccomment">/// Optional hint for what index the trader's ClaimedSeat is at.
     </span><span class="kw">pub </span>trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
-    <span class="kw">pub </span>cancels: Vec&lt;CancelOrderParams&gt;,
-    <span class="kw">pub </span>orders: Vec&lt;PlaceOrderParams&gt;,
+    <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span><span class="kw">pub </span>cancels: Vec&lt;CancelOrderParams&gt;,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub </span>cancels: NoResizableVec&lt;CancelOrderParams&gt;,
+    <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span><span class="kw">pub </span>orders: Vec&lt;PlaceOrderParams&gt;,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub </span>orders: NoResizableVec&lt;PlaceOrderParams&gt;,
 }
 
 <span class="kw">impl </span>BatchUpdateParams {
     <span class="kw">pub fn </span>new(
         trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
-        cancels: Vec&lt;CancelOrderParams&gt;,
-        orders: Vec&lt;PlaceOrderParams&gt;,
+        <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))] </span>cancels: Vec&lt;CancelOrderParams&gt;,
+        <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)] </span>cancels: NoResizableVec&lt;CancelOrderParams&gt;,
+        <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))] </span>orders: Vec&lt;PlaceOrderParams&gt;,
+        <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)] </span>orders: NoResizableVec&lt;PlaceOrderParams&gt;,
     ) -&gt; <span class="self">Self </span>{
         BatchUpdateParams {
             trader_index_hint,
@@ -419,11 +524,67 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_batch_update(
-    _program_id: <span class="kw-2">&amp;</span>Pubkey,
+    program_id: <span class="kw-2">&amp;</span>Pubkey,
     accounts: <span class="kw-2">&amp;</span>[AccountInfo],
     data: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; ProgramResult {
+    <span class="kw">let </span>params: BatchUpdateParams = BatchUpdateParams::try_from_slice(data)<span class="question-mark">?</span>;
+    process_batch_update_core(program_id, accounts, params)
+}
+
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">fn </span>batch_cancel_order(
+    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    trader_index: DataIndex,
+    order_sequence_number: u64,
+    global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+) -&gt; ProgramResult {
+    dynamic_account.cancel_order(
+        trader_index,
+        order_sequence_number,
+        <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+    )
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">fn </span>batch_cancel_order(
+    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    trader_index: DataIndex,
+    order_sequence_number: u64,
+    global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+) -&gt; ProgramResult {
+    mock_cancel_order(
+        <span class="kw-2">&amp;</span>dynamic_account,
+        trader_index,
+        order_sequence_number,
+        <span class="kw-2">&amp;</span>global_trade_accounts_opts,
+    )
+}
+
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">fn </span>batch_place_order(
+    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    args: AddOrderToMarketArgs,
+) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
+    dynamic_account.place_order(args)
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">fn </span>batch_place_order(
+    dynamic_account: <span class="kw-2">&amp;mut </span>MarketRefMut,
+    args: AddOrderToMarketArgs,
+) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
+    mock_place_order(dynamic_account, args)
+}
+
+<span class="attr">#[cfg_attr(all(feature = <span class="string">"certora"</span>, not(feature = <span class="string">"certora-test"</span>)), early_panic)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_batch_update_core(
+    _program_id: <span class="kw-2">&amp;</span>Pubkey,
+    accounts: <span class="kw-2">&amp;</span>[AccountInfo],
+    params: BatchUpdateParams,
+) -&gt; ProgramResult {
     <span class="kw">let </span>batch_update_context: BatchUpdateContext = BatchUpdateContext::load(accounts)<span class="question-mark">?</span>;
+
     <span class="kw">let </span>BatchUpdateContext {
         market,
         payer,
@@ -435,7 +596,7 @@
         trader_index_hint,
         cancels,
         orders,
-    } = BatchUpdateParams::try_from_slice(data)<span class="question-mark">?</span>;
+    } = params;
 
     <span class="kw">let </span>current_slot: <span class="prelude-ty">Option</span>&lt;u32&gt; = <span class="prelude-val">Some</span>(get_now_slot());
 
@@ -443,6 +604,7 @@
 
     <span class="kw">let </span>trader_index: DataIndex = {
         <span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>market.try_borrow_mut_data()<span class="question-mark">?</span>;
+
         <span class="kw">let </span><span class="kw-2">mut </span>dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         <span class="kw">let </span>trader_index: DataIndex =
             get_trader_index_with_hint(trader_index_hint, <span class="kw-2">&amp;</span>dynamic_account, <span class="kw-2">&amp;</span>payer)<span class="question-mark">?</span>;
@@ -454,7 +616,8 @@
             </span><span class="kw">match </span>cancel_order_params.order_index_hint() {
                 <span class="prelude-val">None </span>=&gt; {
                     <span class="comment">// Cancels must succeed otherwise we fail the tx.
-                    </span>dynamic_account.cancel_order(
+                    </span>batch_cancel_order(
+                        <span class="kw-2">&amp;mut </span>dynamic_account,
                         trader_index,
                         cancel_order_params.order_sequence_number(),
                         <span class="kw-2">&amp;</span>global_trade_accounts_opts,
@@ -466,7 +629,7 @@
                     // order owned by the payer inside the handler.
                     </span><span class="macro">require!</span>(
                         hinted_cancel_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
-                        ManifestError::WrongIndexHintParams,
+                        <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint index {}"</span>,
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
@@ -477,7 +640,7 @@
                         )
                         .get_payload_type()
                             == MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8,
-                        ManifestError::WrongIndexHintParams,
+                        <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint index {}"</span>,
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
@@ -485,13 +648,13 @@
                         dynamic_account.get_order_by_index(hinted_cancel_index);
                     <span class="macro">require!</span>(
                         trader_index == order.get_trader_index(),
-                        ManifestError::WrongIndexHintParams,
+                        <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint index {}"</span>,
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
                     <span class="macro">require!</span>(
                         cancel_order_params.order_sequence_number() == order.get_sequence_number(),
-                        ManifestError::WrongIndexHintParams,
+                        <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
                         <span class="string">"Invalid cancel hint sequence number index {}"</span>,
                         hinted_cancel_index,
                     )<span class="question-mark">?</span>;
@@ -510,7 +673,10 @@
     };
 
     <span class="comment">// Result is a vector of (order_sequence_number, data_index)
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
     </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;(u64, DataIndex)&gt; = Vec::with_capacity(orders.len());
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">let </span><span class="kw-2">mut </span>result = NoResizableVec::&lt;(u64, DataIndex)&gt;::new(<span class="number">10</span>);
     <span class="kw">for </span>place_order_params <span class="kw">in </span>orders {
         {
             <span class="kw">let </span>base_atoms: BaseAtoms = BaseAtoms::new(place_order_params.base_atoms());
@@ -522,8 +688,9 @@
             </span><span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>market.try_borrow_mut_data()<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
-            <span class="kw">let </span>add_order_to_market_result: AddOrderToMarketResult =
-                dynamic_account.place_order(AddOrderToMarketArgs {
+            <span class="kw">let </span>add_order_to_market_result: AddOrderToMarketResult = batch_place_order(
+                <span class="kw-2">&amp;mut </span>dynamic_account,
+                AddOrderToMarketArgs {
                     market: <span class="kw-2">*</span>market.key,
                     trader_index,
                     num_base_atoms: base_atoms,
@@ -533,7 +700,8 @@
                     order_type,
                     global_trade_accounts_opts: <span class="kw-2">&amp;</span>global_trade_accounts_opts,
                     current_slot,
-                })<span class="question-mark">?</span>;
+                },
+            )<span class="question-mark">?</span>;
 
             <span class="kw">let </span>AddOrderToMarketResult {
                 order_index,
@@ -558,11 +726,17 @@
         expand_market_if_needed(<span class="kw-2">&amp;</span>payer, <span class="kw-2">&amp;</span>market, <span class="kw-2">&amp;</span>system_program)<span class="question-mark">?</span>;
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; =
-        Vec::with_capacity(size_of::&lt;BatchUpdateReturn&gt;() + result.len() * <span class="number">2 </span>* size_of::&lt;u64&gt;());
-    <span class="kw">let </span>return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
-    return_data.serialize(<span class="kw-2">&amp;mut </span>buffer).unwrap();
-    set_return_data(<span class="kw-2">&amp;</span>buffer[..]);
+    <span class="comment">// Formal verification does not cover return values.
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>buffer: Vec&lt;u8&gt; = Vec::with_capacity(
+            std::mem::size_of::&lt;BatchUpdateReturn&gt;()
+                + result.len() * <span class="number">2 </span>* std::mem::size_of::&lt;u64&gt;(),
+        );
+        <span class="kw">let </span>return_data: BatchUpdateReturn = BatchUpdateReturn { orders: result };
+        return_data.serialize(<span class="kw-2">&amp;mut </span>buffer).unwrap();
+        solana_program::program::set_return_data(<span class="kw-2">&amp;</span>buffer[..]);
+    }
 
     <span class="prelude-val">Ok</span>(())
 }

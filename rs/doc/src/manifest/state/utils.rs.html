@@ -324,12 +324,13 @@
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
 <a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, invoke, ManifestError},
+    program::{get_mut_dynamic_account, invoke},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -389,7 +390,8 @@
     now_epoch
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_from_global(
+<span class="attr">#[inline(always)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_from_global(
     global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;,
 ) -&gt; ProgramResult {
     <span class="kw">if </span>global_trade_accounts_opt.is_none() {
@@ -485,7 +487,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_can_take(order_type: OrderType) -&gt; ProgramResult {
     <span class="macro">require!</span>(
         order_type_can_take(order_type),
-        ManifestError::PostOnlyCrosses,
+        <span class="kw">crate</span>::program::ManifestError::PostOnlyCrosses,
         <span class="string">"Post only order would cross"</span>,
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
@@ -494,7 +496,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_not_already_expired(last_valid_slot: u32, now_slot: u32) -&gt; ProgramResult {
     <span class="macro">require!</span>(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot &gt; now_slot,
-        ManifestError::AlreadyExpired,
+        <span class="kw">crate</span>::program::ManifestError::AlreadyExpired,
         <span class="string">"Placing an already expired order. now: {} last_valid: {}"</span>,
         now_slot,
         last_valid_slot
@@ -505,7 +507,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assert_already_has_seat(trader_index: DataIndex) -&gt; ProgramResult {
     <span class="macro">require!</span>(
         trader_index != NIL,
-        ManifestError::AlreadyClaimedSeat,
+        <span class="kw">crate</span>::program::ManifestError::AlreadyClaimedSeat,
         <span class="string">"Need to claim a seat first"</span>,
     )<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
@@ -537,7 +539,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, ProgramError&gt; {
     <span class="macro">require!</span>(
         global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
+        <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
         <span class="string">"Missing global accounts when adding a global"</span>,
     )<span class="question-mark">?</span>;
     <span class="kw">let </span>global_trade_accounts: <span class="kw-2">&amp;</span>GlobalTradeAccounts = <span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap();
@@ -585,7 +587,7 @@
     <span class="kw">if </span><span class="kw-2">*</span>token_program.key == spl_token_2022::id() {
         <span class="macro">require!</span>(
             mint_opt.is_some(),
-            ManifestError::MissingGlobal,
+            <span class="kw">crate</span>::program::ManifestError::MissingGlobal,
             <span class="string">"Missing global mint"</span>,
         )<span class="question-mark">?</span>;
 

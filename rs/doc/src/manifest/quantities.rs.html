@@ -703,13 +703,48 @@
 <a href="#701" id="701">701</a>
 <a href="#702" id="702">702</a>
 <a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::trace;
 <span class="kw">use </span>shank::ShankAccount;
 <span class="kw">use </span>solana_program::program_error::ProgramError;
-<span class="kw">use </span>static_assertions::{const_assert, const_assert_eq};
+<span class="kw">use </span>static_assertions::const_assert;
 <span class="kw">use </span>std::{
     cmp::Ordering,
     fmt::Display,
@@ -939,6 +974,7 @@
 // on the u128 type, which is not necessary given that the target architecture
 // has no native support for u128 math and requires us only to be 8 byte
 // aligned.
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
 </span><span class="kw">const fn </span>u128_to_u64_slice(a: u128) -&gt; [u64; <span class="number">2</span>] {
     <span class="kw">unsafe </span>{
         <span class="kw">let </span>ptr: <span class="kw-2">*const </span>u128 = <span class="kw-2">&amp;</span>a;
@@ -952,11 +988,13 @@
     }
 }
 
-<span class="kw">const </span>ATOM_LIMIT: u128 = u64::MAX <span class="kw">as </span>u128;
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">const </span>ATOM_LIMIT: u128 = u64::MAX <span class="kw">as </span>u128;
 <span class="kw">const </span>D18: u128 = <span class="number">10u128</span>.pow(<span class="number">18</span>);
 <span class="kw">const </span>D18F: f64 = D18 <span class="kw">as </span>f64;
 
-<span class="kw">const </span>DECIMAL_CONSTANTS: [u128; <span class="number">27</span>] = [
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">const </span>DECIMAL_CONSTANTS: [u128; <span class="number">27</span>] = [
     <span class="number">10u128</span>.pow(<span class="number">26</span>),
     <span class="number">10u128</span>.pow(<span class="number">25</span>),
     <span class="number">10u128</span>.pow(<span class="number">24</span>),
@@ -986,16 +1024,23 @@
     <span class="number">10u128</span>.pow(<span class="number">00</span>),
 ];
 <span class="comment">// ensures that the index lookup is correct when converting from floating point
-</span><span class="macro">const_assert_eq!</span>(
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="macro">static_assertions::const_assert_eq!</span>(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP <span class="kw">as </span>usize],
     D18
 );
 
 <span class="comment">// ensures that we can remove bounds checks on certain multiplications
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
 </span><span class="macro">const_assert!</span>(DECIMAL_CONSTANTS[<span class="number">0</span>] * (u32::MAX <span class="kw">as </span>u128) &lt; u128::MAX);
+
 <span class="macro">const_assert!</span>(D18 * (u64::MAX <span class="kw">as </span>u128) &lt; u128::MAX);
 
-<span class="comment">// Prices
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+#[path = <span class="string">"quantities_certora.rs"</span>]
+</span><span class="kw">mod </span>quantities_certora;
+
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
 </span><span class="kw">impl </span>QuoteAtomsPerBaseAtom {
     <span class="kw">pub const </span>ZERO: <span class="self">Self </span>= QuoteAtomsPerBaseAtom { inner: [<span class="number">0</span>; <span class="number">2</span>] };
     <span class="kw">pub const </span>MIN: <span class="self">Self </span>= QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(<span class="number">1</span>, <span class="self">Self</span>::MIN_EXP);
@@ -1012,9 +1057,9 @@
         -10 -&gt; [18] -&gt; D08
         -18 -&gt; [26] -&gt;  D0
         */
-        </span><span class="kw">let </span>offset = (<span class="self">Self</span>::MAX_EXP <span class="kw">as </span>i64).wrapping_sub(exponent <span class="kw">as </span>i64) <span class="kw">as </span>usize;
+        </span><span class="kw">let </span>offset: usize = (<span class="self">Self</span>::MAX_EXP <span class="kw">as </span>i64).wrapping_sub(exponent <span class="kw">as </span>i64) <span class="kw">as </span>usize;
         <span class="comment">// can not overflow 10^26 * u32::MAX &lt; u128::MAX
-        </span><span class="kw">let </span>inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa <span class="kw">as </span>u128);
+        </span><span class="kw">let </span>inner: u128 = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa <span class="kw">as </span>u128);
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
         }
@@ -1210,6 +1255,31 @@
         round_up: bool,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtoms, ProgramError&gt; {
         other.checked_quote_for_base(<span class="self">self</span>, round_up)
+    }
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">mod </span>nondet {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="kw">impl </span>::nondet::Nondet <span class="kw">for </span>BaseAtoms {
+        <span class="kw">fn </span>nondet() -&gt; <span class="self">Self </span>{
+            <span class="self">Self</span>::new(::nondet::nondet())
+        }
+    }
+
+    <span class="kw">impl </span>::nondet::Nondet <span class="kw">for </span>QuoteAtoms {
+        <span class="kw">fn </span>nondet() -&gt; <span class="self">Self </span>{
+            <span class="self">Self</span>::new(::nondet::nondet())
+        }
+    }
+
+    <span class="kw">impl </span>::nondet::Nondet <span class="kw">for </span>QuoteAtomsPerBaseAtom {
+        <span class="kw">fn </span>nondet() -&gt; <span class="self">Self </span>{
+            <span class="self">Self </span>{
+                inner: [::nondet::nondet(), ::nondet::nondet()],
+            }
+        }
     }
 }
 

@@ -70,16 +70,47 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span><span class="kw">crate</span>::program::batch_update::{CancelOrderParams, PlaceOrderParams};
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">use crate</span>::{
     program::{
         batch_update::{BatchUpdateParams, CancelOrderParams, PlaceOrderParams},
         ManifestInstruction,
     },
     validation::{get_global_address, get_global_vault_address, get_vault_address},
 };
-<span class="kw">use </span>borsh::BorshSerialize;
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">use </span>borsh::BorshSerialize;
 <span class="kw">use </span>hypertree::DataIndex;
-<span class="kw">use </span>solana_program::{
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>solana_program::{instruction::Instruction, pubkey::Pubkey};
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">use </span>solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program,
@@ -87,6 +118,7 @@
 
 <span class="comment">// Token programs are needed for global orders with token22. Only include if
 // this is global or could match with global. Defaults to normal token program.
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
 </span><span class="kw">pub fn </span>batch_update_instruction(
     market: <span class="kw-2">&amp;</span>Pubkey,
     payer: <span class="kw-2">&amp;</span>Pubkey,
@@ -139,5 +171,21 @@
         ]
         .concat(),
     }
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub fn </span>batch_update_instruction(
+    _market: <span class="kw-2">&amp;</span>Pubkey,
+    _payer: <span class="kw-2">&amp;</span>Pubkey,
+    _trader_index_hint: <span class="prelude-ty">Option</span>&lt;DataIndex&gt;,
+    _cancels: Vec&lt;CancelOrderParams&gt;,
+    _orders: Vec&lt;PlaceOrderParams&gt;,
+    _base_mint_opt: <span class="prelude-ty">Option</span>&lt;Pubkey&gt;,
+    _base_mint_token_program_opt: <span class="prelude-ty">Option</span>&lt;Pubkey&gt;,
+    _quote_mint_opt: <span class="prelude-ty">Option</span>&lt;Pubkey&gt;,
+    _quote_mint_token_program_opt: <span class="prelude-ty">Option</span>&lt;Pubkey&gt;,
+) -&gt; Instruction {
+    <span class="comment">// Empty intentionally, just here so it compiles.
+    </span><span class="macro">todo!</span>()
 }
 </code></pre></div></section></main></body></html>

@@ -148,7 +148,7 @@
 <span class="kw">use </span>solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 <span class="kw">use crate</span>::{
-    program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account, ManifestError},
+    program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     state::{utils::get_now_slot, GlobalRefMut, MarketRefMut, RestingOrder, MARKET_BLOCK_SIZE},
@@ -207,7 +207,7 @@
         <span class="comment">// Sanity check on the order index
         </span><span class="macro">require!</span>(
             order_index % (MARKET_BLOCK_SIZE <span class="kw">as </span>DataIndex) == <span class="number">0</span>,
-            ManifestError::WrongIndexHintParams,
+            <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
             <span class="string">"Invalid order index {}"</span>,
             order_index,
         )<span class="question-mark">?</span>;
@@ -215,7 +215,7 @@
             get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(<span class="kw-2">&amp;</span>market_dynamic_account.dynamic, order_index);
         <span class="macro">require!</span>(
             resting_order_node.get_payload_type() == MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8,
-            ManifestError::WrongIndexHintParams,
+            <span class="kw">crate</span>::program::ManifestError::WrongIndexHintParams,
             <span class="string">"Invalid order index {}"</span>,
             order_index,
         )<span class="question-mark">?</span>;
@@ -231,7 +231,7 @@
         <span class="comment">// Verify that the resting order uses the global account given.
         </span><span class="macro">require!</span>(
             <span class="kw-2">*</span>expected_global_mint == <span class="kw-2">*</span>global_mint,
-            ManifestError::InvalidClean,
+            <span class="kw">crate</span>::program::ManifestError::InvalidClean,
             <span class="string">"Wrong global provided"</span>,
         )<span class="question-mark">?</span>;
 
@@ -259,7 +259,7 @@
 
     <span class="macro">require!</span>(
         is_expired || maker_global_balance.as_u64() &lt; required_global_atoms,
-        ManifestError::InvalidClean,
+        <span class="kw">crate</span>::program::ManifestError::InvalidClean,
         <span class="string">"Ineligible clean order index {}"</span>,
         order_index,
     )<span class="question-mark">?</span>;

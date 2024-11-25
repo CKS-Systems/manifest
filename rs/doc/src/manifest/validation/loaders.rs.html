@@ -782,6 +782,22 @@
 <a href="#780" id="780">780</a>
 <a href="#781" id="781">781</a>
 <a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
@@ -800,6 +816,9 @@
 };
 
 <span class="kw">use super</span>::{get_vault_address, ManifestAccountInfo, TokenProgram};
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>early_panic::early_panic;
 
 <span class="doccomment">/// CreateMarket account infos
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CreateMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -845,6 +864,7 @@
         )<span class="question-mark">?</span>;
         <span class="kw">let </span>token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>token_program_22: TokenProgram = TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
             market,
@@ -867,7 +887,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; ClaimSeatContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
-    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+    <span class="attr">#[cfg_attr(all(feature = <span class="string">"certora"</span>, not(feature = <span class="string">"certora-test"</span>)), early_panic)]
+    </span><span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
         <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -918,7 +939,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; DepositContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
-    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+    <span class="attr">#[cfg_attr(all(feature = <span class="string">"certora"</span>, not(feature = <span class="string">"certora-test"</span>)), early_panic)]
+    </span><span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
         <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -1045,7 +1067,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; SwapContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
-    <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+    <span class="attr">#[cfg_attr(all(feature = <span class="string">"certora"</span>, not(feature = <span class="string">"certora-test"</span>)), early_panic)]
+    </span><span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
         <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -1243,84 +1266,93 @@
             ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>system_program: Program =
             Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
-
-        <span class="kw">let </span><span class="kw-2">mut </span>global_trade_accounts_opts: [<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;; <span class="number">2</span>] =
+        <span class="comment">// Certora version is not mutable.
+        </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+        </span><span class="kw">let </span>global_trade_accounts_opts: [<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;; <span class="number">2</span>] = [<span class="prelude-val">None</span>, <span class="prelude-val">None</span>];
+        <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>global_trade_accounts_opts: [<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;; <span class="number">2</span>] =
             [<span class="prelude-val">None</span>, <span class="prelude-val">None</span>];
 
-        <span class="kw">let </span>market_fixed: Ref&lt;MarketFixed&gt; = market.get_fixed()<span class="question-mark">?</span>;
-        <span class="kw">let </span>base_mint: Pubkey = <span class="kw-2">*</span>market_fixed.get_base_mint();
-        <span class="kw">let </span>quote_mint: Pubkey = <span class="kw-2">*</span>market_fixed.get_quote_mint();
-        <span class="kw">let </span>base_vault: Pubkey = <span class="kw-2">*</span>market_fixed.get_base_vault();
-        <span class="kw">let </span>quote_vault: Pubkey = <span class="kw-2">*</span>market_fixed.get_quote_vault();
-        drop(market_fixed);
+        <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+        </span>{
+            <span class="kw">let </span>market_fixed: Ref&lt;MarketFixed&gt; = market.get_fixed()<span class="question-mark">?</span>;
+            <span class="kw">let </span>base_mint: Pubkey = <span class="kw-2">*</span>market_fixed.get_base_mint();
+            <span class="kw">let </span>quote_mint: Pubkey = <span class="kw-2">*</span>market_fixed.get_quote_mint();
+            <span class="kw">let </span>base_vault: Pubkey = <span class="kw-2">*</span>market_fixed.get_base_vault();
+            <span class="kw">let </span>quote_vault: Pubkey = <span class="kw-2">*</span>market_fixed.get_quote_vault();
+            drop(market_fixed);
 
-        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">2 </span>{
-            <span class="kw">let </span>next_account_info_or: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
-                next_account_info(account_iter);
-            <span class="kw">if </span>next_account_info_or.is_ok() {
-                <span class="kw">let </span>mint: MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; = MintAccountInfo::new(next_account_info_or<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>(index, expected_market_vault_address) = <span class="kw">if </span>base_mint == <span class="kw-2">*</span>mint.info.key {
-                    (<span class="number">0</span>, <span class="kw-2">&amp;</span>base_vault)
-                } <span class="kw">else </span>{
-                    <span class="macro">require!</span>(
-                        quote_mint == <span class="kw-2">*</span>mint.info.key,
-                        ManifestError::MissingGlobal,
-                        <span class="string">"Unexpected global mint"</span>,
-                    )<span class="question-mark">?</span>;
-                    (<span class="number">1</span>, <span class="kw-2">&amp;</span>quote_vault)
+            <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">2 </span>{
+                <span class="kw">let </span>next_account_info_or: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
+                    next_account_info(account_iter);
+                <span class="kw">if </span>next_account_info_or.is_ok() {
+                    <span class="kw">let </span>mint: MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
+                        MintAccountInfo::new(next_account_info_or<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+                    <span class="kw">let </span>(index, expected_market_vault_address) = <span class="kw">if </span>base_mint == <span class="kw-2">*</span>mint.info.key {
+                        (<span class="number">0</span>, <span class="kw-2">&amp;</span>base_vault)
+                    } <span class="kw">else </span>{
+                        <span class="macro">require!</span>(
+                            quote_mint == <span class="kw-2">*</span>mint.info.key,
+                            ManifestError::MissingGlobal,
+                            <span class="string">"Unexpected global mint"</span>,
+                        )<span class="question-mark">?</span>;
+                        (<span class="number">1</span>, <span class="kw-2">&amp;</span>quote_vault)
+                    };
+
+                    <span class="kw">let </span>global_or: <span class="prelude-ty">Result</span>&lt;
+                        ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
+                        ProgramError,
+                    &gt; = ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>);
+
+                    <span class="comment">// If a client blindly fills in the global account and vault,
+                    // then handle that case and allow them to try to work without
+                    // the global accounts.
+                    </span><span class="kw">if </span>global_or.is_err() {
+                        <span class="kw">let </span>_global_vault: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
+                            next_account_info(account_iter);
+                        <span class="kw">let </span>_market_vault: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
+                            next_account_info(account_iter);
+                        <span class="kw">let </span>_token_program: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
+                            next_account_info(account_iter);
+                        <span class="kw">continue</span>;
+                    }
+                    <span class="kw">let </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt; = global_or.unwrap();
+                    <span class="kw">let </span>global_data: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = global.data.borrow();
+                    <span class="kw">let </span>global_fixed: <span class="kw-2">&amp;</span>GlobalFixed = get_helper::&lt;GlobalFixed&gt;(<span class="kw-2">&amp;</span>global_data, <span class="number">0_u32</span>);
+                    <span class="kw">let </span>expected_global_vault_address: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_vault();
+
+                    <span class="kw">let </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
+                        TokenAccountInfo::new_with_owner_and_key(
+                            next_account_info(account_iter)<span class="question-mark">?</span>,
+                            mint.info.key,
+                            <span class="kw-2">&amp;</span>expected_global_vault_address,
+                            <span class="kw-2">&amp;</span>expected_global_vault_address,
+                        )<span class="question-mark">?</span>;
+                    drop(global_data);
+
+                    <span class="kw">let </span>market_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
+                        TokenAccountInfo::new_with_owner_and_key(
+                            next_account_info(account_iter)<span class="question-mark">?</span>,
+                            mint.info.key,
+                            <span class="kw-2">&amp;</span>expected_market_vault_address,
+                            <span class="kw-2">&amp;</span>expected_market_vault_address,
+                        )<span class="question-mark">?</span>;
+                    <span class="kw">let </span>token_program: TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
+                        TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+                    global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
+                        mint_opt: <span class="prelude-val">Some</span>(mint),
+                        global,
+                        global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
+                        market_vault_opt: <span class="prelude-val">Some</span>(market_vault),
+                        token_program_opt: <span class="prelude-val">Some</span>(token_program),
+                        system_program: <span class="prelude-val">Some</span>(system_program.clone()),
+                        gas_payer_opt: <span class="prelude-val">Some</span>(payer.clone()),
+                        gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
+                        market: <span class="kw-2">*</span>market.info.key,
+                    })
                 };
-
-                <span class="kw">let </span>global_or: <span class="prelude-ty">Result</span>&lt;ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;, ProgramError&gt; =
-                    ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>);
-
-                <span class="comment">// If a client blindly fills in the global account and vault,
-                // then handle that case and allow them to try to work without
-                // the global accounts.
-                </span><span class="kw">if </span>global_or.is_err() {
-                    <span class="kw">let </span>_global_vault: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
-                        next_account_info(account_iter);
-                    <span class="kw">let </span>_market_vault: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
-                        next_account_info(account_iter);
-                    <span class="kw">let </span>_token_program: <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>AccountInfo&lt;<span class="lifetime">'info</span>&gt;, ProgramError&gt; =
-                        next_account_info(account_iter);
-                    <span class="kw">continue</span>;
-                }
-                <span class="kw">let </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt; = global_or.unwrap();
-                <span class="kw">let </span>global_data: Ref&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = global.data.borrow();
-                <span class="kw">let </span>global_fixed: <span class="kw-2">&amp;</span>GlobalFixed = get_helper::&lt;GlobalFixed&gt;(<span class="kw-2">&amp;</span>global_data, <span class="number">0_u32</span>);
-                <span class="kw">let </span>expected_global_vault_address: <span class="kw-2">&amp;</span>Pubkey = global_fixed.get_vault();
-
-                <span class="kw">let </span>global_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
-                    TokenAccountInfo::new_with_owner_and_key(
-                        next_account_info(account_iter)<span class="question-mark">?</span>,
-                        mint.info.key,
-                        <span class="kw-2">&amp;</span>expected_global_vault_address,
-                        <span class="kw-2">&amp;</span>expected_global_vault_address,
-                    )<span class="question-mark">?</span>;
-                drop(global_data);
-
-                <span class="kw">let </span>market_vault: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
-                    TokenAccountInfo::new_with_owner_and_key(
-                        next_account_info(account_iter)<span class="question-mark">?</span>,
-                        mint.info.key,
-                        <span class="kw-2">&amp;</span>expected_market_vault_address,
-                        <span class="kw-2">&amp;</span>expected_market_vault_address,
-                    )<span class="question-mark">?</span>;
-                <span class="kw">let </span>token_program: TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; =
-                    TokenProgram::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-
-                global_trade_accounts_opts[index] = <span class="prelude-val">Some</span>(GlobalTradeAccounts {
-                    mint_opt: <span class="prelude-val">Some</span>(mint),
-                    global,
-                    global_vault_opt: <span class="prelude-val">Some</span>(global_vault),
-                    market_vault_opt: <span class="prelude-val">Some</span>(market_vault),
-                    token_program_opt: <span class="prelude-val">Some</span>(token_program),
-                    system_program: <span class="prelude-val">Some</span>(system_program.clone()),
-                    gas_payer_opt: <span class="prelude-val">Some</span>(payer.clone()),
-                    gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
-                    market: <span class="kw-2">*</span>market.info.key,
-                })
-            };
+            }
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{

@@ -149,6 +149,9 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Manifest is a limit order book exchange on the Solana blockchain.
 //!
 
@@ -158,6 +161,9 @@
 <span class="kw">pub mod </span>state;
 <span class="kw">pub mod </span>utils;
 <span class="kw">pub mod </span>validation;
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub mod </span>certora;
 
 <span class="kw">use </span>hypertree::trace;
 <span class="kw">use </span>program::{

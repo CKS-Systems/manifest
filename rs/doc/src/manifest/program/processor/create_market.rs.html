@@ -195,7 +195,7 @@
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, invoke, ManifestError},
+    program::{expand_market_if_needed, invoke},
     require,
     state::MarketFixed,
     utils::create_account,
@@ -237,7 +237,7 @@
 
     <span class="macro">require!</span>(
         base_mint.info.key != quote_mint.info.key,
-        ManifestError::InvalidMarketParameters,
+        <span class="kw">crate</span>::program::ManifestError::InvalidMarketParameters,
         <span class="string">"Base and quote must be different"</span>,
     )<span class="question-mark">?</span>;
 

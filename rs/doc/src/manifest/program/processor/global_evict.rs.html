@@ -196,7 +196,7 @@
 <span class="kw">use crate</span>::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalDepositLog, GlobalEvictLog, GlobalWithdrawLog},
-    program::{get_mut_dynamic_account, ManifestError},
+    program::get_mut_dynamic_account,
     quantities::{GlobalAtoms, WrapperU64},
     require,
     state::GlobalRefMut,
@@ -248,7 +248,7 @@
         <span class="comment">// Do verifications that this is a valid eviction.
         </span><span class="macro">require!</span>(
             evictee_balance &lt; GlobalAtoms::new(amount_atoms),
-            ManifestError::InvalidEvict,
+            <span class="kw">crate</span>::program::ManifestError::InvalidEvict,
             <span class="string">"Evictee balance {} is more than evictor wants to deposit"</span>,
             evictee_balance.as_u64(),
         )<span class="question-mark">?</span>;

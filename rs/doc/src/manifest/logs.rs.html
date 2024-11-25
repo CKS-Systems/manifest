@@ -257,9 +257,13 @@
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
-
-<span class="kw">use </span>bytemuck::{Pod, Zeroable};
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::PodBool;
 <span class="kw">use </span>shank::ShankAccount;
 <span class="kw">use </span>solana_program::{program_error::ProgramError, pubkey::Pubkey};
@@ -277,14 +281,22 @@
 /// because the goal of this program is to minimize the number of input
 /// accounts, so including the signer for the self CPI is not worth it.
 /// Also, be compatible with anchor parsing clients.
-</span><span class="attr">#[inline(never)] </span><span class="comment">// ensure fresh stack frame
+
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+#[inline(never)] </span><span class="comment">// ensure fresh stack frame
 </span><span class="kw">pub fn </span>emit_stack&lt;T: bytemuck::Pod + Discriminant&gt;(e: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), ProgramError&gt; {
     <span class="comment">// stack buffer, stack frames are 4kb
     </span><span class="kw">let </span><span class="kw-2">mut </span>buffer: [u8; <span class="number">3000</span>] = [<span class="number">0u8</span>; <span class="number">3000</span>];
     buffer[..<span class="number">8</span>].copy_from_slice(<span class="kw-2">&amp;</span>T::discriminant());
-    <span class="kw-2">*</span>bytemuck::from_bytes_mut::&lt;T&gt;(<span class="kw-2">&amp;mut </span>buffer[<span class="number">8</span>..<span class="number">8 </span>+ size_of::&lt;T&gt;()]) = e;
+    <span class="kw-2">*</span>bytemuck::from_bytes_mut::&lt;T&gt;(<span class="kw-2">&amp;mut </span>buffer[<span class="number">8</span>..<span class="number">8 </span>+ std::mem::size_of::&lt;T&gt;()]) = e;
 
-    solana_program::log::sol_log_data(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>buffer[..(size_of::&lt;T&gt;() + <span class="number">8</span>)]]);
+    solana_program::log::sol_log_data(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>buffer[..(std::mem::size_of::&lt;T&gt;() + <span class="number">8</span>)]]);
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="comment">// Do not emit logs for formal verification.
+</span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub fn </span>emit_stack&lt;T: bytemuck::Pod + Discriminant&gt;(_e: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), ProgramError&gt; {
     <span class="prelude-val">Ok</span>(())
 }
 

@@ -2649,6 +2649,93 @@
 <a href="#2647" id="2647">2647</a>
 <a href="#2648" id="2648">2648</a>
 <a href="#2649" id="2649">2649</a>
+<a href="#2650" id="2650">2650</a>
+<a href="#2651" id="2651">2651</a>
+<a href="#2652" id="2652">2652</a>
+<a href="#2653" id="2653">2653</a>
+<a href="#2654" id="2654">2654</a>
+<a href="#2655" id="2655">2655</a>
+<a href="#2656" id="2656">2656</a>
+<a href="#2657" id="2657">2657</a>
+<a href="#2658" id="2658">2658</a>
+<a href="#2659" id="2659">2659</a>
+<a href="#2660" id="2660">2660</a>
+<a href="#2661" id="2661">2661</a>
+<a href="#2662" id="2662">2662</a>
+<a href="#2663" id="2663">2663</a>
+<a href="#2664" id="2664">2664</a>
+<a href="#2665" id="2665">2665</a>
+<a href="#2666" id="2666">2666</a>
+<a href="#2667" id="2667">2667</a>
+<a href="#2668" id="2668">2668</a>
+<a href="#2669" id="2669">2669</a>
+<a href="#2670" id="2670">2670</a>
+<a href="#2671" id="2671">2671</a>
+<a href="#2672" id="2672">2672</a>
+<a href="#2673" id="2673">2673</a>
+<a href="#2674" id="2674">2674</a>
+<a href="#2675" id="2675">2675</a>
+<a href="#2676" id="2676">2676</a>
+<a href="#2677" id="2677">2677</a>
+<a href="#2678" id="2678">2678</a>
+<a href="#2679" id="2679">2679</a>
+<a href="#2680" id="2680">2680</a>
+<a href="#2681" id="2681">2681</a>
+<a href="#2682" id="2682">2682</a>
+<a href="#2683" id="2683">2683</a>
+<a href="#2684" id="2684">2684</a>
+<a href="#2685" id="2685">2685</a>
+<a href="#2686" id="2686">2686</a>
+<a href="#2687" id="2687">2687</a>
+<a href="#2688" id="2688">2688</a>
+<a href="#2689" id="2689">2689</a>
+<a href="#2690" id="2690">2690</a>
+<a href="#2691" id="2691">2691</a>
+<a href="#2692" id="2692">2692</a>
+<a href="#2693" id="2693">2693</a>
+<a href="#2694" id="2694">2694</a>
+<a href="#2695" id="2695">2695</a>
+<a href="#2696" id="2696">2696</a>
+<a href="#2697" id="2697">2697</a>
+<a href="#2698" id="2698">2698</a>
+<a href="#2699" id="2699">2699</a>
+<a href="#2700" id="2700">2700</a>
+<a href="#2701" id="2701">2701</a>
+<a href="#2702" id="2702">2702</a>
+<a href="#2703" id="2703">2703</a>
+<a href="#2704" id="2704">2704</a>
+<a href="#2705" id="2705">2705</a>
+<a href="#2706" id="2706">2706</a>
+<a href="#2707" id="2707">2707</a>
+<a href="#2708" id="2708">2708</a>
+<a href="#2709" id="2709">2709</a>
+<a href="#2710" id="2710">2710</a>
+<a href="#2711" id="2711">2711</a>
+<a href="#2712" id="2712">2712</a>
+<a href="#2713" id="2713">2713</a>
+<a href="#2714" id="2714">2714</a>
+<a href="#2715" id="2715">2715</a>
+<a href="#2716" id="2716">2716</a>
+<a href="#2717" id="2717">2717</a>
+<a href="#2718" id="2718">2718</a>
+<a href="#2719" id="2719">2719</a>
+<a href="#2720" id="2720">2720</a>
+<a href="#2721" id="2721">2721</a>
+<a href="#2722" id="2722">2722</a>
+<a href="#2723" id="2723">2723</a>
+<a href="#2724" id="2724">2724</a>
+<a href="#2725" id="2725">2725</a>
+<a href="#2726" id="2726">2726</a>
+<a href="#2727" id="2727">2727</a>
+<a href="#2728" id="2728">2728</a>
+<a href="#2729" id="2729">2729</a>
+<a href="#2730" id="2730">2730</a>
+<a href="#2731" id="2731">2731</a>
+<a href="#2732" id="2732">2732</a>
+<a href="#2733" id="2733">2733</a>
+<a href="#2734" id="2734">2734</a>
+<a href="#2735" id="2735">2735</a>
+<a href="#2736" id="2736">2736</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>std::cmp::Ordering;
 
@@ -2828,7 +2915,26 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>RedBlackTreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
+<span class="comment">// Public just for certora.
+</span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub trait </span>RedBlackTreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>get_value&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V;
+    <span class="kw">fn </span>has_left&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
+    <span class="kw">fn </span>has_right&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
+    <span class="kw">fn </span>get_right_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
+    <span class="kw">fn </span>get_left_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
+    <span class="kw">fn </span>get_color&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; Color;
+    <span class="kw">fn </span>get_parent_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
+    <span class="kw">fn </span>is_left_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
+    <span class="kw">fn </span>is_right_child&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
+    <span class="kw">fn </span>get_node&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;V&gt;;
+    <span class="kw">fn </span>get_child_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; DataIndex;
+    <span class="kw">fn </span>is_internal&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
+    <span class="kw">fn </span>get_sibling_index&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex, parent_index: DataIndex)
+        -&gt; DataIndex;
+}
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>RedBlackTreeReadOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>get_value&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V;
     <span class="kw">fn </span>has_left&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
     <span class="kw">fn </span>has_right&lt;V: Payload&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; bool;
@@ -2947,7 +3053,20 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>RedBlackTreeWriteOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
+<span class="comment">// Public just for certora.
+</span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub trait </span>RedBlackTreeWriteOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>set_color&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, color: Color);
+    <span class="kw">fn </span>set_parent_index&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, parent_index: DataIndex);
+    <span class="kw">fn </span>set_left_index&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, left_index: DataIndex);
+    <span class="kw">fn </span>set_right_index&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, right_index: DataIndex);
+    <span class="kw">fn </span>rotate_left&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex);
+    <span class="kw">fn </span>rotate_right&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex);
+    <span class="kw">fn </span>swap_node_with_successor&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index_0: DataIndex, index_1: DataIndex);
+    <span class="kw">fn </span>update_parent_child&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex);
+}
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>RedBlackTreeWriteOperationsHelpers&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>set_color&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, color: Color);
     <span class="kw">fn </span>set_parent_index&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, parent_index: DataIndex);
     <span class="kw">fn </span>set_left_index&lt;V: Payload&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: DataIndex, left_index: DataIndex);
@@ -3536,7 +3655,16 @@
     }
 }
 
-<span class="attr">#[repr(u8)]
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+</span><span class="kw">pub enum </span>Color {
+    <span class="attr">#[default]
+    </span>Black = <span class="number">0</span>,
+    Red = <span class="number">1</span>,
+}
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+#[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Color {
     <span class="attr">#[default]
@@ -3549,7 +3677,37 @@
     }
 }
 
-<span class="attr">#[derive(Debug, Default, Copy, Clone, Zeroable)]
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">impl </span>nondet::Nondet <span class="kw">for </span>Color {
+    <span class="kw">fn </span>nondet() -&gt; <span class="self">Self </span>{
+        <span class="kw">if </span>nondet::nondet::&lt;bool&gt;() {
+            Color::Black
+        } <span class="kw">else </span>{
+            Color::Red
+        }
+    }
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+#[derive(Debug, Default, Copy, Clone, Zeroable)]
+#[repr(C)]
+</span><span class="doccomment">/// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
+/// RedBlack and BST properties, the rest is the payload.
+</span><span class="kw">pub struct </span>RBNode&lt;V&gt; {
+    <span class="kw">pub </span>left: DataIndex,
+    <span class="kw">pub </span>right: DataIndex,
+    <span class="kw">pub </span>parent: DataIndex,
+    <span class="kw">pub </span>color: Color,
+
+    <span class="comment">// Optional enum controlled by the application to identify the type of node.
+    // Defaults to zero.
+    </span><span class="kw">pub </span>payload_type: u8,
+
+    <span class="kw">pub </span>_unused_padding: u16,
+    <span class="kw">pub </span>value: V,
+}
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+#[derive(Debug, Default, Copy, Clone, Zeroable)]
 #[repr(C)]
 </span><span class="doccomment">/// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
 /// RedBlack and BST properties, the rest is the payload.
@@ -3753,6 +3911,16 @@
         <span class="self">self</span>.remove_by_index(index);
     }
 
+    <span class="comment">// Only publicly visible for formal verification.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>certora_remove_fix(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        current_index: DataIndex,
+        parent_index: DataIndex,
+    ) -&gt; (DataIndex, DataIndex) {
+        <span class="self">self</span>.remove_fix(current_index, parent_index)
+    }
+
     <span class="kw">fn </span>remove_fix(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         current_index: DataIndex,
@@ -3907,6 +4075,12 @@
             <span class="kw-2">*</span>new_node = node_to_insert;
             new_node.parent = current_parent_index;
         }
+    }
+
+    <span class="comment">// Only publicly visible for formal verification.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>certora_insert_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index_to_fix: DataIndex) -&gt; DataIndex {
+        <span class="self">self</span>.insert_fix(index_to_fix)
     }
 
     <span class="kw">fn </span>insert_fix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index_to_fix: DataIndex) -&gt; DataIndex {

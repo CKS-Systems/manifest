@@ -1348,11 +1348,367 @@
 <a href="#1346" id="1346">1346</a>
 <a href="#1347" id="1347">1347</a>
 <a href="#1348" id="1348">1348</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
+<a href="#1360" id="1360">1360</a>
+<a href="#1361" id="1361">1361</a>
+<a href="#1362" id="1362">1362</a>
+<a href="#1363" id="1363">1363</a>
+<a href="#1364" id="1364">1364</a>
+<a href="#1365" id="1365">1365</a>
+<a href="#1366" id="1366">1366</a>
+<a href="#1367" id="1367">1367</a>
+<a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
+<a href="#1377" id="1377">1377</a>
+<a href="#1378" id="1378">1378</a>
+<a href="#1379" id="1379">1379</a>
+<a href="#1380" id="1380">1380</a>
+<a href="#1381" id="1381">1381</a>
+<a href="#1382" id="1382">1382</a>
+<a href="#1383" id="1383">1383</a>
+<a href="#1384" id="1384">1384</a>
+<a href="#1385" id="1385">1385</a>
+<a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
+<a href="#1391" id="1391">1391</a>
+<a href="#1392" id="1392">1392</a>
+<a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
+<a href="#1397" id="1397">1397</a>
+<a href="#1398" id="1398">1398</a>
+<a href="#1399" id="1399">1399</a>
+<a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
+<a href="#1406" id="1406">1406</a>
+<a href="#1407" id="1407">1407</a>
+<a href="#1408" id="1408">1408</a>
+<a href="#1409" id="1409">1409</a>
+<a href="#1410" id="1410">1410</a>
+<a href="#1411" id="1411">1411</a>
+<a href="#1412" id="1412">1412</a>
+<a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
+<a href="#1470" id="1470">1470</a>
+<a href="#1471" id="1471">1471</a>
+<a href="#1472" id="1472">1472</a>
+<a href="#1473" id="1473">1473</a>
+<a href="#1474" id="1474">1474</a>
+<a href="#1475" id="1475">1475</a>
+<a href="#1476" id="1476">1476</a>
+<a href="#1477" id="1477">1477</a>
+<a href="#1478" id="1478">1478</a>
+<a href="#1479" id="1479">1479</a>
+<a href="#1480" id="1480">1480</a>
+<a href="#1481" id="1481">1481</a>
+<a href="#1482" id="1482">1482</a>
+<a href="#1483" id="1483">1483</a>
+<a href="#1484" id="1484">1484</a>
+<a href="#1485" id="1485">1485</a>
+<a href="#1486" id="1486">1486</a>
+<a href="#1487" id="1487">1487</a>
+<a href="#1488" id="1488">1488</a>
+<a href="#1489" id="1489">1489</a>
+<a href="#1490" id="1490">1490</a>
+<a href="#1491" id="1491">1491</a>
+<a href="#1492" id="1492">1492</a>
+<a href="#1493" id="1493">1493</a>
+<a href="#1494" id="1494">1494</a>
+<a href="#1495" id="1495">1495</a>
+<a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
+<a href="#1504" id="1504">1504</a>
+<a href="#1505" id="1505">1505</a>
+<a href="#1506" id="1506">1506</a>
+<a href="#1507" id="1507">1507</a>
+<a href="#1508" id="1508">1508</a>
+<a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
+<a href="#1517" id="1517">1517</a>
+<a href="#1518" id="1518">1518</a>
+<a href="#1519" id="1519">1519</a>
+<a href="#1520" id="1520">1520</a>
+<a href="#1521" id="1521">1521</a>
+<a href="#1522" id="1522">1522</a>
+<a href="#1523" id="1523">1523</a>
+<a href="#1524" id="1524">1524</a>
+<a href="#1525" id="1525">1525</a>
+<a href="#1526" id="1526">1526</a>
+<a href="#1527" id="1527">1527</a>
+<a href="#1528" id="1528">1528</a>
+<a href="#1529" id="1529">1529</a>
+<a href="#1530" id="1530">1530</a>
+<a href="#1531" id="1531">1531</a>
+<a href="#1532" id="1532">1532</a>
+<a href="#1533" id="1533">1533</a>
+<a href="#1534" id="1534">1534</a>
+<a href="#1535" id="1535">1535</a>
+<a href="#1536" id="1536">1536</a>
+<a href="#1537" id="1537">1537</a>
+<a href="#1538" id="1538">1538</a>
+<a href="#1539" id="1539">1539</a>
+<a href="#1540" id="1540">1540</a>
+<a href="#1541" id="1541">1541</a>
+<a href="#1542" id="1542">1542</a>
+<a href="#1543" id="1543">1543</a>
+<a href="#1544" id="1544">1544</a>
+<a href="#1545" id="1545">1545</a>
+<a href="#1546" id="1546">1546</a>
+<a href="#1547" id="1547">1547</a>
+<a href="#1548" id="1548">1548</a>
+<a href="#1549" id="1549">1549</a>
+<a href="#1550" id="1550">1550</a>
+<a href="#1551" id="1551">1551</a>
+<a href="#1552" id="1552">1552</a>
+<a href="#1553" id="1553">1553</a>
+<a href="#1554" id="1554">1554</a>
+<a href="#1555" id="1555">1555</a>
+<a href="#1556" id="1556">1556</a>
+<a href="#1557" id="1557">1557</a>
+<a href="#1558" id="1558">1558</a>
+<a href="#1559" id="1559">1559</a>
+<a href="#1560" id="1560">1560</a>
+<a href="#1561" id="1561">1561</a>
+<a href="#1562" id="1562">1562</a>
+<a href="#1563" id="1563">1563</a>
+<a href="#1564" id="1564">1564</a>
+<a href="#1565" id="1565">1565</a>
+<a href="#1566" id="1566">1566</a>
+<a href="#1567" id="1567">1567</a>
+<a href="#1568" id="1568">1568</a>
+<a href="#1569" id="1569">1569</a>
+<a href="#1570" id="1570">1570</a>
+<a href="#1571" id="1571">1571</a>
+<a href="#1572" id="1572">1572</a>
+<a href="#1573" id="1573">1573</a>
+<a href="#1574" id="1574">1574</a>
+<a href="#1575" id="1575">1575</a>
+<a href="#1576" id="1576">1576</a>
+<a href="#1577" id="1577">1577</a>
+<a href="#1578" id="1578">1578</a>
+<a href="#1579" id="1579">1579</a>
+<a href="#1580" id="1580">1580</a>
+<a href="#1581" id="1581">1581</a>
+<a href="#1582" id="1582">1582</a>
+<a href="#1583" id="1583">1583</a>
+<a href="#1584" id="1584">1584</a>
+<a href="#1585" id="1585">1585</a>
+<a href="#1586" id="1586">1586</a>
+<a href="#1587" id="1587">1587</a>
+<a href="#1588" id="1588">1588</a>
+<a href="#1589" id="1589">1589</a>
+<a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
+<a href="#1599" id="1599">1599</a>
+<a href="#1600" id="1600">1600</a>
+<a href="#1601" id="1601">1601</a>
+<a href="#1602" id="1602">1602</a>
+<a href="#1603" id="1603">1603</a>
+<a href="#1604" id="1604">1604</a>
+<a href="#1605" id="1605">1605</a>
+<a href="#1606" id="1606">1606</a>
+<a href="#1607" id="1607">1607</a>
+<a href="#1608" id="1608">1608</a>
+<a href="#1609" id="1609">1609</a>
+<a href="#1610" id="1610">1610</a>
+<a href="#1611" id="1611">1611</a>
+<a href="#1612" id="1612">1612</a>
+<a href="#1613" id="1613">1613</a>
+<a href="#1614" id="1614">1614</a>
+<a href="#1615" id="1615">1615</a>
+<a href="#1616" id="1616">1616</a>
+<a href="#1617" id="1617">1617</a>
+<a href="#1618" id="1618">1618</a>
+<a href="#1619" id="1619">1619</a>
+<a href="#1620" id="1620">1620</a>
+<a href="#1621" id="1621">1621</a>
+<a href="#1622" id="1622">1622</a>
+<a href="#1623" id="1623">1623</a>
+<a href="#1624" id="1624">1624</a>
+<a href="#1625" id="1625">1625</a>
+<a href="#1626" id="1626">1626</a>
+<a href="#1627" id="1627">1627</a>
+<a href="#1628" id="1628">1628</a>
+<a href="#1629" id="1629">1629</a>
+<a href="#1630" id="1630">1630</a>
+<a href="#1631" id="1631">1631</a>
+<a href="#1632" id="1632">1632</a>
+<a href="#1633" id="1633">1633</a>
+<a href="#1634" id="1634">1634</a>
+<a href="#1635" id="1635">1635</a>
+<a href="#1636" id="1636">1636</a>
+<a href="#1637" id="1637">1637</a>
+<a href="#1638" id="1638">1638</a>
+<a href="#1639" id="1639">1639</a>
+<a href="#1640" id="1640">1640</a>
+<a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
+<a href="#1659" id="1659">1659</a>
+<a href="#1660" id="1660">1660</a>
+<a href="#1661" id="1661">1661</a>
+<a href="#1662" id="1662">1662</a>
+<a href="#1663" id="1663">1663</a>
+<a href="#1664" id="1664">1664</a>
+<a href="#1665" id="1665">1665</a>
+<a href="#1666" id="1666">1666</a>
+<a href="#1667" id="1667">1667</a>
+<a href="#1668" id="1668">1668</a>
+<a href="#1669" id="1669">1669</a>
+<a href="#1670" id="1670">1670</a>
+<a href="#1671" id="1671">1671</a>
+<a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
+<a href="#1674" id="1674">1674</a>
+<a href="#1675" id="1675">1675</a>
+<a href="#1676" id="1676">1676</a>
+<a href="#1677" id="1677">1677</a>
+<a href="#1678" id="1678">1678</a>
+<a href="#1679" id="1679">1679</a>
+<a href="#1680" id="1680">1680</a>
+<a href="#1681" id="1681">1681</a>
+<a href="#1682" id="1682">1682</a>
+<a href="#1683" id="1683">1683</a>
+<a href="#1684" id="1684">1684</a>
+<a href="#1685" id="1685">1685</a>
+<a href="#1686" id="1686">1686</a>
+<a href="#1687" id="1687">1687</a>
+<a href="#1688" id="1688">1688</a>
+<a href="#1689" id="1689">1689</a>
+<a href="#1690" id="1690">1690</a>
+<a href="#1691" id="1691">1691</a>
+<a href="#1692" id="1692">1692</a>
+<a href="#1693" id="1693">1693</a>
+<a href="#1694" id="1694">1694</a>
+</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>{
+    <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
+    hook_macro::cvt_hook_end, nondet::nondet,
+};
+
+<span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>hypertree::{
-    get_helper, get_mut_helper, trace, DataIndex, FreeList, FreeListNode, Get,
-    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, PodBool,
-    RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
+    get_helper, get_mut_helper, is_not_nil, trace, DataIndex, FreeList, FreeListNode, Get, PodBool,
+    RBNode, NIL,
+};
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">use </span>hypertree::{
+    HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RedBlackTree,
+    RedBlackTreeReadOnly,
 };
 <span class="kw">use </span>shank::ShankType;
 <span class="kw">use </span>solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
@@ -1385,7 +1741,61 @@
     MARKET_FREE_LIST_BLOCK_SIZE,
 };
 
-<span class="kw">pub struct </span>AddOrderToMarketArgs&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
+<span class="attr">#[path = <span class="string">"market_helpers.rs"</span>]
+</span><span class="kw">pub mod </span>market_helpers;
+<span class="kw">use </span>market_helpers::<span class="kw-2">*</span>;
+
+<span class="attr">#[path = <span class="string">"cvt_munge.rs"</span>]
+#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">mod </span>cvt_munge;
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub use </span>cvt_munge::<span class="kw-2">*</span>;
+
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">mod </span>helpers {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="doccomment">/// Read a `RBNode&lt;ClaimedSeat&gt;` in an array of data at a given index.
+    </span><span class="kw">pub fn </span>get_helper_seat(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;ClaimedSeat&gt; {
+        get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(data, index)
+    }
+    <span class="doccomment">/// Read a `RBNode&lt;ClaimedSeat&gt;` in an array of data at a given index.
+    </span><span class="kw">pub fn </span>get_mut_helper_seat(data: <span class="kw-2">&amp;mut </span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;mut </span>RBNode&lt;ClaimedSeat&gt; {
+        get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(data, index)
+    }
+
+    <span class="kw">pub fn </span>get_helper_order(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;RestingOrder&gt; {
+        get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+    <span class="kw">pub fn </span>get_mut_helper_order(data: <span class="kw-2">&amp;mut </span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;mut </span>RBNode&lt;RestingOrder&gt; {
+        get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+
+    <span class="kw">pub fn </span>get_helper_bid_order(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;RestingOrder&gt; {
+        get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+    <span class="kw">pub fn </span>get_mut_helper_bid_order(
+        data: <span class="kw-2">&amp;mut </span>[u8],
+        index: DataIndex,
+    ) -&gt; <span class="kw-2">&amp;mut </span>RBNode&lt;RestingOrder&gt; {
+        get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+
+    <span class="kw">pub fn </span>get_helper_ask_order(data: <span class="kw-2">&amp;</span>[u8], index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RBNode&lt;RestingOrder&gt; {
+        get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+    <span class="kw">pub fn </span>get_mut_helper_ask_order(
+        data: <span class="kw-2">&amp;mut </span>[u8],
+        index: DataIndex,
+    ) -&gt; <span class="kw-2">&amp;mut </span>RBNode&lt;RestingOrder&gt; {
+        get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(data, index)
+    }
+}
+
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">pub use </span>helpers::<span class="kw-2">*</span>;
+
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>AddOrderToMarketArgs&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>market: Pubkey,
     <span class="kw">pub </span>trader_index: DataIndex,
     <span class="kw">pub </span>num_base_atoms: BaseAtoms,
@@ -1406,7 +1816,7 @@
 
 <span class="attr">#[repr(C, packed)]
 #[derive(Default, Copy, Clone, Pod, Zeroable)]
-</span><span class="kw">struct </span>MarketUnusedFreeListPadding {
+</span><span class="kw">pub struct </span>MarketUnusedFreeListPadding {
     _padding: [u64; <span class="number">9</span>],
     _padding2: [u8; <span class="number">4</span>],
 }
@@ -1470,9 +1880,27 @@
     /// Use at your own risk.
     </span>quote_volume: QuoteAtoms,
 
+    <span class="comment">// These are not included in the normal usage because they are informational
+    // only and not worth the CU.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="doccomment">/// Base tokens reserved for seats
+    </span>withdrawable_base_atoms: BaseAtoms,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="doccomment">/// Quote tokens reserved for seats
+    </span>withdrawable_quote_atoms: QuoteAtoms,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="doccomment">/// Base tokens reserved for non-global orders
+    </span><span class="kw">pub </span>orderbook_base_atoms: BaseAtoms,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="doccomment">/// Quote tokens reserved for non-global orders
+    </span><span class="kw">pub </span>orderbook_quote_atoms: QuoteAtoms,
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span>_padding3: [u64; <span class="number">4</span>],
+
     <span class="comment">// Unused padding. Saved in case a later version wants to be backwards
     // compatible. Also, it is nice to have the fixed size be a round number,
     // 256 bytes.
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
     </span>_padding3: [u64; <span class="number">8</span>],
 }
 <span class="macro">const_assert_eq!</span>(
@@ -1531,10 +1959,60 @@
             asks_root_index: NIL,
             asks_best_index: NIL,
             claimed_seats_root_index: NIL,
-            free_list_head_index: NIL,
+            <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+            </span>free_list_head_index: NIL,
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span><span class="comment">// non NIL
+            </span>free_list_head_index: <span class="number">0</span>,
             _padding2: [<span class="number">0</span>; <span class="number">1</span>],
             quote_volume: QuoteAtoms::ZERO,
-            _padding3: [<span class="number">0</span>; <span class="number">8</span>],
+            <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+            </span>_padding3: [<span class="number">0</span>; <span class="number">8</span>],
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span>withdrawable_base_atoms: BaseAtoms::new(<span class="number">0</span>),
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span>withdrawable_quote_atoms: QuoteAtoms::new(<span class="number">0</span>),
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span>orderbook_base_atoms: BaseAtoms::new(<span class="number">0</span>),
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span>orderbook_quote_atoms: QuoteAtoms::new(<span class="number">0</span>),
+            <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span>_padding3: [<span class="number">0</span>; <span class="number">4</span>],
+        }
+    }
+
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="doccomment">/** All fields are set to nondeterministic values except indexes to the tree **/
+    </span><span class="kw">pub fn </span>new_nondet() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>claimed_seats_root_index = nondet();
+        <span class="macro">cvt::cvt_assume!</span>(claimed_seats_root_index == NIL);
+        MarketFixed {
+            discriminant: MARKET_FIXED_DISCRIMINANT,
+            version: <span class="number">0</span>,
+            base_mint_decimals: nondet(),
+            quote_mint_decimals: nondet(),
+            base_vault_bump: nondet(),
+            quote_vault_bump: nondet(),
+            _padding1: [<span class="number">0</span>; <span class="number">3</span>],
+            base_mint: nondet(),
+            quote_mint: nondet(),
+            base_vault: nondet(),
+            quote_vault: nondet(),
+            order_sequence_number: nondet(),
+            num_bytes_allocated: nondet(),
+            bids_root_index: NIL,
+            bids_best_index: NIL,
+            asks_root_index: NIL,
+            asks_best_index: NIL,
+            claimed_seats_root_index,
+            free_list_head_index: <span class="number">0</span>,
+            _padding2: [<span class="number">0</span>; <span class="number">1</span>],
+            quote_volume: QuoteAtoms::ZERO,
+            withdrawable_base_atoms: BaseAtoms::new(nondet()),
+            withdrawable_quote_atoms: QuoteAtoms::new(nondet()),
+            orderbook_base_atoms: BaseAtoms::new(nondet()),
+            orderbook_quote_atoms: QuoteAtoms::new(nondet()),
+            _padding3: [<span class="number">0</span>; <span class="number">4</span>],
         }
     }
 
@@ -1580,6 +2058,23 @@
         <span class="self">self</span>.asks_best_index
     }
 
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_withdrawable_base_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BaseAtoms {
+        <span class="self">self</span>.withdrawable_base_atoms
+    }
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_withdrawable_quote_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; QuoteAtoms {
+        <span class="self">self</span>.withdrawable_quote_atoms
+    }
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_orderbook_base_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BaseAtoms {
+        <span class="self">self</span>.orderbook_base_atoms
+    }
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_orderbook_quote_atoms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; QuoteAtoms {
+        <span class="self">self</span>.orderbook_quote_atoms
+    }
+
     <span class="comment">// Used in benchmark
     </span><span class="kw">pub fn </span>has_free_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.free_list_head_index != NIL
@@ -1606,10 +2101,27 @@
 <span class="doccomment">/// Full market reference type.
 </span><span class="kw">pub type </span>MarketRefMut&lt;<span class="lifetime">'a</span>&gt; = DynamicAccount&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>MarketFixed, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>[u8]&gt;;
 
-<span class="kw">pub type </span>ClaimedSeatTree&lt;<span class="lifetime">'a</span>&gt; = RedBlackTree&lt;<span class="lifetime">'a</span>, ClaimedSeat&gt;;
-<span class="kw">pub type </span>ClaimedSeatTreeReadOnly&lt;<span class="lifetime">'a</span>&gt; = RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, ClaimedSeat&gt;;
-<span class="kw">pub type </span>Bookside&lt;<span class="lifetime">'a</span>&gt; = RedBlackTree&lt;<span class="lifetime">'a</span>, RestingOrder&gt;;
-<span class="kw">pub type </span>BooksideReadOnly&lt;<span class="lifetime">'a</span>&gt; = RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, RestingOrder&gt;;
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">mod </span>types {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">pub type </span>ClaimedSeatTree&lt;<span class="lifetime">'a</span>&gt; = RedBlackTree&lt;<span class="lifetime">'a</span>, ClaimedSeat&gt;;
+    <span class="kw">pub type </span>ClaimedSeatTreeReadOnly&lt;<span class="lifetime">'a</span>&gt; = RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, ClaimedSeat&gt;;
+    <span class="kw">pub type </span>Bookside&lt;<span class="lifetime">'a</span>&gt; = RedBlackTree&lt;<span class="lifetime">'a</span>, RestingOrder&gt;;
+    <span class="kw">pub type </span>BooksideReadOnly&lt;<span class="lifetime">'a</span>&gt; = RedBlackTreeReadOnly&lt;<span class="lifetime">'a</span>, RestingOrder&gt;;
+}
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">pub use </span>types::<span class="kw-2">*</span>;
+
+<span class="attr">#[cfg(all(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">mod </span>cvt_mock_types {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">pub type </span>ClaimedSeatTree&lt;<span class="lifetime">'a</span>&gt; = CvtClaimedSeatTree&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">pub type </span>ClaimedSeatTreeReadOnly&lt;<span class="lifetime">'a</span>&gt; = CvtClaimedSeatTreeReadOnly&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">pub type </span>Bookside&lt;<span class="lifetime">'a</span>&gt; = CvtBookside&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">pub type </span>BooksideReadOnly&lt;<span class="lifetime">'a</span>&gt; = CvtBooksideReadOnly&lt;<span class="lifetime">'a</span>&gt;;
+}
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">pub use </span>cvt_mock_types::<span class="kw-2">*</span>;
 
 <span class="comment">// This generic impl covers MarketRef, MarketRefMut and other
 // DynamicAccount variants that allow read access.
@@ -1682,7 +2194,7 @@
             )<span class="question-mark">?</span>;
 
             <span class="comment">// Stop walking if missing the needed global account.
-            </span><span class="kw">if </span><span class="self">self</span>.is_missing_global_account(resting_order, is_bid, global_trade_accounts_opts) {
+            </span><span class="kw">if </span><span class="self">self</span>.is_missing_global_account(<span class="kw-2">&amp;</span>resting_order, is_bid, global_trade_accounts_opts) {
                 <span class="kw">break</span>;
             }
 
@@ -1715,7 +2227,21 @@
         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(total_matched_quote_atoms);
     }
 
+    <span class="comment">// Simplified version for certora. Those checks are actually stronger than
+    // needed since it shows invariants hold on swap even when impact_base_atoms
+    // returns a wrong value.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>impact_base_atoms(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        is_bid: bool,
+        limit_quote_atoms: QuoteAtoms,
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
+        impact_base_atoms(<span class="self">self</span>, is_bid, limit_quote_atoms, global_trade_accounts_opts)
+    }
+
     <span class="doccomment">/// How many base atoms you get when you trade in limit_quote_atoms.
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
     </span><span class="kw">pub fn </span>impact_base_atoms(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         is_bid: bool,
@@ -1800,9 +2326,16 @@
         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(total_matched_base_atoms);
     }
 
-    <span class="kw">pub fn </span>get_order_by_index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RestingOrder {
+    <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span><span class="kw">pub fn </span>get_order_by_index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RestingOrder {
         <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_market();
         <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, index).get_value()
+    }
+
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>get_order_by_index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>RestingOrder {
+        <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_market();
+        <span class="kw-2">&amp;</span>get_helper_order(dynamic, index).get_value()
     }
 
     <span class="kw">pub fn </span>get_trader_balance(<span class="kw-2">&amp;</span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; (BaseAtoms, QuoteAtoms) {
@@ -1812,8 +2345,7 @@
             ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
         <span class="kw">let </span>trader_index: DataIndex =
             claimed_seats_tree.lookup_index(<span class="kw-2">&amp;</span>ClaimedSeat::new_empty(<span class="kw-2">*</span>trader));
-        <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;</span>ClaimedSeat =
-            get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index).get_value();
+        <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;</span>ClaimedSeat = get_helper_seat(dynamic, trader_index).get_value();
         (
             claimed_seat.base_withdrawable_balance,
             claimed_seat.quote_withdrawable_balance,
@@ -1823,9 +2355,7 @@
     <span class="kw">pub fn </span>get_trader_key_by_index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: DataIndex) -&gt; <span class="kw-2">&amp;</span>Pubkey {
         <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_market();
 
-        <span class="kw-2">&amp;</span>get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, index)
-            .get_value()
-            .trader
+        <span class="kw-2">&amp;</span>get_helper_seat(dynamic, index).get_value().trader
     }
 
     <span class="kw">pub fn </span>get_trader_voume(<span class="kw-2">&amp;</span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; QuoteAtoms {
@@ -1835,8 +2365,7 @@
             ClaimedSeatTreeReadOnly::new(dynamic, fixed.claimed_seats_root_index, NIL);
         <span class="kw">let </span>trader_index: DataIndex =
             claimed_seats_tree.lookup_index(<span class="kw-2">&amp;</span>ClaimedSeat::new_empty(<span class="kw-2">*</span>trader));
-        <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;</span>ClaimedSeat =
-            get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index).get_value();
+        <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;</span>ClaimedSeat = get_helper_seat(dynamic, trader_index).get_value();
 
         claimed_seat.quote_volume
     }
@@ -1956,7 +2485,7 @@
 
     <span class="kw">pub fn </span>claim_seat(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trader: <span class="kw-2">&amp;</span>Pubkey) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
-        <span class="kw">let </span>free_address: DataIndex = get_free_address_on_market_fixed(fixed, dynamic);
+        <span class="kw">let </span>free_address: DataIndex = get_free_address_on_market_fixed_for_seat(fixed, dynamic);
 
         <span class="kw">let </span><span class="kw-2">mut </span>claimed_seats_tree: ClaimedSeatTree =
             ClaimedSeatTree::new(dynamic, fixed.claimed_seats_root_index, NIL);
@@ -1967,8 +2496,14 @@
             ManifestError::AlreadyClaimedSeat,
             <span class="string">"Already claimed seat"</span>,
         )<span class="question-mark">?</span>;
-
         claimed_seats_tree.insert(free_address, claimed_seat);
+        <span class="comment">// theoretically we need to update the total withdrawable amount, but it's always 0 here.
+        // but let's check here that the assumption holds.
+        </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+        </span>{
+            <span class="macro">cvt::cvt_assert!</span>(claimed_seat.base_withdrawable_balance == BaseAtoms::new(<span class="number">0</span>));
+            <span class="macro">cvt::cvt_assert!</span>(claimed_seat.quote_withdrawable_balance == QuoteAtoms::new(<span class="number">0</span>));
+        }
         fixed.claimed_seats_root_index = claimed_seats_tree.get_root_index();
 
         get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, free_address)
@@ -1989,11 +2524,7 @@
         fixed.claimed_seats_root_index = claimed_seats_tree.get_root_index();
 
         <span class="comment">// Put back seat on free list.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>free_list: FreeList&lt;MarketUnusedFreeListPadding&gt; =
-            FreeList::new(dynamic, fixed.free_list_head_index);
-        free_list.add(trader_seat_index);
-        fixed.free_list_head_index = trader_seat_index;
-
+        </span>release_address_on_market_fixed_for_seat(fixed, dynamic, trader_seat_index);
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -2004,13 +2535,12 @@
         is_base: bool,
     ) -&gt; ProgramResult {
         <span class="macro">require!</span>(
-            trader_index != NIL,
+            <span class="macro">is_not_nil!</span>(trader_index),
             ManifestError::InvalidDepositAccounts,
             <span class="string">"No seat initialized"</span>,
         )<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_mut();
-        update_balance(dynamic, trader_index, is_base, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
+        update_balance(fixed, dynamic, trader_index, is_base, <span class="bool-val">true</span>, amount_atoms)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -2020,9 +2550,16 @@
         amount_atoms: u64,
         is_base: bool,
     ) -&gt; ProgramResult {
-        <span class="kw">let </span>DynamicAccount { dynamic, .. } = <span class="self">self</span>.borrow_mut();
-        update_balance(dynamic, trader_index, is_base, <span class="bool-val">false</span>, amount_atoms)<span class="question-mark">?</span>;
+        <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
+        update_balance(fixed, dynamic, trader_index, is_base, <span class="bool-val">false</span>, amount_atoms)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub fn </span>place_order_(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        args: AddOrderToMarketArgs,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
+        market_helpers::place_order_helper(<span class="self">self</span>, args)
     }
 
     <span class="doccomment">/// Place an order and update the market
@@ -2061,7 +2598,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>total_quote_atoms_traded: QuoteAtoms = QuoteAtoms::ZERO;
 
         <span class="kw">let </span><span class="kw-2">mut </span>remaining_base_atoms: BaseAtoms = num_base_atoms;
-        <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; current_maker_order_index != NIL {
+        <span class="kw">while </span>remaining_base_atoms &gt; BaseAtoms::ZERO &amp;&amp; <span class="macro">is_not_nil!</span>(current_maker_order_index) {
             <span class="kw">let </span>maker_order: <span class="kw-2">&amp;</span>RestingOrder =
                 get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index).get_value();
 
@@ -2120,13 +2657,10 @@
 
             <span class="comment">// If it is a global order, just in time bring the funds over, or
             // remove from the tree and continue on to the next order.
-            </span><span class="kw">let </span>maker: Pubkey =
-                get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, maker_order.get_trader_index())
-                    .get_value()
-                    .trader;
-            <span class="kw">let </span>taker: Pubkey = get_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index)
+            </span><span class="kw">let </span>maker: Pubkey = get_helper_seat(dynamic, maker_order.get_trader_index())
                 .get_value()
                 .trader;
+            <span class="kw">let </span>taker: Pubkey = get_helper_seat(dynamic, trader_index).get_value().trader;
             <span class="kw">let </span>is_global: bool = maker_order.is_global();
 
             <span class="kw">if </span>is_global {
@@ -2154,6 +2688,7 @@
                         base_atoms_traded.as_u64()
                     }),
                 )<span class="question-mark">?</span>;
+
                 <span class="kw">if </span>!has_enough_tokens {
                     <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
                         fixed,
@@ -2206,6 +2741,7 @@
                         <span class="bool-val">true</span>,
                     )<span class="question-mark">?</span>;
                 update_balance(
+                    fixed,
                     dynamic,
                     maker_trader_index,
                     is_bid,
@@ -2219,6 +2755,7 @@
 
             <span class="comment">// Increase maker from the matched amount in the trade.
             </span>update_balance(
+                fixed,
                 dynamic,
                 maker_trader_index,
                 !is_bid,
@@ -2231,6 +2768,7 @@
             )<span class="question-mark">?</span>;
             <span class="comment">// Decrease taker
             </span>update_balance(
+                fixed,
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -2243,6 +2781,7 @@
             )<span class="question-mark">?</span>;
             <span class="comment">// Increase taker
             </span>update_balance(
+                fixed,
                 dynamic,
                 trader_index,
                 is_bid,
@@ -2281,12 +2820,11 @@
                     .get_order_type()
                     == OrderType::Global
                 {
-                    <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
-                        <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
+                    <span class="kw">if </span>is_bid {
+                        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>])<span class="question-mark">?</span>;
                     } <span class="kw">else </span>{
-                        <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
-                    };
-                    remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?</span>;
+                        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>])<span class="question-mark">?</span>;
+                    }
                 }
 
                 <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
@@ -2304,10 +2842,14 @@
                 remaining_base_atoms = remaining_base_atoms.checked_sub(base_atoms_traded)<span class="question-mark">?</span>;
                 current_maker_order_index = next_maker_order_index;
             } <span class="kw">else </span>{
+                <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+                </span>remove_from_orderbook_balance(fixed, dynamic, current_maker_order_index);
                 <span class="kw">let </span>maker_order: <span class="kw-2">&amp;mut </span>RestingOrder =
                     get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index)
                         .get_mut_value();
                 maker_order.reduce(base_atoms_traded)<span class="question-mark">?</span>;
+                <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+                </span>add_to_orderbook_balance(fixed, dynamic, current_maker_order_index);
                 remaining_base_atoms = BaseAtoms::ZERO;
                 <span class="kw">break</span>;
             }
@@ -2344,7 +2886,25 @@
     }
 
     <span class="doccomment">/// Rest the remaining order onto the market in a RestingOrder.
-    </span><span class="kw">fn </span>rest_remaining(
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span><span class="kw">pub fn </span>certora_rest_remaining(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        args: AddOrderToMarketArgs,
+        remaining_base_atoms: BaseAtoms,
+        order_sequence_number: u64,
+        total_base_atoms_traded: BaseAtoms,
+        total_quote_atoms_traded: QuoteAtoms,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AddOrderToMarketResult, ProgramError&gt; {
+        <span class="self">self</span>.rest_remaining(
+            args,
+            remaining_base_atoms,
+            order_sequence_number,
+            total_base_atoms_traded,
+            total_quote_atoms_traded,
+        )
+    }
+
+    <span class="kw">fn </span>rest_remaining(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         args: AddOrderToMarketArgs,
         remaining_base_atoms: BaseAtoms,
@@ -2364,7 +2924,11 @@
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
         <span class="comment">// Put the remaining in an order on the other bookside.
-        </span><span class="kw">let </span>free_address: DataIndex = get_free_address_on_market_fixed(fixed, dynamic);
+        </span><span class="kw">let </span>free_address: DataIndex = <span class="kw">if </span>is_bid {
+            get_free_address_on_market_fixed_for_bid_order(fixed, dynamic)
+        } <span class="kw">else </span>{
+            get_free_address_on_market_fixed_for_ask_order(fixed, dynamic)
+        };
 
         <span class="kw">let </span>resting_order: RestingOrder = RestingOrder::new(
             trader_index,
@@ -2377,21 +2941,28 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">if </span>resting_order.is_global() {
-            <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>is_bid {
-                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
+            <span class="kw">if </span>is_bid {
+                <span class="kw">let </span>global_trade_account_opt = <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>];
+                <span class="macro">require!</span>(
+                    global_trade_account_opt.is_some(),
+                    ManifestError::MissingGlobal,
+                    <span class="string">"Missing global accounts when adding a global"</span>,
+                )<span class="question-mark">?</span>;
+                try_to_add_to_global(<span class="kw-2">&amp;</span>global_trade_account_opt.as_ref().unwrap(), <span class="kw-2">&amp;</span>resting_order)<span class="question-mark">?</span>;
             } <span class="kw">else </span>{
-                <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
-            };
-            <span class="macro">require!</span>(
-                global_trade_accounts_opt.is_some(),
-                ManifestError::MissingGlobal,
-                <span class="string">"Missing global accounts when adding a global"</span>,
-            )<span class="question-mark">?</span>;
-            try_to_add_to_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt.as_ref().unwrap(), <span class="kw-2">&amp;</span>resting_order)<span class="question-mark">?</span>;
+                <span class="kw">let </span>global_trade_account_opt = <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>];
+                <span class="macro">require!</span>(
+                    global_trade_account_opt.is_some(),
+                    ManifestError::MissingGlobal,
+                    <span class="string">"Missing global accounts when adding a global"</span>,
+                )<span class="question-mark">?</span>;
+                try_to_add_to_global(<span class="kw-2">&amp;</span>global_trade_account_opt.as_ref().unwrap(), <span class="kw-2">&amp;</span>resting_order)<span class="question-mark">?</span>;
+            }
         } <span class="kw">else </span>{
             <span class="comment">// Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker
             </span>update_balance(
+                fixed,
                 dynamic,
                 trader_index,
                 !is_bid,
@@ -2405,8 +2976,7 @@
         }
         insert_order_into_tree(is_bid, fixed, dynamic, free_address, <span class="kw-2">&amp;</span>resting_order);
 
-        get_mut_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, free_address)
-            .set_payload_type(MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8);
+        set_payload_order(dynamic, free_address);
 
         <span class="prelude-val">Ok</span>(AddOrderToMarketResult {
             order_sequence_number,
@@ -2426,48 +2996,142 @@
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
         <span class="kw">let </span><span class="kw-2">mut </span>index_to_remove: DataIndex = NIL;
-        <span class="kw">for </span>is_searching_bids <span class="kw">in </span>[<span class="bool-val">false</span>, <span class="bool-val">true</span>] {
-            <span class="kw">let </span>tree: BooksideReadOnly = <span class="kw">if </span>is_searching_bids {
-                BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
-            } <span class="kw">else </span>{
-                BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
-            };
-            <span class="kw">for </span>(index, resting_order) <span class="kw">in </span>tree.iter::&lt;RestingOrder&gt;() {
-                <span class="kw">if </span>resting_order.get_sequence_number() == order_sequence_number {
-                    <span class="macro">require!</span>(
-                        resting_order.get_trader_index() == trader_index,
-                        ManifestError::InvalidCancel,
-                        <span class="string">"Cannot cancel for another trader"</span>,
-                    )<span class="question-mark">?</span>;
-                    <span class="macro">require!</span>(
-                        index_to_remove == NIL,
-                        ManifestError::InvalidCancel,
-                        <span class="string">"Book is broken, matched multiple orders"</span>,
-                    )<span class="question-mark">?</span>;
-                    index_to_remove = index;
-                }
+
+        <span class="comment">// One iteration to find the index to cancel in the ask side.
+        </span><span class="kw">let </span>tree: BooksideReadOnly =
+            BooksideReadOnly::new(dynamic, fixed.asks_root_index, fixed.asks_best_index);
+        <span class="kw">for </span>(index, resting_order) <span class="kw">in </span>tree.iter::&lt;RestingOrder&gt;() {
+            <span class="kw">if </span>resting_order.get_sequence_number() == order_sequence_number {
+                <span class="macro">require!</span>(
+                    resting_order.get_trader_index() == trader_index,
+                    ManifestError::InvalidCancel,
+                    <span class="string">"Cannot cancel for another trader"</span>,
+                )<span class="question-mark">?</span>;
+                <span class="macro">require!</span>(
+                    index_to_remove == NIL,
+                    ManifestError::InvalidCancel,
+                    <span class="string">"Book is broken, matched multiple orders"</span>,
+                )<span class="question-mark">?</span>;
+                index_to_remove = index;
             }
-            <span class="kw">if </span>index_to_remove != NIL {
-                <span class="comment">// Cancel order by index will update balances.
-                </span><span class="self">self</span>.cancel_order_by_index(index_to_remove, global_trade_accounts_opts)<span class="question-mark">?</span>;
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+
+        <span class="comment">// Second iteration to find the index to cancel in the bid side.
+        </span><span class="kw">let </span>tree: BooksideReadOnly =
+            BooksideReadOnly::new(dynamic, fixed.bids_root_index, fixed.bids_best_index);
+        <span class="kw">for </span>(index, resting_order) <span class="kw">in </span>tree.iter::&lt;RestingOrder&gt;() {
+            <span class="kw">if </span>resting_order.get_sequence_number() == order_sequence_number {
+                <span class="macro">require!</span>(
+                    resting_order.get_trader_index() == trader_index,
+                    ManifestError::InvalidCancel,
+                    <span class="string">"Cannot cancel for another trader"</span>,
+                )<span class="question-mark">?</span>;
+                <span class="macro">require!</span>(
+                    index_to_remove == NIL,
+                    ManifestError::InvalidCancel,
+                    <span class="string">"Book is broken, matched multiple orders"</span>,
+                )<span class="question-mark">?</span>;
+                index_to_remove = index;
             }
+        }
+
+        <span class="kw">if </span><span class="macro">is_not_nil!</span>(index_to_remove) {
+            <span class="comment">// Cancel order by index will update balances.
+            </span><span class="self">self</span>.cancel_order_by_index(index_to_remove, global_trade_accounts_opts)<span class="question-mark">?</span>;
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="comment">// Do not fail silently.
         </span><span class="prelude-val">Err</span>(ManifestError::InvalidCancel.into())
     }
 
-    <span class="kw">pub fn </span>cancel_order_by_index(
+    <span class="attr">#[cfg_attr(feature = <span class="string">"certora"</span>, cvt_hook_end(cancel_order_by_index_was_called()))]
+    </span><span class="kw">pub fn </span>cancel_order_by_index(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         order_index: DataIndex,
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; ProgramResult {
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
+        <span class="comment">// TODO: Undo expansion here when it was just
+        // remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)?;
+        // because the tracking for
 
-        remove_and_update_balances(fixed, dynamic, order_index, global_trade_accounts_opts)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>resting_order: <span class="kw-2">&amp;</span>RestingOrder = get_helper_order(dynamic, order_index).get_value();
+        <span class="kw">let </span>is_bid: bool = resting_order.get_is_bid();
+        <span class="kw">let </span>amount_atoms: u64 = <span class="kw">if </span>is_bid {
+            (resting_order
+                .get_price()
+                .checked_quote_for_base(resting_order.get_num_base_atoms(), <span class="bool-val">false</span>)
+                .unwrap())
+            .into()
+        } <span class="kw">else </span>{
+            resting_order.get_num_base_atoms().into()
+        };
+
+        <span class="comment">// Update the accounting for the order that was just canceled.
+        </span><span class="kw">if </span>resting_order.is_global() {
+            <span class="kw">if </span>is_bid {
+                remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>])<span class="question-mark">?</span>;
+            } <span class="kw">else </span>{
+                remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>])<span class="question-mark">?</span>;
+            }
+
+            <span class="comment">// Certora version was equivalent except it returned early here.
+            // Thats a bug, but keeping the certora code as close to what they
+            // wrote as possible. Formal verification does not cover global, so
+            // that would explain why introducing this bug for formal
+            // verification does not cause failures.
+            </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+            </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        } <span class="kw">else </span>{
+            update_balance(
+                fixed,
+                dynamic,
+                resting_order.get_trader_index(),
+                !is_bid,
+                <span class="bool-val">true</span>,
+                amount_atoms,
+            )<span class="question-mark">?</span>;
+        }
+        remove_order_from_tree_and_free(fixed, dynamic, order_index, is_bid)<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(())
     }
+}
+
+<span class="kw">fn </span>set_payload_order(dynamic: <span class="kw-2">&amp;mut </span>[u8], free_address: DataIndex) {
+    get_mut_helper_order(dynamic, free_address)
+        .set_payload_type(MarketDataTreeNodeType::RestingOrder <span class="kw">as </span>u8);
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">fn </span>add_to_orderbook_balance(fixed: <span class="kw-2">&amp;mut </span>MarketFixed, dynamic: <span class="kw-2">&amp;mut </span>[u8], order_index: DataIndex) {
+    <span class="comment">// Update the sum of orderbook balance.
+    </span><span class="kw">let </span>resting_order = get_helper_order(dynamic, order_index).get_value();
+    <span class="kw">let </span>(base_amount, quote_amount) = <span class="kw">match </span>resting_order.get_orderbook_atoms() {
+        <span class="prelude-val">Ok</span>(result) =&gt; result,
+        <span class="comment">// make errors nondet(), so we can see the violation
+        </span><span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; (nondet(), nondet()),
+    };
+    fixed.orderbook_base_atoms = fixed.orderbook_base_atoms.saturating_add(base_amount);
+    fixed.orderbook_quote_atoms = fixed.orderbook_quote_atoms.saturating_add(quote_amount);
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">fn </span>remove_from_orderbook_balance(
+    fixed: <span class="kw-2">&amp;mut </span>MarketFixed,
+    dynamic: <span class="kw-2">&amp;mut </span>[u8],
+    order_index: DataIndex,
+) {
+    <span class="comment">// Update the sum of orderbook balance.
+    </span><span class="kw">let </span>resting_order = get_helper_order(dynamic, order_index).get_value();
+    <span class="kw">let </span>(base_amount, quote_amount) = <span class="kw">match </span>resting_order.get_orderbook_atoms() {
+        <span class="prelude-val">Ok</span>(result) =&gt; result,
+        <span class="comment">// make errors nondet(), so we can see the violation
+        </span><span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; (nondet(), nondet()),
+    };
+    fixed.orderbook_base_atoms = fixed.orderbook_base_atoms.saturating_sub(base_amount);
+    fixed.orderbook_quote_atoms = fixed.orderbook_quote_atoms.saturating_sub(quote_amount);
 }
 
 <span class="kw">fn </span>remove_order_from_tree(
@@ -2476,6 +3140,8 @@
     order_index: DataIndex,
     is_bids: bool,
 ) -&gt; ProgramResult {
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span>remove_from_orderbook_balance(fixed, dynamic, order_index);
     <span class="kw">let </span><span class="kw-2">mut </span>tree: Bookside = <span class="kw">if </span>is_bids {
         Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
     } <span class="kw">else </span>{
@@ -2509,6 +3175,10 @@
 }
 
 <span class="comment">// Remove order from the tree, free the block.
+</span><span class="attr">#[cfg_attr(
+    feature = <span class="string">"certora"</span>,
+    cvt_hook_end(remove_order_from_tree_and_free_was_called())
+)]
 </span><span class="kw">fn </span>remove_order_from_tree_and_free(
     fixed: <span class="kw-2">&amp;mut </span>MarketFixed,
     dynamic: <span class="kw-2">&amp;mut </span>[u8],
@@ -2516,24 +3186,41 @@
     is_bids: bool,
 ) -&gt; ProgramResult {
     remove_order_from_tree(fixed, dynamic, order_index, is_bids)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>free_list: FreeList&lt;MarketUnusedFreeListPadding&gt; =
-        FreeList::new(dynamic, fixed.free_list_head_index);
-    free_list.add(order_index);
-    fixed.free_list_head_index = order_index;
+    <span class="comment">// Separate release functions because certora needs that.
+    </span><span class="kw">if </span>is_bids {
+        release_address_on_market_fixed_for_bid_order(fixed, dynamic, order_index);
+    } <span class="kw">else </span>{
+        release_address_on_market_fixed_for_ask_order(fixed, dynamic, order_index);
+    }
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>update_balance(
+<span class="attr">#[allow(unused_variables)]
+</span><span class="kw">pub fn </span>update_balance(
+    fixed: <span class="kw-2">&amp;mut </span>MarketFixed,
     dynamic: <span class="kw-2">&amp;mut </span>[u8],
     trader_index: DataIndex,
     is_base: bool,
     is_increase: bool,
     amount_atoms: u64,
 ) -&gt; ProgramResult {
-    <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;mut </span>ClaimedSeat =
-        get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index).get_mut_value();
+    <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;mut </span>ClaimedSeat = get_mut_helper_seat(dynamic, trader_index).get_mut_value();
 
     <span class="macro">trace!</span>(<span class="string">"update_balance_by_trader_index idx:{trader_index} base:{is_base} inc:{is_increase} amount:{amount_atoms}"</span>);
+
+    <span class="comment">// Update the sum of withdrawable balance.
+    // Subtract the current value from the sum here and at the end of the function, add
+    // the new value to the sum.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span>{
+        fixed.withdrawable_base_atoms = fixed
+            .withdrawable_base_atoms
+            .saturating_sub(claimed_seat.base_withdrawable_balance);
+        fixed.withdrawable_quote_atoms = fixed
+            .withdrawable_quote_atoms
+            .saturating_sub(claimed_seat.quote_withdrawable_balance);
+    }
+
     <span class="kw">if </span>is_base {
         <span class="kw">if </span>is_increase {
             claimed_seat.base_withdrawable_balance = claimed_seat
@@ -2567,6 +3254,18 @@
             .quote_withdrawable_balance
             .checked_sub(QuoteAtoms::new(amount_atoms))<span class="question-mark">?</span>;
     }
+
+    <span class="comment">// Update the sum of withdrawable balance, second part.
+    </span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span>{
+        fixed.withdrawable_base_atoms = fixed
+            .withdrawable_base_atoms
+            .saturating_add(claimed_seat.base_withdrawable_balance);
+        fixed.withdrawable_quote_atoms = fixed
+            .withdrawable_quote_atoms
+            .saturating_add(claimed_seat.quote_withdrawable_balance);
+    }
+
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -2575,8 +3274,7 @@
     trader_index: DataIndex,
     amount_atoms: QuoteAtoms,
 ) {
-    <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;mut </span>ClaimedSeat =
-        get_mut_helper::&lt;RBNode&lt;ClaimedSeat&gt;&gt;(dynamic, trader_index).get_mut_value();
+    <span class="kw">let </span>claimed_seat: <span class="kw-2">&amp;mut </span>ClaimedSeat = get_mut_helper_seat(dynamic, trader_index).get_mut_value();
     claimed_seat.quote_volume = claimed_seat.quote_volume.wrapping_add(amount_atoms);
 }
 
@@ -2594,6 +3292,7 @@
         Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
     };
     tree.insert(free_address, <span class="kw-2">*</span>resting_order);
+
     <span class="kw">if </span>is_bid {
         <span class="macro">trace!</span>(
             <span class="string">"insert order bid {resting_order:?} root:{}-&gt;{} max:{}-&gt;{}-&gt;{}"</span>,
@@ -2617,6 +3316,8 @@
         fixed.asks_root_index = tree.get_root_index();
         fixed.asks_best_index = tree.get_max_index();
     }
+    <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+    </span>add_to_orderbook_balance(fixed, dynamic, free_address);
 }
 
 <span class="kw">fn </span>get_next_candidate_match_index(
@@ -2640,14 +3341,6 @@
     }
 }
 
-<span class="kw">fn </span>get_free_address_on_market_fixed(fixed: <span class="kw-2">&amp;mut </span>MarketFixed, dynamic: <span class="kw-2">&amp;mut </span>[u8]) -&gt; DataIndex {
-    <span class="kw">let </span><span class="kw-2">mut </span>free_list: FreeList&lt;MarketUnusedFreeListPadding&gt; =
-        FreeList::new(dynamic, fixed.free_list_head_index);
-    <span class="kw">let </span>free_address: DataIndex = free_list.remove();
-    fixed.free_list_head_index = free_list.get_head();
-    free_address
-}
-
 <span class="kw">fn </span>remove_and_update_balances(
     fixed: <span class="kw-2">&amp;mut </span>MarketFixed,
     dynamic: <span class="kw-2">&amp;mut </span>[u8],
@@ -2655,18 +3348,16 @@
     global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
 ) -&gt; ProgramResult {
     <span class="kw">let </span>resting_order_to_remove: <span class="kw-2">&amp;</span>RestingOrder =
-        get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, order_to_remove_index).get_value();
+        get_helper_order(dynamic, order_to_remove_index).get_value();
     <span class="kw">let </span>order_to_remove_is_bid: bool = resting_order_to_remove.get_is_bid();
 
     <span class="comment">// Global order balances are accounted for on the global accounts, not on the market.
     </span><span class="kw">if </span>resting_order_to_remove.is_global() {
-        <span class="kw">let </span>global_trade_accounts_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt; = <span class="kw">if </span>order_to_remove_is_bid {
-            <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>]
+        <span class="kw">if </span>order_to_remove_is_bid {
+            remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">1</span>])<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-            <span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>]
-        };
-
-        remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opt)<span class="question-mark">?</span>;
+            remove_from_global(<span class="kw-2">&amp;</span>global_trade_accounts_opts[<span class="number">0</span>])<span class="question-mark">?</span>;
+        }
     } <span class="kw">else </span>{
         <span class="comment">// Return the exact number of atoms if the resting order is an
         // ask. If the resting order is bid, multiply by price and round
@@ -2681,6 +3372,7 @@
             resting_order_to_remove.get_num_base_atoms().as_u64()
         };
         update_balance(
+            fixed,
             dynamic,
             resting_order_to_remove.get_trader_index(),
             !order_to_remove_is_bid,

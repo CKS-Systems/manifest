@@ -127,18 +127,110 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
     logs::{emit_stack, DepositLog},
     state::MarketRefMut,
-    validation::loaders::DepositContext,
+    validation::{
+        loaders::DepositContext, MintAccountInfo, Signer, TokenAccountInfo, TokenProgram,
+    },
 };
 <span class="kw">use </span>borsh::{BorshDeserialize, BorshSerialize};
 <span class="kw">use </span>hypertree::DataIndex;
 <span class="kw">use </span>solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
-<span class="kw">use super</span>::{get_trader_index_with_hint, invoke, shared::get_mut_dynamic_account};
+<span class="kw">use super</span>::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>early_panic::early_panic;
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="kw">use </span>solana_cvt::token::{spl_token_2022_transfer, spl_token_transfer};
 
 <span class="attr">#[derive(BorshDeserialize, BorshSerialize)]
 </span><span class="kw">pub struct </span>DepositParams {
@@ -156,15 +248,25 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_deposit(
-    _program_id: <span class="kw-2">&amp;</span>Pubkey,
+    program_id: <span class="kw-2">&amp;</span>Pubkey,
     accounts: <span class="kw-2">&amp;</span>[AccountInfo],
     data: <span class="kw-2">&amp;</span>[u8],
+) -&gt; ProgramResult {
+    <span class="kw">let </span>params: DepositParams = DepositParams::try_from_slice(data)<span class="question-mark">?</span>;
+    process_deposit_core(program_id, accounts, params)
+}
+
+<span class="attr">#[cfg_attr(all(feature = <span class="string">"certora"</span>, not(feature = <span class="string">"certora-test"</span>)), early_panic)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_deposit_core(
+    _program_id: <span class="kw-2">&amp;</span>Pubkey,
+    accounts: <span class="kw-2">&amp;</span>[AccountInfo],
+    params: DepositParams,
 ) -&gt; ProgramResult {
     <span class="kw">let </span>deposit_context: DepositContext = DepositContext::load(accounts)<span class="question-mark">?</span>;
     <span class="kw">let </span>DepositParams {
         amount_atoms,
         trader_index_hint,
-    } = DepositParams::try_from_slice(data)<span class="question-mark">?</span>;
+    } = params;
     <span class="comment">// Due to transfer fees, this might not be what you expect.
     </span><span class="kw">let </span><span class="kw-2">mut </span>deposited_amount_atoms: u64 = amount_atoms;
 
@@ -186,32 +288,23 @@
 
     <span class="kw">if </span><span class="kw-2">*</span>vault.owner == spl_token_2022::id() {
         <span class="kw">let </span>before_vault_balance_atoms: u64 = vault.get_balance_atoms();
-        invoke(
-            <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
-                token_program.key,
-                trader_token.key,
-                <span class="kw">if </span>is_base {
-                    dynamic_account.fixed.get_base_mint()
-                } <span class="kw">else </span>{
-                    dynamic_account.get_quote_mint()
-                },
-                vault.key,
-                payer.key,
-                <span class="kw-2">&amp;</span>[],
-                amount_atoms,
-                <span class="kw">if </span>is_base {
-                    dynamic_account.fixed.get_base_mint_decimals()
-                } <span class="kw">else </span>{
-                    dynamic_account.fixed.get_quote_mint_decimals()
-                },
-            )<span class="question-mark">?</span>,
-            <span class="kw-2">&amp;</span>[
-                token_program.as_ref().clone(),
-                trader_token.as_ref().clone(),
-                mint.as_ref().clone(),
-                vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
+        spl_token_2022_transfer_from_trader_to_vault(
+            <span class="kw-2">&amp;</span>token_program,
+            <span class="kw-2">&amp;</span>trader_token,
+            <span class="prelude-val">Some</span>(mint),
+            <span class="kw">if </span>is_base {
+                dynamic_account.fixed.get_base_mint()
+            } <span class="kw">else </span>{
+                dynamic_account.get_quote_mint()
+            },
+            <span class="kw-2">&amp;</span>vault,
+            <span class="kw-2">&amp;</span>payer,
+            amount_atoms,
+            <span class="kw">if </span>is_base {
+                dynamic_account.fixed.get_base_mint_decimals()
+            } <span class="kw">else </span>{
+                dynamic_account.fixed.get_quote_mint_decimals()
+            },
         )<span class="question-mark">?</span>;
 
         <span class="kw">let </span>after_vault_balance_atoms: u64 = vault.get_balance_atoms();
@@ -219,21 +312,12 @@
             .checked_sub(before_vault_balance_atoms)
             .unwrap();
     } <span class="kw">else </span>{
-        invoke(
-            <span class="kw-2">&amp;</span>spl_token::instruction::transfer(
-                token_program.key,
-                trader_token.key,
-                vault.key,
-                payer.key,
-                <span class="kw-2">&amp;</span>[],
-                amount_atoms,
-            )<span class="question-mark">?</span>,
-            <span class="kw-2">&amp;</span>[
-                token_program.as_ref().clone(),
-                trader_token.as_ref().clone(),
-                vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
+        spl_token_transfer_from_trader_to_vault(
+            <span class="kw-2">&amp;</span>token_program,
+            <span class="kw-2">&amp;</span>trader_token,
+            <span class="kw-2">&amp;</span>vault,
+            <span class="kw-2">&amp;</span>payer,
+            amount_atoms,
         )<span class="question-mark">?</span>;
     }
 
@@ -253,5 +337,91 @@
     })<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/** Transfer from base (quote) trader to base (quote) vault using SPL Token **/
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">fn </span>spl_token_transfer_from_trader_to_vault&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+    token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    amount: u64,
+) -&gt; ProgramResult {
+    <span class="kw">crate</span>::program::invoke(
+        <span class="kw-2">&amp;</span>spl_token::instruction::transfer(
+            token_program.key,
+            trader_account.key,
+            vault.key,
+            payer.key,
+            <span class="kw-2">&amp;</span>[],
+            amount,
+        )<span class="question-mark">?</span>,
+        <span class="kw-2">&amp;</span>[
+            token_program.as_ref().clone(),
+            trader_account.as_ref().clone(),
+            vault.as_ref().clone(),
+            payer.as_ref().clone(),
+        ],
+    )
+}
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="doccomment">/** (Summary) Transfer from base (quote) trader to base (quote) vault using SPL Token **/
+</span><span class="kw">fn </span>spl_token_transfer_from_trader_to_vault&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+    _token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    amount: u64,
+) -&gt; ProgramResult {
+    spl_token_transfer(trader_account.info, vault.info, payer.info, amount)
+}
+
+<span class="doccomment">/** Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
+</span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">fn </span>spl_token_2022_transfer_from_trader_to_vault&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+    token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    mint: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    mint_pubkey: <span class="kw-2">&amp;</span>Pubkey,
+    vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    amount: u64,
+    decimals: u8,
+) -&gt; ProgramResult {
+    <span class="kw">crate</span>::program::invoke(
+        <span class="kw-2">&amp;</span>spl_token_2022::instruction::transfer_checked(
+            token_program.key,
+            trader_account.key,
+            mint_pubkey,
+            vault.key,
+            payer.key,
+            <span class="kw-2">&amp;</span>[],
+            amount,
+            decimals,
+        )<span class="question-mark">?</span>,
+        <span class="kw-2">&amp;</span>[
+            token_program.as_ref().clone(),
+            trader_account.as_ref().clone(),
+            vault.as_ref().clone(),
+            mint.unwrap().as_ref().clone(),
+            payer.as_ref().clone(),
+        ],
+    )
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+</span><span class="doccomment">/** (Summary) Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
+</span><span class="kw">fn </span>spl_token_2022_transfer_from_trader_to_vault&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;(
+    _token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    _mint: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
+    _mint_pubkey: <span class="kw-2">&amp;</span>Pubkey,
+    vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    amount: u64,
+    _decimals: u8,
+) -&gt; ProgramResult {
+    spl_token_2022_transfer(trader_account.info, vault.info, payer.info, amount)
 }
 </code></pre></div></section></main></body></html>
