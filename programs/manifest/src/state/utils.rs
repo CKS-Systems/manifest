@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, invoke, ManifestError},
+    program::{get_mut_dynamic_account, invoke},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -63,6 +63,7 @@ pub(crate) fn get_now_epoch() -> u64 {
     now_epoch
 }
 
+#[inline(always)]
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
 ) -> ProgramResult {
@@ -159,7 +160,7 @@ pub(crate) fn try_to_add_to_global(
 pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
     require!(
         order_type_can_take(order_type),
-        ManifestError::PostOnlyCrosses,
+        crate::program::ManifestError::PostOnlyCrosses,
         "Post only order would cross",
     )?;
     Ok(())
@@ -168,7 +169,7 @@ pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
 pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) -> ProgramResult {
     require!(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot > now_slot,
-        ManifestError::AlreadyExpired,
+        crate::program::ManifestError::AlreadyExpired,
         "Placing an already expired order. now: {} last_valid: {}",
         now_slot,
         last_valid_slot
@@ -179,7 +180,7 @@ pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) ->
 pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult {
     require!(
         trader_index != NIL,
-        ManifestError::AlreadyClaimedSeat,
+        crate::program::ManifestError::AlreadyClaimedSeat,
         "Need to claim a seat first",
     )?;
     Ok(())
@@ -211,7 +212,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 ) -> Result<bool, ProgramError> {
     require!(
         global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
+        crate::program::ManifestError::MissingGlobal,
         "Missing global accounts when adding a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
@@ -259,7 +260,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     if *token_program.key == spl_token_2022::id() {
         require!(
             mint_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
 

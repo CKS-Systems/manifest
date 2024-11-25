@@ -12,11 +12,10 @@ use hypertree::{
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
 use shank::ShankType;
-use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
 use crate::{
-    program::ManifestError,
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{get_global_address, get_global_vault_address, ManifestAccount},
@@ -199,7 +198,7 @@ impl ManifestAccount for GlobalFixed {
         // Check the discriminant to make sure it is a global account.
         require!(
             self.discriminant == GLOBAL_FIXED_DISCRIMINANT,
-            ProgramError::InvalidAccountData,
+            solana_program::program_error::ProgramError::InvalidAccountData,
             "Invalid market discriminant actual: {} expected: {}",
             self.discriminant,
             GLOBAL_FIXED_DISCRIMINANT
@@ -269,7 +268,7 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
             get_global_trader(fixed, dynamic, trader);
         require!(
             existing_global_trader_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global trader for {}",
             trader
         )?;
@@ -287,7 +286,7 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
 
         require!(
             existing_deposit_index == fixed.global_deposits_max_index,
-            ManifestError::GlobalInsufficient,
+            crate::program::ManifestError::GlobalInsufficient,
             "Only can remove trader with lowest deposit"
         )?;
 
@@ -310,7 +309,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         require!(
             fixed.free_list_head_index == NIL,
-            ManifestError::InvalidFreeList,
+            crate::program::ManifestError::InvalidFreeList,
             "Expected empty free list, but expand wasnt needed",
         )?;
 
@@ -331,7 +330,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_mut_global_deposit(fixed, dynamic, trader);
         require!(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
             trader
         )?;
@@ -352,7 +351,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
 
         require!(
             global_trader_tree.lookup_index(&global_trader) == NIL,
-            ManifestError::AlreadyClaimedSeat,
+            crate::program::ManifestError::AlreadyClaimedSeat,
             "Already claimed global trader seat",
         )?;
 
@@ -360,7 +359,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
         require!(
             fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
-            ManifestError::TooManyGlobalSeats,
+            crate::program::ManifestError::TooManyGlobalSeats,
             "There is a strict limit on number of seats available in a global, use evict",
         )?;
 
@@ -391,7 +390,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_global_trader(fixed, dynamic, existing_trader);
         require!(
             existing_global_trader_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global trader for {}",
             existing_trader
         )?;
@@ -401,7 +400,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_mut_global_deposit(fixed, dynamic, existing_trader);
         require!(
             existing_global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
             existing_trader
         )?;
@@ -410,7 +409,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         let existing_global_atoms_deposited: GlobalAtoms = existing_global_deposit.balance_atoms;
         require!(
             existing_global_atoms_deposited == GlobalAtoms::ZERO,
-            ManifestError::GlobalInsufficient,
+            crate::program::ManifestError::GlobalInsufficient,
             "Error in emptying the existing global",
         )?;
 
@@ -429,7 +428,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 GlobalTraderTree::new(dynamic, fixed.global_traders_root_index, NIL);
             require!(
                 existing_deposit_index == fixed.global_deposits_max_index,
-                ManifestError::GlobalInsufficient,
+                crate::program::ManifestError::GlobalInsufficient,
                 "Only can remove trader with lowest deposit"
             )?;
             let new_global_trader: GlobalTrader =
@@ -440,7 +439,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // Cannot claim an extra seat.
             require!(
                 global_trader_tree.lookup_index(&new_global_trader) == NIL,
-                ManifestError::AlreadyClaimedSeat,
+                crate::program::ManifestError::AlreadyClaimedSeat,
                 "Already claimed global trader seat",
             )?;
 
@@ -491,7 +490,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 get_mut_global_deposit(fixed, dynamic, global_trade_owner);
             require!(
                 global_deposit_opt.is_some(),
-                ManifestError::MissingGlobal,
+                crate::program::ManifestError::MissingGlobal,
                 "Could not find global deposit for {}",
                 global_trade_owner
             )?;
@@ -503,7 +502,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             // an informational safety check.
             require!(
                 num_global_atoms <= global_atoms_deposited,
-                ManifestError::GlobalInsufficient,
+                crate::program::ManifestError::GlobalInsufficient,
                 "Insufficient funds for global order needed {} has {}",
                 num_global_atoms,
                 global_atoms_deposited
@@ -520,7 +519,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_mut_global_deposit(fixed, dynamic, trader);
         require!(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
             trader
         )?;
@@ -537,7 +536,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_mut_global_deposit(fixed, dynamic, trader);
         require!(
             global_deposit_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
             trader
         )?;

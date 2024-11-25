@@ -1,6 +1,8 @@
 use std::mem::size_of;
 
 use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
+#[cfg(feature = "certora")]
+use crate::quantities::{QuoteAtoms, WrapperU64};
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};
@@ -125,6 +127,12 @@ impl RestingOrder {
         self.order_type
     }
 
+    #[cfg(feature = "certora")]
+    pub fn is_global(&self) -> bool {
+        false
+    }
+
+    #[cfg(not(feature = "certora"))]
     pub fn is_global(&self) -> bool {
         self.order_type == OrderType::Global
     }
@@ -139,6 +147,20 @@ impl RestingOrder {
 
     pub fn get_is_bid(&self) -> bool {
         self.is_bid.0 == 1
+    }
+
+    // compute the "value" of an order, i.e. the tokens that are reserved for the trade and
+    // that will be returned when it is cancelled.
+    #[cfg(feature = "certora")]
+    pub fn get_orderbook_atoms(&self) -> Result<(BaseAtoms, QuoteAtoms), ProgramError> {
+        if self.is_global() {
+            return Ok((BaseAtoms::new(0), QuoteAtoms::new(0)));
+        } else if self.get_is_bid() {
+            let quote_amount = self.num_base_atoms.checked_mul(self.price, true)?;
+            return Ok((BaseAtoms::new(0), quote_amount));
+        } else {
+            return Ok((self.num_base_atoms, QuoteAtoms::new(0)));
+        }
     }
 
     pub fn reduce(&mut self, size: BaseAtoms) -> ProgramResult {

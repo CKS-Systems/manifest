@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_withdraw_withdraws": "SUCCESS"
+       }
+}

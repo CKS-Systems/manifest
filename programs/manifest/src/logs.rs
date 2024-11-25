@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use bytemuck::{Pod, Zeroable};
 use hypertree::PodBool;
 use shank::ShankAccount;
@@ -18,14 +16,22 @@ use crate::{
 /// because the goal of this program is to minimize the number of input
 /// accounts, so including the signer for the self CPI is not worth it.
 /// Also, be compatible with anchor parsing clients.
+
+#[cfg(not(feature = "certora"))]
 #[inline(never)] // ensure fresh stack frame
 pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramError> {
     // stack buffer, stack frames are 4kb
     let mut buffer: [u8; 3000] = [0u8; 3000];
     buffer[..8].copy_from_slice(&T::discriminant());
-    *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + size_of::<T>()]) = e;
+    *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + std::mem::size_of::<T>()]) = e;
 
-    solana_program::log::sol_log_data(&[&buffer[..(size_of::<T>() + 8)]]);
+    solana_program::log::sol_log_data(&[&buffer[..(std::mem::size_of::<T>() + 8)]]);
+    Ok(())
+}
+
+// Do not emit logs for formal verification.
+#[cfg(feature = "certora")]
+pub fn emit_stack<T: bytemuck::Pod + Discriminant>(_e: T) -> Result<(), ProgramError> {
     Ok(())
 }
 

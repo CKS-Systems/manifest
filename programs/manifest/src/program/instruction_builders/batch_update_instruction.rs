@@ -1,3 +1,6 @@
+#[cfg(feature = "certora")]
+use crate::program::batch_update::{CancelOrderParams, PlaceOrderParams};
+#[cfg(not(feature = "certora"))]
 use crate::{
     program::{
         batch_update::{BatchUpdateParams, CancelOrderParams, PlaceOrderParams},
@@ -5,8 +8,12 @@ use crate::{
     },
     validation::{get_global_address, get_global_vault_address, get_vault_address},
 };
+#[cfg(not(feature = "certora"))]
 use borsh::BorshSerialize;
 use hypertree::DataIndex;
+#[cfg(feature = "certora")]
+use solana_program::{instruction::Instruction, pubkey::Pubkey};
+#[cfg(not(feature = "certora"))]
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -15,6 +22,7 @@ use solana_program::{
 
 // Token programs are needed for global orders with token22. Only include if
 // this is global or could match with global. Defaults to normal token program.
+#[cfg(not(feature = "certora"))]
 pub fn batch_update_instruction(
     market: &Pubkey,
     payer: &Pubkey,
@@ -67,4 +75,20 @@ pub fn batch_update_instruction(
         ]
         .concat(),
     }
+}
+
+#[cfg(feature = "certora")]
+pub fn batch_update_instruction(
+    _market: &Pubkey,
+    _payer: &Pubkey,
+    _trader_index_hint: Option<DataIndex>,
+    _cancels: Vec<CancelOrderParams>,
+    _orders: Vec<PlaceOrderParams>,
+    _base_mint_opt: Option<Pubkey>,
+    _base_mint_token_program_opt: Option<Pubkey>,
+    _quote_mint_opt: Option<Pubkey>,
+    _quote_mint_token_program_opt: Option<Pubkey>,
+) -> Instruction {
+    // Empty intentionally, just here so it compiles.
+    todo!()
 }
