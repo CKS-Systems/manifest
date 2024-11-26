@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732550707196,
+  "lastUpdate": 1732644203058,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8549,6 +8549,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6093,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7b98c47b8989b0d66a1a117983500e29a546e9d",
+          "message": "Github action for certora (#297)\n\n* Move to home dir\r\n\r\n* logging\r\n\r\n* github path\r\n\r\n* stdout\r\n\r\n* assert no errors",
+          "timestamp": "2024-11-26T12:38:21-05:00",
+          "tree_id": "baf367f5917016607928f07efdc474c79001aeb9",
+          "url": "https://github.com/CKS-Systems/manifest/commit/d7b98c47b8989b0d66a1a117983500e29a546e9d"
+        },
+        "date": 1732644201466,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3463,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5452,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6118,
             "unit": "CU",
             "range": "",
             "extra": ""
