@@ -10,7 +10,7 @@
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
 [![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
 [![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
-[![Autogen](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-autogen.yml)
+[![Formal Verification](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
 No more permissioned markets.
@@ -109,6 +109,21 @@ sh local-validator-test.sh
 
 ### Client SDK
   [NPM Package](https://www.npmjs.com/package/@cks-systems/manifest-sdk)
+
+### Formal Verification
+Instructions for how to run formal verification are in [Certora_README](https://github.com/CKS-Systems/manifest/blob/main/Certora_README.md)
+
+From a high level, 4 sets of properties were formally verified
+
+- Red black tree properties. Red black tree verification on the core data structure, including the additional hypertree properties.
+- Loss of funds. Properties that show that all funds are accounted for and that there is no loss from any sequence of interactions with the program.
+- Availability. Properties that show that valid operations, like cancelling orders or withdrawing funds will always succeed.
+- Matching. Properties that go beyond loss of funds to show that not only does the exchange itself not lose funds overall, but the matching mechanism properly accounts for who the funds belong to.
+
+Verification is rerun against head every day using the certora prover. The rules
+moslt lie within the certora directory. There are some parts of the code that
+are only enabled with the certora feature, but that is so the verification can
+go beyond proving invariants at the end and do it on intermediate steps.
 
 ### Tip Jar
   B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6
