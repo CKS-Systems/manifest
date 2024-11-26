@@ -82,6 +82,9 @@
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Display;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -92,7 +95,10 @@
 // would be better to set it fully to DataIndex::MAX, but not a major concern
 // because it is just set to an unreacahable data index and SVM limits the
 // account size to 10MB.
+</span><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">pub const </span>NIL: DataIndex = <span class="number">0x7F_FF_FF_FF</span>;
+<span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+</span><span class="kw">pub const </span>NIL: DataIndex = DataIndex::MAX;
 
 <span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 #[macro_export]
