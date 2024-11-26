@@ -25,7 +25,7 @@ class VerificationResult(Enum):
     @staticmethod
     def from_command_result(command_result: subprocess.CompletedProcess[str]) -> 'VerificationResult':
         if command_result.returncode == 0:
-            assert "|Not violated" in command_result.stdout, "The verification terminated successfully, but cannot find the '|Not violated' substring in stdout"
+            assert "|Not violated" in command_result.stdout, ("The verification terminated successfully, but cannot find the '|Not violated' substring in stdout" + str(command_result.stdout))
             return VerificationResult.Verified
         elif "|Violated" in command_result.stdout:
             # If the return code is not zero, and in the stdout we find `|Violated`,
