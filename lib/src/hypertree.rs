@@ -8,7 +8,10 @@ use crate::DataIndex;
 // would be better to set it fully to DataIndex::MAX, but not a major concern
 // because it is just set to an unreacahable data index and SVM limits the
 // account size to 10MB.
+#[cfg(feature = "certora")]
 pub const NIL: DataIndex = 0x7F_FF_FF_FF;
+#[cfg(not(feature = "certora"))]
+pub const NIL: DataIndex = DataIndex::MAX;
 
 #[cfg(feature = "certora")]
 #[macro_export]
