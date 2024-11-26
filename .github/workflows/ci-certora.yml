@@ -29,8 +29,8 @@ jobs:
       - name: Install certora platform tools
         run: |
           mkdir $HOME/platform-tools-certora
-          wget https://github.com/Certora/certora-solana-platform-tools/releases/download/linux-x86_64-ubuntu-20.04-10-22-2024/platform-tools-linux-x86_64.tar.bz2
           cd $HOME
+          wget https://github.com/Certora/certora-solana-platform-tools/releases/download/linux-x86_64-ubuntu-20.04-10-22-2024/platform-tools-linux-x86_64.tar.bz2
           tar -xvjf platform-tools-linux-x86_64.tar.bz2 -C $HOME/platform-tools-certora
           export PLATFORM_TOOLS_DIR=$HOME/.cache/solana/v1.41
           mv $PLATFORM_TOOLS_DIR/platform-tools $PLATFORM_TOOLS_DIR/platform-tools.backup
