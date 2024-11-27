@@ -108,6 +108,8 @@ cargo test-sbf
 sh local-validator-test.sh
 ```
 ## Resources
+### Version
+  Currently deployed version [1.0.0 release](https://github.com/CKS-Systems/manifest/releases/tag/program-v1.0.0)
 ### Client SDK
   [NPM Package](https://www.npmjs.com/package/@cks-systems/manifest-sdk)
 
