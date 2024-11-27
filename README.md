@@ -2,7 +2,7 @@
 
 # <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
 
-*The Unlimited Orderbook.*
+*The Unlimited Orderbook*
 
 
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
@@ -18,6 +18,7 @@ No more trading fees.
 No more expensive rent to start a market.
 Capital efficiency built-in.
 Maximal freedom to exchange risk.
+Trade everything for nothing.
 
 ## Whitepaper
 
@@ -93,22 +94,27 @@ cargo build-sbf
 - Is tickless a good idea? This inverts time priority since it makes the most recent order able to provide negligible price improvement. This could disrupt behavior near mid and lead to unforeseen patterns.
 - Is global lock contention going to be a problem? Global provides capital efficiency that will be attractive to traders, but the extra lock contention for landing transactions, not only for placing a global, but also added to anyone who might match with it, may be problematic. There is a possibility that some markets may have restrictions on global usage to protect the land rates of normal traders.
 
-### Testing
+## Testing
 
-#### Program Test
+### Program Test
 
 ```
 cargo test-sbf
 ```
 
-#### Typescript client test
+### Typescript client test
 
 ```
 sh local-validator-test.sh
 ```
-
+## Resources
+### Version
+  Currently deployed version [1.0.0 release](https://github.com/CKS-Systems/manifest/releases/tag/program-v1.0.0)
 ### Client SDK
   [NPM Package](https://www.npmjs.com/package/@cks-systems/manifest-sdk)
+
+### Audit
+[View Report](https://www.manifest.trade/audit.pdf)
 
 ### Formal Verification
 Instructions for how to run formal verification are in [Certora_README](https://github.com/CKS-Systems/manifest/blob/main/Certora_README.md)
@@ -121,7 +127,7 @@ From a high level, 4 sets of properties were formally verified
 - Matching. Properties that go beyond loss of funds to show that not only does the exchange itself not lose funds overall, but the matching mechanism properly accounts for who the funds belong to.
 
 Verification is rerun against head every day using the certora prover. The rules
-moslt lie within the certora directory. There are some parts of the code that
+mostly lie within the certora directory. There are some parts of the code that
 are only enabled with the certora feature, but that is so the verification can
 go beyond proving invariants at the end and do it on intermediate steps.
 
