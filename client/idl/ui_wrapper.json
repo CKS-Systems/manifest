@@ -7,7 +7,7 @@
       "accounts": [
         {
           "name": "owner",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false,
           "docs": [
             "Owner of the Manifest account"

@@ -10,7 +10,7 @@ pub enum ManifestWrapperInstruction {
 
     /// Create and initialize a wrapper for owner. Note that owner and payer
     /// are separate to enable PDA owners.
-    #[account(0, writable, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(0, name = "owner", desc = "Owner of the Manifest account")]
     #[account(1, name = "system_program", desc = "System program")]
     #[account(2, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     #[account(3, writable, name = "wrapper_state", desc = "Wrapper state")]
