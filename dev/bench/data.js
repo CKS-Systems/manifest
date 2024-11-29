@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732658033881,
+  "lastUpdate": 1732893727464,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8747,6 +8747,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6116,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2601fc52b589301d87a1f744771c7db3c663af57",
+          "message": "Remove signer check for owner when creating ui wrapper (#301)\n\n* Remove signer check for owner when creating wrapper\r\n\r\n* idl\r\n\r\n* make owner not writable in create wrapper ui",
+          "timestamp": "2024-11-29T09:56:33-05:00",
+          "tree_id": "87e7f215acc2c8268f1e5cd873bc4a478c7202d4",
+          "url": "https://github.com/CKS-Systems/manifest/commit/2601fc52b589301d87a1f744771c7db3c663af57"
+        },
+        "date": 1732893723152,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3479,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5488,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6084,
             "unit": "CU",
             "range": "",
             "extra": ""
