@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_cancel_order_by_index_no_revert_ask": "SUCCESS"
+       }
+}

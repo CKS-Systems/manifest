@@ -4,7 +4,53 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::{DataIndex, RedBlackTreeRangeIterator};
 
+// Set to less than DataIndex::MAX because formal verification required it. It
+// would be better to set it fully to DataIndex::MAX, but not a major concern
+// because it is just set to an unreacahable data index and SVM limits the
+// account size to 10MB.
+#[cfg(feature = "certora")]
+pub const NIL: DataIndex = 0x7F_FF_FF_FF;
+#[cfg(not(feature = "certora"))]
 pub const NIL: DataIndex = DataIndex::MAX;
+
+#[cfg(feature = "certora")]
+#[macro_export]
+macro_rules! is_not_nil {
+    ($v: expr) => {
+        $v < NIL
+    };
+}
+
+#[cfg(feature = "certora")]
+#[macro_export]
+macro_rules! is_nil {
+    ($v: expr) => {
+        $v >= NIL
+    };
+}
+
+#[cfg(not(feature = "certora"))]
+#[macro_export]
+macro_rules! is_not_nil {
+    ($v: expr) => {
+        $v != NIL
+    };
+}
+
+#[cfg(not(feature = "certora"))]
+#[macro_export]
+macro_rules! is_nil {
+    ($v: expr) => {
+        $v == NIL
+    };
+}
+
+#[macro_export]
+macro_rules! eq_nil {
+    ($v: expr) => {
+        $v == NIL
+    };
+}
 
 pub trait Payload: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display {}
 impl<T: Zeroable + Pod + PartialOrd + Ord + PartialEq + Eq + Display> Payload for T {}

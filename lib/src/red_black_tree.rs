@@ -218,6 +218,25 @@ impl<'a, V: Payload> GetRedBlackTreeData<'a> for RedBlackTree<'a, V> {
     }
 }
 
+// Public just for certora.
+#[cfg(feature = "certora")]
+pub trait RedBlackTreeReadOperationsHelpers<'a> {
+    fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
+    fn has_left<V: Payload>(&self, index: DataIndex) -> bool;
+    fn has_right<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_right_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn get_left_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn get_color<V: Payload>(&self, index: DataIndex) -> Color;
+    fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
+    fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+    fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
+    fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
+    fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
+        -> DataIndex;
+}
+#[cfg(not(feature = "certora"))]
 pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_value<V: Payload>(&'a self, index: DataIndex) -> &'a V;
     fn has_left<V: Payload>(&self, index: DataIndex) -> bool;
@@ -337,6 +356,19 @@ where
     }
 }
 
+// Public just for certora.
+#[cfg(feature = "certora")]
+pub trait RedBlackTreeWriteOperationsHelpers<'a> {
+    fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
+    fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
+    fn set_left_index<V: Payload>(&mut self, index: DataIndex, left_index: DataIndex);
+    fn set_right_index<V: Payload>(&mut self, index: DataIndex, right_index: DataIndex);
+    fn rotate_left<V: Payload>(&mut self, index: DataIndex);
+    fn rotate_right<V: Payload>(&mut self, index: DataIndex);
+    fn swap_node_with_successor<V: Payload>(&mut self, index_0: DataIndex, index_1: DataIndex);
+    fn update_parent_child<V: Payload>(&mut self, index: DataIndex);
+}
+#[cfg(not(feature = "certora"))]
 pub(crate) trait RedBlackTreeWriteOperationsHelpers<'a> {
     fn set_color<V: Payload>(&mut self, index: DataIndex, color: Color);
     fn set_parent_index<V: Payload>(&mut self, index: DataIndex, parent_index: DataIndex);
@@ -941,6 +973,15 @@ impl<'a, T: HyperTreeReadOperations<'a> + GetRedBlackTreeReadOnlyData<'a>, V: Pa
     }
 }
 
+#[cfg(feature = "certora")]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+pub enum Color {
+    #[default]
+    Black = 0,
+    Red = 1,
+}
+#[cfg(not(feature = "certora"))]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub(crate) enum Color {
@@ -954,6 +995,36 @@ unsafe impl Zeroable for Color {
     }
 }
 
+#[cfg(feature = "certora")]
+impl nondet::Nondet for Color {
+    fn nondet() -> Self {
+        if nondet::nondet::<bool>() {
+            Color::Black
+        } else {
+            Color::Red
+        }
+    }
+}
+
+#[cfg(feature = "certora")]
+#[derive(Debug, Default, Copy, Clone, Zeroable)]
+#[repr(C)]
+/// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
+/// RedBlack and BST properties, the rest is the payload.
+pub struct RBNode<V> {
+    pub left: DataIndex,
+    pub right: DataIndex,
+    pub parent: DataIndex,
+    pub color: Color,
+
+    // Optional enum controlled by the application to identify the type of node.
+    // Defaults to zero.
+    pub payload_type: u8,
+
+    pub _unused_padding: u16,
+    pub value: V,
+}
+#[cfg(not(feature = "certora"))]
 #[derive(Debug, Default, Copy, Clone, Zeroable)]
 #[repr(C)]
 /// Node in a RedBlack tree. The first 16 bytes are used for maintaining the
@@ -1158,6 +1229,16 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
         self.remove_by_index(index);
     }
 
+    // Only publicly visible for formal verification.
+    #[cfg(feature = "certora")]
+    pub fn certora_remove_fix(
+        &mut self,
+        current_index: DataIndex,
+        parent_index: DataIndex,
+    ) -> (DataIndex, DataIndex) {
+        self.remove_fix(current_index, parent_index)
+    }
+
     fn remove_fix(
         &mut self,
         current_index: DataIndex,
@@ -1312,6 +1393,12 @@ impl<'a, V: Payload> RedBlackTree<'a, V> {
             *new_node = node_to_insert;
             new_node.parent = current_parent_index;
         }
+    }
+
+    // Only publicly visible for formal verification.
+    #[cfg(feature = "certora")]
+    pub fn certora_insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {
+        self.insert_fix(index_to_fix)
     }
 
     fn insert_fix(&mut self, index_to_fix: DataIndex) -> DataIndex {

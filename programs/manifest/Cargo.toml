@@ -1,6 +1,6 @@
 [package]
 name = "manifest"
-version = "0.1.4"
+version = "1.0.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -19,6 +19,10 @@ test = []
 fuzz = []
 trace = ["hypertree/trace"]
 no-clock = []
+certora = ["no-entrypoint", "dep:cvt", "dep:nondet", "dep:cvt-macros", "dep:early-panic", "dep:calltrace", "dep:solana_cvt", "dep:vectors", "dep:hook_macro",
+           "hypertree/certora"]
+certora_vacuity = ["cvt/vacuity"]
+
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
@@ -49,6 +53,15 @@ num_enum = { workspace = true }
 thiserror = { workspace = true }
 solana-security-txt = { workspace = true }
 static_assertions = { workspace = true }
+nondet = { workspace = true, optional = true}
+cvt = { workspace = true, optional = true}
+cvt-macros = { workspace = true, optional = true}
+early-panic = { workspace = true, optional = true}
+calltrace = { workspace = true, optional = true}
+solana_cvt = { workspace = true, optional = true}
+vectors = { workspace = true, optional = true}
+hook_macro = { workspace = true, optional = true}
+arrayref = { workspace = true}
 solana-invoke = { workspace = true }
 
 [dev-dependencies]
