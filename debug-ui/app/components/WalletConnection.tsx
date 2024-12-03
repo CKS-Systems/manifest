@@ -19,8 +19,8 @@ const WalletDisconnectButton = (): ReactElement => {
       <WalletMultiButtonDynamic />
       {publicKey && (
         <span className="pl-3 text-sm text-blue-500">
-            {publicKey.toString().slice(0, 6)}...
-            {publicKey.toString().slice(-6)}
+          {publicKey.toString().slice(0, 6)}...
+          {publicKey.toString().slice(-6)}
         </span>
       )}
     </div>
