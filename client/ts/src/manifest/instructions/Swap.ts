@@ -16,7 +16,6 @@ import { SwapParams, swapParamsBeet } from '../types/SwapParams';
  */
 export type SwapInstructionArgs = {
   params: SwapParams;
-  params: SwapParams;
 };
 /**
  * @category Instructions
@@ -30,7 +29,6 @@ export const SwapStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', swapParamsBeet],
     ['params', swapParamsBeet],
   ],
   'SwapInstructionArgs',

@@ -18,8 +18,6 @@ import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams';
 export type WithdrawInstructionArgs = {
   params: WithdrawParams;
   traderIndexHint: beet.COption<number>;
-  params: WithdrawParams;
-  traderIndexHint: beet.COption<number>;
 };
 /**
  * @category Instructions
@@ -33,8 +31,6 @@ export const WithdrawStruct = new beet.FixableBeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', withdrawParamsBeet],
-    ['traderIndexHint', beet.coption(beet.u32)],
     ['params', withdrawParamsBeet],
     ['traderIndexHint', beet.coption(beet.u32)],
   ],

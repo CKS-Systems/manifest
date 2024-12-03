@@ -20,7 +20,6 @@ import {
  */
 export type GlobalEvictInstructionArgs = {
   params: GlobalEvictParams;
-  params: GlobalEvictParams;
 };
 /**
  * @category Instructions
@@ -34,7 +33,6 @@ export const GlobalEvictStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', globalEvictParamsBeet],
     ['params', globalEvictParamsBeet],
   ],
   'GlobalEvictInstructionArgs',

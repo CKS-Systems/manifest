@@ -19,7 +19,6 @@ import {
  */
 export type BatchUpdateInstructionArgs = {
   params: BatchUpdateParams;
-  params: BatchUpdateParams;
 };
 /**
  * @category Instructions
@@ -33,7 +32,6 @@ export const BatchUpdateStruct = new beet.FixableBeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
-    ['params', batchUpdateParamsBeet],
     ['params', batchUpdateParamsBeet],
   ],
   'BatchUpdateInstructionArgs',
