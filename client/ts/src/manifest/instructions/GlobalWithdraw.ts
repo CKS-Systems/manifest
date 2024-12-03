@@ -20,6 +20,7 @@ import {
  */
 export type GlobalWithdrawInstructionArgs = {
   params: GlobalWithdrawParams;
+  params: GlobalWithdrawParams;
 };
 /**
  * @category Instructions
@@ -33,6 +34,7 @@ export const GlobalWithdrawStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
+    ['params', globalWithdrawParamsBeet],
     ['params', globalWithdrawParamsBeet],
   ],
   'GlobalWithdrawInstructionArgs',

@@ -19,6 +19,7 @@ import {
  */
 export type GlobalCleanInstructionArgs = {
   params: GlobalCleanParams;
+  params: GlobalCleanParams;
 };
 /**
  * @category Instructions
@@ -32,6 +33,7 @@ export const GlobalCleanStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
+    ['params', globalCleanParamsBeet],
     ['params', globalCleanParamsBeet],
   ],
   'GlobalCleanInstructionArgs',

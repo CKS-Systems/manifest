@@ -19,7 +19,7 @@ export const CreateWrapperStruct = new beet.BeetArgsStruct<{
 /**
  * Accounts required by the _CreateWrapper_ instruction
  *
- * @property [_writable_, **signer**] owner
+ * @property [] owner
  * @property [_writable_, **signer**] payer
  * @property [_writable_] wrapperState
  * @category Instructions
@@ -53,8 +53,8 @@ export function createCreateWrapperInstruction(
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.owner,
-      isWritable: true,
-      isSigner: true,
+      isWritable: false,
+      isSigner: false,
     },
     {
       pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,

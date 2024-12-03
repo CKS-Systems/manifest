@@ -20,6 +20,7 @@ import {
  */
 export type GlobalDepositInstructionArgs = {
   params: GlobalDepositParams;
+  params: GlobalDepositParams;
 };
 /**
  * @category Instructions
@@ -33,6 +34,7 @@ export const GlobalDepositStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.u8],
+    ['params', globalDepositParamsBeet],
     ['params', globalDepositParamsBeet],
   ],
   'GlobalDepositInstructionArgs',
