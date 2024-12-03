@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 
 // https://solana.stackexchange.com/questions/4304/error-hydration-failed-because-the-initial-ui-does-not-match-what-was-rendered
 const WalletDisconnectButton = (): ReactElement => {
+  const { publicKey } = useWallet();
   const WalletMultiButtonDynamic = dynamic(
     async () =>
       (await import('@solana/wallet-adapter-react-ui')).WalletDisconnectButton,
@@ -14,8 +15,14 @@ const WalletDisconnectButton = (): ReactElement => {
   );
 
   return (
-    <div className="border hover:border-slate-900 rounded">
+    <div className="flex items-center gap-2 border hover:border-slate-900 rounded">
       <WalletMultiButtonDynamic />
+      {publicKey && (
+        <span className="pl-3 text-sm text-blue-500">
+            {publicKey.toString().slice(0, 6)}...
+            {publicKey.toString().slice(-6)}
+        </span>
+      )}
     </div>
   );
 };
