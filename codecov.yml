@@ -21,3 +21,6 @@ ignore:
   - "programs/ui-wrapper"
   - "client/ts/src/ui_wrapper"
   - "client/ts/src/uiWrapperObj"
+  - "programs/manifest/src/certora"
+  - "programs/manifest/src/state/cvt_db_mock.rs"
+  - "programs/manifest/src/state/cvt_munge.rs"
