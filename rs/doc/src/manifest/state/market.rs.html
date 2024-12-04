@@ -1694,6 +1694,9 @@
 <a href="#1692" id="1692">1692</a>
 <a href="#1693" id="1693">1693</a>
 <a href="#1694" id="1694">1694</a>
+<a href="#1695" id="1695">1695</a>
+<a href="#1696" id="1696">1696</a>
+<a href="#1697" id="1697">1697</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">use </span>{
     <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
@@ -3058,10 +3061,13 @@
 
         </span><span class="kw">let </span>resting_order: <span class="kw-2">&amp;</span>RestingOrder = get_helper_order(dynamic, order_index).get_value();
         <span class="kw">let </span>is_bid: bool = resting_order.get_is_bid();
-        <span class="kw">let </span>amount_atoms: u64 = <span class="kw">if </span>is_bid {
+
+        <span class="comment">// Important to round up because there was an extra atom taken for full
+        // taker rounding when the order was placed.
+        </span><span class="kw">let </span>amount_atoms: u64 = <span class="kw">if </span>is_bid {
             (resting_order
                 .get_price()
-                .checked_quote_for_base(resting_order.get_num_base_atoms(), <span class="bool-val">false</span>)
+                .checked_quote_for_base(resting_order.get_num_base_atoms(), <span class="bool-val">true</span>)
                 .unwrap())
             .into()
         } <span class="kw">else </span>{
