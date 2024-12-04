@@ -983,13 +983,15 @@ impl<
                         break;
                     }
                 }
+                // When is_bid, the taker is supplying quote, so the global
+                // maker needs to supply base.
                 let has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     &maker,
                     GlobalAtoms::new(if is_bid {
-                        quote_atoms_traded.as_u64()
-                    } else {
                         base_atoms_traded.as_u64()
+                    } else {
+                        quote_atoms_traded.as_u64()
                     }),
                 )?;
 
