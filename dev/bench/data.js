@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733279711924,
+  "lastUpdate": 1733344222304,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -8872,6 +8872,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_95",
             "value": 5486,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6128,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f8f4e53fbc1d2b4c1923569d1fd38e8d8de55b55",
+          "message": "Fix rounding on cancel (#310)\n\n* Fix on cancel rounding\r\n\r\n* add back rule\r\n\r\n* fmt",
+          "timestamp": "2024-12-04T15:04:29-05:00",
+          "tree_id": "b7febc49df20b290a1ecf9463e38f2b1d81147b5",
+          "url": "https://github.com/CKS-Systems/manifest/commit/f8f4e53fbc1d2b4c1923569d1fd38e8d8de55b55"
+        },
+        "date": 1733344219785,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3496,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5514,
             "unit": "CU",
             "range": "",
             "extra": ""
