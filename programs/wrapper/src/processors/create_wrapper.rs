@@ -28,7 +28,8 @@ pub(crate) fn process_create_wrapper(
         let empty_wrapper_state_fixed: ManifestWrapperStateFixed =
             ManifestWrapperStateFixed::new_empty(owner.key);
         let wrapper_bytes: &mut [u8] = &mut wrapper_state.try_borrow_mut_data()?[..];
-        *get_mut_helper::<ManifestWrapperStateFixed>(wrapper_bytes, 0_u32) = empty_wrapper_state_fixed;
+        *get_mut_helper::<ManifestWrapperStateFixed>(wrapper_bytes, 0_u32) =
+            empty_wrapper_state_fixed;
 
         // Drop the reference to wrapper_state so it can be borrowed in expand
         // wrapper if needed.
