@@ -1238,7 +1238,7 @@ export class ManifestClient {
     await this.market.reload(this.connection);
     const withdrawAllIx = this.withdrawAllIx();
     const withdrawAllTx = new Transaction();
-    const wihdrawAllSig = await sendAndConfirmTransaction(
+    const withdrawAllSig = await sendAndConfirmTransaction(
       this.connection,
       withdrawAllTx.add(...withdrawAllIx),
       [payerKeypair],
@@ -1247,7 +1247,7 @@ export class ManifestClient {
         commitment: 'confirmed',
       },
     );
-    return [cancelAllSig, wihdrawAllSig];
+    return [cancelAllSig, withdrawAllSig];
   }
 
   /**
