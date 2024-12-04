@@ -1362,10 +1362,13 @@ impl<
 
         let resting_order: &RestingOrder = get_helper_order(dynamic, order_index).get_value();
         let is_bid: bool = resting_order.get_is_bid();
+
+        // Important to round up because there was an extra atom taken for full
+        // taker rounding when the order was placed.
         let amount_atoms: u64 = if is_bid {
             (resting_order
                 .get_price()
-                .checked_quote_for_base(resting_order.get_num_base_atoms(), false)
+                .checked_quote_for_base(resting_order.get_num_base_atoms(), true)
                 .unwrap())
             .into()
         } else {
