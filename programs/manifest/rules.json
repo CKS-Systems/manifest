@@ -61,6 +61,12 @@
       "cargo_features": []
     },
     {
+      "name": "rule_cancel_order_by_index_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
       "name": "rule_cancel_order_by_index_ask",
       "expected_result": "Verified",
       "prover_options": [],
