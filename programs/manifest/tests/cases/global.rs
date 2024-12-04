@@ -226,10 +226,16 @@ async fn global_match_order() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
 
-    test_fixture.claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone()).await?;
-    test_fixture.global_add_trader_for_keypair(&test_fixture.second_keypair.insecure_clone()).await?;
-    test_fixture.global_deposit_for_keypair(&test_fixture.second_keypair.insecure_clone(), 1_000_000).await?;
-        
+    test_fixture
+        .claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_add_trader_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_deposit_for_keypair(&test_fixture.second_keypair.insecure_clone(), 1_000_000)
+        .await?;
+
     test_fixture
         .batch_update_with_global_for_keypair(
             None,
@@ -307,7 +313,8 @@ async fn global_match_order() -> anyhow::Result<()> {
         test_fixture
             .global_fixture
             .global
-            .get_balance_atoms(&test_fixture.second_keypair.insecure_clone().pubkey()).as_u64(),
+            .get_balance_atoms(&test_fixture.second_keypair.insecure_clone().pubkey())
+            .as_u64(),
         1_000_000 - 110
     );
 
