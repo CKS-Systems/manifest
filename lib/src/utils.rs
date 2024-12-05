@@ -42,6 +42,7 @@ fn test_pod_bool() {
 }
 
 #[macro_export]
+#[cfg(not(feature = "certora"))]
 macro_rules! trace {
     ($($arg:tt)*) => {
         #[cfg(feature = "trace")]
@@ -56,4 +57,10 @@ macro_rules! trace {
             }
         }
     };
+}
+
+#[macro_export]
+#[cfg(feature = "certora")]
+macro_rules! trace {
+    ($($arg:tt)*) => {};
 }

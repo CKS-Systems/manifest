@@ -2,7 +2,7 @@ use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, invoke, ManifestError},
+    program::{expand_market_if_needed, invoke},
     require,
     state::MarketFixed,
     utils::create_account,
@@ -44,7 +44,7 @@ pub(crate) fn process_create_market(
 
     require!(
         base_mint.info.key != quote_mint.info.key,
-        ManifestError::InvalidMarketParameters,
+        crate::program::ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
 

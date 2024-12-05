@@ -16,7 +16,7 @@ use hypertree::{
 use manifest::{
     program::{get_dynamic_account, invoke},
     quantities::BaseAtoms,
-    state::{claimed_seat::ClaimedSeat, MarketFixed, RestingOrder},
+    state::{claimed_seat::ClaimedSeat, get_helper_seat, MarketFixed, RestingOrder},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -231,7 +231,7 @@ pub(crate) fn sync_fast(
         get_mut_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index)
             .get_mut_value();
     let claimed_seat: &ClaimedSeat =
-        get_helper::<RBNode<ClaimedSeat>>(market_ref.dynamic, market_info.trader_index).get_value();
+        get_helper_seat(market_ref.dynamic, market_info.trader_index).get_value();
     market_info.base_balance = claimed_seat.base_withdrawable_balance;
     market_info.quote_balance = claimed_seat.quote_withdrawable_balance;
     market_info.quote_volume = claimed_seat.quote_volume;
