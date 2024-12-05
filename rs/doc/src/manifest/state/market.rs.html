@@ -1697,6 +1697,8 @@
 <a href="#1695" id="1695">1695</a>
 <a href="#1696" id="1696">1696</a>
 <a href="#1697" id="1697">1697</a>
+<a href="#1698" id="1698">1698</a>
+<a href="#1699" id="1699">1699</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">use </span>{
     <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
@@ -2682,13 +2684,15 @@
                         <span class="kw">break</span>;
                     }
                 }
-                <span class="kw">let </span>has_enough_tokens: bool = try_to_move_global_tokens(
+                <span class="comment">// When is_bid, the taker is supplying quote, so the global
+                // maker needs to supply base.
+                </span><span class="kw">let </span>has_enough_tokens: bool = try_to_move_global_tokens(
                     global_trade_accounts_opt,
                     <span class="kw-2">&amp;</span>maker,
                     GlobalAtoms::new(<span class="kw">if </span>is_bid {
-                        quote_atoms_traded.as_u64()
-                    } <span class="kw">else </span>{
                         base_atoms_traded.as_u64()
+                    } <span class="kw">else </span>{
+                        quote_atoms_traded.as_u64()
                     }),
                 )<span class="question-mark">?</span>;
 
