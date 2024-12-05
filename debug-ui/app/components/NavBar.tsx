@@ -44,7 +44,7 @@ const NavBar = (): ReactElement => {
                 href="/panic-button"
                 className="text-gray-200 hover:text-white transition-colors"
               >
-                Panic Button
+                Killswitch
               </Link>
             </li>
           )}

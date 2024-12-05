@@ -48,7 +48,7 @@ const PanicButton = (): ReactElement => {
           {connected
             ? loading
               ? 'Executing...'
-              : 'PANIC BUTTON'
+              : 'KILLSWITCH'
             : 'connect wallet to execute'}
         </button>
       </div>

@@ -59,11 +59,19 @@ const Home = (): ReactElement => {
                         {addrToLabel(market, labelsByAddr)}
                       </Link>
                       {marketVolumes[market] != 0
-                        ? ' Total: $' + marketVolumes[market]?.toFixed(2)
+                        ? ' Total: $' +
+                          marketVolumes[market]?.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ''}
                       {dailyVolumes[market] != 0 &&
                       dailyVolumes[market] !== undefined
-                        ? ', 24 Hour: $' + dailyVolumes[market]?.toFixed(2)
+                        ? ' | 24 Hour: $' +
+                          dailyVolumes[market]?.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ''}
                     </li>
                   ),
