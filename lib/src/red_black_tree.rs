@@ -2703,3 +2703,26 @@ pub(crate) mod test {
         tree.lookup_index(&TestOrder2::new(1_000, 7890));
     }
 }
+
+#[test]
+fn test_hypertree_range_query() {
+    let mut data: [u8; 100000] = [0; 100000];
+    let tree = RedBlackTree::new(&mut data, NIL, NIL);
+    let hypertree = HyperTree::new(tree);
+
+    hypertree.insert(0, TestOrderBid::new(1000));
+    hypertree.insert(1, TestOrderBid::new(2000));
+    hypertree.insert(2, TestOrderBid::new(3000));
+    hypertree.insert(3, TestOrderBid::new(4000));
+    hypertree.insert(4, TestOrderBid::new(5000));
+
+    let range_min = TestOrderBid::new(2000);
+    let range_max = TestOrderBid::new(4000);
+
+    let results: Vec<_> = hypertree.range(&range_min, &range_max).collect();
+
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].1.order_id, 2000);
+    assert_eq!(results[1].1.order_id, 3000);
+    assert_eq!(results[2].1.order_id, 4000);
+}
