@@ -232,6 +232,62 @@ export class Market {
 
   /**
    * Get the amount in tokens of balance that is deposited on this market, split
+   * by base, quote, and whether in orders or not for the whole market.
+   *
+   * @returns {
+   *    baseWithdrawableBalanceAtoms: number,
+   *    quoteWithdrawableBalanceAtoms: number,
+   *    baseOpenOrdersBalanceAtoms: number,
+   *    quoteOpenOrdersBalanceAtoms: number
+   * }
+   */
+  public getMarketBalances(): {
+    baseWithdrawableBalanceAtoms: number;
+    quoteWithdrawableBalanceAtoms: number;
+    baseOpenOrdersBalanceAtoms: number;
+    quoteOpenOrdersBalanceAtoms: number;
+  } {
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
+
+    const quoteOpenOrdersBalanceAtoms: number = bids
+      .map((restingOrder: RestingOrder) => {
+        return Math.ceil(
+          Number(restingOrder.numBaseTokens) *
+            restingOrder.tokenPrice *
+            10 ** this.data.quoteMintDecimals,
+        );
+      })
+      .reduce((sum, current) => sum + current, 0);
+    const baseOpenOrdersBalanceAtoms: number = asks
+      .map((restingOrder: RestingOrder) => {
+        return (
+          Number(restingOrder.numBaseTokens) * 10 ** this.data.baseMintDecimals
+        );
+      })
+      .reduce((sum, current) => sum + current, 0);
+
+    const quoteWithdrawableBalanceAtoms: number = this.data.claimedSeats
+      .map((claimedSeat: ClaimedSeat) => {
+        return Number(claimedSeat.quoteBalance);
+      })
+      .reduce((sum, current) => sum + current, 0);
+    const baseWithdrawableBalanceAtoms: number = this.data.claimedSeats
+      .map((claimedSeat: ClaimedSeat) => {
+        return Number(claimedSeat.baseBalance);
+      })
+      .reduce((sum, current) => sum + current, 0);
+
+    return {
+      baseWithdrawableBalanceAtoms,
+      quoteWithdrawableBalanceAtoms,
+      baseOpenOrdersBalanceAtoms,
+      quoteOpenOrdersBalanceAtoms,
+    };
+  }
+
+  /**
+   * Get the amount in tokens of balance that is deposited on this market, split
    * by base, quote, and whether in orders or not.
    *
    * @param trader PublicKey of the trader to check balance of
@@ -264,7 +320,7 @@ export class Market {
     const seat: ClaimedSeat = filteredSeats[0];
 
     const asks: RestingOrder[] = this.asks();
-    const bids: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
     const baseOpenOrdersBalanceTokens: number = asks
       .filter((ask) => ask.trader.equals(trader))
       .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
