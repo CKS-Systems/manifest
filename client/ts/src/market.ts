@@ -255,7 +255,9 @@ export class Market {
         return Math.ceil(
           Number(restingOrder.numBaseTokens) *
             restingOrder.tokenPrice *
-            10 ** this.data.quoteMintDecimals,
+            10 ** this.data.quoteMintDecimals
+          // Hack to get around number float precision in js.
+          - 0.0000001
         );
       })
       .reduce((sum, current) => sum + current, 0);

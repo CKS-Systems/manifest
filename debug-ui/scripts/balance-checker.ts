@@ -19,6 +19,7 @@ const run = async () => {
   const marketPks: PublicKey[] =
     await ManifestClient.listMarketPublicKeys(connection);
 
+  let foundMismatch: boolean = false;
   for (const marketPk of marketPks) {
     const client: ManifestClient = await ManifestClient.getClientReadOnly(
       connection,
@@ -84,7 +85,16 @@ const run = async () => {
         quoteVaultBalanceAtoms -
           (quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms),
       );
+      // Skip small differences because of javascript rounding issues.
+      if (Math.abs(baseExpectedAtoms - baseVaultBalanceAtoms) <= 1 &&
+          Math.abs(quoteExpectedAtoms - quoteVaultBalanceAtoms) <= 1) {
+        continue;
+      }
+      foundMismatch = true;
     }
+  }
+  if (foundMismatch) {
+    throw new Error('Mismatch of expected vs actual');
   }
 };
 
