@@ -73,6 +73,12 @@
       "cargo_features": []
     },
     {
+      "name": "rule_cancel_order_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
       "name": "rule_cancel_order_ask",
       "expected_result": "Verified",
       "prover_options": [],
@@ -206,6 +212,30 @@
     },
     {
       "name": "rule_integrity_of_batch_update_place_order_ask",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_base_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_base_not_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_quote_exact",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
+      "name": "rule_swap_quote_not_exact",
       "expected_result": "Verified",
       "prover_options": [],
       "cargo_features": []
