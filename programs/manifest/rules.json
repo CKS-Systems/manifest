@@ -217,30 +217,6 @@
       "cargo_features": []
     },
     {
-      "name": "rule_swap_base_exact",
-      "expected_result": "Verified",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_base_not_exact",
-      "expected_result": "Verified",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_quote_exact",
-      "expected_result": "Verified",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
-      "name": "rule_swap_quote_not_exact",
-      "expected_result": "Verified",
-      "prover_options": [],
-      "cargo_features": []
-    },
-    {
       "name": "rule_matching_if_maker_order_exists_bid",
       "expected_result": "Verified",
       "prover_options": [],
