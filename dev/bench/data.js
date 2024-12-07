@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733358243189,
+  "lastUpdate": 1733540836114,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9011,6 +9011,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6127,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7255c73d29279c07ee440c0661329c5aba1e1cd8",
+          "message": "Bring back a formal verification rule for cancel (#314)\n\n* Bring back some rules\r\n\r\n* Remove swap",
+          "timestamp": "2024-12-06T21:42:03-05:00",
+          "tree_id": "384289196e9d896c4db52ab48739c06470178b75",
+          "url": "https://github.com/CKS-Systems/manifest/commit/7255c73d29279c07ee440c0661329c5aba1e1cd8"
+        },
+        "date": 1733540833495,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3499,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5513,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6131,
             "unit": "CU",
             "range": "",
             "extra": ""
