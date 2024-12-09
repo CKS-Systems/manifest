@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733540836114,
+  "lastUpdate": 1733764449838,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9077,6 +9077,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6131,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3699d01bb61c003e9b07fcffbcb24c6a232878eb",
+          "message": "Fix partial fill of global bid (#315)\n\n* Fix partial fill of global bid\r\n\r\n* Comment\r\n\r\n* fmt",
+          "timestamp": "2024-12-09T11:48:34-05:00",
+          "tree_id": "741d1655da8a31f9617a10610d6f805a883e36bc",
+          "url": "https://github.com/CKS-Systems/manifest/commit/3699d01bb61c003e9b07fcffbcb24c6a232878eb"
+        },
+        "date": 1733764447176,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3500,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5524,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6124,
             "unit": "CU",
             "range": "",
             "extra": ""
