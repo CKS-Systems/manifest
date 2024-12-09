@@ -73,6 +73,12 @@
       "cargo_features": []
     },
     {
+      "name": "rule_cancel_order_bid",
+      "expected_result": "Verified",
+      "prover_options": [],
+      "cargo_features": []
+    },
+    {
       "name": "rule_cancel_order_ask",
       "expected_result": "Verified",
       "prover_options": [],
