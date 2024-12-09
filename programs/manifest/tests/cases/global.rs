@@ -322,6 +322,107 @@ async fn global_match_order() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn global_match_order_quote_no_bonus() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture
+        .claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_add_trader_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_deposit_for_keypair(&test_fixture.second_keypair.insecure_clone(), 1_000_000)
+        .await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                11,
+                -1,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.second_keypair.insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                1,
+                9,
+                -1,
+                false,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    assert_eq!(orders.len(), 1, "Order still on orderbook");
+
+    // Global buys 1 base for 1.1 quote --> rounded to 1 quote
+    // Local sells 1 base for 1.1 quote --> rounded to 1 quote
+
+    // Match will leave global: 1 quote, 1 base
+    // match will leave local: 1 quote, 1_000_000 - 1 base
+
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        1
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        0
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000 - 1
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        1
+    );
+
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.second_keypair.insecure_clone().pubkey())
+            .as_u64(),
+        1_000_000 - 1
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn global_deposit_withdraw_22() -> anyhow::Result<()> {
     let test_fixture: TestFixture = TestFixture::new().await;
     let payer: Pubkey = test_fixture.payer();

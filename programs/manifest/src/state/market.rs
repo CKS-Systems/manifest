@@ -1035,8 +1035,13 @@ impl<
             // Note that we do not have to do this on the other direction
             // because the amount of atoms that a maker needs to support an ask
             // is exact. The rounding is always on quote.
-            if !is_bid {
-                // These are only used when is_bid, included up here for borrow checker reasons.
+            //
+            // Do not credit the bonus atom on global orders. This is because
+            // only the number of atoms required for the trade were brought
+            // over.  The extra one that is no longer needed for taker rounding
+            // is not brought over, so dont credit the maker for it.
+            if !is_bid && !is_global {
+                // These are only used when is_bid.
                 let previous_maker_quote_atoms_allocated: QuoteAtoms =
                     matched_price.checked_quote_for_base(maker_order.get_num_base_atoms(), true)?;
                 let new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
@@ -1046,16 +1051,21 @@ impl<
                             .checked_sub(base_atoms_traded)?,
                         true,
                     )?;
+                let bonus_atom_or_zero: QuoteAtoms = previous_maker_quote_atoms_allocated
+                    .checked_sub(new_maker_quote_atoms_allocated)?
+                    .checked_sub(quote_atoms_traded)?;
+
+                // The bonus atom isnt actually traded, it is recouped to the
+                // maker though from the tokens that they had been using to back
+                // the order since it is no longer needed. So we do not need to
+                // update the fill logs or amounts.
                 update_balance(
                     fixed,
                     dynamic,
                     maker_trader_index,
                     is_bid,
                     true,
-                    (previous_maker_quote_atoms_allocated
-                        .checked_sub(new_maker_quote_atoms_allocated)?
-                        .checked_sub(quote_atoms_traded)?)
-                    .as_u64(),
+                    bonus_atom_or_zero.as_u64(),
                 )?;
             }
 
