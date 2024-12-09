@@ -1699,6 +1699,16 @@
 <a href="#1697" id="1697">1697</a>
 <a href="#1698" id="1698">1698</a>
 <a href="#1699" id="1699">1699</a>
+<a href="#1700" id="1700">1700</a>
+<a href="#1701" id="1701">1701</a>
+<a href="#1702" id="1702">1702</a>
+<a href="#1703" id="1703">1703</a>
+<a href="#1704" id="1704">1704</a>
+<a href="#1705" id="1705">1705</a>
+<a href="#1706" id="1706">1706</a>
+<a href="#1707" id="1707">1707</a>
+<a href="#1708" id="1708">1708</a>
+<a href="#1709" id="1709">1709</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">use </span>{
     <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
@@ -2736,8 +2746,13 @@
             // Note that we do not have to do this on the other direction
             // because the amount of atoms that a maker needs to support an ask
             // is exact. The rounding is always on quote.
-            </span><span class="kw">if </span>!is_bid {
-                <span class="comment">// These are only used when is_bid, included up here for borrow checker reasons.
+            //
+            // Do not credit the bonus atom on global orders. This is because
+            // only the number of atoms required for the trade were brought
+            // over.  The extra one that is no longer needed for taker rounding
+            // is not brought over, so dont credit the maker for it.
+            </span><span class="kw">if </span>!is_bid &amp;&amp; !is_global {
+                <span class="comment">// These are only used when is_bid.
                 </span><span class="kw">let </span>previous_maker_quote_atoms_allocated: QuoteAtoms =
                     matched_price.checked_quote_for_base(maker_order.get_num_base_atoms(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
                 <span class="kw">let </span>new_maker_quote_atoms_allocated: QuoteAtoms = matched_price
@@ -2747,16 +2762,21 @@
                             .checked_sub(base_atoms_traded)<span class="question-mark">?</span>,
                         <span class="bool-val">true</span>,
                     )<span class="question-mark">?</span>;
-                update_balance(
+                <span class="kw">let </span>bonus_atom_or_zero: QuoteAtoms = previous_maker_quote_atoms_allocated
+                    .checked_sub(new_maker_quote_atoms_allocated)<span class="question-mark">?
+                    </span>.checked_sub(quote_atoms_traded)<span class="question-mark">?</span>;
+
+                <span class="comment">// The bonus atom isnt actually traded, it is recouped to the
+                // maker though from the tokens that they had been using to back
+                // the order since it is no longer needed. So we do not need to
+                // update the fill logs or amounts.
+                </span>update_balance(
                     fixed,
                     dynamic,
                     maker_trader_index,
                     is_bid,
                     <span class="bool-val">true</span>,
-                    (previous_maker_quote_atoms_allocated
-                        .checked_sub(new_maker_quote_atoms_allocated)<span class="question-mark">?
-                        </span>.checked_sub(quote_atoms_traded)<span class="question-mark">?</span>)
-                    .as_u64(),
+                    bonus_atom_or_zero.as_u64(),
                 )<span class="question-mark">?</span>;
             }
 
