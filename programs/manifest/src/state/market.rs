@@ -1054,7 +1054,7 @@ impl<
                 let bonus_atom_or_zero: QuoteAtoms = previous_maker_quote_atoms_allocated
                     .checked_sub(new_maker_quote_atoms_allocated)?
                     .checked_sub(quote_atoms_traded)?;
-                
+
                 // The bonus atom isnt actually traded, it is recouped to the
                 // maker though from the tokens that they had been using to back
                 // the order since it is no longer needed. So we do not need to
