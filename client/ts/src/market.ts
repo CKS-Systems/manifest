@@ -251,15 +251,23 @@ export class Market {
     const bids: RestingOrder[] = this.bids();
 
     const quoteOpenOrdersBalanceAtoms: number = bids
+      .filter((restingOrder: RestingOrder) => {
+        return restingOrder.orderType != OrderType.Global
+      })
       .map((restingOrder: RestingOrder) => {
         return Math.ceil(
           Number(restingOrder.numBaseTokens) *
             restingOrder.tokenPrice *
-            10 ** this.data.quoteMintDecimals,
+            10 ** this.data.quoteMintDecimals
+          // Force float precision to not round up on an integer.
+          - .00001
         );
       })
       .reduce((sum, current) => sum + current, 0);
     const baseOpenOrdersBalanceAtoms: number = asks
+      .filter((restingOrder: RestingOrder) => {
+        return restingOrder.orderType != OrderType.Global
+      })
       .map((restingOrder: RestingOrder) => {
         return (
           Number(restingOrder.numBaseTokens) * 10 ** this.data.baseMintDecimals
