@@ -44,6 +44,7 @@ export const fetchAndSetMfxAddrLabels = async (
   conn: Connection,
   marketProgramAccounts: GetProgramAccountsResponse,
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>,
+  setInfoByAddr: Dispatch<SetStateAction<LabelsByAddr>>,
 ): Promise<Set<string>> => {
   const mints = new Set<string>();
   const markets: Market[] = [];
@@ -75,12 +76,17 @@ export const fetchAndSetMfxAddrLabels = async (
   );
 
   const marketLabels: LabelsByAddr = {};
+  const infoByAddr: LabelsByAddr = {};
   for (const m of markets) {
-    marketLabels[m.address.toBase58()] =
-      `MFX-${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}-${shortenPub(m.address)}`;
+    const marketAddr = m.address.toBase58();
+    marketLabels[marketAddr] =
+      `${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}`;
+    infoByAddr[marketAddr] =
+      `base: ${m.baseMint().toBase58()} quote: ${m.quoteMint().toBase58()} market: ${marketAddr}`;
   }
 
   setLabelsByAddr({ ...mintLabels, ...marketLabels });
+  setInfoByAddr({ ...infoByAddr });
 
   return mints;
 };
