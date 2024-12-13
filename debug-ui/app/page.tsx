@@ -21,7 +21,7 @@ const Home = (): ReactElement => {
   } = useAppState();
   const [showAll, setShowAll] = useState<boolean>(false);
 
-  function handleShowAllChange(event: { target: { checked: boolean } }) {
+  function handleShowAllChange(event: { target: { checked: boolean } }): void {
     setShowAll(event.target.checked);
   }
 
@@ -37,7 +37,7 @@ const Home = (): ReactElement => {
           may not be actively supported or maintained. The developers,
           contributors, and associated parties are not liable for any losses,
           damages, or claims arising from your use of this platform. This
-          platform is provided "as is" without any warranties or guarantees.
+          platform is provided &quot;as is&quot; without any warranties or guarantees.
           Users are responsible for complying with all applicable laws and
           regulations in their jurisdiction. Please exercise caution.
         </p>

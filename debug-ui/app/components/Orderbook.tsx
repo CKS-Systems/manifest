@@ -34,10 +34,10 @@ const Orderbook = ({
       },
     );
 
-    return () => {
+    return (): void => {
       conn.removeAccountChangeListener(accountChangeListenerId);
     };
-  }, [marketAddress]);
+  }, [conn, marketAddress]);
 
   useEffect(() => {
     try {
@@ -80,10 +80,10 @@ const Orderbook = ({
       }
     });
 
-    return () => {
+    return (): void => {
       conn.removeSlotUpdateListener(slotUpdateListenerId);
     };
-  }, []);
+  }, [conn]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
