@@ -1,4 +1,5 @@
 import { ManifestClient } from '@cks-systems/manifest-sdk';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   SendTransactionOptions,
   WalletAdapterNetwork,
@@ -91,4 +92,16 @@ export const shortenAddress = (address: string): string => {
 
 export const shortenSig = (address: string): string => {
   return `${address.slice(0, 6)}...${address.slice(-6)}`;
+};
+
+export const checkForToken22 = async (
+  conn: Connection,
+  mint: PublicKey,
+): Promise<boolean> => {
+  const acc = await conn.getAccountInfo(mint);
+  if (!acc) {
+    throw new Error('checkForToken22: account does not exist');
+  }
+
+  return acc.owner.toBase58() !== TOKEN_PROGRAM_ID.toBase58();
 };
