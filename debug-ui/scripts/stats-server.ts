@@ -129,7 +129,7 @@ export class ManifestStatsServer {
       if (this.traderNumTrades.get(taker) == undefined) {
         this.traderNumTrades.set(taker, 0);
       }
-      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1)
+      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
 
       if (this.markets.get(market) == undefined) {
         this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
