@@ -78,6 +78,9 @@ export class ManifestStatsServer {
   // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
 
+  // Pubkey to the number of trades.
+  private traderNumTrades: Map<string, number> = new Map();
+
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
 
@@ -112,7 +115,7 @@ export class ManifestStatsServer {
 
     this.ws.onmessage = async (message) => {
       const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
 
       // Do not accept old spurious messages.
       if (this.lastFillSlot > slot) {
@@ -122,6 +125,11 @@ export class ManifestStatsServer {
 
       fills.inc({ market });
       console.log('Got fill', fill);
+
+      if (this.traderNumTrades.get(taker) == undefined) {
+        this.traderNumTrades.set(taker, 0);
+      }
+      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1)
 
       if (this.markets.get(market) == undefined) {
         this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -517,6 +525,13 @@ export class ManifestStatsServer {
       dailyVolume: Object.fromEntries(dailyVolumesByToken),
     };
   }
+
+  /**
+   * Get Traders to be used in a leaderboard if a UI wants to. Only tracks takers.
+   */
+  async getTraders() {
+    return this.traderNumTrades;
+  }
 }
 
 const run = async () => {
@@ -557,11 +572,15 @@ const run = async () => {
   const volumeHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getVolume());
   };
+  const tradersHandler: RequestHandler = (_req, res) => {
+    res.send(statsServer.getTraders());
+  };
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
+  app.get('/trades', tradersHandler);
   app.listen(Number(PORT!));
 
   while (true) {
