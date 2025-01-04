@@ -529,7 +529,7 @@ export class ManifestStatsServer {
   /**
    * Get Traders to be used in a leaderboard if a UI wants to. Only tracks takers.
    */
-  async getTraders() {
+  getTraders() {
     return Object.fromEntries(this.traderNumTrades);
   }
 }
