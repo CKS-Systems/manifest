@@ -92,7 +92,10 @@ const run = async () => {
       );
       // Only crash on a loss of funds. There has been unsolicited deposits into
       // vaults which makes them have more tokens than the program expects.
-      if (baseExpectedAtoms < baseVaultBalanceAtoms || quoteExpectedAtoms < quoteVaultBalanceAtoms) {
+      if (
+        baseExpectedAtoms < baseVaultBalanceAtoms ||
+        quoteExpectedAtoms < quoteVaultBalanceAtoms
+      ) {
         foundMismatch = true;
       }
     }
