@@ -72,19 +72,17 @@ const run = async () => {
         'Base actual',
         baseVaultBalanceAtoms,
         'base expected',
-        baseWithdrawableBalanceAtoms + baseOpenOrdersBalanceAtoms,
+        baseExpectedAtoms,
         'difference',
-        baseVaultBalanceAtoms -
-          (baseWithdrawableBalanceAtoms + baseOpenOrdersBalanceAtoms),
+        baseVaultBalanceAtoms - baseExpectedAtoms,
       );
       console.log(
         'Quote actual',
         quoteVaultBalanceAtoms,
         'quote expected',
-        quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms,
+        quoteExpectedAtoms,
         'difference',
-        quoteVaultBalanceAtoms -
-          (quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms),
+        quoteVaultBalanceAtoms - quoteExpectedAtoms,
         'withdrawable',
         quoteWithdrawableBalanceAtoms,
         'open orders',
