@@ -104,6 +104,6 @@ const run = async () => {
 };
 
 run().catch((e) => {
-  console.error('fatal error');
+  console.error('fatal error', e);
   throw e;
 });
