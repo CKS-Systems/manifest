@@ -68,7 +68,7 @@ MAX_NUM_IX          // Maximum instructions per transaction
 1. **Environment Variables**
    Create a `.env` file with:
    ```
-   SOLANA_PK=<your-private-key>
+   PRIVATE_KEY=<your-private-key>
    RPC_URL=<solana-rpc-url>
    MFX_MKT=<manifest-market-address>
    ```
