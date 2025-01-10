@@ -60,7 +60,8 @@ PRICE_INCR_REDUCITION // How much to reduce the price increase
 TOKEN_SUPPLY         // Total token supply
 NUM_ORDERS           // Number of price levels
 INTERVAL_SECS        // Update interval in seconds
-MAX_NUM_IX          // Maximum instructions per transaction
+MAX_NUM_CANCEL_IX    // Maximum cancel instructions per transaction
+MAX_NUM_ORDER_IX     // Maximum order instructions per transaction
 ```
 
 ## Setup
