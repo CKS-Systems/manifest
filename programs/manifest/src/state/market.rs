@@ -1225,7 +1225,7 @@ impl<
                     // there.
                     let reverse_order_sequence_number: u64 = fixed.order_sequence_number;
                     fixed.order_sequence_number = reverse_order_sequence_number.wrapping_add(1);
-                    
+
                     // Verify that there is going to be a free block to use.
                     // This will fail on swap with a partial fill and an account
                     // with only one free block and no system program included.
@@ -1237,7 +1237,10 @@ impl<
                             "Need free block to partial fill a reverse order",
                         )?;
                         let free_list_head: &FreeListNode<MarketUnusedFreeListPadding> =
-                            get_helper::<FreeListNode<MarketUnusedFreeListPadding>>(dynamic, free_list_head_index);
+                            get_helper::<FreeListNode<MarketUnusedFreeListPadding>>(
+                                dynamic,
+                                free_list_head_index,
+                            );
                         require!(
                             free_list_head.has_next(),
                             ManifestError::InvalidFreeList,
