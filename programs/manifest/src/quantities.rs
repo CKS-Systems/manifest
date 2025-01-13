@@ -325,6 +325,16 @@ impl QuoteAtomsPerBaseAtom {
         }
     }
 
+    pub fn multiply_spread(self, spread_e_5: u16) -> Self {
+        // Stored as u128 * 10^-26
+        let inner: u128 = u64_slice_to_u128(self.inner);
+        let inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 as u128);
+        let new_inner: u128 = inner_e_minus_5.div_ceil(10_000);
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(new_inner),
+        }
+    }
+
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
@@ -354,14 +364,9 @@ impl QuoteAtomsPerBaseAtom {
             return Ok(BaseAtoms::ZERO);
         }
         // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
+        let dividend: u128 = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
-        trace!(
-            "checked_base_for_quote {dividend}/{inner} {round_up} {}>{}",
-            dividend.div_ceil(inner),
-            dividend.div(inner)
-        );
-        let base_atoms = if round_up {
+        let base_atoms: u128 = if round_up {
             dividend.div_ceil(inner)
         } else {
             dividend.div(inner)
@@ -383,7 +388,7 @@ impl QuoteAtomsPerBaseAtom {
         let product: u128 = inner
             .checked_mul(base_atoms.inner as u128)
             .ok_or(PriceConversionError(0x8))?;
-        let quote_atoms = if round_up {
+        let quote_atoms: u128 = if round_up {
             product.div_ceil(D18)
         } else {
             product.div(D18)
