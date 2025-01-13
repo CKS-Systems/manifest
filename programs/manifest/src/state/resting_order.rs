@@ -225,7 +225,11 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.sequence_number) == (other.sequence_number)
+        // Only used in equality check of lookups. To enable coalescing, just
+        // check price, trader, and order type.
+        (self.price == other.price)
+            && (self.trader_index == other.trader_index)
+            && (self.order_type == other.order_type)
     }
 }
 

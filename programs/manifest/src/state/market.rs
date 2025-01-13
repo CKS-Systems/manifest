@@ -1180,7 +1180,7 @@ impl<
                     matched_price.divide_spread(10_000 - maker_reverse_spread)
                 };
                 let num_base_atoms_reverse: BaseAtoms = if is_bid {
-                    // They are now buying with the exact number of quote atoms.
+                    // Maker is now buying with the exact number of quote atoms.
                     // Do not round_up because there might not be enough atoms
                     // for that.
                     price_reverse.checked_base_for_quote(quote_atoms_traded, false)?
@@ -1188,27 +1188,32 @@ impl<
                     base_atoms_traded
                 };
 
-                // Peek the top of the orderbook to see if we can merge into that order.
-                // is_bid means the taker is buying, so we need to see if the
-                // new bid will coalesce.
-                let top_of_book_other_side: DataIndex = if is_bid {
-                    fixed.bids_best_index
-                } else {
-                    fixed.asks_best_index
-                };
-
                 let mut coalesced: bool = false;
-                if top_of_book_other_side != NIL {
-                    let possible_order_to_coalesce: &mut RestingOrder =
-                        get_mut_helper::<RBNode<RestingOrder>>(dynamic, top_of_book_other_side)
-                            .get_mut_value();
-                    if possible_order_to_coalesce.get_trader_index() == maker_trader_index
-                        && possible_order_to_coalesce.get_order_type() == OrderType::Reverse
-                        // Coalesce is not necessarily reversible, since *(1+spread) / (1+spread) could round.
-                        // There is a chance that we end up with 2 different. The new one will cycle back though.
-                        && possible_order_to_coalesce.get_price() == price_reverse
-                    {
-                        possible_order_to_coalesce.increase(num_base_atoms_reverse)?;
+                {
+                    let other_tree: Bookside = if is_bid {
+                        Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
+                    } else {
+                        Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
+                    };
+                    let lookup_resting_order: RestingOrder = RestingOrder::new(
+                        maker_trader_index,
+                        num_base_atoms_reverse,
+                        price_reverse,
+                        0, // Sequence number does not matter, just price
+                        NO_EXPIRATION_LAST_VALID_SLOT,
+                        is_bid,
+                        OrderType::Reverse,
+                    )?;
+                    // There is an edge case where the the price is off by 1 due
+                    // to rounding. This will result in fragmented liquidity,
+                    // however should be infrequent enough to not do a walk of
+                    // the tree.
+                    let lookup_index: DataIndex = other_tree.lookup_index(&lookup_resting_order);
+                    if lookup_index != NIL {
+                        let order_to_coalesce_into: &mut RestingOrder =
+                            get_mut_helper::<RBNode<RestingOrder>>(dynamic, lookup_index)
+                                .get_mut_value();
+                        order_to_coalesce_into.increase(num_base_atoms_reverse)?;
                         coalesced = true;
                     }
                 }
@@ -1216,8 +1221,8 @@ impl<
                 if !coalesced {
                     // This code is similar to rest_remaining except it doesnt
                     // require borrowing data.  Non-trivial to combine the code
-                    // because the certora formal verification sloppily inserted
-                    // itself there.
+                    // because the certora formal verification inserted itself
+                    // there.
                     let reverse_order_sequence_number: u64 = fixed.order_sequence_number;
                     fixed.order_sequence_number = reverse_order_sequence_number.wrapping_add(1);
 

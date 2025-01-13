@@ -780,8 +780,8 @@ async fn place_order_zero_size() -> anyhow::Result<()> {
 async fn reverse_order_type_test() -> anyhow::Result<()> {
     // Default payer places reverse orders on both booksides.
     // Buy 3@1.0, Sell 3@3.0
-    // Other user takes and flips both twice each.
-    // Spread is 50%, so the new order is top of book. (1.0 -> 2.0, 3.0 -> 1.5)
+    // Spread is 50%, so the new order is top of book after fill.
+    // (1.0 -> 2.0, 3.0 -> 1.5)
 
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
@@ -907,6 +907,21 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
     assert_eq!(
         second_bid.get_price(),
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(1, 0).unwrap()
+    );
+    // Balance is unchanged.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        7_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        7 * SOL_UNIT_SIZE
     );
 
     // Fill in the other direction puts back the ask.
