@@ -335,6 +335,17 @@ impl QuoteAtomsPerBaseAtom {
         }
     }
 
+    pub fn divide_spread(self, spread_e_5: u16) -> Self {
+        // multiply then divide
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(
+                u64_slice_to_u128(self.inner)
+                    .wrapping_mul(10_000)
+                    .div_ceil(spread_e_5 as u128),
+            ),
+        }
+    }
+
     pub fn try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,

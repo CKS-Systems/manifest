@@ -944,7 +944,7 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
     assert_eq!(first_ask.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
     assert_eq!(
         first_ask.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(225, -2).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3, 0).unwrap()
     );
 
     // Maker's balances are unchanged.

@@ -1171,9 +1171,13 @@ impl<
             // filling the books on partial fills, we coalesce on top of book.
             if is_maker_reverse {
                 let price_reverse: QuoteAtomsPerBaseAtom = if is_bid {
+                    // Ask @P --> Bid @P * (1 - spread)
                     matched_price.multiply_spread(10_000 - maker_reverse_spread)
                 } else {
-                    matched_price.multiply_spread(10_000 + maker_reverse_spread)
+                    // Bid @P * (1 - spread) --> Ask @P
+                    // equivalent to
+                    // Bid @P --> Ask @P / (1 - spread)
+                    matched_price.divide_spread(10_000 - maker_reverse_spread)
                 };
                 let num_base_atoms_reverse: BaseAtoms = if is_bid {
                     // They are now buying with the exact number of quote atoms.
@@ -1200,6 +1204,8 @@ impl<
                             .get_mut_value();
                     if possible_order_to_coalesce.get_trader_index() == maker_trader_index
                         && possible_order_to_coalesce.get_order_type() == OrderType::Reverse
+                        // Coalesce is not necessarily reversible, since *(1+spread) / (1+spread) could round.
+                        // There is a chance that we end up with 2 different. The new one will cycle back though.
                         && possible_order_to_coalesce.get_price() == price_reverse
                     {
                         possible_order_to_coalesce.increase(num_base_atoms_reverse)?;
@@ -1227,7 +1233,7 @@ impl<
                         get_free_address_on_market_fixed_for_ask_order(fixed, dynamic)
                     };
 
-                    let mut resting_order: RestingOrder = RestingOrder::new(
+                    let mut new_reverse_resting_order: RestingOrder = RestingOrder::new(
                         maker_trader_index,
                         num_base_atoms_reverse,
                         price_reverse,
@@ -1237,8 +1243,14 @@ impl<
                         is_bid,
                         OrderType::Reverse,
                     )?;
-                    resting_order.set_reverse_spread(maker_reverse_spread);
-                    insert_order_into_tree(is_bid, fixed, dynamic, free_address, &resting_order);
+                    new_reverse_resting_order.set_reverse_spread(maker_reverse_spread);
+                    insert_order_into_tree(
+                        is_bid,
+                        fixed,
+                        dynamic,
+                        free_address,
+                        &new_reverse_resting_order,
+                    );
                     set_payload_order(dynamic, free_address);
                 }
 
