@@ -911,16 +911,16 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
 
     // Fill in the other direction puts back the ask.
     test_fixture
-    .place_order_for_keypair(
-        Side::Ask,
-        2 * SOL_UNIT_SIZE,
-        1,
-        0,
-        NO_EXPIRATION_LAST_VALID_SLOT,
-        OrderType::Limit,
-        &second_keypair,
-    )
-    .await?;
+        .place_order_for_keypair(
+            Side::Ask,
+            2 * SOL_UNIT_SIZE,
+            1,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
     let resting_orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
     assert_eq!(resting_orders.len(), 3);
     let first_bid: &RestingOrder = resting_orders.get(0).unwrap();
