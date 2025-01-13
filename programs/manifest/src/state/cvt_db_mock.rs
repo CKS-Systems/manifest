@@ -464,6 +464,10 @@ impl<'a> CvtBookside<'a> {
         self.max_index
     }
 
+    pub fn lookup_index(&self, _order: &RestingOrder) -> DataIndex {
+        todo!()
+    }
+
     pub fn remove_by_index(&mut self, index: DataIndex) {
         if index == main_bid_order_index() {
             release_bid_order();
