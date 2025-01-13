@@ -450,7 +450,7 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
     }
 
     pub fn has_free_block(&self) -> bool {
-        let DynamicAccount { fixed , .. } = self.borrow_market();
+        let DynamicAccount { fixed, .. } = self.borrow_market();
         let free_list_head_index: DataIndex = fixed.free_list_head_index;
         return free_list_head_index != NIL;
     }
