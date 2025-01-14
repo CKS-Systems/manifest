@@ -738,6 +738,22 @@
 <a href="#736" id="736">736</a>
 <a href="#737" id="737">737</a>
 <a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::program::ManifestError;
 <span class="kw">use </span>borsh::{BorshDeserialize <span class="kw">as </span>Deserialize, BorshSerialize <span class="kw">as </span>Serialize};
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
@@ -1065,6 +1081,27 @@
         }
     }
 
+    <span class="kw">pub fn </span>multiply_spread(<span class="self">self</span>, spread_e_5: u16) -&gt; <span class="self">Self </span>{
+        <span class="comment">// Stored as u128 * 10^-26
+        </span><span class="kw">let </span>inner: u128 = u64_slice_to_u128(<span class="self">self</span>.inner);
+        <span class="kw">let </span>inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 <span class="kw">as </span>u128);
+        <span class="kw">let </span>new_inner: u128 = inner_e_minus_5.div_ceil(<span class="number">10_000</span>);
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(new_inner),
+        }
+    }
+
+    <span class="kw">pub fn </span>divide_spread(<span class="self">self</span>, spread_e_5: u16) -&gt; <span class="self">Self </span>{
+        <span class="comment">// multiply then divide
+        </span>QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(
+                u64_slice_to_u128(<span class="self">self</span>.inner)
+                    .wrapping_mul(<span class="number">10_000</span>)
+                    .div_ceil(spread_e_5 <span class="kw">as </span>u128),
+            ),
+        }
+    }
+
     <span class="kw">pub fn </span>try_from_mantissa_and_exponent(
         mantissa: u32,
         exponent: i8,
@@ -1094,14 +1131,9 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(BaseAtoms::ZERO);
         }
         <span class="comment">// this doesn't need a check, will never overflow: u64::MAX * D18 &lt; u128::MAX
-        </span><span class="kw">let </span>dividend = D18.wrapping_mul(quote_atoms.inner <span class="kw">as </span>u128);
+        </span><span class="kw">let </span>dividend: u128 = D18.wrapping_mul(quote_atoms.inner <span class="kw">as </span>u128);
         <span class="kw">let </span>inner: u128 = u64_slice_to_u128(<span class="self">self</span>.inner);
-        <span class="macro">trace!</span>(
-            <span class="string">"checked_base_for_quote {dividend}/{inner} {round_up} {}&gt;{}"</span>,
-            dividend.div_ceil(inner),
-            dividend.div(inner)
-        );
-        <span class="kw">let </span>base_atoms = <span class="kw">if </span>round_up {
+        <span class="kw">let </span>base_atoms: u128 = <span class="kw">if </span>round_up {
             dividend.div_ceil(inner)
         } <span class="kw">else </span>{
             dividend.div(inner)
@@ -1123,7 +1155,7 @@
         <span class="kw">let </span>product: u128 = inner
             .checked_mul(base_atoms.inner <span class="kw">as </span>u128)
             .ok_or(PriceConversionError(<span class="number">0x8</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>quote_atoms = <span class="kw">if </span>round_up {
+        <span class="kw">let </span>quote_atoms: u128 = <span class="kw">if </span>round_up {
             product.div_ceil(D18)
         } <span class="kw">else </span>{
             product.div(D18)

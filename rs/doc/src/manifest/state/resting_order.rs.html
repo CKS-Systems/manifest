@@ -295,6 +295,44 @@
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::mem::size_of;
 
 <span class="kw">use </span><span class="kw">crate</span>::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
@@ -335,6 +373,10 @@
 
     <span class="comment">// Global orders are post only but use funds from the global account.
     </span>Global = <span class="number">3</span>,
+
+    <span class="comment">// Reverse orders behave like an AMM. When filled, they place an order on
+    // the other side of the book with a small fee (spread).
+    </span>Reverse = <span class="number">4</span>,
 }
 <span class="kw">unsafe impl </span>bytemuck::Zeroable <span class="kw">for </span>OrderType {}
 <span class="kw">unsafe impl </span>bytemuck::Pod <span class="kw">for </span>OrderType {}
@@ -362,7 +404,9 @@
     last_valid_slot: u32,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; <span class="number">22</span>],
+    <span class="comment">// Spread for reverse orders. Defaults to zero.
+    </span>reverse_spread: u16,
+    _padding: [u8; <span class="number">20</span>],
 }
 
 <span class="comment">// 16 +  // price
@@ -372,7 +416,8 @@
 //  4 +  // last_valid_slot
 //  1 +  // is_bid
 //  1 +  // order_type
-// 22    // padding
+//  2 +  // spread
+// 20    // padding 2
 // = 64
 </span><span class="macro">const_assert_eq!</span>(size_of::&lt;RestingOrder&gt;(), RESTING_ORDER_SIZE);
 <span class="macro">const_assert_eq!</span>(size_of::&lt;RestingOrder&gt;() % <span class="number">8</span>, <span class="number">0</span>);
@@ -387,6 +432,12 @@
         is_bid: bool,
         order_type: OrderType,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
+        <span class="comment">// Reverse orders cannot have expiration. The purpose of those orders is to
+        // be a permanent liquidity on the book.
+        </span><span class="macro">assert!</span>(
+            !(order_type == OrderType::Reverse &amp;&amp; last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT)
+        );
+
         <span class="prelude-val">Ok</span>(RestingOrder {
             trader_index,
             num_base_atoms,
@@ -395,6 +446,7 @@
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
+            reverse_spread: <span class="number">0</span>,
             _padding: Default::default(),
         })
     }
@@ -434,6 +486,20 @@
         <span class="self">self</span>.order_type == OrderType::Global
     }
 
+    <span class="kw">pub fn </span>is_reverse(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.order_type == OrderType::Reverse
+    }
+
+    <span class="kw">pub fn </span>get_reverse_spread(<span class="self">self</span>) -&gt; u16 {
+        <span class="self">self</span>.reverse_spread
+    }
+
+    <span class="kw">pub fn </span>set_reverse_spread(<span class="kw-2">&amp;mut </span><span class="self">self</span>, spread: u16) {
+        <span class="comment">// Spread is e-5, so dont allow too big of a spread.
+        </span><span class="macro">assert!</span>(spread &lt; <span class="number">10_000</span>);
+        <span class="self">self</span>.reverse_spread = spread;
+    }
+
     <span class="kw">pub fn </span>get_sequence_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.sequence_number
     }
@@ -464,6 +530,12 @@
         <span class="self">self</span>.num_base_atoms = <span class="self">self</span>.num_base_atoms.checked_sub(size)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="comment">// Only needed for combining orders. There is no edit_order function.
+    </span><span class="kw">pub fn </span>increase(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: BaseAtoms) -&gt; ProgramResult {
+        <span class="self">self</span>.num_base_atoms = <span class="self">self</span>.num_base_atoms.checked_add(size)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
 }
 
 <span class="kw">impl </span>Ord <span class="kw">for </span>RestingOrder {
@@ -488,7 +560,11 @@
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>RestingOrder {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        (<span class="self">self</span>.sequence_number) == (other.sequence_number)
+        <span class="comment">// Only used in equality check of lookups. To enable coalescing, just
+        // check price, trader, and order type.
+        </span>(<span class="self">self</span>.price == other.price)
+            &amp;&amp; (<span class="self">self</span>.trader_index == other.trader_index)
+            &amp;&amp; (<span class="self">self</span>.order_type == other.order_type)
     }
 }
 

@@ -580,6 +580,12 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
@@ -949,6 +955,12 @@
         </span>dynamic_account.withdraw(trader_index, extra_base_atoms.as_u64(), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
         dynamic_account.withdraw(trader_index, extra_quote_atoms.as_u64(), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
     }
+    <span class="comment">// Verify that there wasnt a reverse order that took the only spare block.
+    </span><span class="macro">require!</span>(
+        dynamic_account.has_free_block(),
+        ManifestError::InvalidFreeList,
+        <span class="string">"Cannot swap against a reverse order unless there is a free block"
+    </span>)<span class="question-mark">?</span>;
 
     emit_stack(PlaceOrderLog {
         market: <span class="kw-2">*</span>market.key,
