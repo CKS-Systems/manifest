@@ -8,7 +8,6 @@ export * from './types';
 export * from './manifest/errors';
 export * from './manifest/accounts';
 export * from './manifest/types/OrderType';
-export * from './wrapper/instructions';
 
 export * from './wrapperObj';
 export * from './uiWrapperObj';
