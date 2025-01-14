@@ -72,6 +72,8 @@ impl WrapperPlaceOrderParams {
     }
 }
 
+// TODO: Note that this does not cancel reverse orders which have been created
+// at a new sequence number and address (partial fill).
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct WrapperCancelOrderParams {
     client_order_id: u64,

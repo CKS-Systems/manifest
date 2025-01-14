@@ -367,6 +367,12 @@ pub(crate) fn process_swap_core(
         dynamic_account.withdraw(trader_index, extra_base_atoms.as_u64(), true)?;
         dynamic_account.withdraw(trader_index, extra_quote_atoms.as_u64(), false)?;
     }
+    // Verify that there wasnt a reverse order that took the only spare block.
+    require!(
+        dynamic_account.has_free_block(),
+        ManifestError::InvalidFreeList,
+        "Cannot swap against a reverse order unless there is a free block"
+    )?;
 
     emit_stack(PlaceOrderLog {
         market: *market.key,
