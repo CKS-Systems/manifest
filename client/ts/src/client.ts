@@ -1455,7 +1455,7 @@ function toWrapperPlaceOrderParams(
   // Convert spread bps to 10^-5.
   if ('spreadBps' in wrapperPlaceOrderParamsExternal) {
     wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(
-      wrapperPlaceOrderParamsExternal['spreadBps'] * 10,
+      wrapperPlaceOrderParamsExternal['spreadBps'] / 10,
     );
   }
   const quoteAtomsPerToken = 10 ** market.quoteDecimals();
