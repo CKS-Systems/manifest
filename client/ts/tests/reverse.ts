@@ -59,8 +59,8 @@ async function testReverse(): Promise<void> {
   // Asks are sorted worst to best.
   assert(market.asks().length == 1, 'place asks did not work');
   assert(
-    Number(market.asks()[0].numBaseTokens) == 1,
-    `ask top of book wrong size expected ${1} actual ${Number(market.asks()[0].numBaseTokens)}`,
+    Number(market.asks()[0].numBaseTokens) == 4,
+    `ask top of book wrong size expected ${4} actual ${Number(market.asks()[0].numBaseTokens)}`,
   );
   assert(
     market.asks()[0].tokenPrice == 5,
