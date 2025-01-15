@@ -329,7 +329,7 @@ impl QuoteAtomsPerBaseAtom {
         // Stored as u128 * 10^-26
         let inner: u128 = u64_slice_to_u128(self.inner);
         let inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 as u128);
-        let new_inner: u128 = inner_e_minus_5.div_ceil(10_000);
+        let new_inner: u128 = inner_e_minus_5.div_ceil(100_000);
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(new_inner),
         }
@@ -340,7 +340,7 @@ impl QuoteAtomsPerBaseAtom {
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(
                 u64_slice_to_u128(self.inner)
-                    .wrapping_mul(10_000)
+                    .wrapping_mul(100_000)
                     .div_ceil(spread_e_5 as u128),
             ),
         }
