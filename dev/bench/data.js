@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736817154224,
+  "lastUpdate": 1736912566264,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9209,6 +9209,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6119,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "433ada88b0744b8123cde1e63bbefde6d1ec16be",
+          "message": "Fixes to wrapper for post only order pruning (#333)\n\n* Fixes to wrapper for post only order pruning\r\n\r\n* fmt",
+          "timestamp": "2025-01-14T22:16:55-05:00",
+          "tree_id": "0d37831533de55f57e547c2f1a75fa33f1c890a2",
+          "url": "https://github.com/CKS-Systems/manifest/commit/433ada88b0744b8123cde1e63bbefde6d1ec16be"
+        },
+        "date": 1736912564341,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3514,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5552,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6148,
             "unit": "CU",
             "range": "",
             "extra": ""
