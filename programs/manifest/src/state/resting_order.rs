@@ -160,8 +160,6 @@ impl RestingOrder {
     }
 
     pub fn set_reverse_spread(&mut self, spread: u16) {
-        // Spread is e-5, so dont allow too big of a spread.
-        assert!(spread < 10_000);
         self.reverse_spread = spread;
     }
 

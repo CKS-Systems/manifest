@@ -795,7 +795,7 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
             3 * SOL_UNIT_SIZE,
             1,
             0,
-            5_000,
+            50_000,
             OrderType::Reverse,
         )
         .await?;
@@ -805,7 +805,7 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
             3 * SOL_UNIT_SIZE,
             3,
             0,
-            5_000,
+            50_000,
             OrderType::Reverse,
         )
         .await?;
