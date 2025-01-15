@@ -325,7 +325,7 @@ impl QuoteAtomsPerBaseAtom {
         }
     }
 
-    pub fn multiply_spread(self, spread_e_5: u16) -> Self {
+    pub fn multiply_spread(self, spread_e_5: u32) -> Self {
         // Stored as u128 * 10^-26
         let inner: u128 = u64_slice_to_u128(self.inner);
         let inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 as u128);
@@ -335,7 +335,7 @@ impl QuoteAtomsPerBaseAtom {
         }
     }
 
-    pub fn divide_spread(self, spread_e_5: u16) -> Self {
+    pub fn divide_spread(self, spread_e_5: u32) -> Self {
         // multiply then divide
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(
