@@ -84,6 +84,10 @@ Manifest should be interacted with though a wrapper program. Features like Clien
 
 Global orders are a new type of order for trading on Solana. When resting orders across many markets, cost of capital can be expensive. This is the problem that global orders look to address. A global order is an order that does not lock the tokens to support the order on the market. The same tokens that would have supported an order on one market, can now support orders across many markets, with the tokens moved just in time as there is a fill.
 
+### Reverse Orders
+
+Reverse orders are a special type of order available on Manifest designed to replicate the replacement mechanism inherent in Automated Market Makers (AMMs). These are limit orders that automatically switch sides when filled - buys convert to sells, and sells convert to buys with the same size. These orders also allow configurable spreads, making them a more customizable version of AMMs. This enables users to have various fixed fees across a series of orders. By utilizing a series of reverse orders, users can fully replicate a concentrated liquidity AMM position. Liquidity providers benefit from reduced gas costs, as there’s no need to replace orders after they are filled. Therefore, reverse orders are permanent discretized liquidity directly on the orderbook. Similar to AMMs, reverse orders on Manifest make on-chain orderbook market making more accessible for everyone.
+
 ### Building
 
 ```
