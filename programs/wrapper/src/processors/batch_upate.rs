@@ -15,7 +15,7 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder},
+    state::{utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder, MARKET_FIXED_SIZE},
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -170,33 +170,33 @@ fn prepare_orders(
     let now_slot: u32 = get_now_slot();
 
     while best_ask_index != NIL
-        && get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index + (MARKET_FIXED_SIZE as DataIndex))
             .get_value()
             .is_expired(now_slot)
     {
         best_ask_index = market_ref
             .get_asks()
-            .get_next_lower_index::<RBNode<RestingOrder>>(best_ask_index);
+            .get_next_lower_index::<RestingOrder>(best_ask_index);
     }
     while best_bid_index != NIL
-        && get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
+        && get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index + (MARKET_FIXED_SIZE as DataIndex))
             .get_value()
             .is_expired(now_slot)
     {
         best_bid_index = market_ref
             .get_bids()
-            .get_next_lower_index::<RBNode<RestingOrder>>(best_bid_index);
+            .get_next_lower_index::<RestingOrder>(best_bid_index);
     }
 
     let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
-        get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
+        get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index + (MARKET_FIXED_SIZE as DataIndex))
             .get_value()
             .get_price()
     } else {
         QuoteAtomsPerBaseAtom::MAX
     };
     let best_bid_price: QuoteAtomsPerBaseAtom = if best_bid_index != NIL {
-        get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
+        get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index + (MARKET_FIXED_SIZE as DataIndex))
             .get_value()
             .get_price()
     } else {
