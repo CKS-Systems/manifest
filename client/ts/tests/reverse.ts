@@ -60,7 +60,7 @@ async function testReverse(): Promise<void> {
   assert(market.asks().length == 1, 'place asks did not work');
   assert(
     Number(market.asks()[0].numBaseTokens) == 1,
-    'ask top of book wrong size',
+    `ask top of book wrong size expected ${1} actual ${Number(market.asks()[0].numBaseTokens)}`,
   );
   assert(
     market.asks()[0].tokenPrice == 5,
@@ -68,8 +68,8 @@ async function testReverse(): Promise<void> {
   );
   assert(market.bids().length == 1, 'place bids did not work');
   assert(
-    Math.abs(Number(market.bids()[0].numBaseTokens) - 1.25) < 0.001,
-    'bid top of book wrong size',
+    Number(market.bids()[0].numBaseTokens) == 1.25,
+    `bids top of book wrong size expected ${1} actual ${Number(market.bids()[0].numBaseTokens)}`,
   );
   assert(
     market.bids()[0].tokenPrice == 4,
