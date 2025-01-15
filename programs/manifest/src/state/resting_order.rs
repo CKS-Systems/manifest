@@ -38,6 +38,10 @@ pub enum OrderType {
 
     // Global orders are post only but use funds from the global account.
     Global = 3,
+
+    // Reverse orders behave like an AMM. When filled, they place an order on
+    // the other side of the book with a small fee (spread).
+    Reverse = 4,
 }
 unsafe impl bytemuck::Zeroable for OrderType {}
 unsafe impl bytemuck::Pod for OrderType {}
@@ -65,7 +69,9 @@ pub struct RestingOrder {
     last_valid_slot: u32,
     is_bid: PodBool,
     order_type: OrderType,
-    _padding: [u8; 22],
+    // Spread for reverse orders. Defaults to zero.
+    reverse_spread: u16,
+    _padding: [u8; 20],
 }
 
 // 16 +  // price
@@ -75,7 +81,8 @@ pub struct RestingOrder {
 //  4 +  // last_valid_slot
 //  1 +  // is_bid
 //  1 +  // order_type
-// 22    // padding
+//  2 +  // spread
+// 20    // padding 2
 // = 64
 const_assert_eq!(size_of::<RestingOrder>(), RESTING_ORDER_SIZE);
 const_assert_eq!(size_of::<RestingOrder>() % 8, 0);
@@ -90,6 +97,12 @@ impl RestingOrder {
         is_bid: bool,
         order_type: OrderType,
     ) -> Result<Self, ProgramError> {
+        // Reverse orders cannot have expiration. The purpose of those orders is to
+        // be a permanent liquidity on the book.
+        assert!(
+            !(order_type == OrderType::Reverse && last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT)
+        );
+
         Ok(RestingOrder {
             trader_index,
             num_base_atoms,
@@ -98,6 +111,7 @@ impl RestingOrder {
             sequence_number,
             is_bid: PodBool::from_bool(is_bid),
             order_type,
+            reverse_spread: 0,
             _padding: Default::default(),
         })
     }
@@ -137,6 +151,20 @@ impl RestingOrder {
         self.order_type == OrderType::Global
     }
 
+    pub fn is_reverse(&self) -> bool {
+        self.order_type == OrderType::Reverse
+    }
+
+    pub fn get_reverse_spread(self) -> u16 {
+        self.reverse_spread
+    }
+
+    pub fn set_reverse_spread(&mut self, spread: u16) {
+        // Spread is e-5, so dont allow too big of a spread.
+        assert!(spread < 10_000);
+        self.reverse_spread = spread;
+    }
+
     pub fn get_sequence_number(&self) -> u64 {
         self.sequence_number
     }
@@ -167,6 +195,12 @@ impl RestingOrder {
         self.num_base_atoms = self.num_base_atoms.checked_sub(size)?;
         Ok(())
     }
+
+    // Only needed for combining orders. There is no edit_order function.
+    pub fn increase(&mut self, size: BaseAtoms) -> ProgramResult {
+        self.num_base_atoms = self.num_base_atoms.checked_add(size)?;
+        Ok(())
+    }
 }
 
 impl Ord for RestingOrder {
@@ -191,7 +225,11 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        (self.sequence_number) == (other.sequence_number)
+        // Only used in equality check of lookups. To enable coalescing, just
+        // check price, trader, and order type.
+        (self.price == other.price)
+            && (self.trader_index == other.trader_index)
+            && (self.order_type == other.order_type)
     }
 }
 

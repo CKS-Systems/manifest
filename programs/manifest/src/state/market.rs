@@ -42,7 +42,7 @@ use super::{
         try_to_add_to_global,
     },
     DerefOrBorrow, DerefOrBorrowMut, DynamicAccount, RestingOrder, MARKET_FIXED_DISCRIMINANT,
-    MARKET_FREE_LIST_BLOCK_SIZE,
+    MARKET_FREE_LIST_BLOCK_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
 };
 
 #[path = "market_helpers.rs"]
@@ -449,8 +449,14 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         fixed.get_quote_mint()
     }
 
+    pub fn has_free_block(&self) -> bool {
+        let DynamicAccount { fixed, .. } = self.borrow_market();
+        let free_list_head_index: DataIndex = fixed.free_list_head_index;
+        return free_list_head_index != NIL;
+    }
+
     pub fn has_two_free_blocks(&self) -> bool {
-        let DynamicAccount { fixed, dynamic, .. } = self.borrow_market();
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
         let free_list_head_index: DataIndex = fixed.free_list_head_index;
         if free_list_head_index == NIL {
             return false;
@@ -934,10 +940,6 @@ impl<
             // Got a match. First make sure we are allowed to match. We check
             // inside the matching rather than skipping the matching altogether
             // because post only orders should fail, not produce a crossed book.
-            trace!(
-                "match {} {order_type:?} {price:?} with {maker_order:?}",
-                if is_bid { "bid" } else { "ask" }
-            );
             assert_can_take(order_type)?;
 
             let maker_sequence_number = maker_order.get_sequence_number();
@@ -961,11 +963,13 @@ impl<
 
             // If it is a global order, just in time bring the funds over, or
             // remove from the tree and continue on to the next order.
-            let maker: Pubkey = get_helper_seat(dynamic, maker_order.get_trader_index())
+            let maker: Pubkey = get_helper_seat(dynamic, maker_trader_index)
                 .get_value()
                 .trader;
             let taker: Pubkey = get_helper_seat(dynamic, trader_index).get_value().trader;
             let is_global: bool = maker_order.is_global();
+            let is_maker_reverse: bool = maker_order.is_reverse();
+            let maker_reverse_spread: u16 = maker_order.get_reverse_spread();
 
             if is_global {
                 let global_trade_accounts_opt: &Option<GlobalTradeAccounts> = if is_bid {
@@ -1133,8 +1137,7 @@ impl<
                 // Get paid for removing a global order.
                 if get_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index)
                     .get_value()
-                    .get_order_type()
-                    == OrderType::Global
+                    .is_global()
                 {
                     if is_bid {
                         remove_from_global(&global_trade_accounts_opts[0])?;
@@ -1167,6 +1170,120 @@ impl<
                 #[cfg(feature = "certora")]
                 add_to_orderbook_balance(fixed, dynamic, current_maker_order_index);
                 remaining_base_atoms = BaseAtoms::ZERO;
+            }
+
+            // Place the reverse order if the maker was a reverse order type.
+            // This is non-trivial because in order to prevent tons of orders
+            // filling the books on partial fills, we coalesce on top of book.
+            if is_maker_reverse {
+                let price_reverse: QuoteAtomsPerBaseAtom = if is_bid {
+                    // Ask @P --> Bid @P * (1 - spread)
+                    matched_price.multiply_spread(10_000 - maker_reverse_spread)
+                } else {
+                    // Bid @P * (1 - spread) --> Ask @P
+                    // equivalent to
+                    // Bid @P --> Ask @P / (1 - spread)
+                    matched_price.divide_spread(10_000 - maker_reverse_spread)
+                };
+                let num_base_atoms_reverse: BaseAtoms = if is_bid {
+                    // Maker is now buying with the exact number of quote atoms.
+                    // Do not round_up because there might not be enough atoms
+                    // for that.
+                    price_reverse.checked_base_for_quote(quote_atoms_traded, false)?
+                } else {
+                    base_atoms_traded
+                };
+
+                let mut coalesced: bool = false;
+                {
+                    let other_tree: Bookside = if is_bid {
+                        Bookside::new(dynamic, fixed.bids_root_index, fixed.bids_best_index)
+                    } else {
+                        Bookside::new(dynamic, fixed.asks_root_index, fixed.asks_best_index)
+                    };
+                    let lookup_resting_order: RestingOrder = RestingOrder::new(
+                        maker_trader_index,
+                        num_base_atoms_reverse,
+                        price_reverse,
+                        0, // Sequence number does not matter, just price
+                        NO_EXPIRATION_LAST_VALID_SLOT,
+                        is_bid,
+                        OrderType::Reverse,
+                    )?;
+                    // There is an edge case where the the price is off by 1 due
+                    // to rounding. This will result in fragmented liquidity,
+                    // however should be infrequent enough to not do a walk of
+                    // the tree.
+                    let lookup_index: DataIndex = other_tree.lookup_index(&lookup_resting_order);
+                    if lookup_index != NIL {
+                        let order_to_coalesce_into: &mut RestingOrder =
+                            get_mut_helper::<RBNode<RestingOrder>>(dynamic, lookup_index)
+                                .get_mut_value();
+                        order_to_coalesce_into.increase(num_base_atoms_reverse)?;
+                        coalesced = true;
+                    }
+                }
+
+                if !coalesced {
+                    // This code is similar to rest_remaining except it doesnt
+                    // require borrowing data.  Non-trivial to combine the code
+                    // because the certora formal verification inserted itself
+                    // there.
+                    let reverse_order_sequence_number: u64 = fixed.order_sequence_number;
+                    fixed.order_sequence_number = reverse_order_sequence_number.wrapping_add(1);
+
+                    // Put the remaining in an order on the other bookside.
+                    // There are 2 cases, either the maker was fully exhausted and
+                    // we know that we will be able to use their address, or they
+                    // were not fully exhausted and we know the order will not rest.
+                    // In the second case, that uses the free block that was
+                    // speculatively there for the current trader to rest.
+                    let free_address: DataIndex = if is_bid {
+                        get_free_address_on_market_fixed_for_bid_order(fixed, dynamic)
+                    } else {
+                        get_free_address_on_market_fixed_for_ask_order(fixed, dynamic)
+                    };
+
+                    let mut new_reverse_resting_order: RestingOrder = RestingOrder::new(
+                        maker_trader_index,
+                        num_base_atoms_reverse,
+                        price_reverse,
+                        reverse_order_sequence_number,
+                        // Does not expire.
+                        NO_EXPIRATION_LAST_VALID_SLOT,
+                        is_bid,
+                        OrderType::Reverse,
+                    )?;
+                    new_reverse_resting_order.set_reverse_spread(maker_reverse_spread);
+                    insert_order_into_tree(
+                        is_bid,
+                        fixed,
+                        dynamic,
+                        free_address,
+                        &new_reverse_resting_order,
+                    );
+                    set_payload_order(dynamic, free_address);
+                }
+
+                update_balance(
+                    fixed,
+                    dynamic,
+                    maker_trader_index,
+                    !is_bid,
+                    false,
+                    if is_bid {
+                        num_base_atoms_reverse
+                            .checked_mul(price_reverse, true)?
+                            .into()
+                    } else {
+                        num_base_atoms_reverse.into()
+                    },
+                )?;
+            }
+
+            // Stop if the last resting order did not fully match since that
+            // means the taker was exhausted.
+            if !did_fully_match_resting_order {
                 break;
             }
         }
@@ -1246,15 +1363,23 @@ impl<
             get_free_address_on_market_fixed_for_ask_order(fixed, dynamic)
         };
 
-        let resting_order: RestingOrder = RestingOrder::new(
+        let mut resting_order: RestingOrder = RestingOrder::new(
             trader_index,
             remaining_base_atoms,
             price,
             order_sequence_number,
-            last_valid_slot,
+            if order_type != OrderType::Reverse {
+                last_valid_slot
+            } else {
+                NO_EXPIRATION_LAST_VALID_SLOT
+            },
             is_bid,
             order_type,
         )?;
+
+        if order_type == OrderType::Reverse {
+            resting_order.set_reverse_spread(last_valid_slot as u16);
+        }
 
         if resting_order.is_global() {
             if is_bid {

@@ -19,6 +19,7 @@ const run = async () => {
   const marketPks: PublicKey[] =
     await ManifestClient.listMarketPublicKeys(connection);
 
+  let foundMismatch: boolean = false;
   for (const marketPk of marketPks) {
     const client: ManifestClient = await ManifestClient.getClientReadOnly(
       connection,
@@ -61,34 +62,48 @@ const run = async () => {
     const quoteExpectedAtoms: number =
       quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms;
 
+    // Allow small difference because of javascript rounding.
     if (
-      baseExpectedAtoms != baseVaultBalanceAtoms ||
-      quoteExpectedAtoms != quoteVaultBalanceAtoms
+      Math.abs(baseExpectedAtoms - baseVaultBalanceAtoms) > 1 ||
+      Math.abs(quoteExpectedAtoms - quoteVaultBalanceAtoms) > 1
     ) {
       console.log('Market', marketPk.toBase58());
       console.log(
         'Base actual',
         baseVaultBalanceAtoms,
         'base expected',
-        baseWithdrawableBalanceAtoms + baseOpenOrdersBalanceAtoms,
+        baseExpectedAtoms,
         'difference',
-        baseVaultBalanceAtoms -
-          (baseWithdrawableBalanceAtoms + baseOpenOrdersBalanceAtoms),
+        baseVaultBalanceAtoms - baseExpectedAtoms,
       );
       console.log(
         'Quote actual',
         quoteVaultBalanceAtoms,
         'quote expected',
-        quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms,
+        quoteExpectedAtoms,
         'difference',
-        quoteVaultBalanceAtoms -
-          (quoteWithdrawableBalanceAtoms + quoteOpenOrdersBalanceAtoms),
+        quoteVaultBalanceAtoms - quoteExpectedAtoms,
+        'withdrawable',
+        quoteWithdrawableBalanceAtoms,
+        'open orders',
+        quoteOpenOrdersBalanceAtoms,
       );
+      // Only crash on a loss of funds. There has been unsolicited deposits into
+      // vaults which makes them have more tokens than the program expects.
+      if (
+        baseExpectedAtoms > baseVaultBalanceAtoms ||
+        quoteExpectedAtoms > quoteVaultBalanceAtoms
+      ) {
+        foundMismatch = true;
+      }
     }
+  }
+  if (foundMismatch) {
+    throw new Error();
   }
 };
 
 run().catch((e) => {
-  console.error('fatal error');
+  console.error('fatal error', e);
   throw e;
 });

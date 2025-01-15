@@ -103,4 +103,12 @@ impl QuoteAtomsPerBaseAtom {
         cvt::cvt_assume!(x <= u32::MAX as u64);
         Self { inner: [x, 0] }
     }
+
+    pub fn multiply_spread(self, _spread_e_5: u16) -> Self {
+        todo!()
+    }
+
+    pub fn divide_spread(self, _spread_e_5: u16) -> Self {
+        todo!()
+    }
 }
