@@ -1178,12 +1178,12 @@ impl<
             if is_maker_reverse {
                 let price_reverse: QuoteAtomsPerBaseAtom = if is_bid {
                     // Ask @P --> Bid @P * (1 - spread)
-                    matched_price.multiply_spread(10_000 - maker_reverse_spread)
+                    matched_price.multiply_spread(100_000_u32 - (maker_reverse_spread as u32))
                 } else {
                     // Bid @P * (1 - spread) --> Ask @P
                     // equivalent to
                     // Bid @P --> Ask @P / (1 - spread)
-                    matched_price.divide_spread(10_000 - maker_reverse_spread)
+                    matched_price.divide_spread(100_000_u32 - (maker_reverse_spread as u32))
                 };
                 let num_base_atoms_reverse: BaseAtoms = if is_bid {
                     // Maker is now buying with the exact number of quote atoms.
