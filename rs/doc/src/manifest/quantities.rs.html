@@ -1081,22 +1081,22 @@
         }
     }
 
-    <span class="kw">pub fn </span>multiply_spread(<span class="self">self</span>, spread_e_5: u16) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>multiply_spread(<span class="self">self</span>, spread_e_5: u32) -&gt; <span class="self">Self </span>{
         <span class="comment">// Stored as u128 * 10^-26
         </span><span class="kw">let </span>inner: u128 = u64_slice_to_u128(<span class="self">self</span>.inner);
         <span class="kw">let </span>inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 <span class="kw">as </span>u128);
-        <span class="kw">let </span>new_inner: u128 = inner_e_minus_5.div_ceil(<span class="number">10_000</span>);
+        <span class="kw">let </span>new_inner: u128 = inner_e_minus_5.div_ceil(<span class="number">100_000</span>);
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(new_inner),
         }
     }
 
-    <span class="kw">pub fn </span>divide_spread(<span class="self">self</span>, spread_e_5: u16) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>divide_spread(<span class="self">self</span>, spread_e_5: u32) -&gt; <span class="self">Self </span>{
         <span class="comment">// multiply then divide
         </span>QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(
                 u64_slice_to_u128(<span class="self">self</span>.inner)
-                    .wrapping_mul(<span class="number">10_000</span>)
+                    .wrapping_mul(<span class="number">100_000</span>)
                     .div_ceil(spread_e_5 <span class="kw">as </span>u128),
             ),
         }

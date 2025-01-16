@@ -3014,12 +3014,12 @@
             </span><span class="kw">if </span>is_maker_reverse {
                 <span class="kw">let </span>price_reverse: QuoteAtomsPerBaseAtom = <span class="kw">if </span>is_bid {
                     <span class="comment">// Ask @P --&gt; Bid @P * (1 - spread)
-                    </span>matched_price.multiply_spread(<span class="number">10_000 </span>- maker_reverse_spread)
+                    </span>matched_price.multiply_spread(<span class="number">100_000_u32 </span>- (maker_reverse_spread <span class="kw">as </span>u32))
                 } <span class="kw">else </span>{
                     <span class="comment">// Bid @P * (1 - spread) --&gt; Ask @P
                     // equivalent to
                     // Bid @P --&gt; Ask @P / (1 - spread)
-                    </span>matched_price.divide_spread(<span class="number">10_000 </span>- maker_reverse_spread)
+                    </span>matched_price.divide_spread(<span class="number">100_000_u32 </span>- (maker_reverse_spread <span class="kw">as </span>u32))
                 };
                 <span class="kw">let </span>num_base_atoms_reverse: BaseAtoms = <span class="kw">if </span>is_bid {
                     <span class="comment">// Maker is now buying with the exact number of quote atoms.
