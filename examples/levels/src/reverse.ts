@@ -105,21 +105,8 @@ function generateInitialOrders(
     currentLevel: number
 ): WrapperPlaceOrderReverseParamsExternal[] {
     const orders: WrapperPlaceOrderReverseParamsExternal[] = [];
-    
-    // Place bid orders for cleared levels
-    for (let i = 1; i < currentLevel; i++) {
-        const level = levels[i - 1];
-        orders.push({
-            numBaseTokens: level.quantity,
-            tokenPrice: level.price,
-            isBid: true,
-            spreadBps: 100, // Default 1%
-            orderType: OrderType.Reverse,  // Use reverse orders
-            clientOrderId: i
-        });
-    }
 
-    // Place ask orders for remaining levels
+    // Place ask orders to replicate bonding curve
     for (let i = currentLevel; i <= levels.length; i++) {
         const level = levels[i - 1];
         orders.push({
