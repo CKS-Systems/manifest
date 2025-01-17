@@ -1,5 +1,6 @@
 import {
-    ManifestClient, WrapperPlaceOrderParamsExternal,
+    ManifestClient,
+    WrapperPlaceOrderReverseParamsExternal,
 } from '@cks-systems/manifest-sdk';
 import { OrderType } from '@cks-systems/manifest-sdk/client/ts/src/manifest/types';
 import { 
@@ -102,8 +103,8 @@ function getCurrentLevel(
 function generateInitialOrders(
     levels: BondingLevel[],
     currentLevel: number
-): WrapperPlaceOrderParamsExternal[] {
-    const orders: WrapperPlaceOrderParamsExternal[] = [];
+): WrapperPlaceOrderReverseParamsExternal[] {
+    const orders: WrapperPlaceOrderReverseParamsExternal[] = [];
     
     // Place bid orders for cleared levels
     for (let i = 1; i < currentLevel; i++) {
@@ -112,7 +113,7 @@ function generateInitialOrders(
             numBaseTokens: level.quantity,
             tokenPrice: level.price,
             isBid: true,
-            lastValidSlot: 0,
+            spreadBps: 1000, // Default 1%
             orderType: OrderType.Reverse,  // Use reverse orders
             clientOrderId: i
         });
@@ -125,7 +126,7 @@ function generateInitialOrders(
             numBaseTokens: level.quantity,
             tokenPrice: level.price,
             isBid: false,
-            lastValidSlot: 0,
+            spreadBps: 1000, // Default 1%
             orderType: OrderType.Reverse,  // Use reverse orders
             clientOrderId: i
         });
@@ -138,7 +139,7 @@ async function sendOrderBatches(
     connection: Connection,
     mfxClient: ManifestClient,
     owner: Keypair,
-    orders: WrapperPlaceOrderParamsExternal[],
+    orders: WrapperPlaceOrderReverseParamsExternal[],
 ): Promise<string[]> {
     const signatures: string[] = [];
     let remainingOrders = [...orders];
@@ -201,7 +202,7 @@ async function main() {
         new PublicKey(MFX_MKT),
         owner,
     );
-    console.log('LEVELS RUNNING! MKT', mfxClient.market.address.toBase58(), 'Base', mfxClient.market.baseMint().toBase58())
+    console.log('Levels running with Reverse orders. Market', mfxClient.market.address.toBase58(), 'Base', mfxClient.market.baseMint().toBase58())
 
     // Generate bonding levels
     const bondingLevels = generateBondingLevels(TOKEN_SUPPLY, NUM_LEVELS);
