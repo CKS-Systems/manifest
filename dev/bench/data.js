@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736987192452,
+  "lastUpdate": 1737082807428,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9341,6 +9341,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6137,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fe60bad3485d2365c3f6838a8861abc9fa075f1",
+          "message": "Remove expiration check on reverse orders (#338)",
+          "timestamp": "2025-01-16T21:34:16-05:00",
+          "tree_id": "f5a80f94ea72ec3eb17ef8dccf10ab7ca3055459",
+          "url": "https://github.com/CKS-Systems/manifest/commit/4fe60bad3485d2365c3f6838a8861abc9fa075f1"
+        },
+        "date": 1737082805492,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3514,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5550,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6150,
             "unit": "CU",
             "range": "",
             "extra": ""
