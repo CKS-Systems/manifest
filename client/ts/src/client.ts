@@ -1030,7 +1030,10 @@ export class ManifestClient {
    * @returns TransactionInstruction
    */
   public batchUpdateIx(
-    placeParams: WrapperPlaceOrderParamsExternal[],
+    placeParams: (
+      | WrapperPlaceOrderParamsExternal
+      | WrapperPlaceOrderReverseParamsExternal
+    )[],
     cancelParams: WrapperCancelOrderParams[],
     cancelAll: boolean,
   ): TransactionInstruction {
@@ -1038,12 +1041,20 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const baseGlobalRequired: boolean = placeParams.some(
-      (placeParams: WrapperPlaceOrderParamsExternal) => {
+      (
+        placeParams:
+          | WrapperPlaceOrderParamsExternal
+          | WrapperPlaceOrderReverseParamsExternal,
+      ) => {
         return !placeParams.isBid && placeParams.orderType == OrderType.Global;
       },
     );
     const quoteGlobalRequired: boolean = placeParams.some(
-      (placeParams: WrapperPlaceOrderParamsExternal) => {
+      (
+        placeParams:
+          | WrapperPlaceOrderParamsExternal
+          | WrapperPlaceOrderReverseParamsExternal,
+      ) => {
         return placeParams.isBid && placeParams.orderType == OrderType.Global;
       },
     );
@@ -1059,8 +1070,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1093,8 +1108,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1127,8 +1146,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1176,8 +1199,12 @@ export class ManifestClient {
         params: {
           cancels: cancelParams,
           cancelAll,
-          orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-            toWrapperPlaceOrderParams(this.market, params),
+          orders: placeParams.map(
+            (
+              params:
+                | WrapperPlaceOrderParamsExternal
+                | WrapperPlaceOrderReverseParamsExternal,
+            ) => toWrapperPlaceOrderParams(this.market, params),
           ),
         },
       },
