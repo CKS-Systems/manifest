@@ -894,7 +894,10 @@ impl<
         assert_already_has_seat(trader_index)?;
         let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
-        assert_not_already_expired(last_valid_slot, now_slot)?;
+        // Reverse orders will have their last valid slot overriden to no expiration.
+        if order_type != OrderType::Reverse {
+            assert_not_already_expired(last_valid_slot, now_slot)?;
+        }
 
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
 
