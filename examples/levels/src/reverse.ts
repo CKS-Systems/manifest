@@ -113,7 +113,7 @@ function generateInitialOrders(
             numBaseTokens: level.quantity,
             tokenPrice: level.price,
             isBid: true,
-            spreadBps: 1000, // Default 1%
+            spreadBps: 100, // Default 1%
             orderType: OrderType.Reverse,  // Use reverse orders
             clientOrderId: i
         });
@@ -126,7 +126,7 @@ function generateInitialOrders(
             numBaseTokens: level.quantity,
             tokenPrice: level.price,
             isBid: false,
-            spreadBps: 1000, // Default 1%
+            spreadBps: 100, // Default 1%
             orderType: OrderType.Reverse,  // Use reverse orders
             clientOrderId: i
         });
