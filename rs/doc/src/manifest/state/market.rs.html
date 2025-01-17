@@ -1834,6 +1834,9 @@
 <a href="#1832" id="1832">1832</a>
 <a href="#1833" id="1833">1833</a>
 <a href="#1834" id="1834">1834</a>
+<a href="#1835" id="1835">1835</a>
+<a href="#1836" id="1836">1836</a>
+<a href="#1837" id="1837">1837</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">use </span>{
     <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
@@ -2730,7 +2733,10 @@
         assert_already_has_seat(trader_index)<span class="question-mark">?</span>;
         <span class="kw">let </span>now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
-        assert_not_already_expired(last_valid_slot, now_slot)<span class="question-mark">?</span>;
+        <span class="comment">// Reverse orders will have their last valid slot overriden to no expiration.
+        </span><span class="kw">if </span>order_type != OrderType::Reverse {
+            assert_not_already_expired(last_valid_slot, now_slot)<span class="question-mark">?</span>;
+        }
 
         <span class="kw">let </span>DynamicAccount { fixed, dynamic } = <span class="self">self</span>.borrow_mut();
 
