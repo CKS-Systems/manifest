@@ -543,7 +543,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.4",
- "hashbrown 0.12.3",
+ "hashbrown 0.13.2",
 ]
 
 [[package]]
@@ -1817,10 +1817,21 @@ dependencies = [
 
 [[package]]
 name = "hypertree"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bytemuck",
  "colored",
+ "solana-program",
+ "static_assertions",
+]
+
+[[package]]
+name = "hypertree"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c82aa88dee5e1767f4b7862389379d0dd943e87533d8e8b8bf8063b29cb50c9"
+dependencies = [
+ "bytemuck",
  "solana-program",
  "static_assertions",
 ]
@@ -2292,7 +2303,7 @@ dependencies = [
  "arrayref",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -2313,7 +2324,7 @@ name = "manifest-jupiter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hypertree",
+ "hypertree 1.0.0",
  "jupiter-amm-interface",
  "manifest-dex",
  "solana-program",
@@ -2659,7 +2670,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 3.2.0",
  "proc-macro2",
  "quote",
  "syn 2.0.87",
@@ -6049,7 +6060,7 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "manifest-dex",
  "num_enum 0.5.11",
  "shank",
@@ -6555,7 +6566,7 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "manifest-dex",
  "num_enum 0.5.11",
  "shank",

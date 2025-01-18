@@ -20,7 +20,7 @@ test = []
 
 [dependencies]
 manifest-dex = { path = "../manifest", features = ["no-entrypoint"]  }
-hypertree = { path = "../../lib" }
+hypertree = "1.0.0"
 # Cannot use workspace because the generator needs to see a version here
 shank = "0.4.2"
 spl-token = { workspace = true, features = ["no-entrypoint"] }

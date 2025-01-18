@@ -5,7 +5,7 @@ edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
 description = "Onchain orderbook optimized for space and accounts"
-license-file = "LICENSE"
+license = "GPL-2.0-or-later"
 
 [lib]
 crate-type = ["cdylib", "lib"]
