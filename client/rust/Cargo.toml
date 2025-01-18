@@ -12,7 +12,7 @@ test = []
 
 [dependencies]
 anyhow = { workspace = true }
-manifest = { path = "../../programs/manifest", features=['no-clock'] }
+manifest-dex = { path = "../../programs/manifest", features=['no-clock'] }
 hypertree = { path = "../../lib" }
 jupiter-amm-interface = "=0.4.5"
 solana-sdk = { workspace = true }

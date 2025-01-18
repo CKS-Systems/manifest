@@ -2546,7 +2546,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "manifest"
+name = "manifest-dex"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -2584,7 +2584,7 @@ dependencies = [
  "anyhow",
  "hypertree",
  "jupiter-amm-interface",
- "manifest",
+ "manifest-dex",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -6423,7 +6423,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree",
- "manifest",
+ "manifest-dex",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -6946,7 +6946,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree",
- "manifest",
+ "manifest-dex",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
