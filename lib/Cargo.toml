@@ -5,6 +5,7 @@ edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
 description = "Data structures for Manifest"
+license = "GPL-2.0-or-later"
 
 [features]
 colored = ["dep:colored"]
