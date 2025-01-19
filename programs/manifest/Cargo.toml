@@ -1,5 +1,5 @@
 [package]
-name = "manifest"
+name = "manifest-dex"
 version = "1.0.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
