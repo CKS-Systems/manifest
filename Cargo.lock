@@ -2071,6 +2071,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hypertree"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c82aa88dee5e1767f4b7862389379d0dd943e87533d8e8b8bf8063b29cb50c9"
+dependencies = [
+ "bytemuck",
+ "solana-program",
+ "static_assertions",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2546,7 +2557,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "manifest"
+name = "manifest-dex"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -2558,7 +2569,7 @@ dependencies = [
  "cvt-macros",
  "early-panic",
  "hook_macro",
- "hypertree",
+ "hypertree 0.1.0",
  "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",
  "num_enum 0.5.11",
  "shank",
@@ -2578,13 +2589,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "manifest-dex"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5565da77e64f9ccaa7a575c5911fca554350ef2092eec728ea96218b14af889e"
+dependencies = [
+ "arrayref",
+ "borsh 0.10.4",
+ "bytemuck",
+ "hypertree 1.0.0",
+ "num_enum 0.5.11",
+ "shank",
+ "solana-invoke",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
 name = "manifest-jupiter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hypertree",
+ "hypertree 1.0.0",
  "jupiter-amm-interface",
- "manifest",
+ "manifest-dex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -6422,8 +6454,8 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree",
- "manifest",
+ "hypertree 0.1.0",
+ "manifest-dex 1.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -6945,8 +6977,8 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree",
- "manifest",
+ "hypertree 0.1.0",
+ "manifest-dex 1.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
