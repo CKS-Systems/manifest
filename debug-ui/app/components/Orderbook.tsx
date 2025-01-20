@@ -87,6 +87,7 @@ const Orderbook = ({
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
+    // TODO: Differentiate whether the order was set through the wrapper or not and give the client order id here.
     const isOwn = pk && pk.equals(restingOrder.trader);
     return (
       <tr
