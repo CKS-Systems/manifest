@@ -77,10 +77,11 @@ function generateBondingLevels(
 }
 
 /**
- * Gets the current level based on total tokens sold.
+ * Gets the current level based on total tokens sold only.
+ * This can potentially be innaccurate if a spread is configured.
  * Levels are 1-based to match the order ID convention.
  */
-function getCurrentLevel(
+function getCurrentLevelBasedOnPositionOnly(
     totalTokensSold: number,
     levels: BondingLevel[]
 ): number {
@@ -202,7 +203,7 @@ async function main() {
     } = mfxClient.market.getBalances(owner.publicKey);
     
     const totalTokensSold = TOKEN_SUPPLY - baseWithdrawableBalanceTokens - baseOpenOrdersBalanceTokens;
-    const currentLevel = getCurrentLevel(totalTokensSold, bondingLevels);
+    const currentLevel = getCurrentLevelBasedOnPositionOnly(totalTokensSold, bondingLevels);
     
     console.log('Market Status:', {
         currentLevel,
