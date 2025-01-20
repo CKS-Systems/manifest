@@ -7,12 +7,16 @@ import {
   TransactionInstruction,
   PublicKey,
 } from '@solana/web3.js';
-import { WrapperPlaceOrderParamsExternal } from '@cks-systems/manifest-sdk';
+import {
+  WrapperPlaceOrderParamsExternal,
+  WrapperPlaceOrderReverseParamsExternal,
+} from '@cks-systems/manifest-sdk';
 import { OrderType } from '@cks-systems/manifest-sdk/manifest';
 import { getSolscanSigUrl, setupClient } from '@/lib/util';
 import { useAppState } from './AppWalletProvider';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
+import { NO_EXPIRATION_LAST_VALID_SLOT } from '@cks-systems/manifest-sdk/constants';
 
 const PlaceOrder = ({
   marketAddress,
@@ -27,6 +31,8 @@ const PlaceOrder = ({
   const [amount, setAmount] = useState('0');
   const [side, setSide] = useState('buy');
   const [clientOrderId, setClientOrderId] = useState('0');
+  const [orderType, setOrderType] = useState('0');
+  const [spreadBps, setSpreadBps] = useState('0');
 
   const handlePriceChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setPrice(e.target.value);
@@ -48,6 +54,14 @@ const PlaceOrder = ({
     setClientOrderId(e.target.value);
   };
 
+  const handleOrderTypeChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+    setOrderType(e.target.value);
+  };
+
+  const handleSpreadBpsChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setSpreadBps(e.target.value);
+  };
+
   const onSubmit = async (e: { preventDefault: () => void }): Promise<void> => {
     e.preventDefault();
 
@@ -62,15 +76,27 @@ const PlaceOrder = ({
       network,
     );
 
-    const orderParams: WrapperPlaceOrderParamsExternal = {
-      numBaseTokens: Number(amount),
-      tokenPrice: Number(price),
-      isBid: side == 'buy',
-      lastValidSlot: 0,
-      orderType: OrderType.Limit,
-      clientOrderId: Number(clientOrderId),
-    };
-
+    const orderParams:
+      | WrapperPlaceOrderParamsExternal
+      | WrapperPlaceOrderReverseParamsExternal =
+      Number(orderType) != OrderType.Reverse
+        ? {
+            numBaseTokens: Number(amount),
+            tokenPrice: Number(price),
+            isBid: side == 'buy',
+            lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
+            orderType: Number(orderType),
+            clientOrderId: Number(clientOrderId),
+          }
+        : {
+            numBaseTokens: Number(amount),
+            tokenPrice: Number(price),
+            isBid: side == 'buy',
+            // The sdk is responsible for mapping this value into the correct expressible range of values.
+            spreadBps: Number(spreadBps),
+            orderType: OrderType.Reverse,
+            clientOrderId: Number(clientOrderId),
+          };
     const placeOrderIx: TransactionInstruction =
       mClient.placeOrderIx(orderParams);
     try {
@@ -153,6 +179,44 @@ const PlaceOrder = ({
           Sell
         </label>
       </div>
+
+      <div className="mb-6">
+        <label className="block text-gray-200 font-bold mb-2" htmlFor="amount">
+          OrderType
+        </label>
+
+        <select
+          value={orderType}
+          onChange={handleOrderTypeChange}
+          className="bg-gray-800 border border-gray-700 rounded w-full py-2 px-4 text-gray-200 focus:outline-none focus:border-gray-500"
+        >
+          {Object.keys(OrderType)
+            .filter((v) => isNaN(Number(v)))
+            .map((key, index) => (
+              <option key={key} value={index}>
+                {key}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {Number(orderType) === OrderType.Reverse && (
+        <div className="mb-6">
+          <label
+            className="block text-gray-200 font-bold mb-2"
+            htmlFor="spreadBps"
+          >
+            SpreadBps
+          </label>
+          <input
+            className="bg-gray-800 border border-gray-700 rounded w-full py-2 px-4 text-gray-200 focus:outline-none focus:border-gray-500"
+            id="spreadBps"
+            type="text"
+            value={spreadBps}
+            onChange={handleSpreadBpsChange}
+          />
+        </div>
+      )}
 
       <div className="flex justify-center">
         <button
