@@ -23,7 +23,7 @@ import {
   getClusterFromConnection,
 } from '@cks-systems/manifest-sdk/utils/solana';
 import { OrderType, PROGRAM_ID } from '@cks-systems/manifest-sdk/manifest';
-import { FIXED_MANIFEST_HEADER_SIZE } from '@cks-systems/manifest-sdk/constants';
+import { FIXED_MANIFEST_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT } from '@cks-systems/manifest-sdk/constants';
 
 const {
   RPC_URL,
@@ -310,13 +310,17 @@ class DummyTrader {
         break;
       }
       case 'charlie': {
-        orderType = OrderType.ImmediateOrCancel;
+        if (Math.random() === 0) {
+            orderType = OrderType.Reverse;
+        } else {
+            orderType = OrderType.ImmediateOrCancel;
+        }
         break;
       }
     }
     const placeOrderIx: TransactionInstruction = this.client.placeOrderIx({
       isBid,
-      lastValidSlot: 0,
+      lastValidSlot: orderType != OrderType.Reverse ? NO_EXPIRATION_LAST_VALID_SLOT : Math.random() * 100,
       orderType,
       clientOrderId: 0,
       numBaseTokens: baseTokensInOrder,
@@ -543,7 +547,7 @@ async function main() {
     );
     await fundWallet(connection, aliceKeypair, creatorKeypair, baseMint);
     await fundWallet(connection, aliceKeypair, creatorKeypair, quoteMint);
-    await Promise.all([alice.run()]);
+    alice.run();
   }
 
   if (process.env.BOB_PRIVATE_KEY) {
@@ -567,7 +571,7 @@ async function main() {
     );
     await fundWallet(connection, bobKeypair, creatorKeypair, baseMint);
     await fundWallet(connection, bobKeypair, creatorKeypair, quoteMint);
-    await Promise.all([bob.run()]);
+    bob.run();
   }
 
   if (process.env.CHARLIE_PRIVATE_KEY) {
@@ -584,16 +588,16 @@ async function main() {
       marketAddress,
       'charlie',
       [
-        //'DEPOSIT',
-        //'WITHDRAW',
-        //'PLACE_ORDER',
+        'DEPOSIT',
+        'WITHDRAW',
+        'PLACE_ORDER',
         'SWAP',
         //'CANCEL_ORDER',
       ],
     );
     await fundWallet(connection, charlieKeypair, creatorKeypair, baseMint);
     await fundWallet(connection, charlieKeypair, creatorKeypair, quoteMint);
-    await Promise.all([charlie.run()]);
+    charlie.run();
   }
 }
 
