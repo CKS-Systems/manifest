@@ -34,7 +34,9 @@ async function testExpiredAsk(): Promise<void> {
       20,
     );
     assert(false);
-  } catch (err) {}
+  } catch (err) {
+    assert(true);
+  }
 }
 
 describe('Expired Order test', () => {
