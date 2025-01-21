@@ -8,9 +8,6 @@
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
-[![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
-[![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
-[![Formal Verification](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
 No more permissioned markets.
@@ -32,7 +29,7 @@ Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
 | Anchor |Yes |No|No|
-| Creation Rent|2 SOL |3+ SOL |.004 SOL|
+| Creation Rent|2 SOL |3+ SOL |.007 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
 | Swap accounts| 16 | 8 | 7 |
