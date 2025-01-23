@@ -473,7 +473,16 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<QuoteAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
+        self.impact_quote_atoms_with_slot(is_bid, limit_base_atoms, global_trade_accounts_opts, now_slot)
+    }
 
+    pub fn impact_quote_atoms_with_slot(
+        &self,
+        is_bid: bool,
+        limit_base_atoms: BaseAtoms,
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+        now_slot: u32,
+    ) -> Result<QuoteAtoms, ProgramError> {
         let book: BooksideReadOnly = if is_bid {
             self.get_asks()
         } else {
@@ -547,10 +556,9 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         limit_quote_atoms: QuoteAtoms,
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
-        impact_base_atoms(self, is_bid, limit_quote_atoms, global_trade_accounts_opts)
+        impact_base_atoms_with_slot(self, is_bid, limit_quote_atoms, global_trade_accounts_opts)
     }
 
-    /// How many base atoms you get when you trade in limit_quote_atoms.
     #[cfg(not(feature = "certora"))]
     pub fn impact_base_atoms(
         &self,
@@ -559,7 +567,18 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
+        self.impact_base_atoms_with_slot(is_bid, limit_quote_atoms, global_trade_accounts_opts, now_slot)
+    }
 
+    /// How many base atoms you get when you trade in limit_quote_atoms.
+    #[cfg(not(feature = "certora"))]
+    pub fn impact_base_atoms_with_slot(
+        &self,
+        is_bid: bool,
+        limit_quote_atoms: QuoteAtoms,
+        global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+        now_slot: u32,
+    ) -> Result<BaseAtoms, ProgramError> {
         let book: RedBlackTreeReadOnly<'_, RestingOrder> = if is_bid {
             self.get_asks()
         } else {
