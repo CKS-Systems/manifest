@@ -128,12 +128,12 @@ impl Amm for ManifestLocalMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {
@@ -394,12 +394,12 @@ impl Amm for ManifestMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {

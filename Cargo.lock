@@ -2558,7 +2558,7 @@ dependencies = [
 
 [[package]]
 name = "manifest-dex"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "arrayref",
@@ -2590,9 +2590,9 @@ dependencies = [
 
 [[package]]
 name = "manifest-dex"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5565da77e64f9ccaa7a575c5911fca554350ef2092eec728ea96218b14af889e"
+checksum = "42c93ba07891cc55c279651781d2dc016e28ca30afea109d87d41e5a2a6818fb"
 dependencies = [
  "arrayref",
  "borsh 0.10.4",
@@ -2616,7 +2616,7 @@ dependencies = [
  "anyhow",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
- "manifest-dex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "manifest-dex 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -6455,7 +6455,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 1.0.0",
+ "manifest-dex 1.0.1",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -6978,7 +6978,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 1.0.0",
+ "manifest-dex 1.0.1",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
