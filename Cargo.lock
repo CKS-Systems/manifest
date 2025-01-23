@@ -2059,7 +2059,7 @@ dependencies = [
 
 [[package]]
 name = "hypertree"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bytemuck",
  "calltrace",
@@ -2569,7 +2569,7 @@ dependencies = [
  "cvt-macros",
  "early-panic",
  "hook_macro",
- "hypertree 0.1.0",
+ "hypertree 1.0.0",
  "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",
  "num_enum 0.5.11",
  "shank",
@@ -2597,7 +2597,7 @@ dependencies = [
  "arrayref",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 1.0.0",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -2614,7 +2614,7 @@ name = "manifest-jupiter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hypertree 1.0.0",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
  "manifest-dex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-program",
@@ -6454,7 +6454,7 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 0.1.0",
+ "hypertree 1.0.0",
  "manifest-dex 1.0.0",
  "num_enum 0.5.11",
  "shank",
@@ -6977,7 +6977,7 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 0.1.0",
+ "hypertree 1.0.0",
  "manifest-dex 1.0.0",
  "num_enum 0.5.11",
  "shank",

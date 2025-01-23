@@ -131,7 +131,7 @@ export async function depositPlaceOrder(
   );
 
   const depositPlaceOrderIx: TransactionInstruction[] =
-    await client.placeOrderWithRequiredDepositIx(payerKeypair.publicKey, {
+    await client.placeOrderWithRequiredDepositIxs(payerKeypair.publicKey, {
       numBaseTokens,
       tokenPrice,
       isBid,
