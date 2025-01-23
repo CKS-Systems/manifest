@@ -473,7 +473,12 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<QuoteAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
-        self.impact_quote_atoms_with_slot(is_bid, limit_base_atoms, global_trade_accounts_opts, now_slot)
+        self.impact_quote_atoms_with_slot(
+            is_bid,
+            limit_base_atoms,
+            global_trade_accounts_opts,
+            now_slot,
+        )
     }
 
     pub fn impact_quote_atoms_with_slot(
@@ -567,7 +572,12 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
         let now_slot: u32 = get_now_slot();
-        self.impact_base_atoms_with_slot(is_bid, limit_quote_atoms, global_trade_accounts_opts, now_slot)
+        self.impact_base_atoms_with_slot(
+            is_bid,
+            limit_quote_atoms,
+            global_trade_accounts_opts,
+            now_slot,
+        )
     }
 
     /// How many base atoms you get when you trade in limit_quote_atoms.
