@@ -240,12 +240,14 @@ fn prepare_orders(
                     if order.is_bid {
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price > best_ask_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only bid that would cross");
                             num_base_atoms = 0;
                         } else {
                             let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
                                 .checked_mul(price, true)
                                 .unwrap();
                             if desired > *remaining_quote_atoms {
+                                solana_program::msg!("Removing bid for insufficient funds");
                                 num_base_atoms = 0;
                             } else {
                                 *remaining_quote_atoms -= desired;
@@ -255,9 +257,11 @@ fn prepare_orders(
                         let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price < best_bid_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only ask that would cross");
                             num_base_atoms = 0;
                         } else {
                             if desired > *remaining_base_atoms {
+                                solana_program::msg!("Removing ask for insufficient funds");
                                 num_base_atoms = 0;
                             } else {
                                 *remaining_base_atoms -= desired;
