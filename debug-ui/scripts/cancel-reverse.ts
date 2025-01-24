@@ -1,8 +1,4 @@
-import { ManifestClient, RestingOrder } from '@cks-systems/manifest-sdk';
-import {
-  createBatchUpdateInstruction,
-  OrderType,
-} from '@cks-systems/manifest-sdk/manifest';
+import { ManifestClient, RestingOrder, OrderType, createBatchUpdateInstruction } from '@cks-systems/manifest-sdk';
 import { bignum } from '@metaplex-foundation/beet';
 import {
   Connection,
