@@ -12,5 +12,5 @@ export const NUM_LEVELS = 100;
 
 // Others
 export const MAX_NUM_CANCEL_IX = 20;
-export const MAX_NUM_ORDER_IX = 20;
+export const MAX_NUM_ORDER_IX = 10;
 export const INTERVAL_SECS = 60;
