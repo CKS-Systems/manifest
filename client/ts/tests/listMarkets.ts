@@ -1,8 +1,4 @@
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-} from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { ManifestClient } from '../src/client';
 import { Market } from '../src/market';
 import { assert } from 'chai';
