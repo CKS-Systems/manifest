@@ -143,6 +143,47 @@ export class ManifestClient {
   }
 
   /**
+   * list all Manifest markets that match
+   *
+   * @param connection Connection
+   * @returns PublicKey[]
+   */
+  public static async listMarketsForMints(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    useApi?: boolean,
+  ): Promise<PublicKey[]> {
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: marketDiscriminator.toString('base64'),
+            encoding: 'base64',
+          },
+        },
+        {
+          memcmp: {
+            offset: 16,
+            bytes: baseMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+        {
+          memcmp: {
+            offset: 24,
+            bytes: quoteMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+      ],
+    });
+
+    return accounts.map((a) => a.pubkey);
+  }
+
+  /**
    * Get all market program accounts. This is expensive RPC load..
    *
    * @param connection Connection
