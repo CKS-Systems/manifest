@@ -143,9 +143,14 @@ export class ManifestClient {
   }
 
   /**
-   * list all Manifest markets that match
+   * List all Manifest markets that match base and quote mint. If useApi, then
+   * this call uses the manifest stats server instead of the heavy
+   * getProgramAccounts RPC call.
    *
    * @param connection Connection
+   * @param baseMint PublicKey
+   * @param quoteMint PublicKey
+   * @param useApi boolean
    * @returns PublicKey[]
    */
   public static async listMarketsForMints(
@@ -188,7 +193,7 @@ export class ManifestClient {
         },
         {
           memcmp: {
-            offset: 24,
+            offset: 48,
             bytes: quoteMint.toBase58(),
             encoding: 'base58',
           },
