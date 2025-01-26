@@ -154,6 +154,22 @@ export class ManifestClient {
     quoteMint: PublicKey,
     useApi?: boolean,
   ): Promise<PublicKey[]> {
+    if (useApi) {
+      const responseJson = await (
+        await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
+      ).json();
+      const tickers: PublicKey[] = responseJson
+        .filter((ticker) => {
+          return (
+            ticker.base_currency == baseMint.toBase58() &&
+            ticker.quote_currency == quoteMint.toBase58()
+          );
+        })
+        .map((ticker) => {
+          return new PublicKey(ticker.ticker_id);
+        });
+      return tickers;
+    }
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
       filters: [
         {
