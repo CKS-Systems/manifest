@@ -143,6 +143,68 @@ export class ManifestClient {
   }
 
   /**
+   * List all Manifest markets that match base and quote mint. If useApi, then
+   * this call uses the manifest stats server instead of the heavy
+   * getProgramAccounts RPC call.
+   *
+   * @param connection Connection
+   * @param baseMint PublicKey
+   * @param quoteMint PublicKey
+   * @param useApi boolean
+   * @returns PublicKey[]
+   */
+  public static async listMarketsForMints(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    useApi?: boolean,
+  ): Promise<PublicKey[]> {
+    if (useApi) {
+      const responseJson = await (
+        await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
+      ).json();
+      const tickers: PublicKey[] = responseJson
+        .filter((ticker) => {
+          return (
+            ticker.base_currency == baseMint.toBase58() &&
+            ticker.target_currency == quoteMint.toBase58()
+          );
+        })
+        .map((ticker) => {
+          return new PublicKey(ticker.ticker_id);
+        });
+      return tickers;
+    }
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: marketDiscriminator.toString('base64'),
+            encoding: 'base64',
+          },
+        },
+        {
+          memcmp: {
+            offset: 16,
+            bytes: baseMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+        {
+          memcmp: {
+            offset: 48,
+            bytes: quoteMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+      ],
+    });
+
+    return accounts.map((a) => a.pubkey);
+  }
+
+  /**
    * Get all market program accounts. This is expensive RPC load..
    *
    * @param connection Connection
