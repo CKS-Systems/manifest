@@ -167,7 +167,7 @@ export class ManifestClient {
         .filter((ticker) => {
           return (
             ticker.base_currency == baseMint.toBase58() &&
-            ticker.quote_currency == quoteMint.toBase58()
+            ticker.target_currency == quoteMint.toBase58()
           );
         })
         .map((ticker) => {
