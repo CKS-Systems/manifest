@@ -425,6 +425,26 @@ fn process_orders<'a, 'info>(
     Ok(())
 }
 
+// Fee here is 5_000 lamports stored on the wrapper state. This is stored on the
+// wrapper state because it prevents the need for a contentious extra write
+// lock. Users who do not wish to pay this fee should use their own wrapper or
+// interact directly with the manifest program.
+fn collect_fee<'a, 'info>(
+    payer: &Signer<'a, 'info>,
+    wrapper_state: &WrapperStateAccountInfo<'a, 'info>,
+) -> ProgramResult {
+    invoke(
+        &solana_program::system_instruction::transfer(
+            &payer.as_ref().key,
+            &wrapper_state.key,
+            manifest::state::GAS_DEPOSIT_LAMPORTS,
+        ),
+        &[payer.as_ref().clone(), wrapper_state.info.clone()],
+    )?;
+
+    Ok(())
+}
+
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -497,6 +517,9 @@ pub(crate) fn process_batch_update(
 
     // Sync to get the balance correct and remove any expired orders.
     sync_fast(&wrapper_state, &market, market_info_index)?;
+
+    // Collect fee.
+    collect_fee(&payer, &wrapper_state)?;
 
     Ok(())
 }
