@@ -1,12 +1,12 @@
 use manifest::program::invoke;
 
 use manifest::validation::{Program, Signer};
-use solana_program::sysvar::Sysvar;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     pubkey::Pubkey,
     system_program,
+    sysvar::Sysvar,
 };
 use std::str::FromStr;
 
