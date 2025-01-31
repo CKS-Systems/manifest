@@ -461,8 +461,8 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
-        // Does not have to be writable, but this will fail if removing a global
-        // or requiring expanding.
+        // Does not have to be writable, but this ix will fail if removing a
+        // global or requiring expanding.
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
