@@ -35,7 +35,7 @@ pub fn batch_update_instruction(
     quote_mint_token_program_opt: Option<Pubkey>,
 ) -> Instruction {
     let mut account_metas: Vec<AccountMeta> = vec![
-        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new(*payer, true),
         AccountMeta::new(*market, false),
         AccountMeta::new_readonly(system_program::id(), false),
     ];
