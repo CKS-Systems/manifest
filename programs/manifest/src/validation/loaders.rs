@@ -91,7 +91,7 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
         let system_program: Program =
@@ -461,7 +461,9 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        // Does not have to be writable, but this ix will fail if removing a
+        // global or requiring expanding.
+        let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
         let system_program: Program =
@@ -636,7 +638,7 @@ impl<'a, 'info> GlobalDepositContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
 
@@ -683,7 +685,7 @@ impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
-        let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
+        let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
 

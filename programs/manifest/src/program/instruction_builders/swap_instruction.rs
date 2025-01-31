@@ -27,7 +27,7 @@ pub fn swap_instruction(
     let (vault_base_account, _) = get_vault_address(market, base_mint);
     let (vault_quote_account, _) = get_vault_address(market, quote_mint);
     let mut account_metas: Vec<AccountMeta> = vec![
-        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(*payer, true),
         AccountMeta::new(*market, false),
         AccountMeta::new(*trader_base_account, false),
         AccountMeta::new(*trader_quote_account, false),
