@@ -29,6 +29,7 @@ import {
 } from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
+import BN from 'bn.js';
 
 /**
  * RestingOrder on the market.
@@ -710,7 +711,11 @@ export class Market {
       .map(({ account, pubkey }) =>
         Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
       )
-      .sort((a, b) => Number(b.quoteVolume()) - Number(a.quoteVolume()));
+      .sort((a, b) =>
+        new BN(b.quoteVolume().toString())
+          .sub(new BN(a.quoteVolume().toString()))
+          .toNumber(),
+      );
   }
 
   static async setupIxs(
