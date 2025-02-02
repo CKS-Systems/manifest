@@ -642,9 +642,11 @@ export class Market {
       filters,
     });
 
-    return accounts.map(({ account, pubkey }) =>
-      Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
-    );
+    return accounts
+      .map(({ account, pubkey }) =>
+        Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
+      )
+      .sort((a, b) => Number(b.quoteVolume()) - Number(a.quoteVolume()));
   }
 
   static async setupIxs(
