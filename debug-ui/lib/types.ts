@@ -12,6 +12,10 @@ export interface VolumeByAddr {
   [addr: string]: number;
 }
 
+export interface HasToken22ByAddr {
+  [addr: string]: boolean;
+}
+
 export type FillResultUi = {
   market: string;
   maker: string;

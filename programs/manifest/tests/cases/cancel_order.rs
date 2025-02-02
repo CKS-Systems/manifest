@@ -42,6 +42,28 @@ async fn cancel_order_bid_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+// This test failed when the rounding on cancel was incorrect. Now it passes. It
+// shows that all funds are retrievable.
+#[tokio::test]
+async fn cancel_order_rounding_test() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture
+        .deposit(Token::USDC, 2 * USDC_UNIT_SIZE)
+        .await?;
+
+    test_fixture
+        .place_order(Side::Bid, 1, 11, -1, u32::MAX, OrderType::Limit)
+        .await?;
+
+    test_fixture.cancel_order(0).await?;
+    test_fixture
+        .withdraw(Token::USDC, 2 * USDC_UNIT_SIZE)
+        .await?;
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn cancel_order_fail_other_trader_order_test() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;

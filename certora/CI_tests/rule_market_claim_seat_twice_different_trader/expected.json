@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_market_claim_seat_twice_different_trader": "SUCCESS"
+       }
+}

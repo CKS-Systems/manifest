@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_swap_quote_exact": "SUCCESS"
+       }
+}

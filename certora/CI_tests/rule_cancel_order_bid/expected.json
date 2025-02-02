@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_cancel_order_bid": "FAIL"
+       }
+}

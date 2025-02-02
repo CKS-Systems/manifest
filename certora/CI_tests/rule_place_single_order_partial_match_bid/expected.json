@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_place_single_order_partial_match_bid": "SUCCESS"
+       }
+}

@@ -33,8 +33,14 @@ import {
   getClusterFromConnection,
 } from '@cks-systems/manifest-sdk/utils/solana';
 import NavBar from './NavBar';
-import { ActiveByAddr, LabelsByAddr, VolumeByAddr } from '@/lib/types';
+import {
+  ActiveByAddr,
+  LabelsByAddr,
+  VolumeByAddr,
+  HasToken22ByAddr,
+} from '@/lib/types';
 import { fetchAndSetMfxAddrLabels } from '@/lib/address-labels';
+import { checkForToken22 } from '@/lib/util';
 
 require('react-toastify/dist/ReactToastify.css');
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -44,11 +50,14 @@ interface AppStateContextValue {
   network: WalletAdapterNetwork | null;
   marketAddrs: string[];
   labelsByAddr: LabelsByAddr;
+  infoByAddr: LabelsByAddr;
   activeByAddr: ActiveByAddr;
   marketVolumes: VolumeByAddr;
   dailyVolumes: VolumeByAddr;
+  hasToken22ByAddr: HasToken22ByAddr;
   setMarketAddrs: Dispatch<SetStateAction<string[]>>;
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
+  setInfoByAddr: Dispatch<SetStateAction<LabelsByAddr>>;
   setActiveByAddr: Dispatch<SetStateAction<ActiveByAddr>>;
   setMarketVolumes: Dispatch<SetStateAction<VolumeByAddr>>;
 }
@@ -75,8 +84,10 @@ const AppWalletProvider = ({
   const [marketVolumes, setMarketVolumes] = useState<VolumeByAddr>({});
   const [dailyVolumes, setDailyVolumes] = useState<VolumeByAddr>({});
   const [labelsByAddr, setLabelsByAddr] = useState<LabelsByAddr>({});
+  const [infoByAddr, setInfoByAddr] = useState<LabelsByAddr>({});
   const [activeByAddr, setActiveByAddr] = useState<ActiveByAddr>({});
   const [loading, setLoading] = useState<boolean>(false);
+  const [has22ByAddr, setHas22ByAddr] = useState<HasToken22ByAddr>({});
   const setupRun = useRef(false);
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
@@ -157,6 +168,7 @@ const AppWalletProvider = ({
 
         // Fine to do an N^2 search until the number of markets gets too big.
         const activeByAddr: ActiveByAddr = {};
+        const marketsByAddr: { [key: string]: Market } = {};
         marketProgramAccounts.forEach(
           (
             acct1: Readonly<{
@@ -168,6 +180,7 @@ const AppWalletProvider = ({
               address: acct1.pubkey,
               buffer: acct1.account.data,
             });
+            marketsByAddr[acct1.pubkey.toBase58()] = market;
             let foundBigger: boolean = false;
 
             marketProgramAccounts.forEach(
@@ -198,7 +211,39 @@ const AppWalletProvider = ({
         );
         setActiveByAddr(activeByAddr);
 
-        fetchAndSetMfxAddrLabels(conn, marketProgramAccounts, setLabelsByAddr);
+        const activeAddrs = Object.entries(activeByAddr)
+          .filter(([_, active]) => active)
+          .map(([addr]) => addr);
+        const res: [string, boolean][] = await Promise.all(
+          activeAddrs.map(async (addr) => {
+            const market = marketsByAddr[addr];
+            if (!market) {
+              throw new Error(
+                'missing market in mapping. this should never happen',
+              );
+            }
+            const [quoteIs22, baseIs22] = await Promise.all([
+              checkForToken22(conn, market.quoteMint()),
+              checkForToken22(conn, market.baseMint()),
+            ]);
+            const has22 = quoteIs22 || baseIs22;
+
+            return [addr, has22];
+          }),
+        );
+        const hasToken22ByAddr: HasToken22ByAddr = res.reduce((acc, curr) => {
+          const [addr, has22] = curr;
+          acc[addr] = has22;
+          return acc;
+        }, {} as HasToken22ByAddr);
+        setHas22ByAddr(hasToken22ByAddr);
+
+        fetchAndSetMfxAddrLabels(
+          conn,
+          marketProgramAccounts,
+          setLabelsByAddr,
+          setInfoByAddr,
+        );
 
         const tickers = await fetch(
           'https://mfx-stats-mainnet.fly.dev/tickers',
@@ -210,7 +255,7 @@ const AppWalletProvider = ({
         setDailyVolumes(dailyVolumeByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
-        toast.error(`placeOrder: ${ensureError(e).message}`);
+        toast.error(`fetchTickers: ${ensureError(e).message}`);
       } finally {
         setLoading(false);
       }
@@ -241,11 +286,14 @@ const AppWalletProvider = ({
               marketVolumes,
               activeByAddr,
               labelsByAddr,
+              infoByAddr,
               setLabelsByAddr,
+              setInfoByAddr,
               setMarketAddrs,
               setMarketVolumes,
               setActiveByAddr,
               dailyVolumes,
+              hasToken22ByAddr: has22ByAddr,
               loading,
             }}
           >

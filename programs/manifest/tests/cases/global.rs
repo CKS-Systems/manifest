@@ -226,8 +226,15 @@ async fn global_match_order() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
 
-    test_fixture.global_add_trader().await?;
-    test_fixture.global_deposit(1_000_000).await?;
+    test_fixture
+        .claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_add_trader_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_deposit_for_keypair(&test_fixture.second_keypair.insecure_clone(), 1_000_000)
+        .await?;
 
     test_fixture
         .batch_update_with_global_for_keypair(
@@ -235,13 +242,13 @@ async fn global_match_order() -> anyhow::Result<()> {
             vec![],
             vec![PlaceOrderParams::new(
                 100,
-                1,
-                0,
+                11,
+                -1,
                 true,
                 OrderType::Global,
                 NO_EXPIRATION_LAST_VALID_SLOT,
             )],
-            &test_fixture.payer_keypair().insecure_clone(),
+            &test_fixture.second_keypair.insecure_clone(),
         )
         .await?;
 
@@ -267,27 +274,149 @@ async fn global_match_order() -> anyhow::Result<()> {
     let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
     assert_eq!(orders.len(), 0, "Order still on orderbook");
 
+    // Global buys 100 base for 110 quote
+    // Local sells 100 base for 90 quote
+
+    // Match will leave global: 0 quote, 100 base
+    // match will leave local: 110 quote, 1_000_000 - 100 base
+
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        100
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        0
+    );
     assert_eq!(
         test_fixture
             .market_fixture
             .get_base_balance_atoms(&test_fixture.payer())
             .await,
-        1_000_000
+        1_000_000 - 100
     );
     assert_eq!(
         test_fixture
             .market_fixture
             .get_quote_balance_atoms(&test_fixture.payer())
             .await,
-        100
+        110
     );
     test_fixture.global_fixture.reload().await;
     assert_eq!(
         test_fixture
             .global_fixture
             .global
-            .get_balance_atoms(&test_fixture.payer()),
-        999_900
+            .get_balance_atoms(&test_fixture.second_keypair.insecure_clone().pubkey())
+            .as_u64(),
+        1_000_000 - 110
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn global_match_order_quote_no_bonus() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+
+    test_fixture
+        .claim_seat_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_add_trader_for_keypair(&test_fixture.second_keypair.insecure_clone())
+        .await?;
+    test_fixture
+        .global_deposit_for_keypair(&test_fixture.second_keypair.insecure_clone(), 1_000_000)
+        .await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                100,
+                11,
+                -1,
+                true,
+                OrderType::Global,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.second_keypair.insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.deposit(Token::SOL, 1_000_000).await?;
+
+    test_fixture
+        .batch_update_with_global_for_keypair(
+            None,
+            vec![],
+            vec![PlaceOrderParams::new(
+                1,
+                9,
+                -1,
+                false,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &test_fixture.payer_keypair().insecure_clone(),
+        )
+        .await?;
+
+    test_fixture.market_fixture.reload().await;
+    let orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    assert_eq!(orders.len(), 1, "Order still on orderbook");
+
+    // Global buys 1 base for 1.1 quote --> rounded to 1 quote
+    // Local sells 1 base for 1.1 quote --> rounded to 1 quote
+
+    // Match will leave global: 1 quote, 1 base
+    // match will leave local: 1 quote, 1_000_000 - 1 base
+
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        1
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.second_keypair.pubkey())
+            .await,
+        0
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        1_000_000 - 1
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        1
+    );
+
+    test_fixture.global_fixture.reload().await;
+    assert_eq!(
+        test_fixture
+            .global_fixture
+            .global
+            .get_balance_atoms(&test_fixture.second_keypair.insecure_clone().pubkey())
+            .as_u64(),
+        1_000_000 - 1
     );
 
     Ok(())

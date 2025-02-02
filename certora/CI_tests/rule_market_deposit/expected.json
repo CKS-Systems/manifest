@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_market_deposit": "SUCCESS"
+       }
+}

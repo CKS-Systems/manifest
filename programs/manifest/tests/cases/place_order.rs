@@ -2,7 +2,7 @@ use std::u64;
 
 use hypertree::HyperTreeValueIteratorTrait;
 use manifest::{
-    quantities::WrapperU64,
+    quantities::{QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         constants::{MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT},
         OrderType, RestingOrder,
@@ -771,6 +771,211 @@ async fn place_order_zero_size() -> anyhow::Result<()> {
     assert_eq!(
         test_fixture.market_fixture.get_resting_orders().await.len(),
         0
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn reverse_order_type_test() -> anyhow::Result<()> {
+    // Default payer places reverse orders on both booksides.
+    // Buy 3@1.0, Sell 3@3.0
+    // Spread is 50%, so the new order is top of book after fill.
+    // (1.0 -> 2.0, 3.0 -> 1.5)
+
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture.deposit(Token::SOL, 10 * SOL_UNIT_SIZE).await?;
+    test_fixture
+        .deposit(Token::USDC, 10_000 * USDC_UNIT_SIZE)
+        .await?;
+    test_fixture
+        .place_order(
+            Side::Bid,
+            3 * SOL_UNIT_SIZE,
+            1,
+            0,
+            50_000,
+            OrderType::Reverse,
+        )
+        .await?;
+    test_fixture
+        .place_order(
+            Side::Ask,
+            3 * SOL_UNIT_SIZE,
+            3,
+            0,
+            50_000,
+            OrderType::Reverse,
+        )
+        .await?;
+
+    // Setup the second keypair.
+    let second_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
+    test_fixture.claim_seat_for_keypair(&second_keypair).await?;
+    test_fixture
+        .deposit_for_keypair(Token::USDC, 10_000 * USDC_UNIT_SIZE, &second_keypair)
+        .await?;
+    test_fixture
+        .deposit_for_keypair(Token::SOL, 10_000 * SOL_UNIT_SIZE, &second_keypair)
+        .await?;
+
+    // Partial fill on each, then full fill.
+    test_fixture
+        .place_order_for_keypair(
+            Side::Bid,
+            1 * SOL_UNIT_SIZE,
+            4,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+
+    // 7 = 10 - 3. All proceeds were put back on the book
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        7_000 * USDC_UNIT_SIZE
+    );
+    // 10 - 3 = 7
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        7 * SOL_UNIT_SIZE
+    );
+    let resting_orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // bids first, asks second.
+    assert_eq!(resting_orders.len(), 3);
+    let first_bid: &RestingOrder = resting_orders.get(0).unwrap();
+    let second_bid: &RestingOrder = resting_orders.get(1).unwrap();
+    // First bid is the new flipped version of the first ask.
+    // Book is bid: 2@1.5, 3@1
+    assert_eq!(first_bid.get_is_bid(), true);
+    assert_eq!(second_bid.get_is_bid(), true);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
+    assert_eq!(second_bid.get_num_base_atoms().as_u64(), 3 * SOL_UNIT_SIZE);
+    assert_eq!(
+        first_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(15, -1).unwrap()
+    );
+    assert_eq!(
+        second_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(1, 0).unwrap()
+    );
+
+    let first_ask: &RestingOrder = resting_orders.get(2).unwrap();
+    assert_eq!(first_ask.get_is_bid(), false);
+    assert_eq!(first_ask.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
+    assert_eq!(
+        first_ask.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3, 0).unwrap()
+    );
+
+    // Full fill
+    test_fixture
+        .place_order_for_keypair(
+            Side::Bid,
+            2 * SOL_UNIT_SIZE,
+            4,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+    let resting_orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    // bids first, asks second.
+    assert_eq!(resting_orders.len(), 2);
+    let first_bid: &RestingOrder = resting_orders.get(0).unwrap();
+    let second_bid: &RestingOrder = resting_orders.get(1).unwrap();
+    // First bid is the flipped version of the first ask fully coalesced.
+    // Book is bid: 6@1.5, 3@1
+    assert_eq!(first_bid.get_is_bid(), true);
+    assert_eq!(second_bid.get_is_bid(), true);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 6 * SOL_UNIT_SIZE);
+    assert_eq!(second_bid.get_num_base_atoms().as_u64(), 3 * SOL_UNIT_SIZE);
+    assert_eq!(
+        first_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(15, -1).unwrap()
+    );
+    assert_eq!(
+        second_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(1, 0).unwrap()
+    );
+    // Balance is unchanged.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        7_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        7 * SOL_UNIT_SIZE
+    );
+
+    // Fill in the other direction puts back the ask.
+    test_fixture
+        .place_order_for_keypair(
+            Side::Ask,
+            2 * SOL_UNIT_SIZE,
+            1,
+            0,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+            &second_keypair,
+        )
+        .await?;
+    let resting_orders: Vec<RestingOrder> = test_fixture.market_fixture.get_resting_orders().await;
+    assert_eq!(resting_orders.len(), 3);
+    let first_bid: &RestingOrder = resting_orders.get(0).unwrap();
+    let second_bid: &RestingOrder = resting_orders.get(1).unwrap();
+    // First bid is the flipped version of the first ask fully coalesced.
+    // Book is bid: 4@1.5, 3@1
+    assert_eq!(first_bid.get_is_bid(), true);
+    assert_eq!(second_bid.get_is_bid(), true);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 4 * SOL_UNIT_SIZE);
+    assert_eq!(second_bid.get_num_base_atoms().as_u64(), 3 * SOL_UNIT_SIZE);
+    assert_eq!(
+        first_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(15, -1).unwrap()
+    );
+    assert_eq!(
+        second_bid.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(1, 0).unwrap()
+    );
+    let first_ask: &RestingOrder = resting_orders.get(2).unwrap();
+    assert_eq!(first_ask.get_is_bid(), false);
+    assert_eq!(first_ask.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
+    assert_eq!(
+        first_ask.get_price(),
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3, 0).unwrap()
+    );
+
+    // Maker's balances are unchanged.
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_quote_balance_atoms(&test_fixture.payer())
+            .await,
+        7_000 * USDC_UNIT_SIZE
+    );
+    assert_eq!(
+        test_fixture
+            .market_fixture
+            .get_base_balance_atoms(&test_fixture.payer())
+            .await,
+        7 * SOL_UNIT_SIZE
     );
 
     Ok(())

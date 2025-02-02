@@ -1,0 +1,135 @@
+# user settings should be placed into .env file in some ancestor directory
+set dotenv-load
+
+# used by OSX, ignore otherwise
+export CPATH := env_var_or_default("CPATH", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include")
+# magic llvm flags
+export RUSTFLAGS := "-C llvm-args=--sbf-expand-memcpy-in-order -C llvm-args=--combiner-store-merging=false" 
+# features used when compiling target Rust code
+export CARGO_FEATURES := env_var_or_default("CARGO_FEATURES", "")
+# java executable
+export JAVA := env_var_or_default("JAVA", "java")
+# certora cli: certoraRun or certoraRun.py
+export CERTORA_CLI := env_var_or_default("CERTORA_CLI", "certoraRun")
+# run split or single solver mode
+export CERTORA_SPLIT := env_var_or_default("CERTORA_SPLIT", "false")
+# produce unsat cores
+export CERTORA_UNSAT_CORES := env_var_or_default("CERTORA_UNSAT_CORES", "false")
+
+# type of cloud to use
+certora_cloud := "prover"
+# cloud version of the prover (if remote is used)
+prover_version := "jorge/solana-jsm"
+
+# location of prover jar
+emv_jar := "$CERTORA/emv.jar"
+
+# location of all local files
+
+# this justfile is expected to be imported from others
+# this is set in the top-level justfile
+jsm_root := canonicalize("../..")
+certora-scripts := jsm_root / "certora"
+inliner_cfg   := certora-scripts  / "cvt_inlining.txt"
+summaries_cfg := certora-scripts  / "cvt_summaries.txt"
+file := jsm_root / "target/sbf-solana-solana/release/manifest.so"
+
+remote_jsm_root := "../.."
+remote_certora-scripts := remote_jsm_root / "certora"
+remote_inliner_cfg   := remote_certora-scripts  / "cvt_inlining.txt"
+remote_summaries_cfg := remote_certora-scripts  / "cvt_summaries.txt"
+remote_file := remote_jsm_root / "target/sbf-solana-solana/release/manifest.so"
+
+
+doc:
+	cargo doc --lib -F certora
+test *TESTS:
+	cargo test {{TESTS}} -- --nocapture
+test-certora *TESTS:
+	cargo test --features certora-test {{TESTS}} -- --nocapture
+
+build-sbf extra_features="":
+       echo "env RUSTFLAGS=$RUSTFLAGS"
+       echo "env CARGO_FEATURES=$CARGO_FEATURES"
+       cargo +solana build-sbf --features certora {{ extra_features }} ${CARGO_FEATURES}
+
+build-sbf-llvm:
+		env RUSTFLAGS="${RUSTFLAGS} --emit=llvm-ir -C no-vectorize-slp -C opt-level=2" \
+		cargo +solana build-sbf --features certora
+
+build:
+	cargo build
+
+cvt-update:
+	cargo update -p nondet
+	cargo update -p cvt
+
+# Usage: verify name_of_rule extra_options
+verify RULE *OPTS: build-sbf
+		mkdir -p certora_out
+		cd certora_out && ${JAVA} -ea -Xmx8g \
+		-Dtopic.spec -Dlevel.ebpf=${CERTORA_VERBOSE:-info} \
+		-Dverbose.times -Dcvt.simple.parallel -Djava.awt.headless=true \
+		-jar {{ emv_jar }} \
+		-deleteSMTFile false -graphDrawLimit 2000 \
+		{{ file }} \
+		-split ${CERTORA_SPLIT} \
+		-unsatCoresForAllAsserts ${CERTORA_UNSAT_CORES} \
+		-solanaInlining {{ inliner_cfg }} \
+		-solanaSummaries {{ summaries_cfg }} \
+		-solanaOptimisticJoin true \
+		-solanaOptimisticOverlaps true \
+		-solanaOptimisticMemcpyPromotion true \
+		-solanaOptimisticMemcmp true \
+		-solanaOptimisticNoMemmove true \
+		-solanaPrintAnalyzedToDot \
+		-solanaEntrypoint {{ RULE }} \
+		{{ OPTS }} 
+
+# Usage: vacuity name_of_rule extra_options
+vacuity RULE *OPTS: (build-sbf "certora_vacuity")
+		mkdir -p certora_out
+		cd certora_out && ${JAVA} -ea -Xmx8g \
+		-Dtopic.spec -Dlevel.ebpf=${CERTORA_VERBOSE:-info} \
+		-Dverbose.times -Dcvt.simple.parallel -Djava.awt.headless=true \
+		-jar {{ emv_jar }} \
+		-deleteSMTFile false -graphDrawLimit 2000 \
+		{{ file }} \
+		-solanaInlining {{ inliner_cfg }} \
+		-solanaSummaries {{ summaries_cfg }} \
+		-solanaOptimisticJoin true \
+		-solanaOptimisticOverlaps true \
+		-solanaOptimisticMemcpyPromotion true \
+		-solanaOptimisticMemcmp true \
+		-solanaOptimisticNoMemmove true \
+		-solanaPrintAnalyzedToDot \
+		-solanaEntrypoint {{ RULE }} \
+		{{ OPTS }} 
+
+# Usage: verify-remote name_of_rule extra_options
+verify-remote RULE *OPTS: build-sbf
+		${CERTORA_CLI} {{ remote_file }} \
+		 {{ OPTS }} \
+		 --prover_args \
+		 "-solanaInlining {{ remote_inliner_cfg }} \
+		 -solanaSummaries {{ remote_summaries_cfg }} \
+		 -solanaOptimisticJoin true \
+		 -solanaOptimisticOverlaps true \
+		 -solanaOptimisticMemcpyPromotion true \
+		 -solanaOptimisticMemcmp true \
+		 -solanaOptimisticNoMemmove true \
+		 -solanaEntrypoint {{ RULE }}" \
+		 --prover_version {{ prover_version }} \
+		 --server {{ certora_cloud }}
+
+
+clean:
+	rm -f *.dot *.png *.svg
+	rm -f log_verification*
+	rm -Rf emv-*
+	rm -Rf .certora_internal
+	rm -f log.txt
+	rm -rf certora_out
+
+
+

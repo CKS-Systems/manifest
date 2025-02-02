@@ -15,7 +15,10 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder},
+    state::{
+        utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder,
+        MARKET_FIXED_SIZE,
+    },
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -72,6 +75,8 @@ impl WrapperPlaceOrderParams {
     }
 }
 
+// TODO: Note that this does not cancel reverse orders which have been created
+// at a new sequence number and address (partial fill).
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct WrapperCancelOrderParams {
     client_order_id: u64,
@@ -170,35 +175,47 @@ fn prepare_orders(
     let now_slot: u32 = get_now_slot();
 
     while best_ask_index != NIL
-        && get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
-            .get_value()
-            .is_expired(now_slot)
+        && get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_ask_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .is_expired(now_slot)
     {
         best_ask_index = market_ref
             .get_asks()
-            .get_next_lower_index::<RBNode<RestingOrder>>(best_ask_index);
+            .get_next_lower_index::<RestingOrder>(best_ask_index);
     }
     while best_bid_index != NIL
-        && get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
-            .get_value()
-            .is_expired(now_slot)
+        && get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_bid_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .is_expired(now_slot)
     {
         best_bid_index = market_ref
             .get_bids()
-            .get_next_lower_index::<RBNode<RestingOrder>>(best_bid_index);
+            .get_next_lower_index::<RestingOrder>(best_bid_index);
     }
 
     let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
-        get_helper::<RBNode<RestingOrder>>(&market_data, best_ask_index)
-            .get_value()
-            .get_price()
+        get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_ask_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .get_price()
     } else {
         QuoteAtomsPerBaseAtom::MAX
     };
     let best_bid_price: QuoteAtomsPerBaseAtom = if best_bid_index != NIL {
-        get_helper::<RBNode<RestingOrder>>(&market_data, best_bid_index)
-            .get_value()
-            .get_price()
+        get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_bid_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .get_price()
     } else {
         QuoteAtomsPerBaseAtom::MIN
     };
@@ -223,12 +240,14 @@ fn prepare_orders(
                     if order.is_bid {
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price > best_ask_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only bid that would cross");
                             num_base_atoms = 0;
                         } else {
                             let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
                                 .checked_mul(price, true)
                                 .unwrap();
                             if desired > *remaining_quote_atoms {
+                                solana_program::msg!("Removing bid for insufficient funds");
                                 num_base_atoms = 0;
                             } else {
                                 *remaining_quote_atoms -= desired;
@@ -238,9 +257,11 @@ fn prepare_orders(
                         let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
                         // If a post only would cross, then reduce to no size and clear it in the filter later.
                         if price < best_bid_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only ask that would cross");
                             num_base_atoms = 0;
                         } else {
                             if desired > *remaining_base_atoms {
+                                solana_program::msg!("Removing ask for insufficient funds");
                                 num_base_atoms = 0;
                             } else {
                                 *remaining_base_atoms -= desired;
@@ -408,6 +429,26 @@ fn process_orders<'a, 'info>(
     Ok(())
 }
 
+// Fee here is 5_000 lamports stored on the wrapper state. This is stored on the
+// wrapper state because it prevents the need for a contentious extra write
+// lock. Users who do not wish to pay this fee should use their own wrapper or
+// interact directly with the manifest program.
+fn collect_fee<'a, 'info>(
+    payer: &Signer<'a, 'info>,
+    wrapper_state: &WrapperStateAccountInfo<'a, 'info>,
+) -> ProgramResult {
+    invoke(
+        &solana_program::system_instruction::transfer(
+            &payer.as_ref().key,
+            &wrapper_state.key,
+            manifest::state::GAS_DEPOSIT_LAMPORTS,
+        ),
+        &[payer.as_ref().clone(), wrapper_state.info.clone()],
+    )?;
+
+    Ok(())
+}
+
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -480,6 +521,9 @@ pub(crate) fn process_batch_update(
 
     // Sync to get the balance correct and remove any expired orders.
     sync_fast(&wrapper_state, &market, market_info_index)?;
+
+    // Collect fee.
+    collect_fee(&payer, &wrapper_state)?;
 
     Ok(())
 }

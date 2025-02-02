@@ -6,7 +6,7 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubke
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalDepositLog, GlobalEvictLog, GlobalWithdrawLog},
-    program::{get_mut_dynamic_account, ManifestError},
+    program::get_mut_dynamic_account,
     quantities::{GlobalAtoms, WrapperU64},
     require,
     state::GlobalRefMut,
@@ -58,7 +58,7 @@ pub(crate) fn process_global_evict(
         // Do verifications that this is a valid eviction.
         require!(
             evictee_balance < GlobalAtoms::new(amount_atoms),
-            ManifestError::InvalidEvict,
+            crate::program::ManifestError::InvalidEvict,
             "Evictee balance {} is more than evictor wants to deposit",
             evictee_balance.as_u64(),
         )?;

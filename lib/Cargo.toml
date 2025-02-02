@@ -1,6 +1,6 @@
 [package]
 name = "hypertree"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -13,10 +13,18 @@ fuzz = []
 trace = []
 test = []
 
+# Certora feature exposes many of the internal implementation details, so should
+# only be used in formal verification. Ironically, the security testing makes
+# the code less secure.
+certora = ["dep:nondet", "dep:calltrace", "dep:cvt"]
+
 [dependencies]
 bytemuck = { workspace = true }
 solana-program = { workspace = true }
 static_assertions = { workspace = true }
+nondet = { workspace = true, optional = true}
+calltrace = { workspace = true, optional = true}
+cvt = { workspace = true, optional = true}
 
 # Does not work with sbf. Enable when debugging red black only
 colored = { version = "2.1.0", optional = true }

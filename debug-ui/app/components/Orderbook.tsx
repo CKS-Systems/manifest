@@ -34,10 +34,10 @@ const Orderbook = ({
       },
     );
 
-    return () => {
+    return (): void => {
       conn.removeAccountChangeListener(accountChangeListenerId);
     };
-  }, [marketAddress]);
+  }, [conn, marketAddress]);
 
   useEffect(() => {
     try {
@@ -80,13 +80,14 @@ const Orderbook = ({
       }
     });
 
-    return () => {
+    return (): void => {
       conn.removeSlotUpdateListener(slotUpdateListenerId);
     };
-  }, []);
+  }, [conn]);
 
   const formatOrder = (restingOrder: RestingOrder, i: number): ReactElement => {
     const pk = wallet?.adapter?.publicKey;
+    // TODO: Differentiate whether the order was set through the wrapper or not and give the client order id here.
     const isOwn = pk && pk.equals(restingOrder.trader);
     return (
       <tr
@@ -102,6 +103,7 @@ const Orderbook = ({
         </td>
         <td className="py-2">
           {restingOrder.orderType == OrderType.Global ? '🌎' : ''}
+          {restingOrder.orderType == OrderType.Reverse ? '🔄' : ''}
           {<SolscanAddrLink address={restingOrder.trader.toBase58()} />}
         </td>
       </tr>
