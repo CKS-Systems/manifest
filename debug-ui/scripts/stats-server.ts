@@ -86,6 +86,9 @@ export class ManifestStatsServer {
 
   private lastFillSlot: number = 0;
 
+  // Recent fill log results
+  private fillLogResults: Map<string, FillLogResult[]> = new Map();
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
@@ -150,6 +153,7 @@ export class ManifestStatsServer {
             address: marketPk,
           }),
         );
+        this.fillLogResults.set(market, []);
       }
       lastPrice.set(
         { market },
@@ -170,6 +174,13 @@ export class ManifestStatsServer {
         this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
           Number(quoteAtoms),
       );
+
+      let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
+      prevFills.push(fill);
+      if (prevFills.length > 10) {
+        prevFills = prevFills.slice(1, 10);
+      }
+      this.fillLogResults.set(market, prevFills);
     };
   }
 
@@ -532,6 +543,13 @@ export class ManifestStatsServer {
   getTraders() {
     return Object.fromEntries(this.traderNumTrades);
   }
+
+  /**
+   * Get array of recent fills.
+   */
+  async getRecentFills(market: string) {
+    return { [market]: this.fillLogResults.get(market) };
+  }
 }
 
 const run = async () => {
@@ -575,12 +593,16 @@ const run = async () => {
   const tradersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTraders());
   };
+  const recentFillsHandler: RequestHandler = (req, res) => {
+    res.send(statsServer.getRecentFills(req.query.market as string));
+  };
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
   app.get('/trades', tradersHandler);
+  app.get('/recentFills', recentFillsHandler);
   app.listen(Number(PORT!));
 
   while (true) {
