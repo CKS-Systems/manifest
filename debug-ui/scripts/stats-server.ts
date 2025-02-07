@@ -180,10 +180,7 @@ export class ManifestStatsServer {
       if (prevFills.length > 10) {
         prevFills = prevFills.slice(1, 10);
       }
-      this.fillLogResults.set(
-        market,
-        prevFills,
-      );
+      this.fillLogResults.set(market, prevFills);
     };
   }
 
