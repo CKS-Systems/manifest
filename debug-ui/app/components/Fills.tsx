@@ -61,25 +61,17 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     );
   }
 
-  /*
-  const responseJson = await (
-    await fetch('https://mfx-stats-mainnet.fly.dev/recentFills')
-    // market
-  ).json();
-  const tickers: PublicKey[] = responseJson
-    .filter((ticker) => {
-      return (
-        ticker.base_currency == baseMint.toBase58() &&
-        ticker.target_currency == quoteMint.toBase58()
-      );
-    })
-    .map((ticker) => {
-      return new PublicKey(ticker.ticker_id);
-    });
-  return tickers;
-  */
-
   useEffect(() => {
+    async function preLoad() {
+      const responseJson = await (
+        await fetch(`https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`)
+      ).json();
+      for (const fillLog in responseJson[marketAddress]) {
+        await processFill(fillLog as unknown as FillLogResult);
+      }
+    }
+
+    preLoad();
     if (!wsRef.current) {
       const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
       if (!feedUrl) {
