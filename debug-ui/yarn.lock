@@ -1107,7 +1107,7 @@
 
 "@metaplex-foundation/js@^0.20.1":
   version "0.20.1"
-  resolved "https://registry.npmjs.org/@metaplex-foundation/js/-/js-0.20.1.tgz"
+  resolved "https://registry.yarnpkg.com/@metaplex-foundation/js/-/js-0.20.1.tgz#654974dfdb163435f9583478256e5917e2187a7b"
   integrity sha512-aqiLoEiToXdfI5pS+17/GN/dIO2D31gLoVQvEKDQi9XcnOPVhfJerXDmwgKbhp79OGoYxtlvVw+b2suacoUzGQ==
   dependencies:
     "@irys/sdk" "^0.0.2"
@@ -1958,7 +1958,7 @@
 
 "@solana/spl-token-registry@^0.2.4574":
   version "0.2.4574"
-  resolved "https://registry.npmjs.org/@solana/spl-token-registry/-/spl-token-registry-0.2.4574.tgz"
+  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.4574.tgz#13f4636b7bec90d2bb43bbbb83512cd90d2ce257"
   integrity sha512-JzlfZmke8Rxug20VT/VpI2XsXlsqMlcORIUivF+Yucj7tFi7A0dXG7h+2UnD0WaZJw8BrUz2ABNkUnv89vbv1A==
   dependencies:
     cross-fetch "3.0.6"

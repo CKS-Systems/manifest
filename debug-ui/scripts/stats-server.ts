@@ -1,5 +1,12 @@
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
+import { Metaplex, Pda } from '@metaplex-foundation/js';
+import {
+  ENV,
+  TokenInfo,
+  TokenListContainer,
+  TokenListProvider,
+} from '@solana/spl-token-registry';
 import * as promClient from 'prom-client';
 import cors from 'cors';
 import express, { RequestHandler } from 'express';
@@ -84,6 +91,10 @@ export class ManifestStatsServer {
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
 
+  // Tickers. Ticker from metaplex metadata with a fallback to spl token
+  // registry for old stuff like wsol.
+  private tickers: Map<string, [string, string]> = new Map();
+
   private lastFillSlot: number = 0;
 
   // Recent fill log results
@@ -153,6 +164,8 @@ export class ManifestStatsServer {
             address: marketPk,
           }),
         );
+      }
+      if (this.fillLogResults.get(market) == undefined) {
         this.fillLogResults.set(market, []);
       }
       lastPrice.set(
@@ -217,6 +230,62 @@ export class ManifestStatsServer {
         this.markets.set(marketPk, market);
       },
     );
+
+    const mintToSymbols: Map<string, string> = new Map();
+    const metaplex: Metaplex = Metaplex.make(this.connection);
+    this.markets.forEach(async (market: Market, marketPk: string) => {
+      const baseMint: PublicKey = market.baseMint();
+      const quoteMint: PublicKey = market.quoteMint();
+
+      let baseSymbol = '';
+      let quoteSymbol = '';
+      if (mintToSymbols.has(baseMint.toBase58())) {
+        baseSymbol = mintToSymbols.get(baseMint.toBase58())!;
+      } else {
+        // Sleep to backoff on RPC load.
+        await new Promise((f) => setTimeout(f, 500));
+        baseSymbol = await this.lookupMintTicker(metaplex, baseMint);
+      }
+      mintToSymbols.set(baseMint.toBase58(), baseSymbol);
+
+      if (mintToSymbols.has(quoteMint.toBase58())) {
+        quoteSymbol = mintToSymbols.get(quoteMint.toBase58())!;
+      } else {
+        quoteSymbol = await this.lookupMintTicker(metaplex, quoteMint);
+      }
+      mintToSymbols.set(quoteMint.toBase58(), quoteSymbol);
+
+      this.tickers.set(market.address.toBase58(), [
+        mintToSymbols.get(market.baseMint()!.toBase58())!,
+        mintToSymbols.get(market.quoteMint()!.toBase58())!,
+      ]);
+    });
+  }
+
+  async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
+    const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
+    const metadataAccountInfo =
+      await this.connection.getAccountInfo(metadataAccount);
+    if (metadataAccountInfo) {
+      const token = await metaplex.nfts().findByMint({ mintAddress: mint });
+      return token.symbol;
+    } else {
+      const provider: TokenListContainer =
+        await new TokenListProvider().resolve();
+      const tokenList: TokenInfo[] = provider
+        .filterByChainId(ENV.MainnetBeta)
+        .getList();
+      const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
+        map.set(item.address, item);
+        return map;
+      }, new Map<string, TokenInfo>());
+
+      const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
+      if (token) {
+        return token.symbol;
+      }
+    }
+    return '';
   }
 
   /**
@@ -394,6 +463,15 @@ export class ManifestStatsServer {
       });
     });
     return tickers;
+  }
+
+  /**
+   * Would be named tickers if that wasnt reserved for coingecko.
+   *
+   */
+  getMetadata() {
+    console.log('getting metadata', this.tickers);
+    return this.tickers;
   }
 
   /**
@@ -579,6 +657,9 @@ const run = async () => {
   const tickersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTickers());
   };
+  const metadataHandler: RequestHandler = (_req, res) => {
+    res.send(JSON.stringify(Object.fromEntries(statsServer.getMetadata())));
+  };
   const orderbookHandler: RequestHandler = async (req, res) => {
     res.send(
       await statsServer.getOrderbook(
@@ -593,12 +674,13 @@ const run = async () => {
   const tradersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTraders());
   };
-  const recentFillsHandler: RequestHandler = (req, res) => {
-    res.send(statsServer.getRecentFills(req.query.market as string));
+  const recentFillsHandler: RequestHandler = async (req, res) => {
+    res.send(await statsServer.getRecentFills(req.query.market as string));
   };
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
+  app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
   app.get('/trades', tradersHandler);
