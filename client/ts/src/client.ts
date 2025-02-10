@@ -128,6 +128,7 @@ export class ManifestClient {
     connection: Connection,
   ): Promise<PublicKey[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      dataSlice: { offset: 0, length: 0 },
       filters: [
         {
           memcmp: {
@@ -176,6 +177,7 @@ export class ManifestClient {
       return tickers;
     }
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      dataSlice: { offset: 0, length: 0 },
       filters: [
         {
           memcmp: {
@@ -586,6 +588,8 @@ export class ManifestClient {
       quoteMintAccountInfo,
       quoteMintAccountInfo!.owner,
     );
+
+    // Global accounts are optional
     const baseGlobal: Global | null =
       baseGlobalAccountInfo &&
       Global.loadFromBuffer({
