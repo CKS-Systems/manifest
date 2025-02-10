@@ -560,28 +560,44 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMintAccountInfo: AccountInfo<Buffer> =
-      (await connection.getAccountInfo(baseMintPk))!;
+    const baseGlobalPk: PublicKey = getGlobalAddress(baseMintPk);
+    const quoteGlobalPk: PublicKey = getGlobalAddress(quoteMintPk);
+
+    const [
+      baseMintAccountInfo,
+      quoteMintAccountInfo,
+      baseGlobalAccountInfo,
+      quoteGlobalAccountInfo,
+    ]: (AccountInfo<Buffer> | null)[] =
+      await connection.getMultipleAccountsInfo([
+        baseMintPk,
+        quoteMintPk,
+        baseGlobalPk,
+        quoteGlobalPk,
+      ]);
+
     const baseMint: Mint = unpackMint(
       baseMintPk,
       baseMintAccountInfo,
-      baseMintAccountInfo.owner,
+      baseMintAccountInfo!.owner,
     );
-    const quoteMintAccountInfo: AccountInfo<Buffer> =
-      (await connection.getAccountInfo(quoteMintPk))!;
     const quoteMint: Mint = unpackMint(
       quoteMintPk,
       quoteMintAccountInfo,
-      quoteMintAccountInfo.owner,
+      quoteMintAccountInfo!.owner,
     );
-    const baseGlobal: Global | null = await Global.loadFromAddress({
-      connection,
-      address: getGlobalAddress(baseMint.address),
-    });
-    const quoteGlobal: Global | null = await Global.loadFromAddress({
-      connection,
-      address: getGlobalAddress(quoteMint.address),
-    });
+    const baseGlobal: Global | null =
+      baseGlobalAccountInfo &&
+      Global.loadFromBuffer({
+        address: baseGlobalPk,
+        buffer: baseGlobalAccountInfo.data,
+      });
+    const quoteGlobal: Global | null =
+      quoteGlobalAccountInfo &&
+      Global.loadFromBuffer({
+        address: quoteGlobalPk,
+        buffer: quoteGlobalAccountInfo.data,
+      });
 
     let wrapper: Wrapper | null = null;
     if (trader != null) {
