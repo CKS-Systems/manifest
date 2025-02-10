@@ -21,9 +21,22 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       connection: conn,
       address: marketPub,
     }).then((m) => {
-      console.log('got market', m);
       marketRef.current = m;
+      preLoad();
     });
+
+    async function preLoad() {
+      const responseJson = await (
+        await fetch(
+          `https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`,
+        )
+      ).json();
+      for (const fillLogInd in responseJson[marketAddress]) {
+        await processFill(
+          responseJson[marketAddress][fillLogInd] as unknown as FillLogResult,
+        );
+      }
+    }
   }, [conn, marketAddress]);
 
   async function processFill(fill: FillLogResult) {
@@ -54,26 +67,28 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       dateString: await slotToTimestamp(fill.slot),
     };
 
-    setFills((prevFills) =>
-      [fillUi, ...prevFills].filter((value, index, self) => {
+    setFills((prevFills) => {
+      if (prevFills.length == 0) {
+        return [fillUi];
+      }
+      if (fillUi.slot < prevFills[0].slot) {
+        return prevFills;
+      }
+      if (
+        fillUi.slot == prevFills[0].slot &&
+        fillUi.maker == prevFills[0].maker &&
+        fillUi.taker == prevFills[0].taker &&
+        fillUi.priceTokens == prevFills[0].priceTokens
+      ) {
+        return prevFills;
+      }
+      return [fillUi, ...prevFills].filter((value, index, self) => {
         return self.indexOf(value) === index;
-      }),
-    );
+      });
+    });
   }
 
   useEffect(() => {
-    async function preLoad() {
-      const responseJson = await (
-        await fetch(
-          `https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`,
-        )
-      ).json();
-      for (const fillLog in responseJson[marketAddress]) {
-        await processFill(fillLog as unknown as FillLogResult);
-      }
-    }
-
-    preLoad();
     if (!wsRef.current) {
       const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
       if (!feedUrl) {
