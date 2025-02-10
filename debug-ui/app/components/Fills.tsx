@@ -26,7 +26,54 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     });
   }, [conn, marketAddress]);
 
+  async function processFill(fill: FillLogResult) {
+    if (fill.market !== marketAddress) {
+      return;
+    }
+
+    const quoteTokens =
+      Number(fill.quoteAtoms) /
+      10 ** Number(marketRef.current?.quoteDecimals() || 0);
+    const baseTokens =
+      Number(fill.baseAtoms) /
+      10 ** Number(marketRef.current?.baseDecimals() || 0);
+
+    // Price is the actual price which factors in rounding, not the limit price.
+    const priceTokens = Number((quoteTokens / baseTokens).toFixed(4));
+    const fillUi: FillResultUi = {
+      market: fill.market,
+      maker: fill.maker,
+      taker: fill.taker,
+      baseTokens,
+      quoteTokens,
+      priceTokens,
+      isMakerGlobal: fill.isMakerGlobal,
+      takerSide: fill.takerIsBuy ? 'bid' : 'ask',
+      signature: fill.signature,
+      slot: fill.slot,
+      dateString: await slotToTimestamp(fill.slot),
+    };
+
+    setFills((prevFills) =>
+      [fillUi, ...prevFills].filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      }),
+    );
+  }
+
   useEffect(() => {
+    async function preLoad() {
+      const responseJson = await (
+        await fetch(
+          `https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`,
+        )
+      ).json();
+      for (const fillLog in responseJson[marketAddress]) {
+        await processFill(fillLog as unknown as FillLogResult);
+      }
+    }
+
+    preLoad();
     if (!wsRef.current) {
       const feedUrl = process.env.NEXT_PUBLIC_FEED_URL;
       if (!feedUrl) {
@@ -42,38 +89,7 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
       ws.onmessage = async (message): Promise<void> => {
         const fill: FillLogResult = JSON.parse(message.data);
-        if (fill.market !== marketAddress) {
-          return;
-        }
-
-        const quoteTokens =
-          Number(fill.quoteAtoms) /
-          10 ** Number(marketRef.current?.quoteDecimals() || 0);
-        const baseTokens =
-          Number(fill.baseAtoms) /
-          10 ** Number(marketRef.current?.baseDecimals() || 0);
-
-        // Price is the actual price which factors in rounding, not the limit price.
-        const priceTokens = Number((quoteTokens / baseTokens).toFixed(4));
-        const fillUi: FillResultUi = {
-          market: fill.market,
-          maker: fill.maker,
-          taker: fill.taker,
-          baseTokens,
-          quoteTokens,
-          priceTokens,
-          isMakerGlobal: fill.isMakerGlobal,
-          takerSide: fill.takerIsBuy ? 'bid' : 'ask',
-          signature: fill.signature,
-          slot: fill.slot,
-          dateString: await slotToTimestamp(fill.slot),
-        };
-
-        setFills((prevFills) =>
-          [fillUi, ...prevFills].filter((value, index, self) => {
-            return self.indexOf(value) === index;
-          }),
-        );
+        await processFill(fill);
       };
 
       ws.onclose = (message): void => {
