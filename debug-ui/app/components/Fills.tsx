@@ -64,7 +64,9 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   useEffect(() => {
     async function preLoad() {
       const responseJson = await (
-        await fetch(`https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`)
+        await fetch(
+          `https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`,
+        )
       ).json();
       for (const fillLog in responseJson[marketAddress]) {
         await processFill(fillLog as unknown as FillLogResult);
