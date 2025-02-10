@@ -138,6 +138,17 @@ async function testWrapper(): Promise<void> {
     address: wrapperKeypair2.publicKey,
   });
   wrapper2.prettyPrint();
+
+  // Check loading all markets with active seats for coverage.
+  const allClients = await ManifestClient.getClientsReadOnlyForAllTraderSeats(
+    connection,
+    payerKeypair.publicKey,
+  );
+  assert(
+    allClients.find((c) => c.market.address.equals(market.address)) !=
+      undefined,
+    'expected user to have a seat on new market',
+  );
 }
 
 describe('Wrapper test', () => {
