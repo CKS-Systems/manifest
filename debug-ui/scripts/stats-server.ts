@@ -164,6 +164,7 @@ export class ManifestStatsServer {
             address: marketPk,
           }),
         );
+        this.fillLogResults.set(market, []);
       }
       if (this.fillLogResults.get(market) == undefined) {
         this.fillLogResults.set(market, []);
@@ -625,7 +626,7 @@ export class ManifestStatsServer {
   /**
    * Get array of recent fills.
    */
-  async getRecentFills(market: string) {
+  getRecentFills(market: string) {
     return { [market]: this.fillLogResults.get(market) };
   }
 }
@@ -674,8 +675,8 @@ const run = async () => {
   const tradersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTraders());
   };
-  const recentFillsHandler: RequestHandler = async (req, res) => {
-    res.send(await statsServer.getRecentFills(req.query.market as string));
+  const recentFillsHandler: RequestHandler = (req, res) => {
+    res.send(statsServer.getRecentFills(req.query.market as string));
   };
   const app = express();
   app.use(cors());
