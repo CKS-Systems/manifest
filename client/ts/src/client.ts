@@ -628,6 +628,132 @@ export class ManifestClient {
   }
 
   /**
+   * Initializes a ReadOnlyClient for each Market the trader has a seat on.
+   * This has been optimized to be as light on the RPC as possible but it is
+   * still using getProgramAccounts. caution: this is a heavy call.
+   *
+   * @param connection Connection
+   * @param trader PublicKey
+   * @returns ManifestClient[]
+   */
+  public static async getClientsReadOnlyForAllTraderSeats(
+    connection: Connection,
+    trader: PublicKey,
+  ): Promise<ManifestClient[]> {
+    const marketAccountResponse = await connection.getProgramAccounts(
+      PROGRAM_ID,
+      {
+        filters: [
+          {
+            memcmp: {
+              offset: 0,
+              bytes: marketDiscriminator.toString('base64'),
+              encoding: 'base64',
+            },
+          },
+        ],
+        withContext: true,
+      },
+    );
+
+    const markets: Market[] = marketAccountResponse.value.map((m) =>
+      Market.loadFromBuffer({
+        address: m.pubkey,
+        buffer: m.account.data,
+        slot: marketAccountResponse.context.slot,
+      }),
+    );
+    const marketsForTrader: Market[] = markets.filter((m) => m.hasSeat(trader));
+
+    const baseMintPks: string[] = marketsForTrader.map((m) =>
+      m.baseMint().toString(),
+    );
+    const quoteMintPks: string[] = marketsForTrader.map((m) =>
+      m.quoteMint().toString(),
+    );
+    const baseGlobalPks: string[] = marketsForTrader.map((m) =>
+      getGlobalAddress(m.baseMint()).toString(),
+    );
+    const quoteGlobalPks: string[] = marketsForTrader.map((m) =>
+      getGlobalAddress(m.quoteMint()).toString(),
+    );
+
+    // ensure every account is only fetched once
+    const allAisFetched: { [pk: string]: AccountInfo<Buffer> | null } = {};
+    const allPksToFetch: string[] = [
+      ...new Set(
+        ...baseMintPks,
+        ...quoteMintPks,
+        ...baseGlobalPks,
+        ...quoteGlobalPks,
+      ),
+    ];
+    const mutableCopy = Array.from(allPksToFetch);
+    while (mutableCopy.length > 0) {
+      const batchPks: string[] = mutableCopy.splice(0, 100);
+      const batchAis = await connection.getMultipleAccountsInfoAndContext(
+        batchPks.map((a) => new PublicKey(a)),
+      );
+      batchAis.value.forEach((ai, i) => (allAisFetched[batchPks[i]] = ai));
+    }
+
+    let wrapper: Wrapper | null = null;
+    if (trader != null) {
+      const userWrapper: WrapperResponse | null =
+        await ManifestClient.fetchFirstUserWrapper(connection, trader);
+      if (userWrapper) {
+        wrapper = Wrapper.loadFromBuffer({
+          address: userWrapper.pubkey,
+          buffer: userWrapper.account.data,
+        });
+      }
+    }
+
+    return marketsForTrader.map((m, i) => {
+      const baseMintAccountInfo = allAisFetched[baseMintPks[i]];
+      const quoteMintAccountInfo = allAisFetched[quoteMintPks[i]];
+      const baseGlobalAccountInfo = allAisFetched[baseGlobalPks[i]];
+      const quoteGlobalAccountInfo = allAisFetched[quoteGlobalPks[i]];
+
+      const baseMint: Mint = unpackMint(
+        m.baseMint(),
+        baseMintAccountInfo,
+        baseMintAccountInfo!.owner,
+      );
+      const quoteMint: Mint = unpackMint(
+        m.quoteMint(),
+        quoteMintAccountInfo,
+        quoteMintAccountInfo!.owner,
+      );
+
+      // Global accounts are optional
+      const baseGlobal: Global | null =
+        baseGlobalAccountInfo &&
+        Global.loadFromBuffer({
+          address: new PublicKey(baseGlobalPks[i]),
+          buffer: baseGlobalAccountInfo.data,
+        });
+      const quoteGlobal: Global | null =
+        quoteGlobalAccountInfo &&
+        Global.loadFromBuffer({
+          address: new PublicKey(quoteGlobalPks[i]),
+          buffer: quoteGlobalAccountInfo.data,
+        });
+
+      return new ManifestClient(
+        connection,
+        wrapper,
+        m,
+        null,
+        baseMint,
+        quoteMint,
+        baseGlobal,
+        quoteGlobal,
+      );
+    });
+  }
+
+  /**
    * Reload the market and wrapper and global objects.
    */
   public async reload(): Promise<void> {
