@@ -681,12 +681,12 @@ export class ManifestClient {
     // ensure every account is only fetched once
     const allAisFetched: { [pk: string]: AccountInfo<Buffer> | null } = {};
     const allPksToFetch: string[] = [
-      ...new Set(
+      ...new Set([
         ...baseMintPks,
         ...quoteMintPks,
         ...baseGlobalPks,
         ...quoteGlobalPks,
-      ),
+      ]),
     ];
     const mutableCopy = Array.from(allPksToFetch);
     while (mutableCopy.length > 0) {
