@@ -47,6 +47,12 @@ const reconnects: promClient.Counter<string> = new promClient.Counter({
   help: 'Number of reconnects to websocket',
 });
 
+const volatility: promClient.Gauge<'market'> = new promClient.Gauge({
+  name: 'volatility',
+  help: 'Volatility in last 24 hours',
+  labelNames: ['market'] as const,
+});
+
 const volume: promClient.Gauge<'market' | 'mint' | 'side'> =
   new promClient.Gauge({
     name: 'volume',
@@ -81,6 +87,9 @@ export class ManifestStatsServer {
   // Hourly checkpoints
   private baseVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
   private quoteVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
+
+  // Hourly price checkpoints have a variable length for new markets or after boot
+  private priceCheckpoints: Map<string, number[]> = new Map();
 
   // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
@@ -164,6 +173,7 @@ export class ManifestStatsServer {
             address: marketPk,
           }),
         );
+        this.priceCheckpoints.set(market, [priceAtoms]);
         this.fillLogResults.set(market, []);
       }
       if (this.fillLogResults.get(market) == undefined) {
@@ -291,6 +301,7 @@ export class ManifestStatsServer {
 
   /**
    * Periodically save the volume so a 24 hour rolling volume can be calculated.
+   * Periodically save the last price so a 24 hour realized volatility can be calculated.
    */
   saveCheckpoints(): void {
     console.log('Saving checkpoints');
@@ -332,6 +343,40 @@ export class ManifestStatsServer {
           .get(market)!
           .reduce((sum, num) => sum + num, 0),
       );
+
+      // rollingPriceCheckpoints might be empty after initialization until a fill is observed
+      // if there was no fill since restart, it will just stay empty
+      // if there was a fill we let the array grow until we reach target length
+      const rollingPriceCheckpoints = this.priceCheckpoints.get(market) ?? [];
+      const lastPrice = this.lastPriceByMarket.get(market);
+      if (lastPrice) {
+        rollingPriceCheckpoints.push(lastPrice);
+        const targetLength = ONE_DAY_SEC / CHECKPOINT_DURATION_SEC;
+        if (rollingPriceCheckpoints.length > targetLength) {
+          this.priceCheckpoints.set(
+            market,
+            rollingPriceCheckpoints.slice(
+              rollingPriceCheckpoints.length - targetLength,
+            ),
+          );
+        } else {
+          this.priceCheckpoints.set(market, rollingPriceCheckpoints);
+        }
+      }
+
+      // calculate volatility using log returns of close to close
+      // may overestimate the volatility due to lack of drift estimator
+      const priceSamples = this.priceCheckpoints.get(market) ?? [];
+      if (priceSamples.length > 1) {
+        const sqLogReturns = priceSamples
+          .slice(1)
+          .map((p, i) => Math.log(p / priceSamples[i]) ** 2);
+        const variance =
+          priceSamples.reduce((a, b) => a + b, 0) / sqLogReturns.length;
+        volatility.set({ market }, Math.sqrt(variance));
+      } else {
+        volatility.set({ market }, 0);
+      }
     });
   }
 
@@ -544,6 +589,38 @@ export class ManifestStatsServer {
   }
 
   /**
+   * Get Realized Volatility estimate
+   * Calculates volatility using log returns of close to close for checkpoint interval.
+   * May overestimate the volatility due to lack of drift estimator.
+   * @returns dailyVolatility
+   */
+  async getVolatility() {
+    const volByMarket: Map<string, number> = new Map();
+    this.markets.forEach((market: Market, marketPk: string) => {
+      const priceSamples = this.priceCheckpoints.get(marketPk) ?? [];
+
+      // add lastPrice to make volatility more receptive to recent price changes
+      const lastPrice = this.lastPriceByMarket.get(marketPk);
+      if (lastPrice) {
+        priceSamples.push(lastPrice);
+      }
+
+      if (priceSamples.length > 1) {
+        const sqLogReturns = priceSamples
+          .slice(1)
+          .map((p, i) => Math.log(p / priceSamples[i]) ** 2);
+        const variance =
+          priceSamples.reduce((a, b) => a + b, 0) / sqLogReturns.length;
+        volByMarket.set(marketPk, Math.sqrt(variance));
+      } else {
+        volByMarket.set(marketPk, 0);
+      }
+    });
+
+    return { dailyVolatility: volByMarket };
+  }
+
+  /**
    * Get Volume
    *
    * https://docs.llama.fi/list-your-project/other-dashboards/dimensions
@@ -669,6 +746,9 @@ const run = async () => {
       ),
     );
   };
+  const volatilityHandler: RequestHandler = async (_req, res) => {
+    res.send(await statsServer.getVolatility());
+  };
   const volumeHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getVolume());
   };
@@ -683,6 +763,7 @@ const run = async () => {
   app.get('/tickers', tickersHandler);
   app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
+  app.get('/volatility', volatilityHandler);
   app.get('/volume', volumeHandler);
   app.get('/trades', tradersHandler);
   app.get('/recentFills', recentFillsHandler);
