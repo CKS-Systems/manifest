@@ -4,7 +4,7 @@
 This document outlines the technical specification for implementing sanctions compliance in the Manifest protocol. The system is designed to ensure that users interacting with Manifest are compliant with sanctions requirements while maintaining protocol performance and scalability.
 
 ## Background
-- Tradin firms may require OFAC compliance capabilities for their involvement with Manifest
+- Trading firms may require OFAC compliance capabilities for their involvement with Manifest
 - Traditional on-chain blacklist approaches are not scalable due to Solana account storage limitations
 - A compliance system is needed at account creation time
 
@@ -25,7 +25,7 @@ This document outlines the technical specification for implementing sanctions co
 
 #### Flow
 1. User initiates account creation with Manifest
-2. Sanctions Compliance Provider SCP verifies wallet against sanctions lists
+2. SCP verifies wallet against sanctions lists
 3. If compliant, SCP creates a Proof of Compliance account
 4. Manifest checks for existence of Proof of Compliance account during wrapper creation
 5. Account creation proceeds only if Proof of Compliance exists
