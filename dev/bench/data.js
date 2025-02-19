@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737082807428,
+  "lastUpdate": 1740005310437,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9407,6 +9407,70 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 6150,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Britt Cyr",
+            "username": "brittcyr",
+            "email": "cyrbritt@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "70cc57b03dac2e098788c74e0759788e60dc6621",
+          "message": "Lock on stats server for each fill (#361)",
+          "timestamp": "2025-02-19T21:53:10Z",
+          "url": "https://github.com/CKS-Systems/manifest/commit/70cc57b03dac2e098788c74e0759788e60dc6621"
+        },
+        "date": 1740005308524,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3569,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 5661,
+            "unit": "CU",
+            "range": "",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 6285,
             "unit": "CU",
             "range": "",
             "extra": ""
