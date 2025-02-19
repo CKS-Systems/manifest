@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
+import { Mutex } from 'async-mutex';
 import { Metaplex, Pda } from '@metaplex-foundation/js';
 import {
   ENV,
@@ -100,6 +101,11 @@ export class ManifestStatsServer {
   // Recent fill log results
   private fillLogResults: Map<string, FillLogResult[]> = new Map();
 
+  // Mutex to guard all the recent fills, volume, ... Most important for recent
+  // fills when a fill spills over to multiple maker orders and bursts in fill
+  // logs.
+  private fillMutex: Mutex = new Mutex();
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
@@ -131,70 +137,72 @@ export class ManifestStatsServer {
       const fill: FillLogResult = JSON.parse(message.data.toString());
       const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
 
-      // Do not accept old spurious messages.
-      if (this.lastFillSlot > slot) {
-        return;
-      }
-      this.lastFillSlot = slot;
+      await this.fillMutex.runExclusive(async () => {
+        // Do not accept old spurious messages.
+        if (this.lastFillSlot > slot) {
+          return;
+        }
+        this.lastFillSlot = slot;
 
-      fills.inc({ market });
-      console.log('Got fill', fill);
+        fills.inc({ market });
+        console.log('Got fill', fill);
 
-      if (this.traderNumTrades.get(taker) == undefined) {
-        this.traderNumTrades.set(taker, 0);
-      }
-      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+        if (this.traderNumTrades.get(taker) == undefined) {
+          this.traderNumTrades.set(taker, 0);
+        }
+        this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
 
-      if (this.markets.get(market) == undefined) {
-        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.baseVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        if (this.markets.get(market) == undefined) {
+          this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.baseVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          this.quoteVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          const marketPk: PublicKey = new PublicKey(market);
+          this.markets.set(
+            market,
+            await Market.loadFromAddress({
+              connection: this.connection,
+              address: marketPk,
+            }),
+          );
+          this.fillLogResults.set(market, []);
+        }
+        if (this.fillLogResults.get(market) == undefined) {
+          this.fillLogResults.set(market, []);
+        }
+        lastPrice.set(
+          { market },
+          priceAtoms *
+            10 **
+              (this.markets.get(market)!.baseDecimals() -
+                this.markets.get(market)!.quoteDecimals()),
         );
-        this.quoteVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
-        const marketPk: PublicKey = new PublicKey(market);
-        this.markets.set(
-          market,
-          await Market.loadFromAddress({
-            connection: this.connection,
-            address: marketPk,
-          }),
-        );
-        this.fillLogResults.set(market, []);
-      }
-      if (this.fillLogResults.get(market) == undefined) {
-        this.fillLogResults.set(market, []);
-      }
-      lastPrice.set(
-        { market },
-        priceAtoms *
-          10 **
-            (this.markets.get(market)!.baseDecimals() -
-              this.markets.get(market)!.quoteDecimals()),
-      );
 
-      this.lastPriceByMarket.set(market, priceAtoms);
-      this.baseVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(baseAtoms),
-      );
-      this.quoteVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(quoteAtoms),
-      );
+        this.lastPriceByMarket.set(market, priceAtoms);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(baseAtoms),
+        );
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(quoteAtoms),
+        );
 
-      let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
-      prevFills.push(fill);
-      if (prevFills.length > 10) {
-        prevFills = prevFills.slice(1, 10);
-      }
-      this.fillLogResults.set(market, prevFills);
+        let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
+        prevFills.push(fill);
+        if (prevFills.length > 10) {
+          prevFills = prevFills.slice(1, 10);
+        }
+        this.fillLogResults.set(market, prevFills);
+      });
     };
   }
 
