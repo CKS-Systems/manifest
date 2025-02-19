@@ -128,73 +128,85 @@ export class ManifestStatsServer {
     };
 
     this.ws.onmessage = async (message) => {
-      const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
-
-      // Do not accept old spurious messages.
-      if (this.lastFillSlot > slot) {
+      let fillsEvents: FillLogResult[];
+    
+      // A single taker can fill against multiple maker orders in the same fill event
+      try {
+        const data = JSON.parse(message.data.toString());
+        fillsEvents = Array.isArray(data) ? data : [data];
+      } catch (err) {
+        console.error('Error parsing fill data:', err);
         return;
       }
-      this.lastFillSlot = slot;
+    
+      for (const fill of fillsEvents) {
+        const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
 
-      fills.inc({ market });
-      console.log('Got fill', fill);
+        // Do not accept old spurious messages.
+        if (this.lastFillSlot > slot) {
+          continue;
+        }
+        this.lastFillSlot = slot;
 
-      if (this.traderNumTrades.get(taker) == undefined) {
-        this.traderNumTrades.set(taker, 0);
-      }
-      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+        fills.inc({ market });
+        console.log('Got fill', fill);
 
-      if (this.markets.get(market) == undefined) {
-        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.baseVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        if (this.traderNumTrades.get(taker) == undefined) {
+          this.traderNumTrades.set(taker, 0);
+        }
+        this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+
+        if (this.markets.get(market) == undefined) {
+          this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.baseVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          this.quoteVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          const marketPk: PublicKey = new PublicKey(market);
+          this.markets.set(
+            market,
+            await Market.loadFromAddress({
+              connection: this.connection,
+              address: marketPk,
+            }),
+          );
+          this.fillLogResults.set(market, []);
+        }
+        if (this.fillLogResults.get(market) == undefined) {
+          this.fillLogResults.set(market, []);
+        }
+        lastPrice.set(
+          { market },
+          priceAtoms *
+            10 **
+              (this.markets.get(market)!.baseDecimals() -
+                this.markets.get(market)!.quoteDecimals()),
         );
-        this.quoteVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
-        const marketPk: PublicKey = new PublicKey(market);
-        this.markets.set(
-          market,
-          await Market.loadFromAddress({
-            connection: this.connection,
-            address: marketPk,
-          }),
-        );
-        this.fillLogResults.set(market, []);
-      }
-      if (this.fillLogResults.get(market) == undefined) {
-        this.fillLogResults.set(market, []);
-      }
-      lastPrice.set(
-        { market },
-        priceAtoms *
-          10 **
-            (this.markets.get(market)!.baseDecimals() -
-              this.markets.get(market)!.quoteDecimals()),
-      );
 
-      this.lastPriceByMarket.set(market, priceAtoms);
-      this.baseVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(baseAtoms),
-      );
-      this.quoteVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(quoteAtoms),
-      );
+        this.lastPriceByMarket.set(market, priceAtoms);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(baseAtoms),
+        );
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(quoteAtoms),
+        );
 
-      let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
-      prevFills.push(fill);
-      if (prevFills.length > 10) {
-        prevFills = prevFills.slice(1, 10);
+        let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
+        prevFills.push(fill);
+        if (prevFills.length > 10) {
+          prevFills = prevFills.slice(1, 10);
+        }
+        this.fillLogResults.set(market, prevFills);
       }
-      this.fillLogResults.set(market, prevFills);
     };
   }
 
