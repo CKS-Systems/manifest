@@ -7,8 +7,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use hypertree::{DataIndex, PodBool};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use pinocchio::{program_error::ProgramError, ProgramResult};
 use shank::ShankType;
-use solana_program::{entrypoint::ProgramResult, program_error::ProgramError};
 use static_assertions::const_assert_eq;
 use std::cmp::Ordering;
 

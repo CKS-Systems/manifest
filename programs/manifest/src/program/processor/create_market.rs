@@ -1,18 +1,22 @@
-use std::{cell::Ref, mem::size_of};
+use std::mem::size_of;
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, invoke},
+    program::expand_market_if_needed,
     require,
     state::MarketFixed,
-    utils::create_account,
     validation::{get_vault_address, loaders::CreateMarketContext},
 };
-use hypertree::{get_mut_helper, trace};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent, sysvar::Sysvar,
+use hypertree::get_mut_helper;
+use pinocchio::{
+    account_info::{AccountInfo, Ref},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    ProgramResult,
 };
+use pinocchio_system::instructions::CreateAccount;
+use pinocchio_token::instructions::InitializeAccount3;
+use solana_program::{program_pack::Pack, rent::Rent, sysvar::Sysvar};
 use spl_token_2022::{
     extension::{
         mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
@@ -22,12 +26,8 @@ use spl_token_2022::{
     state::{Account, Mint},
 };
 
-pub(crate) fn process_create_market(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    _data: &[u8],
-) -> ProgramResult {
-    trace!("process_create_market accs={accounts:?}");
+pub(crate) fn process_create_market(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
+    solana_program::msg!("Creating");
     let create_market_context: CreateMarketContext = CreateMarketContext::load(accounts)?;
 
     let CreateMarketContext {
@@ -43,19 +43,21 @@ pub(crate) fn process_create_market(
     } = create_market_context;
 
     require!(
-        base_mint.info.key != quote_mint.info.key,
+        base_mint.info.key() != quote_mint.info.key(),
         crate::program::ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
 
     for mint in [base_mint.as_ref(), quote_mint.as_ref()] {
-        if *mint.owner == spl_token_2022::id() {
-            let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+        if *mint.owner() == spl_token_2022::id().to_bytes() {
+            let mint_data: Ref<'_, [u8]> = mint.try_borrow_data()?;
             let pool_mint: StateWithExtensions<'_, Mint> =
-                StateWithExtensions::<Mint>::unpack(&mint_data)?;
+                StateWithExtensions::<Mint>::unpack(&mint_data)
+                    .map_err(|_| ProgramError::InvalidAccountData)?;
             // Closable mints can be replaced with different ones, breaking some saved info on the market.
             if let Ok(extension) = pool_mint.get_extension::<MintCloseAuthority>() {
-                let close_authority: Option<Pubkey> = extension.close_authority.into();
+                let close_authority: Option<solana_program::pubkey::Pubkey> =
+                    extension.close_authority.into();
                 if close_authority.is_some() {
                     solana_program::msg!(
                         "Warning, you are creating a market with a close authority."
@@ -66,7 +68,8 @@ pub(crate) fn process_create_market(
             // accounting in the market, so there is no assertion of security
             // against loss of funds on these markets.
             if let Ok(extension) = pool_mint.get_extension::<PermanentDelegate>() {
-                let permanent_delegate: Option<Pubkey> = extension.delegate.into();
+                let permanent_delegate: Option<solana_program::pubkey::Pubkey> =
+                    extension.delegate.into();
                 if permanent_delegate.is_some() {
                     solana_program::msg!(
                         "Warning, you are creating a market with a permanent delegate. There is no loss of funds protection for funds on this market"
@@ -78,52 +81,53 @@ pub(crate) fn process_create_market(
 
     {
         // Create the base and quote vaults of this market
-        let rent: Rent = Rent::get()?;
+        let rent: Rent = Rent::get().map_err(|_| ProgramError::InvalidAccountData)?;
         for (token_account, mint) in [
             (base_vault.as_ref(), base_mint.as_ref()),
             (quote_vault.as_ref(), quote_mint.as_ref()),
         ] {
             // We dont have to deserialize the mint, just check the owner.
-            let is_mint_22: bool = *mint.owner == spl_token_2022::id();
+            let is_mint_22: bool = *mint.owner() == spl_token_2022::id().to_bytes();
             let token_program_for_mint: Pubkey = if is_mint_22 {
-                spl_token_2022::id()
+                spl_token_2022::id().to_bytes()
             } else {
-                spl_token::id()
+                spl_token::id().to_bytes()
             };
 
-            let (_vault_key, bump) = get_vault_address(market.key, mint.key);
+            let (_vault_key, bump) = get_vault_address(market.key(), mint.key());
             let seeds: Vec<Vec<u8>> = vec![
                 b"vault".to_vec(),
-                market.key.as_ref().to_vec(),
-                mint.key.as_ref().to_vec(),
+                market.key().as_ref().to_vec(),
+                mint.key().as_ref().to_vec(),
                 vec![bump],
             ];
 
             if is_mint_22 {
-                let mint_data: Ref<'_, &mut [u8]> = mint.data.borrow();
+                let mint_data: Ref<'_, [u8]> = mint.try_borrow_data()?;
                 let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
                     PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
-                let mint_extensions: Vec<ExtensionType> =
-                    mint_with_extension.get_extension_types()?;
+                let mint_extensions: Vec<ExtensionType> = mint_with_extension
+                    .get_extension_types()
+                    .map_err(|_| ProgramError::InvalidAccountData)?;
                 let required_extensions: Vec<ExtensionType> =
                     ExtensionType::get_required_init_account_extensions(&mint_extensions);
                 let space: usize =
-                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)?;
-                create_account(
-                    payer.as_ref(),
-                    token_account,
-                    system_program.as_ref(),
-                    &token_program_for_mint,
-                    &rent,
-                    space as u64,
-                    seeds,
-                )?;
+                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)
+                        .map_err(|_| ProgramError::InvalidAccountData)?;
+                CreateAccount {
+                    from: &payer,
+                    to: token_account,
+                    lamports: rent.minimum_balance(space as usize),
+                    space: space as u64,
+                    owner: &token_program_for_mint,
+                }
+                .invoke()?;
                 invoke(
                     &spl_token_2022::instruction::initialize_account3(
                         &token_program_for_mint,
-                        token_account.key,
-                        mint.key,
-                        token_account.key,
+                        token_account.key(),
+                        mint.key(),
+                        token_account.key(),
                     )?,
                     &[
                         payer.as_ref().clone(),
@@ -134,29 +138,20 @@ pub(crate) fn process_create_market(
                 )?;
             } else {
                 let space: usize = spl_token::state::Account::LEN;
-                create_account(
-                    payer.as_ref(),
-                    token_account,
-                    system_program.as_ref(),
-                    &token_program_for_mint,
-                    &rent,
-                    space as u64,
-                    seeds,
-                )?;
-                invoke(
-                    &spl_token::instruction::initialize_account3(
-                        &token_program_for_mint,
-                        token_account.key,
-                        mint.key,
-                        token_account.key,
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
-                        token_program.as_ref().clone(),
-                    ],
-                )?;
+                CreateAccount {
+                    from: &payer,
+                    to: token_account,
+                    lamports: rent.minimum_balance(space as usize),
+                    space: space as u64,
+                    owner: &token_program_for_mint,
+                }
+                .invoke()?;
+                InitializeAccount3 {
+                    account: token_account,
+                    mint,
+                    owner: token_account.key(),
+                }
+                .invoke()?;
             }
         }
 
@@ -170,17 +165,17 @@ pub(crate) fn process_create_market(
 
         // Setup the empty market
         let empty_market_fixed: MarketFixed =
-            MarketFixed::new_empty(&base_mint, &quote_mint, market.key);
+            MarketFixed::new_empty(&base_mint, &quote_mint, market.key());
         assert_eq!(market.data_len(), size_of::<MarketFixed>());
 
         let market_bytes: &mut [u8] = &mut market.try_borrow_mut_data()?[..];
         *get_mut_helper::<MarketFixed>(market_bytes, 0_u32) = empty_market_fixed;
 
         emit_stack(CreateMarketLog {
-            market: *market.key,
-            creator: *payer.key,
-            base_mint: *base_mint.info.key,
-            quote_mint: *quote_mint.info.key,
+            market: *market.key(),
+            creator: *payer.key(),
+            base_mint: *base_mint.info.key(),
+            quote_mint: *quote_mint.info.key(),
         })?;
     }
 

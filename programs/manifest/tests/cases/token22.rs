@@ -24,7 +24,7 @@ async fn token22_base() -> anyhow::Result<()> {
     let program_test: ProgramTest = ProgramTest::new(
         "manifest",
         manifest::ID,
-        processor!(manifest::process_instruction),
+        processor!(manifest::testable_process_instruction),
     );
 
     solana_logger::setup_with_default(RUST_LOG_DEFAULT);
@@ -306,7 +306,7 @@ async fn token22_quote() -> anyhow::Result<()> {
     let program_test: ProgramTest = ProgramTest::new(
         "manifest",
         manifest::ID,
-        processor!(manifest::process_instruction),
+        processor!(manifest::testable_process_instruction),
     );
 
     solana_logger::setup_with_default(RUST_LOG_DEFAULT);
@@ -571,7 +571,7 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
     let program_test: ProgramTest = ProgramTest::new(
         "manifest",
         manifest::ID,
-        processor!(manifest::process_instruction),
+        processor!(manifest::testable_process_instruction),
     );
     solana_logger::setup_with_default(RUST_LOG_DEFAULT);
 

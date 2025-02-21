@@ -1,7 +1,10 @@
-use std::cell::RefMut;
-
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+use pinocchio::{
+    account_info::{AccountInfo, RefMut},
+    program_error::ProgramError,
+    ProgramResult,
+};
+use pinocchio_token::instructions::Transfer;
 
 use crate::{
     logs::{emit_stack, GlobalDepositLog},
@@ -10,8 +13,6 @@ use crate::{
     state::GlobalRefMut,
     validation::loaders::GlobalDepositContext,
 };
-
-use super::invoke;
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalDepositParams {
@@ -28,13 +29,10 @@ impl GlobalDepositParams {
     }
 }
 
-pub(crate) fn process_global_deposit(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    data: &[u8],
-) -> ProgramResult {
+pub(crate) fn process_global_deposit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let global_deposit_context: GlobalDepositContext = GlobalDepositContext::load(accounts)?;
-    let GlobalDepositParams { amount_atoms } = GlobalDepositParams::try_from_slice(data)?;
+    let GlobalDepositParams { amount_atoms } =
+        GlobalDepositParams::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)?;
     // Due to transfer fees, this might not be what you expect.
     let mut deposited_amount_atoms: u64 = amount_atoms;
 
@@ -47,20 +45,20 @@ pub(crate) fn process_global_deposit(
         token_program,
     } = global_deposit_context;
 
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.deposit_global(payer.key, GlobalAtoms::new(amount_atoms))?;
+    global_dynamic_account.deposit_global(payer.key(), GlobalAtoms::new(amount_atoms))?;
 
     // Do the token transfer
-    if *global_vault.owner == spl_token_2022::id() {
+    if *global_vault.owner() == spl_token_2022::id().to_bytes() {
         let before_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
         invoke(
             &spl_token_2022::instruction::transfer_checked(
-                token_program.key,
-                trader_token_account.key,
-                mint.info.key,
-                global_vault.key,
-                payer.key,
+                token_program.key(),
+                trader_token_account.key(),
+                mint.info.key(),
+                global_vault.key(),
+                payer.key(),
                 &[],
                 amount_atoms,
                 mint.mint.decimals,
@@ -79,27 +77,18 @@ pub(crate) fn process_global_deposit(
             .checked_sub(before_vault_balance_atoms)
             .unwrap();
     } else {
-        invoke(
-            &spl_token::instruction::transfer(
-                token_program.key,
-                trader_token_account.key,
-                global_vault.key,
-                payer.key,
-                &[],
-                amount_atoms,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                trader_token_account.as_ref().clone(),
-                global_vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
-        )?;
+        Transfer {
+            from: &trader_token_account,
+            to: &global_vault,
+            authority: payer.info,
+            amount: amount_atoms,
+        }
+        .invoke()?;
     }
 
     emit_stack(GlobalDepositLog {
-        global: *global.key,
-        trader: *payer.key,
+        global: *global.key(),
+        trader: *payer.key(),
         global_atoms: GlobalAtoms::new(deposited_amount_atoms),
     })?;
 

@@ -1,5 +1,3 @@
-use std::cell::RefMut;
-
 use crate::{
     logs::{emit_stack, DepositLog},
     state::MarketRefMut,
@@ -9,7 +7,13 @@ use crate::{
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::DataIndex;
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+use pinocchio::{
+    account_info::{AccountInfo, RefMut},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    ProgramResult,
+};
+use pinocchio_token::instructions::Transfer;
 
 use super::{get_trader_index_with_hint, shared::get_mut_dynamic_account};
 
@@ -33,18 +37,14 @@ impl DepositParams {
     }
 }
 
-pub(crate) fn process_deposit(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    data: &[u8],
-) -> ProgramResult {
-    let params: DepositParams = DepositParams::try_from_slice(data)?;
-    process_deposit_core(program_id, accounts, params)
+pub(crate) fn process_deposit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let params: DepositParams =
+        DepositParams::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)?;
+    process_deposit_core(accounts, params)
 }
 
 #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_deposit_core(
-    _program_id: &Pubkey,
     accounts: &[AccountInfo],
     params: DepositParams,
 ) -> ProgramResult {
@@ -65,14 +65,14 @@ pub(crate) fn process_deposit_core(
         mint,
     } = deposit_context;
 
-    let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+    let market_data: &mut RefMut<[u8]> = &mut market.try_borrow_mut_data()?;
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
     // Validation already verifies that the mint is either base or quote.
     let is_base: bool =
         &trader_token.try_borrow_data()?[0..32] == dynamic_account.get_base_mint().as_ref();
 
-    if *vault.owner == spl_token_2022::id() {
+    if *vault.owner() == spl_token_2022::id().to_bytes() {
         let before_vault_balance_atoms: u64 = vault.get_balance_atoms();
         spl_token_2022_transfer_from_trader_to_vault(
             &token_program,
@@ -112,8 +112,8 @@ pub(crate) fn process_deposit_core(
     dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)?;
 
     emit_stack(DepositLog {
-        market: *market.key,
-        trader: *payer.key,
+        market: *market.key(),
+        trader: *payer.key(),
         mint: if is_base {
             *dynamic_account.get_base_mint()
         } else {
@@ -127,37 +127,28 @@ pub(crate) fn process_deposit_core(
 
 /** Transfer from base (quote) trader to base (quote) vault using SPL Token **/
 #[cfg(not(feature = "certora"))]
-fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
-    token_program: &TokenProgram<'a, 'info>,
-    trader_account: &TokenAccountInfo<'a, 'info>,
-    vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+fn spl_token_transfer_from_trader_to_vault<'a>(
+    _token_program: &TokenProgram<'a>,
+    trader_account: &TokenAccountInfo<'a>,
+    vault: &TokenAccountInfo<'a>,
+    payer: &Signer<'a>,
     amount: u64,
 ) -> ProgramResult {
-    crate::program::invoke(
-        &spl_token::instruction::transfer(
-            token_program.key,
-            trader_account.key,
-            vault.key,
-            payer.key,
-            &[],
-            amount,
-        )?,
-        &[
-            token_program.as_ref().clone(),
-            trader_account.as_ref().clone(),
-            vault.as_ref().clone(),
-            payer.as_ref().clone(),
-        ],
-    )
+    Transfer {
+        from: &trader_account,
+        to: &vault,
+        authority: &payer,
+        amount,
+    }
+    .invoke()
 }
 #[cfg(feature = "certora")]
 /** (Summary) Transfer from base (quote) trader to base (quote) vault using SPL Token **/
-fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
-    _token_program: &TokenProgram<'a, 'info>,
-    trader_account: &TokenAccountInfo<'a, 'info>,
-    vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+fn spl_token_transfer_from_trader_to_vault<'a>(
+    _token_program: &TokenProgram<'a>,
+    trader_account: &TokenAccountInfo<'a>,
+    vault: &TokenAccountInfo<'a>,
+    payer: &Signer<'a>,
     amount: u64,
 ) -> ProgramResult {
     spl_token_transfer(trader_account.info, vault.info, payer.info, amount)
@@ -165,23 +156,23 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
 
 /** Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
 #[cfg(not(feature = "certora"))]
-fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
-    token_program: &TokenProgram<'a, 'info>,
-    trader_account: &TokenAccountInfo<'a, 'info>,
-    mint: Option<MintAccountInfo<'a, 'info>>,
+fn spl_token_2022_transfer_from_trader_to_vault<'a>(
+    token_program: &TokenProgram<'a>,
+    trader_account: &TokenAccountInfo<'a>,
+    mint: Option<MintAccountInfo<'a>>,
     mint_pubkey: &Pubkey,
-    vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    vault: &TokenAccountInfo<'a>,
+    payer: &Signer<'a>,
     amount: u64,
     decimals: u8,
 ) -> ProgramResult {
     crate::program::invoke(
         &spl_token_2022::instruction::transfer_checked(
-            token_program.key,
-            trader_account.key,
+            token_program.key(),
+            trader_account.key(),
             mint_pubkey,
-            vault.key,
-            payer.key,
+            vault.key(),
+            payer.key(),
             &[],
             amount,
             decimals,
@@ -198,13 +189,13 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
 
 #[cfg(feature = "certora")]
 /** (Summary) Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
-fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
-    _token_program: &TokenProgram<'a, 'info>,
-    trader_account: &TokenAccountInfo<'a, 'info>,
-    _mint: Option<MintAccountInfo<'a, 'info>>,
+fn spl_token_2022_transfer_from_trader_to_vault<'a>(
+    _token_program: &TokenProgram<'a>,
+    trader_account: &TokenAccountInfo<'a>,
+    _mint: Option<MintAccountInfo<'a>>,
     _mint_pubkey: &Pubkey,
-    vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    vault: &TokenAccountInfo<'a>,
+    payer: &Signer<'a>,
     amount: u64,
     _decimals: u8,
 ) -> ProgramResult {

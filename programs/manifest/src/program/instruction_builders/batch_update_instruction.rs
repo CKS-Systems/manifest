@@ -44,9 +44,9 @@ pub fn batch_update_instruction(
         (quote_mint_opt, quote_mint_token_program_opt),
     ] {
         if let Some(mint) = mint_opt {
-            let (global, _) = get_global_address(&mint);
-            let (global_vault, _) = get_global_vault_address(&mint);
-            let (market_vault, _) = get_vault_address(market, &mint);
+            let (global, _) = get_global_address(&mint.to_bytes());
+            let (global_vault, _) = get_global_vault_address(&mint.to_bytes());
+            let (market_vault, _) = get_vault_address(&market.to_bytes(), &mint.to_bytes());
             let mut global_account_metas: Vec<AccountMeta> = vec![
                 AccountMeta::new_readonly(mint, false),
                 AccountMeta::new(global, false),

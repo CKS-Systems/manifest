@@ -1,19 +1,16 @@
-use std::cell::RefMut;
-
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, invoke},
+    program::get_mut_dynamic_account,
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
 };
 use hypertree::{DataIndex, NIL};
+use pinocchio::{account_info::RefMut, program_error::ProgramError, pubkey::Pubkey, ProgramResult};
+use solana_program::program::invoke_signed;
 #[cfg(not(feature = "no-clock"))]
 use solana_program::sysvar::Sysvar;
-use solana_program::{
-    entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
-};
 use spl_token_2022::{
     extension::{
         transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
@@ -112,8 +109,11 @@ pub(crate) fn remove_from_global(
     // Somehow, a hybrid works. Dont know why, but it does.
     //
     if global_trade_accounts.system_program.is_some() {
-        **global.lamports.borrow_mut() -= GAS_DEPOSIT_LAMPORTS;
-        **gas_receiver_opt.as_ref().unwrap().lamports.borrow_mut() += GAS_DEPOSIT_LAMPORTS;
+        *global.try_borrow_mut_lamports()? -= GAS_DEPOSIT_LAMPORTS;
+        *gas_receiver_opt
+            .as_ref()
+            .unwrap()
+            .try_borrow_mut_lamports()? += GAS_DEPOSIT_LAMPORTS;
     }
 
     Ok(())
@@ -130,9 +130,9 @@ pub(crate) fn try_to_add_to_global(
     } = global_trade_accounts;
 
     {
-        let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+        let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data()?;
         let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key)?;
+        global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key())?;
     }
 
     // Need to CPI because otherwise we get:
@@ -142,17 +142,12 @@ pub(crate) fn try_to_add_to_global(
     // Done here instead of inside the object because the borrow checker needs
     // to get the data on global which it cannot while there is a mut self
     // reference.
-    invoke(
-        &solana_program::system_instruction::transfer(
-            &gas_payer_opt.as_ref().unwrap().info.key,
-            &global.key,
-            GAS_DEPOSIT_LAMPORTS,
-        ),
-        &[
-            gas_payer_opt.as_ref().unwrap().info.clone(),
-            global.info.clone(),
-        ],
-    )?;
+    pinocchio_system::instructions::Transfer {
+        from: gas_payer_opt.as_ref().unwrap(),
+        to: global,
+        lamports: GAS_DEPOSIT_LAMPORTS,
+    }
+    .invoke()?;
 
     Ok(())
 }
@@ -186,8 +181,8 @@ pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult 
     Ok(())
 }
 
-pub(crate) fn can_back_order<'a, 'info>(
-    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
+pub(crate) fn can_back_order<'a>(
+    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a>>,
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -> bool {
@@ -197,7 +192,7 @@ pub(crate) fn can_back_order<'a, 'info>(
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
     let GlobalTradeAccounts { global, .. } = global_trade_accounts;
 
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data().unwrap();
+    let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data().unwrap();
     let global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     let num_deposited_atoms: GlobalAtoms =
@@ -205,8 +200,8 @@ pub(crate) fn can_back_order<'a, 'info>(
     return desired_global_atoms <= num_deposited_atoms;
 }
 
-pub(crate) fn try_to_move_global_tokens<'a, 'info>(
-    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a, 'info>>,
+pub(crate) fn try_to_move_global_tokens<'a>(
+    global_trade_accounts_opt: &'a Option<GlobalTradeAccounts<'a>>,
     resting_order_trader: &Pubkey,
     desired_global_atoms: GlobalAtoms,
 ) -> Result<bool, ProgramError> {
@@ -226,7 +221,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         ..
     } = global_trade_accounts;
 
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     let num_deposited_atoms: GlobalAtoms =
@@ -238,7 +233,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     // when needed, not just for all orders.
     if desired_global_atoms > num_deposited_atoms {
         emit_stack(GlobalCleanupLog {
-            cleaner: *gas_receiver_opt.as_ref().unwrap().key,
+            cleaner: *gas_receiver_opt.as_ref().unwrap().key(),
             maker: *resting_order_trader,
             amount_desired: desired_global_atoms,
             amount_deposited: num_deposited_atoms,
@@ -253,11 +248,11 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
     let global_vault_bump: u8 = global_dynamic_account.fixed.get_vault_bump();
 
-    let global_vault: &TokenAccountInfo<'a, 'info> = global_vault_opt.as_ref().unwrap();
-    let market_vault: &TokenAccountInfo<'a, 'info> = market_vault_opt.as_ref().unwrap();
-    let token_program: &TokenProgram<'a, 'info> = token_program_opt.as_ref().unwrap();
+    let global_vault: &TokenAccountInfo<'a> = global_vault_opt.as_ref().unwrap();
+    let market_vault: &TokenAccountInfo<'a> = market_vault_opt.as_ref().unwrap();
+    let token_program: &TokenProgram<'a> = token_program_opt.as_ref().unwrap();
 
-    if *token_program.key == spl_token_2022::id() {
+    if *token_program.key() == spl_token_2022::id().to_bytes() {
         require!(
             mint_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
@@ -266,16 +261,18 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
         // Prevent transfer from global to market vault if a token has a non-zero fee.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.try_borrow_data()?)
+            .map_err(|e| ProgramError::InvalidAccountData)?
             .get_extension::<TransferFeeConfig>()
             .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into())
         {
             solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
             return Ok(false);
         }
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.try_borrow_data()?)
+            .map_err(|_| ProgramError::InvalidAccountData)?
             .get_extension::<TransferHook>()
-            .is_ok_and(|f| f.program_id.0 != Pubkey::default())
+            .is_ok_and(|f| f.program_id.0 != solana_program::pubkey::Pubkey::default())
         {
             solana_program::msg!(
                 "Treating global order as unbacked because it has a transfer hook"
@@ -285,11 +282,11 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
-                token_program.key,
-                global_vault.key,
-                mint_account_info.info.key,
-                market_vault.key,
-                global_vault.key,
+                &solana_program::pubkey::Pubkey::from(*token_program.key()),
+                global_vault.key(),
+                mint_account_info.info.key(),
+                market_vault.key(),
+                global_vault.key(),
                 &[],
                 desired_global_atoms.as_u64(),
                 mint_account_info.mint.decimals,
@@ -303,22 +300,13 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
             global_vault_seeds_with_bump!(mint_key, global_vault_bump),
         )?;
     } else {
-        invoke_signed(
-            &spl_token::instruction::transfer(
-                token_program.key,
-                global_vault.key,
-                market_vault.key,
-                global_vault.key,
-                &[],
-                desired_global_atoms.as_u64(),
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                global_vault.as_ref().clone(),
-                market_vault.as_ref().clone(),
-            ],
-            global_vault_seeds_with_bump!(mint_key, global_vault_bump),
-        )?;
+        pinocchio_token::instructions::Transfer {
+            from: &global_vault,
+            to: market_vault,
+            authority: &global_vault,
+            amount: desired_global_atoms.as_u64(),
+        }
+        .invoke_signed(global_vault_seeds_with_bump!(mint_key, global_vault_bump))?;
     }
 
     Ok(true)

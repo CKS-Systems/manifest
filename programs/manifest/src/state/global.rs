@@ -11,8 +11,8 @@ use hypertree::{
     get_helper, get_mut_helper, DataIndex, FreeList, Get, HyperTreeReadOperations,
     HyperTreeWriteOperations, RBNode, RedBlackTree, RedBlackTreeReadOnly, NIL,
 };
+use pinocchio::{program_error::ProgramError, pubkey::Pubkey, ProgramResult};
 use shank::ShankType;
-use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
 use crate::{
@@ -123,7 +123,7 @@ impl PartialEq for GlobalTrader {
 impl Eq for GlobalTrader {}
 impl std::fmt::Display for GlobalTrader {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.trader)
+        write!(f, "{}", solana_program::pubkey::Pubkey::from(self.trader))
     }
 }
 
@@ -160,7 +160,7 @@ impl PartialEq for GlobalDeposit {
 impl Eq for GlobalDeposit {}
 impl std::fmt::Display for GlobalDeposit {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.trader)
+        write!(f, "{}", solana_program::pubkey::Pubkey::from(self.trader))
     }
 }
 
@@ -198,7 +198,7 @@ impl ManifestAccount for GlobalFixed {
         // Check the discriminant to make sure it is a global account.
         require!(
             self.discriminant == GLOBAL_FIXED_DISCRIMINANT,
-            solana_program::program_error::ProgramError::InvalidAccountData,
+            ProgramError::InvalidAccountData,
             "Invalid market discriminant actual: {} expected: {}",
             self.discriminant,
             GLOBAL_FIXED_DISCRIMINANT
@@ -270,7 +270,7 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
             existing_global_trader_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global trader for {}",
-            trader
+            solana_program::pubkey::Pubkey::from(*trader)
         )?;
         let existing_global_trader: GlobalTrader = *existing_global_trader_opt.unwrap();
         let global_trader_tree: GlobalTraderTreeReadOnly = GlobalTraderTreeReadOnly::new(
@@ -332,7 +332,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             global_deposit_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
-            trader
+            solana_program::pubkey::Pubkey::from(*trader)
         )?;
         let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_sub(num_atoms)?;
@@ -392,7 +392,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             existing_global_trader_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global trader for {}",
-            existing_trader
+            solana_program::pubkey::Pubkey::from(*existing_trader)
         )?;
         let existing_global_trader: GlobalTrader = *existing_global_trader_opt.unwrap();
 
@@ -402,7 +402,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             existing_global_deposit_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
-            existing_trader
+            solana_program::pubkey::Pubkey::from(*existing_trader)
         )?;
         let existing_global_deposit: &mut GlobalDeposit = existing_global_deposit_opt.unwrap();
 
@@ -492,7 +492,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
                 global_deposit_opt.is_some(),
                 crate::program::ManifestError::MissingGlobal,
                 "Could not find global deposit for {}",
-                global_trade_owner
+                solana_program::pubkey::Pubkey::from(*global_trade_owner)
             )?;
             let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
 
@@ -521,7 +521,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             global_deposit_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
-            trader
+            solana_program::pubkey::Pubkey::from(*trader)
         )?;
         let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         global_deposit.balance_atoms = global_deposit.balance_atoms.checked_add(num_atoms)?;
@@ -538,7 +538,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             global_deposit_opt.is_some(),
             crate::program::ManifestError::MissingGlobal,
             "Could not find global deposit for {}",
-            trader
+            solana_program::pubkey::Pubkey::from(*trader)
         )?;
         let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
         // Checked sub makes sure there are enough funds.
@@ -621,8 +621,10 @@ mod test {
     #[test]
     fn test_cmp_trader() {
         // Just use token program ids since those have known sort order.
-        let global_trader1: GlobalTrader = GlobalTrader::new_empty(&spl_token::id(), NIL);
-        let global_trader2: GlobalTrader = GlobalTrader::new_empty(&spl_token_2022::id(), NIL);
+        let global_trader1: GlobalTrader =
+            GlobalTrader::new_empty(&spl_token::id().to_bytes(), NIL);
+        let global_trader2: GlobalTrader =
+            GlobalTrader::new_empty(&spl_token_2022::id().to_bytes(), NIL);
         assert!(global_trader1 < global_trader2);
         assert!(global_trader1 != global_trader2);
     }
@@ -634,8 +636,10 @@ mod test {
 
     #[test]
     fn test_cmp_deposit() {
-        let global_deposit1: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
-        let mut global_deposit2: GlobalDeposit = GlobalDeposit::new_empty(&Pubkey::new_unique());
+        let global_deposit1: GlobalDeposit =
+            GlobalDeposit::new_empty(&solana_program::pubkey::Pubkey::new_unique().to_bytes());
+        let mut global_deposit2: GlobalDeposit =
+            GlobalDeposit::new_empty(&solana_program::pubkey::Pubkey::new_unique().to_bytes());
         global_deposit2.balance_atoms = GlobalAtoms::new(1);
         // Reversed order than expected because Hypertrees give max pointer, but we want a min balance.
         assert!(global_deposit1 > global_deposit2);

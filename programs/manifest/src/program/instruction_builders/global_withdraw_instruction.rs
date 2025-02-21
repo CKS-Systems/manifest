@@ -3,10 +3,8 @@ use crate::{
     validation::{get_global_address, get_global_vault_address},
 };
 use borsh::BorshSerialize;
-use solana_program::{
-    instruction::{AccountMeta, Instruction},
-    pubkey::Pubkey,
-};
+use pinocchio::pubkey::Pubkey;
+use solana_program::instruction::{AccountMeta, Instruction};
 
 pub fn global_withdraw_instruction(
     mint: &Pubkey,

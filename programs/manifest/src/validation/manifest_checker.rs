@@ -1,28 +1,28 @@
 use bytemuck::Pod;
 use hypertree::{get_helper, Get};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+use pinocchio::{
+    account_info::{AccountInfo, Ref},
+    program_error::ProgramError,
+    pubkey::{find_program_address, Pubkey},
+    ProgramResult,
 };
-use std::{cell::Ref, mem::size_of, ops::Deref};
+use std::{mem::size_of, ops::Deref};
 
 use crate::require;
 
 /// Validation for manifest accounts.
 #[derive(Clone)]
-pub struct ManifestAccountInfo<'a, 'info, T: ManifestAccount + Pod + Clone> {
-    pub info: &'a AccountInfo<'info>,
+pub struct ManifestAccountInfo<'a, T: ManifestAccount + Pod + Clone> {
+    pub info: &'a AccountInfo,
 
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info, T> {
-    pub fn new(
-        info: &'a AccountInfo<'info>,
-    ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {
-        verify_owned_by_manifest(info.owner)?;
+impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, T> {
+    pub fn new(info: &'a AccountInfo) -> Result<ManifestAccountInfo<'a, T>, ProgramError> {
+        verify_owned_by_manifest(info.owner())?;
 
-        let bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
+        let bytes: Ref<[u8]> = info.try_borrow_data()?;
         let (header_bytes, _) = bytes.split_at(size_of::<T>());
         let header: &T = get_helper::<T>(header_bytes, 0_u32);
         header.verify_discriminant()?;
@@ -33,11 +33,12 @@ impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info,
         })
     }
 
-    pub fn new_init(
-        info: &'a AccountInfo<'info>,
-    ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {
-        verify_owned_by_manifest(info.owner)?;
+    pub fn new_init(info: &'a AccountInfo) -> Result<ManifestAccountInfo<'a, T>, ProgramError> {
+        solana_program::msg!("init");
+        verify_owned_by_manifest(info.owner())?;
+        solana_program::msg!("init");
         verify_uninitialized::<T>(info)?;
+        solana_program::msg!("init");
         Ok(Self {
             info,
             phantom: std::marker::PhantomData,
@@ -45,15 +46,15 @@ impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info,
     }
 
     pub fn get_fixed(&self) -> Result<Ref<'_, T>, ProgramError> {
-        let data: Ref<&mut [u8]> = self.info.try_borrow_data()?;
+        let data: Ref<[u8]> = self.info.try_borrow_data()?;
         Ok(Ref::map(data, |data| {
             return get_helper::<T>(data, 0_u32);
         }))
     }
 }
 
-impl<'a, 'info, T: ManifestAccount + Pod + Clone> Deref for ManifestAccountInfo<'a, 'info, T> {
-    type Target = AccountInfo<'info>;
+impl<'a, 'info, T: ManifestAccount + Pod + Clone> Deref for ManifestAccountInfo<'a, T> {
+    type Target = AccountInfo;
 
     fn deref(&self) -> &Self::Target {
         self.info
@@ -65,18 +66,20 @@ pub trait ManifestAccount {
 }
 
 fn verify_owned_by_manifest(owner: &Pubkey) -> ProgramResult {
+    solana_program::msg!("verify owned");
     require!(
-        owner == &crate::ID,
+        owner == &crate::ID.to_bytes(),
         ProgramError::IllegalOwner,
-        "Account must be owned by the Manifest program expected:{} actual:{}",
+        "Account must be owned by the Manifest program expected:{} actual:{:?}",
         crate::ID,
         owner
     )?;
+    solana_program::msg!("done verify owned");
     Ok(())
 }
 
 fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> ProgramResult {
-    let bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
+    let bytes: Ref<[u8]> = info.try_borrow_data()?;
     require!(
         size_of::<T>() == bytes.len(),
         ProgramError::InvalidAccountData,
@@ -131,5 +134,5 @@ macro_rules! global_seeds_with_bump {
 }
 
 pub fn get_global_address(mint: &Pubkey) -> (Pubkey, u8) {
-    Pubkey::find_program_address(global_seeds!(mint), &crate::ID)
+    find_program_address(global_seeds!(mint), &crate::ID.to_bytes())
 }

@@ -69,7 +69,7 @@ impl TestFixture {
         let mut program: ProgramTest = ProgramTest::new(
             "manifest",
             manifest::ID,
-            processor!(manifest::process_instruction),
+            processor!(manifest::testable_process_instruction),
         );
 
         let second_keypair: Keypair = Keypair::new();

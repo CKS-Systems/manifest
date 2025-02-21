@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use hypertree::PodBool;
+use pinocchio::{program_error::ProgramError, pubkey::Pubkey};
 use shank::ShankAccount;
-use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     quantities::{BaseAtoms, GlobalAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom},
@@ -21,6 +21,7 @@ use crate::{
 #[inline(never)] // ensure fresh stack frame
 pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramError> {
     // stack buffer, stack frames are 4kb
+
     let mut buffer: [u8; 3000] = [0u8; 3000];
     buffer[..8].copy_from_slice(&T::discriminant());
     *bytemuck::from_bytes_mut::<T>(&mut buffer[8..8 + std::mem::size_of::<T>()]) = e;

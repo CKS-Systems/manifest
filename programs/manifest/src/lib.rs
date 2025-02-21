@@ -12,6 +12,9 @@ pub mod validation;
 pub mod certora;
 
 use hypertree::trace;
+#[cfg(not(feature = "no-entrypoint"))]
+use pinocchio::entrypoint;
+use pinocchio::{account_info::AccountInfo, program_error::ProgramError, ProgramResult};
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
     create_market::process_create_market, deposit::process_deposit,
@@ -21,10 +24,7 @@ use program::{
     global_withdraw::process_global_withdraw, process_swap, withdraw::process_withdraw,
     ManifestInstruction,
 };
-use solana_program::{
-    account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
-};
+use solana_program::declare_id;
 
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
@@ -90,13 +90,29 @@ security_txt! {
 declare_id!("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms");
 
 #[cfg(not(feature = "no-entrypoint"))]
-solana_program::entrypoint!(process_instruction);
+entrypoint!(pinocchio_process_instruction);
 
-pub fn process_instruction(
-    program_id: &Pubkey,
+// SolanaProgramTest requires using the default Pubkey, not the pinocchio
+// version.
+pub fn testable_process_instruction(
+    _program_id: &solana_program::pubkey::Pubkey,
+    accounts: &[solana_program::account_info::AccountInfo],
+    instruction_data: &[u8],
+) -> solana_program::entrypoint::ProgramResult {
+    process_instruction(accounts, instruction_data).unwrap();
+    Ok(())
+}
+
+pub fn pinocchio_process_instruction(
+    _program_id: &pinocchio::pubkey::Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
+    process_instruction(accounts, instruction_data)?;
+    Ok(())
+}
+
+fn process_instruction(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let (tag, data) = instruction_data
         .split_first()
         .ok_or(ProgramError::InvalidInstructionData)?;
@@ -108,43 +124,43 @@ pub fn process_instruction(
 
     match instruction {
         ManifestInstruction::CreateMarket => {
-            process_create_market(program_id, accounts, data)?;
+            process_create_market(accounts, data)?;
         }
         ManifestInstruction::ClaimSeat => {
-            process_claim_seat(program_id, accounts, data)?;
+            process_claim_seat(accounts, data)?;
         }
         ManifestInstruction::Deposit => {
-            process_deposit(program_id, accounts, data)?;
+            process_deposit(accounts, data)?;
         }
         ManifestInstruction::Withdraw => {
-            process_withdraw(program_id, accounts, data)?;
+            process_withdraw(accounts, data)?;
         }
         ManifestInstruction::Swap => {
-            process_swap(program_id, accounts, data)?;
+            process_swap(accounts, data)?;
         }
         ManifestInstruction::Expand => {
-            process_expand_market(program_id, accounts, data)?;
+            process_expand_market(accounts, data)?;
         }
         ManifestInstruction::BatchUpdate => {
-            process_batch_update(program_id, accounts, data)?;
+            process_batch_update(accounts, data)?;
         }
         ManifestInstruction::GlobalCreate => {
-            process_global_create(program_id, accounts, data)?;
+            process_global_create(accounts, data)?;
         }
         ManifestInstruction::GlobalAddTrader => {
-            process_global_add_trader(program_id, accounts, data)?;
+            process_global_add_trader(accounts, data)?;
         }
         ManifestInstruction::GlobalDeposit => {
-            process_global_deposit(program_id, accounts, data)?;
+            process_global_deposit(accounts, data)?;
         }
         ManifestInstruction::GlobalWithdraw => {
-            process_global_withdraw(program_id, accounts, data)?;
+            process_global_withdraw(accounts, data)?;
         }
         ManifestInstruction::GlobalEvict => {
-            process_global_evict(program_id, accounts, data)?;
+            process_global_evict(accounts, data)?;
         }
         ManifestInstruction::GlobalClean => {
-            process_global_clean(program_id, accounts, data)?;
+            process_global_clean(accounts, data)?;
         }
     }
 

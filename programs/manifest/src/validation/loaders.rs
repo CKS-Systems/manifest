@@ -1,12 +1,12 @@
-use std::{cell::Ref, slice::Iter};
+use std::slice::Iter;
 
 use hypertree::{get_helper, trace};
-use solana_program::{
-    account_info::{next_account_info, AccountInfo},
+use pinocchio::{
+    account_info::{AccountInfo, Ref},
     program_error::ProgramError,
     pubkey::Pubkey,
-    system_program,
 };
+use solana_program::system_program;
 
 use crate::{
     program::ManifestError,
@@ -21,44 +21,52 @@ use super::{get_vault_address, ManifestAccountInfo, TokenProgram};
 use early_panic::early_panic;
 
 /// CreateMarket account infos
-pub(crate) struct CreateMarketContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub base_mint: MintAccountInfo<'a, 'info>,
-    pub quote_mint: MintAccountInfo<'a, 'info>,
-    pub base_vault: EmptyAccount<'a, 'info>,
-    pub quote_vault: EmptyAccount<'a, 'info>,
-    pub system_program: Program<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
-    pub token_program_22: TokenProgram<'a, 'info>,
+pub(crate) struct CreateMarketContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub base_mint: MintAccountInfo<'a>,
+    pub quote_mint: MintAccountInfo<'a>,
+    pub base_vault: EmptyAccount<'a>,
+    pub quote_vault: EmptyAccount<'a>,
+    pub system_program: Program<'a>,
+    pub token_program: TokenProgram<'a>,
+    pub token_program_22: TokenProgram<'a>,
 }
 
-impl<'a, 'info> CreateMarketContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+fn next_account_info<'a, I: Iterator<Item = &'a AccountInfo>>(
+    iter: &mut I,
+) -> Result<I::Item, ProgramError> {
+    iter.next().ok_or(ProgramError::NotEnoughAccountKeys)
+}
+
+impl<'a> CreateMarketContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new_init(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         let base_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
         let quote_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
         let base_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
         let quote_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
 
         let (expected_base_vault, _base_vault_bump) =
-            get_vault_address(market.key, base_mint.info.key);
+            get_vault_address(market.key(), base_mint.info.key());
         let (expected_quote_vault, _quote_vault_bump) =
-            get_vault_address(market.key, quote_mint.info.key);
+            get_vault_address(market.key(), quote_mint.info.key());
 
         require!(
-            expected_base_vault == *base_vault.info.key,
+            expected_base_vault == *base_vault.info.key(),
             ManifestError::IncorrectAccount,
             "Incorrect base vault account",
         )?;
         require!(
-            expected_quote_vault == *quote_vault.info.key,
+            expected_quote_vault == *quote_vault.info.key(),
             ManifestError::IncorrectAccount,
             "Incorrect quote vault account",
         )?;
@@ -80,22 +88,24 @@ impl<'a, 'info> CreateMarketContext<'a, 'info> {
 }
 
 /// ClaimSeat account infos
-pub(crate) struct ClaimSeatContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+pub(crate) struct ClaimSeatContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub system_program: Program<'a>,
 }
 
-impl<'a, 'info> ClaimSeatContext<'a, 'info> {
+impl<'a> ClaimSeatContext<'a> {
     #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         Ok(Self {
             payer,
             market,
@@ -105,21 +115,23 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
 }
 
 /// ExpandMarketContext account infos
-pub(crate) struct ExpandMarketContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+pub(crate) struct ExpandMarketContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub system_program: Program<'a>,
 }
 
-impl<'a, 'info> ExpandMarketContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> ExpandMarketContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         Ok(Self {
             payer,
             market,
@@ -129,19 +141,19 @@ impl<'a, 'info> ExpandMarketContext<'a, 'info> {
 }
 
 /// Deposit into a market account infos
-pub(crate) struct DepositContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub trader_token: TokenAccountInfo<'a, 'info>,
-    pub vault: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
-    pub mint: MintAccountInfo<'a, 'info>,
+pub(crate) struct DepositContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub trader_token: TokenAccountInfo<'a>,
+    pub vault: TokenAccountInfo<'a>,
+    pub token_program: TokenProgram<'a>,
+    pub mint: MintAccountInfo<'a>,
 }
 
-impl<'a, 'info> DepositContext<'a, 'info> {
+impl<'a> DepositContext<'a> {
     #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
@@ -151,7 +163,7 @@ impl<'a, 'info> DepositContext<'a, 'info> {
         let base_mint: &Pubkey = market_fixed.get_base_mint();
         let quote_mint: &Pubkey = market_fixed.get_quote_mint();
 
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
 
         // Infer the mint key from the token account.
         let (mint, expected_vault_address) =
@@ -163,9 +175,9 @@ impl<'a, 'info> DepositContext<'a, 'info> {
                 return Err(ManifestError::InvalidWithdrawAccounts.into());
             };
 
-        trace!("trader token account {:?}", token_account_info.key);
+        trace!("trader token account {:?}", token_account_info.key());
         let trader_token: TokenAccountInfo =
-            TokenAccountInfo::new_with_owner(token_account_info, mint, payer.key)?;
+            TokenAccountInfo::new_with_owner(token_account_info, mint, payer.key())?;
 
         trace!("vault token account {:?}", expected_vault_address);
         let vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
@@ -192,18 +204,18 @@ impl<'a, 'info> DepositContext<'a, 'info> {
 }
 
 /// Withdraw account infos
-pub(crate) struct WithdrawContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub trader_token: TokenAccountInfo<'a, 'info>,
-    pub vault: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
-    pub mint: MintAccountInfo<'a, 'info>,
+pub(crate) struct WithdrawContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub trader_token: TokenAccountInfo<'a>,
+    pub vault: TokenAccountInfo<'a>,
+    pub token_program: TokenProgram<'a>,
+    pub mint: MintAccountInfo<'a>,
 }
 
-impl<'a, 'info> WithdrawContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> WithdrawContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
@@ -213,7 +225,7 @@ impl<'a, 'info> WithdrawContext<'a, 'info> {
         let base_mint: &Pubkey = market_fixed.get_base_mint();
         let quote_mint: &Pubkey = market_fixed.get_quote_mint();
 
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
 
         let (mint, expected_vault_address) =
             if &token_account_info.try_borrow_data()?[0..32] == base_mint.as_ref() {
@@ -225,7 +237,7 @@ impl<'a, 'info> WithdrawContext<'a, 'info> {
             };
 
         let trader_token: TokenAccountInfo =
-            TokenAccountInfo::new_with_owner(token_account_info, mint, payer.key)?;
+            TokenAccountInfo::new_with_owner(token_account_info, mint, payer.key())?;
         let vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
             next_account_info(account_iter)?,
             mint,
@@ -250,26 +262,26 @@ impl<'a, 'info> WithdrawContext<'a, 'info> {
 }
 
 /// Swap account infos
-pub(crate) struct SwapContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub trader_base: TokenAccountInfo<'a, 'info>,
-    pub trader_quote: TokenAccountInfo<'a, 'info>,
-    pub base_vault: TokenAccountInfo<'a, 'info>,
-    pub quote_vault: TokenAccountInfo<'a, 'info>,
-    pub token_program_base: TokenProgram<'a, 'info>,
-    pub token_program_quote: TokenProgram<'a, 'info>,
-    pub base_mint: Option<MintAccountInfo<'a, 'info>>,
-    pub quote_mint: Option<MintAccountInfo<'a, 'info>>,
+pub(crate) struct SwapContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub trader_base: TokenAccountInfo<'a>,
+    pub trader_quote: TokenAccountInfo<'a>,
+    pub base_vault: TokenAccountInfo<'a>,
+    pub quote_vault: TokenAccountInfo<'a>,
+    pub token_program_base: TokenProgram<'a>,
+    pub token_program_quote: TokenProgram<'a>,
+    pub base_mint: Option<MintAccountInfo<'a>>,
+    pub quote_mint: Option<MintAccountInfo<'a>>,
 
     // One for each side. First is base, then is quote.
-    pub global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2],
+    pub global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a>>; 2],
 }
 
-impl<'a, 'info> SwapContext<'a, 'info> {
+impl<'a> SwapContext<'a> {
     #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
@@ -282,12 +294,12 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let trader_base: TokenAccountInfo = TokenAccountInfo::new_with_owner(
             next_account_info(account_iter)?,
             &base_mint_key,
-            payer.key,
+            payer.key(),
         )?;
         let trader_quote: TokenAccountInfo = TokenAccountInfo::new_with_owner(
             next_account_info(account_iter)?,
             &quote_mint_key,
-            payer.key,
+            payer.key(),
         )?;
         let base_vault_address: &Pubkey = market_fixed.get_base_vault();
         let quote_vault_address: &Pubkey = market_fixed.get_quote_vault();
@@ -309,15 +321,15 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let token_program_base: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         let mut base_mint: Option<MintAccountInfo> = None;
 
-        let mut current_account_info_or: Result<&AccountInfo<'info>, ProgramError> =
+        let mut current_account_info_or: Result<&AccountInfo, ProgramError> =
             next_account_info(account_iter);
 
         // Possibly includes base mint.
-        if current_account_info_or
-            .as_ref()
-            .is_ok_and(|f| *f.owner == spl_token::id() || *f.owner == spl_token_2022::id())
-        {
-            let current_account_info: &AccountInfo<'info> = current_account_info_or?;
+        if current_account_info_or.as_ref().is_ok_and(|f| {
+            *f.owner() == spl_token::id().to_bytes()
+                || *f.owner() == spl_token_2022::id().to_bytes()
+        }) {
+            let current_account_info: &AccountInfo = current_account_info_or?;
             base_mint = Some(MintAccountInfo::new(current_account_info)?);
             current_account_info_or = next_account_info(account_iter);
         }
@@ -326,49 +338,46 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         // anyways, so at most this is one more.
         let mut token_program_quote: TokenProgram = token_program_base.clone();
         let mut quote_mint: Option<MintAccountInfo> = None;
-        let mut global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2] =
-            [None, None];
+        let mut global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a>>; 2] = [None, None];
 
         // Possibly includes quote token program.
-        if current_account_info_or
-            .as_ref()
-            .is_ok_and(|f| *f.key == spl_token::id() || *f.key == spl_token_2022::id())
-        {
-            let current_account_info: &AccountInfo<'info> = current_account_info_or?;
+        if current_account_info_or.as_ref().is_ok_and(|f| {
+            *f.key() == spl_token::id().to_bytes() || *f.key() == spl_token_2022::id().to_bytes()
+        }) {
+            let current_account_info: &AccountInfo = current_account_info_or?;
             token_program_quote = TokenProgram::new(current_account_info)?;
             current_account_info_or = next_account_info(account_iter);
         }
         // Possibly includes quote mint if the quote token program was token22.
-        if current_account_info_or
-            .as_ref()
-            .is_ok_and(|f| *f.owner == spl_token::id() || *f.owner == spl_token_2022::id())
-        {
-            let current_account_info: &AccountInfo<'info> = current_account_info_or?;
+        if current_account_info_or.as_ref().is_ok_and(|f| {
+            *f.owner() == spl_token::id().to_bytes()
+                || *f.owner() == spl_token_2022::id().to_bytes()
+        }) {
+            let current_account_info: &AccountInfo = current_account_info_or?;
             quote_mint = Some(MintAccountInfo::new(current_account_info)?);
             current_account_info_or = next_account_info(account_iter);
         }
 
         if current_account_info_or.is_ok() {
-            let current_account_info: &AccountInfo<'info> = current_account_info_or?;
+            let current_account_info: &AccountInfo = current_account_info_or?;
 
             // It is possible that the global account does not exist. Do not
             // throw an error. This will happen when users just blindly include
             // global accounts that have not been initialized.
             if !current_account_info.data_is_empty() {
-                let global: ManifestAccountInfo<'a, 'info, GlobalFixed> =
+                let global: ManifestAccountInfo<'a, GlobalFixed> =
                     ManifestAccountInfo::<GlobalFixed>::new(current_account_info)?;
-                let global_data: Ref<&mut [u8]> = global.data.borrow();
+                let global_data: Ref<[u8]> = global.try_borrow_data()?;
                 let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                 let global_mint_key: &Pubkey = global_fixed.get_mint();
                 let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
-                let global_vault: TokenAccountInfo<'a, 'info> =
-                    TokenAccountInfo::new_with_owner_and_key(
-                        next_account_info(account_iter)?,
-                        global_mint_key,
-                        &expected_global_vault_address,
-                        &expected_global_vault_address,
-                    )?;
+                let global_vault: TokenAccountInfo<'a> = TokenAccountInfo::new_with_owner_and_key(
+                    next_account_info(account_iter)?,
+                    global_mint_key,
+                    &expected_global_vault_address,
+                    &expected_global_vault_address,
+                )?;
 
                 let index: usize = if *global_mint_key == base_mint_key {
                     0
@@ -402,7 +411,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                     },
                     gas_payer_opt: None,
                     gas_receiver_opt: Some(payer.clone()),
-                    market: *market.info.key,
+                    market: *market.info.key(),
                     // System program not included because does not rest an order.
                     system_program: None,
                 });
@@ -427,53 +436,54 @@ impl<'a, 'info> SwapContext<'a, 'info> {
 
 /// Accounts needed to make a global trade. Scope is beyond just crate so
 /// clients can place orders on markets in testing.
-pub struct GlobalTradeAccounts<'a, 'info> {
+pub struct GlobalTradeAccounts<'a> {
     /// Required if this is a token22 token.
-    pub mint_opt: Option<MintAccountInfo<'a, 'info>>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
+    pub mint_opt: Option<MintAccountInfo<'a>>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
 
     // These are required when matching a global order, not necessarily when
     // cancelling since tokens dont move in that case.
-    pub global_vault_opt: Option<TokenAccountInfo<'a, 'info>>,
-    pub market_vault_opt: Option<TokenAccountInfo<'a, 'info>>,
-    pub token_program_opt: Option<TokenProgram<'a, 'info>>,
+    pub global_vault_opt: Option<TokenAccountInfo<'a>>,
+    pub market_vault_opt: Option<TokenAccountInfo<'a>>,
+    pub token_program_opt: Option<TokenProgram<'a>>,
 
-    pub system_program: Option<Program<'a, 'info>>,
+    pub system_program: Option<Program<'a>>,
 
     // Trader is sending or cancelling the order. They are the one who will pay
     // or receive gas prepayments.
-    pub gas_payer_opt: Option<Signer<'a, 'info>>,
-    pub gas_receiver_opt: Option<Signer<'a, 'info>>,
+    pub gas_payer_opt: Option<Signer<'a>>,
+    pub gas_receiver_opt: Option<Signer<'a>>,
     pub market: Pubkey,
 }
 
 /// BatchUpdate account infos
-pub(crate) struct BatchUpdateContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+pub(crate) struct BatchUpdateContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub system_program: Program<'a>,
 
     // One for each side. First is base, then is quote.
-    pub global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2],
+    pub global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a>>; 2],
 }
 
-impl<'a, 'info> BatchUpdateContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> BatchUpdateContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         // Does not have to be writable, but this ix will fail if removing a
         // global or requiring expanding.
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         // Certora version is not mutable.
         #[cfg(feature = "certora")]
-        let global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2] = [None, None];
+        let global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a>>; 2] = [None, None];
         #[cfg(not(feature = "certora"))]
-        let mut global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2] =
-            [None, None];
+        let mut global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a>>; 2] = [None, None];
 
         #[cfg(not(feature = "certora"))]
         {
@@ -485,61 +495,58 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
             drop(market_fixed);
 
             for _ in 0..2 {
-                let next_account_info_or: Result<&AccountInfo<'info>, ProgramError> =
+                let next_account_info_or: Result<&AccountInfo, ProgramError> =
                     next_account_info(account_iter);
                 if next_account_info_or.is_ok() {
-                    let mint: MintAccountInfo<'a, 'info> =
-                        MintAccountInfo::new(next_account_info_or?)?;
-                    let (index, expected_market_vault_address) = if base_mint == *mint.info.key {
+                    let mint: MintAccountInfo<'a> = MintAccountInfo::new(next_account_info_or?)?;
+                    let (index, expected_market_vault_address) = if base_mint == *mint.info.key() {
                         (0, &base_vault)
                     } else {
                         require!(
-                            quote_mint == *mint.info.key,
+                            quote_mint == *mint.info.key(),
                             ManifestError::MissingGlobal,
                             "Unexpected global mint",
                         )?;
                         (1, &quote_vault)
                     };
 
-                    let global_or: Result<
-                        ManifestAccountInfo<'a, 'info, GlobalFixed>,
-                        ProgramError,
-                    > = ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?);
+                    let global_or: Result<ManifestAccountInfo<'a, GlobalFixed>, ProgramError> =
+                        ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?);
 
                     // If a client blindly fills in the global account and vault,
                     // then handle that case and allow them to try to work without
                     // the global accounts.
                     if global_or.is_err() {
-                        let _global_vault: Result<&AccountInfo<'info>, ProgramError> =
+                        let _global_vault: Result<&AccountInfo, ProgramError> =
                             next_account_info(account_iter);
-                        let _market_vault: Result<&AccountInfo<'info>, ProgramError> =
+                        let _market_vault: Result<&AccountInfo, ProgramError> =
                             next_account_info(account_iter);
-                        let _token_program: Result<&AccountInfo<'info>, ProgramError> =
+                        let _token_program: Result<&AccountInfo, ProgramError> =
                             next_account_info(account_iter);
                         continue;
                     }
-                    let global: ManifestAccountInfo<'a, 'info, GlobalFixed> = global_or.unwrap();
-                    let global_data: Ref<&mut [u8]> = global.data.borrow();
+                    let global: ManifestAccountInfo<'a, GlobalFixed> = global_or.unwrap();
+                    let global_data: Ref<[u8]> = global.try_borrow_data()?;
                     let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                     let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
-                    let global_vault: TokenAccountInfo<'a, 'info> =
+                    let global_vault: TokenAccountInfo<'a> =
                         TokenAccountInfo::new_with_owner_and_key(
                             next_account_info(account_iter)?,
-                            mint.info.key,
+                            mint.info.key(),
                             &expected_global_vault_address,
                             &expected_global_vault_address,
                         )?;
                     drop(global_data);
 
-                    let market_vault: TokenAccountInfo<'a, 'info> =
+                    let market_vault: TokenAccountInfo<'a> =
                         TokenAccountInfo::new_with_owner_and_key(
                             next_account_info(account_iter)?,
-                            mint.info.key,
+                            mint.info.key(),
                             &expected_market_vault_address,
                             &expected_market_vault_address,
                         )?;
-                    let token_program: TokenProgram<'a, 'info> =
+                    let token_program: TokenProgram<'a> =
                         TokenProgram::new(next_account_info(account_iter)?)?;
 
                     global_trade_accounts_opts[index] = Some(GlobalTradeAccounts {
@@ -551,7 +558,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                         system_program: Some(system_program.clone()),
                         gas_payer_opt: Some(payer.clone()),
                         gas_receiver_opt: Some(payer.clone()),
-                        market: *market.info.key,
+                        market: *market.info.key(),
                     })
                 };
             }
@@ -567,23 +574,25 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
 }
 
 /// Global create
-pub(crate) struct GlobalCreateContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: EmptyAccount<'a, 'info>,
-    pub system_program: Program<'a, 'info>,
-    pub global_mint: MintAccountInfo<'a, 'info>,
-    pub global_vault: EmptyAccount<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
+pub(crate) struct GlobalCreateContext<'a> {
+    pub payer: Signer<'a>,
+    pub global: EmptyAccount<'a>,
+    pub system_program: Program<'a>,
+    pub global_mint: MintAccountInfo<'a>,
+    pub global_vault: EmptyAccount<'a>,
+    pub token_program: TokenProgram<'a>,
 }
 
-impl<'a, 'info> GlobalCreateContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalCreateContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let global: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         let global_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
         // Address of the global vault is verified in the handler because the
         // create will only work if the signer seeds match.
@@ -601,21 +610,23 @@ impl<'a, 'info> GlobalCreateContext<'a, 'info> {
 }
 
 /// Global add trader
-pub(crate) struct GlobalAddTraderContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub system_program: Program<'a, 'info>,
+pub(crate) struct GlobalAddTraderContext<'a> {
+    pub payer: Signer<'a>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
+    pub system_program: Program<'a>,
 }
 
-impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalAddTraderContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         Ok(Self {
             payer,
             global,
@@ -625,18 +636,18 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
 }
 
 /// Global deposit
-pub(crate) struct GlobalDepositContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub mint: MintAccountInfo<'a, 'info>,
-    pub global_vault: TokenAccountInfo<'a, 'info>,
-    pub trader_token: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
+pub(crate) struct GlobalDepositContext<'a> {
+    pub payer: Signer<'a>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
+    pub mint: MintAccountInfo<'a>,
+    pub global_vault: TokenAccountInfo<'a>,
+    pub trader_token: TokenAccountInfo<'a>,
+    pub token_program: TokenProgram<'a>,
 }
 
-impl<'a, 'info> GlobalDepositContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalDepositContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
@@ -644,21 +655,21 @@ impl<'a, 'info> GlobalDepositContext<'a, 'info> {
 
         let mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
 
-        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_data: Ref<[u8]> = global.try_borrow_data()?;
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
             next_account_info(account_iter)?,
-            mint.info.key,
+            mint.info.key(),
             &expected_global_vault_address,
             &expected_global_vault_address,
         )?;
         drop(global_data);
 
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
         let trader_token: TokenAccountInfo =
-            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key(), payer.key())?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
             payer,
@@ -672,18 +683,18 @@ impl<'a, 'info> GlobalDepositContext<'a, 'info> {
 }
 
 /// Global withdraw
-pub(crate) struct GlobalWithdrawContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub mint: MintAccountInfo<'a, 'info>,
-    pub global_vault: TokenAccountInfo<'a, 'info>,
-    pub trader_token: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
+pub(crate) struct GlobalWithdrawContext<'a> {
+    pub payer: Signer<'a>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
+    pub mint: MintAccountInfo<'a>,
+    pub global_vault: TokenAccountInfo<'a>,
+    pub trader_token: TokenAccountInfo<'a>,
+    pub token_program: TokenProgram<'a>,
 }
 
-impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalWithdrawContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
@@ -691,21 +702,21 @@ impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
 
         let mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
 
-        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_data: Ref<[u8]> = global.try_borrow_data()?;
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
             next_account_info(account_iter)?,
-            mint.info.key,
+            mint.info.key(),
             &expected_global_vault_address,
             &expected_global_vault_address,
         )?;
         drop(global_data);
 
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
         let trader_token: TokenAccountInfo =
-            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key(), payer.key())?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
             payer,
@@ -719,19 +730,19 @@ impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
 }
 
 /// Global evict
-pub(crate) struct GlobalEvictContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub mint: MintAccountInfo<'a, 'info>,
-    pub global_vault: TokenAccountInfo<'a, 'info>,
-    pub trader_token: TokenAccountInfo<'a, 'info>,
-    pub evictee_token: TokenAccountInfo<'a, 'info>,
-    pub token_program: TokenProgram<'a, 'info>,
+pub(crate) struct GlobalEvictContext<'a> {
+    pub payer: Signer<'a>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
+    pub mint: MintAccountInfo<'a>,
+    pub global_vault: TokenAccountInfo<'a>,
+    pub trader_token: TokenAccountInfo<'a>,
+    pub evictee_token: TokenAccountInfo<'a>,
+    pub token_program: TokenProgram<'a>,
 }
 
-impl<'a, 'info> GlobalEvictContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalEvictContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
@@ -739,24 +750,24 @@ impl<'a, 'info> GlobalEvictContext<'a, 'info> {
 
         let mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
 
-        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_data: Ref<[u8]> = global.try_borrow_data()?;
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
             next_account_info(account_iter)?,
-            mint.info.key,
+            mint.info.key(),
             &expected_global_vault_address,
             &expected_global_vault_address,
         )?;
         drop(global_data);
 
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
         let trader_token: TokenAccountInfo =
-            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key, payer.key)?;
-        let token_account_info: &AccountInfo<'info> = next_account_info(account_iter)?;
+            TokenAccountInfo::new_with_owner(token_account_info, mint.info.key(), payer.key())?;
+        let token_account_info: &AccountInfo = next_account_info(account_iter)?;
         let evictee_token: TokenAccountInfo =
-            TokenAccountInfo::new(token_account_info, mint.info.key)?;
+            TokenAccountInfo::new(token_account_info, mint.info.key())?;
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
             payer,
@@ -771,22 +782,24 @@ impl<'a, 'info> GlobalEvictContext<'a, 'info> {
 }
 
 /// Global clean
-pub(crate) struct GlobalCleanContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
-    pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
-    pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
+pub(crate) struct GlobalCleanContext<'a> {
+    pub payer: Signer<'a>,
+    pub market: ManifestAccountInfo<'a, MarketFixed>,
+    pub system_program: Program<'a>,
+    pub global: ManifestAccountInfo<'a, GlobalFixed>,
 }
 
-impl<'a, 'info> GlobalCleanContext<'a, 'info> {
-    pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
-        let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
+impl<'a> GlobalCleanContext<'a> {
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<Self, ProgramError> {
+        let account_iter: &mut Iter<AccountInfo> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
-            Program::new(next_account_info(account_iter)?, &system_program::id())?;
+        let system_program: Program = Program::new(
+            next_account_info(account_iter)?,
+            &system_program::id().to_bytes(),
+        )?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
 

@@ -4,8 +4,8 @@ use std::mem::size_of;
 use crate::quantities::WrapperU64;
 use crate::quantities::{BaseAtoms, QuoteAtoms};
 use bytemuck::{Pod, Zeroable};
+use pinocchio::pubkey::Pubkey;
 use shank::ShankType;
-use solana_program::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 use std::cmp::Ordering;
 
@@ -80,7 +80,7 @@ impl Eq for ClaimedSeat {}
 
 impl std::fmt::Display for ClaimedSeat {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.trader)
+        write!(f, "{}", solana_program::pubkey::Pubkey::from(self.trader))
     }
 }
 

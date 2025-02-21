@@ -63,6 +63,9 @@ vectors = { workspace = true, optional = true}
 hook_macro = { workspace = true, optional = true}
 arrayref = { workspace = true}
 solana-invoke = { workspace = true }
+pinocchio = { workspace = true, features = ["std"] }
+pinocchio-system = "0.2.1"
+pinocchio-token = "0.2.1"
 
 [dev-dependencies]
 anyhow = { workspace = true }

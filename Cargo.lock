@@ -1631,6 +1631,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "five8_const"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b4f62f0f8ca357f93ae90c8c2dd1041a1f665fde2f889ea9b1787903829015"
+dependencies = [
+ "five8_core",
+]
+
+[[package]]
+name = "five8_core"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94474d15a76982be62ca8a39570dccce148d98c238ebb7408b0a21b2c4bdddc4"
+
+[[package]]
 name = "flate2"
 version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2572,6 +2587,9 @@ dependencies = [
  "hypertree 1.0.0",
  "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",
  "num_enum 0.5.11",
+ "pinocchio",
+ "pinocchio-system",
+ "pinocchio-token",
  "shank",
  "solana-invoke",
  "solana-logger",
@@ -3178,6 +3196,42 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pinocchio"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43a8a77bf74e1c4050a2bad53648acfcfbf22b1806473f9c9334a58ef3b38ec4"
+
+[[package]]
+name = "pinocchio-pubkey"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "103d69776a0c585bb01b344d641346593adb4496120796df229722a9bab2db68"
+dependencies = [
+ "five8_const",
+ "pinocchio",
+]
+
+[[package]]
+name = "pinocchio-system"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "691ec8989fcb86fba22f22deb3cae9d440dc174d1735dd785b172349e9cbbb8a"
+dependencies = [
+ "pinocchio",
+ "pinocchio-pubkey",
+]
+
+[[package]]
+name = "pinocchio-token"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94c71afd8ddf3d2befc8c64e6efc58ede172bb98051c0faa02db8a737c958cd"
+dependencies = [
+ "pinocchio",
+ "pinocchio-pubkey",
+]
 
 [[package]]
 name = "pkcs8"

@@ -1,8 +1,11 @@
-use std::cell::RefMut;
-
 use borsh::{BorshDeserialize, BorshSerialize};
-use hypertree::{get_helper, trace, DataIndex, RBNode};
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+use hypertree::{get_helper, DataIndex, RBNode};
+use pinocchio::{
+    account_info::{AccountInfo, RefMut},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    ProgramResult,
+};
 
 use crate::{
     program::{batch_update::MarketDataTreeNodeType, get_mut_dynamic_account},
@@ -23,12 +26,7 @@ impl GlobalCleanParams {
     }
 }
 
-pub(crate) fn process_global_clean(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    data: &[u8],
-) -> ProgramResult {
-    trace!("process_global_clean accs={accounts:?}");
+pub(crate) fn process_global_clean(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let global_clean_context: GlobalCleanContext = GlobalCleanContext::load(accounts)?;
 
     let GlobalCleanContext {
@@ -45,17 +43,18 @@ pub(crate) fn process_global_clean(
         market_vault_opt: None,
         token_program_opt: None,
         system_program: Some(system_program),
-        market: *market.key,
+        market: *market.key(),
         gas_payer_opt: None,
         gas_receiver_opt: Some(payer),
     };
 
-    let GlobalCleanParams { order_index } = GlobalCleanParams::try_from_slice(data)?;
+    let GlobalCleanParams { order_index } =
+        GlobalCleanParams::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)?;
 
-    let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+    let market_data: &mut RefMut<[u8]> = &mut market.try_borrow_mut_data()?;
     let mut market_dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data()?;
     let global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     // Get the resting order and do some checks to make sure the order index is

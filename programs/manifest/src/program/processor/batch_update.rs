@@ -1,5 +1,3 @@
-use std::cell::RefMut;
-
 use crate::{
     logs::{emit_stack, CancelOrderLog, PlaceOrderLog},
     program::get_trader_index_with_hint,
@@ -14,9 +12,10 @@ use crate::{
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use hypertree::{get_helper, trace, DataIndex, PodBool, RBNode};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+use pinocchio::{
+    account_info::{AccountInfo, RefMut},
+    program_error::ProgramError,
+    ProgramResult,
 };
 
 use super::{expand_market_if_needed, shared::get_mut_dynamic_account};
@@ -151,13 +150,10 @@ pub enum MarketDataTreeNodeType {
     RestingOrder = 2,
 }
 
-pub(crate) fn process_batch_update(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    data: &[u8],
-) -> ProgramResult {
-    let params: BatchUpdateParams = BatchUpdateParams::try_from_slice(data)?;
-    process_batch_update_core(program_id, accounts, params)
+pub(crate) fn process_batch_update(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let params: BatchUpdateParams =
+        BatchUpdateParams::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)?;
+    process_batch_update_core(accounts, params)
 }
 
 #[cfg(not(feature = "certora"))]
@@ -207,7 +203,6 @@ fn batch_place_order(
 
 #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_batch_update_core(
-    _program_id: &Pubkey,
     accounts: &[AccountInfo],
     params: BatchUpdateParams,
 ) -> ProgramResult {
@@ -231,7 +226,7 @@ pub(crate) fn process_batch_update_core(
     trace!("batch_update trader_index_hint:{trader_index_hint:?} cancels:{cancels:?} orders:{orders:?}");
 
     let trader_index: DataIndex = {
-        let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+        let market_data: &mut RefMut<[u8]> = &mut market.try_borrow_mut_data()?;
 
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let trader_index: DataIndex =
@@ -292,8 +287,8 @@ pub(crate) fn process_batch_update_core(
             };
 
             emit_stack(CancelOrderLog {
-                market: *market.key,
-                trader: *payer.key,
+                market: *market.key(),
+                trader: *payer.key(),
                 order_sequence_number: cancel_order_params.order_sequence_number(),
             })?;
         }
@@ -313,13 +308,13 @@ pub(crate) fn process_batch_update_core(
             let last_valid_slot: u32 = place_order_params.last_valid_slot();
 
             // Need to reborrow every iteration so we can borrow later for expanding.
-            let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+            let market_data: &mut RefMut<[u8]> = &mut market.try_borrow_mut_data()?;
             let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
             let add_order_to_market_result: AddOrderToMarketResult = batch_place_order(
                 &mut dynamic_account,
                 AddOrderToMarketArgs {
-                    market: *market.key,
+                    market: *market.key(),
                     trader_index,
                     num_base_atoms: base_atoms,
                     price,
@@ -338,8 +333,8 @@ pub(crate) fn process_batch_update_core(
             } = add_order_to_market_result;
 
             emit_stack(PlaceOrderLog {
-                market: *market.key,
-                trader: *payer.key,
+                market: *market.key(),
+                trader: *payer.key(),
                 base_atoms,
                 price,
                 order_type,

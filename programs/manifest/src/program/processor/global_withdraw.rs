@@ -1,9 +1,10 @@
-use std::cell::RefMut;
-
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey,
+use pinocchio::{
+    account_info::{AccountInfo, RefMut},
+    program_error::ProgramError,
+    ProgramResult,
 };
+use pinocchio_token::instructions::Transfer;
 
 use crate::{
     global_vault_seeds_with_bump,
@@ -29,13 +30,10 @@ impl GlobalWithdrawParams {
     }
 }
 
-pub(crate) fn process_global_withdraw(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    data: &[u8],
-) -> ProgramResult {
+pub(crate) fn process_global_withdraw(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let global_withdraw_context: GlobalWithdrawContext = GlobalWithdrawContext::load(accounts)?;
-    let GlobalWithdrawParams { amount_atoms } = GlobalWithdrawParams::try_from_slice(data)?;
+    let GlobalWithdrawParams { amount_atoms } =
+        GlobalWithdrawParams::try_from_slice(data).map_err(|_| ProgramError::InvalidAccountData)?;
 
     let GlobalWithdrawContext {
         payer,
@@ -46,14 +44,14 @@ pub(crate) fn process_global_withdraw(
         token_program,
     } = global_withdraw_context;
 
-    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let global_data: &mut RefMut<[u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-    global_dynamic_account.withdraw_global(payer.key, GlobalAtoms::new(amount_atoms))?;
+    global_dynamic_account.withdraw_global(payer.key(), GlobalAtoms::new(amount_atoms))?;
 
-    let (_, bump) = get_global_vault_address(mint.info.key);
+    let (_, bump) = get_global_vault_address(mint.info.key());
 
     // Do the token transfer
-    if *global_vault.owner == spl_token_2022::id() {
+    if *global_vault.owner() == spl_token_2022::id().to_bytes() {
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,
@@ -74,27 +72,18 @@ pub(crate) fn process_global_withdraw(
             global_vault_seeds_with_bump!(mint.info.key, bump),
         )?;
     } else {
-        invoke_signed(
-            &spl_token::instruction::transfer(
-                token_program.key,
-                global_vault.key,
-                trader_token.key,
-                global_vault.key,
-                &[],
-                amount_atoms,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                global_vault.as_ref().clone(),
-                trader_token.as_ref().clone(),
-            ],
-            global_vault_seeds_with_bump!(mint.info.key, bump),
-        )?;
+        Transfer {
+            from: &global_vault,
+            to: &trader_token,
+            authority: &global_vault,
+            amount: amount_atoms,
+        }
+        .invoke_signed(global_vault_seeds_with_bump!(mint.info.key(), bump))?;
     }
 
     emit_stack(GlobalWithdrawLog {
-        global: *global.key,
-        trader: *payer.key,
+        global: *global.key(),
+        trader: *payer.key(),
         global_atoms: GlobalAtoms::new(amount_atoms),
     })?;
 

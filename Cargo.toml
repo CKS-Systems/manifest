@@ -37,6 +37,8 @@ hook_macro = { git = "https://github.com/Certora/solana-cvt.git" }
 vectors = { git = "https://github.com/Certora/solana-cvt.git", branch="dev-vector-borsh" }
 arrayref = "0.3.7"
 
+pinocchio = { version = "0.7.0" }
+
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
 codegen-units = 1

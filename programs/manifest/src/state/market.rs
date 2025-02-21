@@ -14,8 +14,8 @@ use hypertree::{
     HyperTreeReadOperations, HyperTreeValueIteratorTrait, HyperTreeWriteOperations, RedBlackTree,
     RedBlackTreeReadOnly,
 };
+use pinocchio::{program_error::ProgramError, pubkey::Pubkey, ProgramResult};
 use shank::ShankType;
-use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 use std::mem::size_of;
 
@@ -99,7 +99,7 @@ mod helpers {
 pub use helpers::*;
 
 #[derive(Clone)]
-pub struct AddOrderToMarketArgs<'a, 'info> {
+pub struct AddOrderToMarketArgs<'a> {
     pub market: Pubkey,
     pub trader_index: DataIndex,
     pub num_base_atoms: BaseAtoms,
@@ -107,7 +107,7 @@ pub struct AddOrderToMarketArgs<'a, 'info> {
     pub is_bid: bool,
     pub last_valid_slot: u32,
     pub order_type: OrderType,
-    pub global_trade_accounts_opts: &'a [Option<GlobalTradeAccounts<'a, 'info>>; 2],
+    pub global_trade_accounts_opts: &'a [Option<GlobalTradeAccounts<'a>>; 2],
     pub current_slot: Option<u32>,
 }
 
@@ -242,8 +242,8 @@ impl MarketFixed {
         quote_mint: &MintAccountInfo,
         market_key: &Pubkey,
     ) -> Self {
-        let (base_vault, base_vault_bump) = get_vault_address(market_key, base_mint.info.key);
-        let (quote_vault, quote_vault_bump) = get_vault_address(market_key, quote_mint.info.key);
+        let (base_vault, base_vault_bump) = get_vault_address(market_key, base_mint.info.key());
+        let (quote_vault, quote_vault_bump) = get_vault_address(market_key, quote_mint.info.key());
         MarketFixed {
             discriminant: MARKET_FIXED_DISCRIMINANT,
             version: 0,
@@ -252,8 +252,8 @@ impl MarketFixed {
             base_vault_bump,
             quote_vault_bump,
             _padding1: [0; 3],
-            base_mint: *base_mint.info.key,
-            quote_mint: *quote_mint.info.key,
+            base_mint: *base_mint.info.key(),
+            quote_mint: *quote_mint.info.key(),
             base_vault,
             quote_vault,
             order_sequence_number: 0,
