@@ -5,15 +5,11 @@ use hypertree::DataIndex;
 use manifest::{
     program::{invoke, withdraw_instruction},
     state::MarketFixed,
-    validation::{ManifestAccountInfo, MintAccountInfo, TokenProgram},
+    validation::{loaders::next_account_info, ManifestAccountInfo, MintAccountInfo, TokenProgram},
 };
 
 use manifest::validation::{Program, Signer};
-use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,
-    pubkey::Pubkey,
-};
+use pinocchio::{account_info::AccountInfo, pubkey::Pubkey, ProgramResult};
 
 use crate::loader::{check_signer, WrapperStateAccountInfo};
 
@@ -37,7 +33,7 @@ pub(crate) fn process_withdraw(
 ) -> ProgramResult {
     let account_iter: &mut std::slice::Iter<AccountInfo> = &mut accounts.iter();
     let manifest_program: Program =
-        Program::new(next_account_info(account_iter)?, &manifest::id())?;
+        Program::new(next_account_info(account_iter)?, &manifest::id().to_bytes())?;
     let owner: Signer = Signer::new(next_account_info(account_iter)?)?;
     let market: ManifestAccountInfo<MarketFixed> =
         ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
@@ -46,7 +42,7 @@ pub(crate) fn process_withdraw(
     let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
-    check_signer(&wrapper_state, owner.key);
+    check_signer(&wrapper_state, owner.key());
     let mint_account_info: MintAccountInfo =
         MintAccountInfo::new(next_account_info(account_iter)?)?;
 

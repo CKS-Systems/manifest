@@ -5,7 +5,6 @@ members = [
   "client/rust",
   "programs/manifest",
   "programs/wrapper",
-  "programs/ui-wrapper",
 ]
 
 [workspace.dependencies]

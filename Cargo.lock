@@ -6502,30 +6502,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
-name = "ui-wrapper"
-version = "0.1.4"
-dependencies = [
- "anyhow",
- "borsh 0.10.4",
- "bytemuck",
- "hypertree 1.0.0",
- "manifest-dex 1.0.1",
- "num_enum 0.5.11",
- "shank",
- "solana-invoke",
- "solana-logger",
- "solana-program",
- "solana-program-test",
- "solana-sdk",
- "solana-security-txt",
- "spl-token 3.5.0",
- "spl-token-2022 3.0.4",
- "static_assertions",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7034,6 +7010,9 @@ dependencies = [
  "hypertree 1.0.0",
  "manifest-dex 1.0.1",
  "num_enum 0.5.11",
+ "pinocchio",
+ "pinocchio-system",
+ "pinocchio-token",
  "shank",
  "solana-invoke",
  "solana-logger",

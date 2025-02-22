@@ -33,7 +33,7 @@ pub(crate) struct CreateMarketContext<'a> {
     pub token_program_22: TokenProgram<'a>,
 }
 
-fn next_account_info<'a, I: Iterator<Item = &'a AccountInfo>>(
+pub fn next_account_info<'a, I: Iterator<Item = &'a AccountInfo>>(
     iter: &mut I,
 ) -> Result<I::Item, ProgramError> {
     iter.next().ok_or(ProgramError::NotEnoughAccountKeys)

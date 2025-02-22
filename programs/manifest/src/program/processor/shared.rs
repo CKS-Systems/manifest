@@ -210,7 +210,7 @@ fn verify_trader_index_hint(
     Ok(())
 }
 
-fn invoke(ix: &solana_program::instruction::Instruction, account_infos: &[solana_program::sysvar::slot_history::AccountInfo<'_>]) -> solana_program::entrypoint::ProgramResult {
+pub fn invoke(ix: &solana_program::instruction::Instruction, account_infos: &[solana_program::sysvar::slot_history::AccountInfo<'_>]) -> solana_program::entrypoint::ProgramResult {
     #[cfg(target_os = "solana")]
     {
         solana_invoke::invoke_unchecked(ix, account_infos)

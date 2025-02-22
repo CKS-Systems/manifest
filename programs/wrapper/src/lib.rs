@@ -11,13 +11,13 @@ pub mod wrapper_state;
 
 use hypertree::trace;
 use instruction::ManifestWrapperInstruction;
+use pinocchio::{pubkey::Pubkey, ProgramResult};
 use processors::{
     batch_upate::process_batch_update, claim_seat::process_claim_seat, collect::process_collect,
     create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
 };
 use solana_program::{
-    account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+    declare_id,
 };
 
 #[cfg(not(feature = "no-entrypoint"))]
