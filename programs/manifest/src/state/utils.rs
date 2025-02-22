@@ -253,52 +253,7 @@ pub(crate) fn try_to_move_global_tokens<'a>(
     let token_program: &TokenProgram<'a> = token_program_opt.as_ref().unwrap();
 
     if *token_program.key() == spl_token_2022::id().to_bytes() {
-        require!(
-            mint_opt.is_some(),
-            crate::program::ManifestError::MissingGlobal,
-            "Missing global mint",
-        )?;
-
-        // Prevent transfer from global to market vault if a token has a non-zero fee.
-        let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.try_borrow_data()?)
-            .map_err(|e| ProgramError::InvalidAccountData)?
-            .get_extension::<TransferFeeConfig>()
-            .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into())
-        {
-            solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
-            return Ok(false);
-        }
-        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.try_borrow_data()?)
-            .map_err(|_| ProgramError::InvalidAccountData)?
-            .get_extension::<TransferHook>()
-            .is_ok_and(|f| f.program_id.0 != solana_program::pubkey::Pubkey::default())
-        {
-            solana_program::msg!(
-                "Treating global order as unbacked because it has a transfer hook"
-            );
-            return Ok(false);
-        }
-
-        invoke_signed(
-            &spl_token_2022::instruction::transfer_checked(
-                &solana_program::pubkey::Pubkey::from(*token_program.key()),
-                global_vault.key(),
-                mint_account_info.info.key(),
-                market_vault.key(),
-                global_vault.key(),
-                &[],
-                desired_global_atoms.as_u64(),
-                mint_account_info.mint.decimals,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                global_vault.as_ref().clone(),
-                mint_account_info.as_ref().clone(),
-                market_vault.as_ref().clone(),
-            ],
-            global_vault_seeds_with_bump!(mint_key, global_vault_bump),
-        )?;
+        todo!()
     } else {
         pinocchio_token::instructions::Transfer {
             from: &global_vault,
@@ -306,7 +261,7 @@ pub(crate) fn try_to_move_global_tokens<'a>(
             authority: &global_vault,
             amount: desired_global_atoms.as_u64(),
         }
-        .invoke_signed(global_vault_seeds_with_bump!(mint_key, global_vault_bump))?;
+        .invoke_signed(&[global_vault_seeds_with_bump!(mint_key, global_vault_bump)])?;
     }
 
     Ok(true)

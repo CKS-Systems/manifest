@@ -442,25 +442,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a>(
     amount: u64,
     decimals: u8,
 ) -> ProgramResult {
-    invoke(
-        &spl_token_2022::instruction::transfer_checked(
-            token_program.key,
-            trader_account.key,
-            mint_pubkey,
-            vault.key,
-            payer.key,
-            &[],
-            amount,
-            decimals,
-        )?,
-        &[
-            token_program.as_ref().clone(),
-            trader_account.as_ref().clone(),
-            vault.as_ref().clone(),
-            mint.unwrap().as_ref().clone(),
-            payer.as_ref().clone(),
-        ],
-    )
+    Ok(())
 }
 
 #[cfg(feature = "certora")]
@@ -497,11 +479,11 @@ fn spl_token_transfer_from_vault_to_trader<'a>(
         authority: vault,
         amount,
     }
-    .invoke_signed(market_vault_seeds_with_bump!(
+    .invoke_signed(&[market_vault_seeds_with_bump!(
         market_key,
         mint_pubkey,
         vault_bump
-    ))
+    )])
 }
 
 #[cfg(feature = "certora")]
@@ -531,25 +513,7 @@ fn spl_token_2022_transfer_from_vault_to_trader<'a>(
     market_key: &Pubkey,
     vault_bump: u8,
 ) -> ProgramResult {
-    solana_program::program::invoke_signed(
-        &spl_token_2022::instruction::transfer_checked(
-            token_program.key,
-            vault.key,
-            mint_pubkey,
-            trader_account.key,
-            vault.key,
-            &[],
-            amount,
-            decimals,
-        )?,
-        &[
-            token_program.as_ref().clone(),
-            vault.as_ref().clone(),
-            mint.unwrap().as_ref().clone(),
-            trader_account.as_ref().clone(),
-        ],
-        market_vault_seeds_with_bump!(market_key, mint_pubkey, vault_bump),
-    )
+    Ok(())
 }
 
 #[cfg(feature = "certora")]

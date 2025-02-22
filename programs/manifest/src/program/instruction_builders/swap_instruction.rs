@@ -24,15 +24,15 @@ pub fn swap_instruction(
     token_program_quote: Pubkey,
     include_global: bool,
 ) -> Instruction {
-    let (vault_base_account, _) = get_vault_address(market, base_mint);
-    let (vault_quote_account, _) = get_vault_address(market, quote_mint);
+    let (vault_base_account, _) = get_vault_address(&market.to_bytes(), &base_mint.to_bytes());
+    let (vault_quote_account, _) = get_vault_address(&market.to_bytes(), &quote_mint.to_bytes());
     let mut account_metas: Vec<AccountMeta> = vec![
         AccountMeta::new_readonly(*payer, true),
         AccountMeta::new(*market, false),
         AccountMeta::new(*trader_base_account, false),
         AccountMeta::new(*trader_quote_account, false),
-        AccountMeta::new(vault_base_account, false),
-        AccountMeta::new(vault_quote_account, false),
+        AccountMeta::new(vault_base_account.into(), false),
+        AccountMeta::new(vault_quote_account.into(), false),
         AccountMeta::new_readonly(token_program_base, false),
     ];
     if token_program_base == spl_token_2022::id() {
@@ -46,10 +46,10 @@ pub fn swap_instruction(
     }
     if include_global {
         let global_mint: &Pubkey = if is_base_in { quote_mint } else { base_mint };
-        let (global, _) = get_global_address(global_mint);
-        let (global_vault, _) = get_global_vault_address(global_mint);
-        account_metas.push(AccountMeta::new(global, false));
-        account_metas.push(AccountMeta::new(global_vault, false));
+        let (global, _) = get_global_address(&global_mint.to_bytes());
+        let (global_vault, _) = get_global_vault_address(&global_mint.to_bytes());
+        account_metas.push(AccountMeta::new(Pubkey::from(global), false));
+        account_metas.push(AccountMeta::new(Pubkey::from(global_vault), false));
     }
 
     Instruction {

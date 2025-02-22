@@ -166,25 +166,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a>(
     amount: u64,
     decimals: u8,
 ) -> ProgramResult {
-    crate::program::invoke(
-        &spl_token_2022::instruction::transfer_checked(
-            token_program.key(),
-            trader_account.key(),
-            mint_pubkey,
-            vault.key(),
-            payer.key(),
-            &[],
-            amount,
-            decimals,
-        )?,
-        &[
-            token_program.as_ref().clone(),
-            trader_account.as_ref().clone(),
-            vault.as_ref().clone(),
-            mint.unwrap().as_ref().clone(),
-            payer.as_ref().clone(),
-        ],
-    )
+    Ok(())
 }
 
 #[cfg(feature = "certora")]

@@ -49,9 +49,9 @@ pub fn batch_update_instruction(
             let (market_vault, _) = get_vault_address(&market.to_bytes(), &mint.to_bytes());
             let mut global_account_metas: Vec<AccountMeta> = vec![
                 AccountMeta::new_readonly(mint, false),
-                AccountMeta::new(global, false),
-                AccountMeta::new(global_vault, false),
-                AccountMeta::new(market_vault, false),
+                AccountMeta::new(Pubkey::from(global), false),
+                AccountMeta::new(Pubkey::from(global_vault), false),
+                AccountMeta::new(Pubkey::from(market_vault), false),
             ];
             if token_program_opt.is_none()
                 || token_program_opt.is_some_and(|f| f == spl_token::id())

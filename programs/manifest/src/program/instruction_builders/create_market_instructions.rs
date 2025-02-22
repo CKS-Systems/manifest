@@ -34,8 +34,8 @@ pub fn create_market_instruction(
     quote_mint: &Pubkey,
     market_creator: &Pubkey,
 ) -> Instruction {
-    let (base_vault, _) = get_vault_address(market, base_mint);
-    let (quote_vault, _) = get_vault_address(market, quote_mint);
+    let (base_vault, _) = get_vault_address(&market.to_bytes(), &base_mint.to_bytes());
+    let (quote_vault, _) = get_vault_address(&market.to_bytes(), &quote_mint.to_bytes());
     Instruction {
         program_id: crate::id(),
         accounts: vec![
@@ -44,8 +44,8 @@ pub fn create_market_instruction(
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new_readonly(*base_mint, false),
             AccountMeta::new_readonly(*quote_mint, false),
-            AccountMeta::new(base_vault, false),
-            AccountMeta::new(quote_vault, false),
+            AccountMeta::new(Pubkey::from(base_vault), false),
+            AccountMeta::new(Pubkey::from(quote_vault), false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(spl_token_2022::id(), false),
         ],

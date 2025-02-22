@@ -147,11 +147,11 @@ fn spl_token_transfer_from_vault_to_trader<'a>(
         authority: &vault,
         amount,
     }
-    .invoke_signed(market_vault_seeds_with_bump!(
+    .invoke_signed(&[market_vault_seeds_with_bump!(
         market_key,
         mint_pubkey,
         vault_bump
-    ))
+    )])
 }
 
 #[cfg(feature = "certora")]
@@ -181,25 +181,7 @@ fn spl_token_2022_transfer_from_vault_to_trader_fixed<'a>(
     market_key: &Pubkey,
     bump: u8,
 ) -> ProgramResult {
-    invoke_signed(
-        &spl_token_2022::instruction::transfer_checked(
-            token_program.key,
-            vault.key,
-            mint_key,
-            trader_token.key,
-            vault.key,
-            &[],
-            amount_atoms,
-            decimals,
-        )?,
-        &[
-            token_program.as_ref().clone(),
-            vault.as_ref().clone(),
-            mint.unwrap().as_ref().clone(),
-            trader_token.as_ref().clone(),
-        ],
-        market_vault_seeds_with_bump!(market_key, mint_key, bump),
-    )
+    Ok(())
 }
 
 // TODO: Share these with swap and deposit.

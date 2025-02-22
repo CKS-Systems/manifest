@@ -73,25 +73,7 @@ pub(crate) fn process_global_evict(accounts: &[AccountInfo], data: &[u8]) -> Pro
 
         // Do the token transfer
         if *global_vault.owner() == spl_token_2022::id().to_bytes() {
-            invoke_signed(
-                &spl_token_2022::instruction::transfer_checked(
-                    token_program.key(),
-                    global_vault.key(),
-                    mint.info.key(),
-                    evictee_token.key(),
-                    global_vault.key(),
-                    &[],
-                    evictee_balance.into(),
-                    mint.mint.decimals,
-                )?,
-                &[
-                    token_program.as_ref().clone(),
-                    evictee_token.as_ref().clone(),
-                    mint.as_ref().clone(),
-                    global_vault.as_ref().clone(),
-                ],
-                global_vault_seeds_with_bump!(mint.info.key(), bump),
-            )?;
+            todo!()
         } else {
             Transfer {
                 from: &global_vault.info,
@@ -99,7 +81,7 @@ pub(crate) fn process_global_evict(accounts: &[AccountInfo], data: &[u8]) -> Pro
                 authority: &global_vault.info,
                 amount: evictee_balance.as_u64(),
             }
-            .invoke_signed(global_vault_seeds_with_bump!(mint.info.key(), bump))?;
+            .invoke_signed(&[global_vault_seeds_with_bump!(mint.info.key(), bump)])?;
         }
 
         emit_stack(GlobalWithdrawLog {
@@ -128,25 +110,7 @@ pub(crate) fn process_global_evict(accounts: &[AccountInfo], data: &[u8]) -> Pro
 
         // Do the token transfer
         if *global_vault.owner() == spl_token_2022::id().to_bytes() {
-            invoke(
-                &spl_token_2022::instruction::transfer_checked(
-                    token_program.key(),
-                    trader_token.key(),
-                    mint.info.key(),
-                    global_vault.key(),
-                    payer.key(),
-                    &[],
-                    amount_atoms,
-                    mint.mint.decimals,
-                )?,
-                &[
-                    token_program.as_ref().clone(),
-                    trader_token.as_ref().clone(),
-                    mint.as_ref().clone(),
-                    global_vault.as_ref().clone(),
-                    payer.as_ref().clone(),
-                ],
-            )?;
+            todo!()
         } else {
             Transfer {
                 from: &trader_token,

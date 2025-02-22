@@ -103,39 +103,7 @@ pub(crate) fn process_create_market(accounts: &[AccountInfo], _data: &[u8]) -> P
             ];
 
             if is_mint_22 {
-                let mint_data: Ref<'_, [u8]> = mint.try_borrow_data()?;
-                let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
-                    PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
-                let mint_extensions: Vec<ExtensionType> = mint_with_extension
-                    .get_extension_types()
-                    .map_err(|_| ProgramError::InvalidAccountData)?;
-                let required_extensions: Vec<ExtensionType> =
-                    ExtensionType::get_required_init_account_extensions(&mint_extensions);
-                let space: usize =
-                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)
-                        .map_err(|_| ProgramError::InvalidAccountData)?;
-                CreateAccount {
-                    from: &payer,
-                    to: token_account,
-                    lamports: rent.minimum_balance(space as usize),
-                    space: space as u64,
-                    owner: &token_program_for_mint,
-                }
-                .invoke()?;
-                invoke(
-                    &spl_token_2022::instruction::initialize_account3(
-                        &token_program_for_mint,
-                        token_account.key(),
-                        mint.key(),
-                        token_account.key(),
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
-                        token_program_22.as_ref().clone(),
-                    ],
-                )?;
+                todo!()
             } else {
                 let space: usize = spl_token::state::Account::LEN;
                 CreateAccount {

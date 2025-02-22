@@ -18,7 +18,7 @@ pub fn deposit_instruction(
     token_program: Pubkey,
     trader_index_hint: Option<DataIndex>,
 ) -> Instruction {
-    let (vault_address, _) = get_vault_address(market, mint);
+    let (vault_address, _) = get_vault_address(&market.to_bytes(), &mint.to_bytes());
 
     Instruction {
         program_id: crate::id(),
@@ -26,7 +26,7 @@ pub fn deposit_instruction(
             AccountMeta::new_readonly(*payer, true),
             AccountMeta::new(*market, false),
             AccountMeta::new(*trader_token_account, false),
-            AccountMeta::new(vault_address, false),
+            AccountMeta::new(Pubkey::from(vault_address), false),
             AccountMeta::new_readonly(token_program, false),
             AccountMeta::new_readonly(*mint, false),
         ],

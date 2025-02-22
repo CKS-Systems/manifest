@@ -52,25 +52,7 @@ pub(crate) fn process_global_withdraw(accounts: &[AccountInfo], data: &[u8]) -> 
 
     // Do the token transfer
     if *global_vault.owner() == spl_token_2022::id().to_bytes() {
-        invoke_signed(
-            &spl_token_2022::instruction::transfer_checked(
-                token_program.key,
-                global_vault.key,
-                mint.info.key,
-                trader_token.key,
-                global_vault.key,
-                &[],
-                amount_atoms,
-                mint.mint.decimals,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                trader_token.as_ref().clone(),
-                mint.as_ref().clone(),
-                global_vault.as_ref().clone(),
-            ],
-            global_vault_seeds_with_bump!(mint.info.key, bump),
-        )?;
+        todo!()
     } else {
         Transfer {
             from: &global_vault,
@@ -78,7 +60,7 @@ pub(crate) fn process_global_withdraw(accounts: &[AccountInfo], data: &[u8]) -> 
             authority: &global_vault,
             amount: amount_atoms,
         }
-        .invoke_signed(global_vault_seeds_with_bump!(mint.info.key(), bump))?;
+        .invoke_signed(&[global_vault_seeds_with_bump!(mint.info.key(), bump)])?;
     }
 
     emit_stack(GlobalWithdrawLog {

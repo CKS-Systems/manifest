@@ -51,31 +51,7 @@ pub(crate) fn process_global_deposit(accounts: &[AccountInfo], data: &[u8]) -> P
 
     // Do the token transfer
     if *global_vault.owner() == spl_token_2022::id().to_bytes() {
-        let before_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
-        invoke(
-            &spl_token_2022::instruction::transfer_checked(
-                token_program.key(),
-                trader_token_account.key(),
-                mint.info.key(),
-                global_vault.key(),
-                payer.key(),
-                &[],
-                amount_atoms,
-                mint.mint.decimals,
-            )?,
-            &[
-                token_program.as_ref().clone(),
-                trader_token_account.as_ref().clone(),
-                mint.as_ref().clone(),
-                global_vault.as_ref().clone(),
-                payer.as_ref().clone(),
-            ],
-        )?;
-
-        let after_vault_balance_atoms: u64 = global_vault.get_balance_atoms();
-        deposited_amount_atoms = after_vault_balance_atoms
-            .checked_sub(before_vault_balance_atoms)
-            .unwrap();
+        todo!()
     } else {
         Transfer {
             from: &trader_token_account,

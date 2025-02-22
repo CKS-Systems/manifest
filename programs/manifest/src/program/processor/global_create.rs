@@ -38,11 +38,6 @@ pub(crate) fn process_global_create(accounts: &[AccountInfo], _data: &[u8]) -> P
         // Make the global account.
         {
             let (_global_key, global_bump) = get_global_address(global_mint.info.key());
-            let global_seeds: Vec<Vec<u8>> = vec![
-                b"global".to_vec(),
-                global_mint.info.key().as_ref().to_vec(),
-                vec![global_bump],
-            ];
             CreateAccount {
                 from: &payer,
                 to: &global.info,
@@ -52,7 +47,7 @@ pub(crate) fn process_global_create(accounts: &[AccountInfo], _data: &[u8]) -> P
                 space: size_of::<GlobalFixed>() as u64,
                 owner: &crate::id().to_bytes(),
             }
-            .invoke_signed(global_seeds);
+            .invoke_signed(&[pinocchio::signer!(b"global", global_mint.info.key().as_ref(), &[global_bump])]);
 
             // Setup the empty market
             let empty_global_fixed: GlobalFixed =
@@ -85,39 +80,7 @@ pub(crate) fn process_global_create(accounts: &[AccountInfo], _data: &[u8]) -> P
             let rent: Rent = Rent::get().map_err(|_| ProgramError::InvalidAccountData)?;
 
             if is_mint_22 {
-                let mint_data: Ref<'_, [u8]> = global_mint.info.try_borrow_data()?;
-                let mint_with_extension: PodStateWithExtensions<'_, PodMint> =
-                    PodStateWithExtensions::<PodMint>::unpack(&mint_data).unwrap();
-                let mint_extensions: Vec<ExtensionType> = mint_with_extension
-                    .get_extension_types()
-                    .map_err(|_| ProgramError::InvalidAccountData)?;
-                let required_extensions: Vec<ExtensionType> =
-                    ExtensionType::get_required_init_account_extensions(&mint_extensions);
-                let space: usize =
-                    ExtensionType::try_calculate_account_len::<Account>(&required_extensions)
-                        .map_err(|_| ProgramError::InvalidAccountData)?;
-                CreateAccount {
-                    from: &payer,
-                    to: global_vault.info,
-                    lamports: rent.minimum_balance(space),
-                    space: space as u64,
-                    owner: &token_program_for_mint,
-                }
-                .invoke()?;
-                invoke(
-                    &spl_token_2022::instruction::initialize_account3(
-                        &spl_token_2022::id(),
-                        global_vault.as_ref().key(),
-                        global_mint.info.key(),
-                        global_vault.as_ref().key(),
-                    )?,
-                    &[
-                        payer.as_ref().clone(),
-                        global_vault.as_ref().clone(),
-                        global_mint.as_ref().clone(),
-                        token_program.as_ref().clone(),
-                    ],
-                )?;
+                todo!()
             } else {
                 let space: usize = spl_token::state::Account::LEN;
                 CreateAccount {
