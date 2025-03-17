@@ -25,9 +25,10 @@ import {
   createGlobalDepositInstruction,
   createGlobalWithdrawInstruction,
   createSwapInstruction,
+  createBatchUpdateInstruction as createBatchUpdateCoreInstruction,
 } from './manifest/instructions';
 import { OrderType, SwapParams } from './manifest/types';
-import { Market } from './market';
+import { Market, RestingOrder } from './market';
 import { WrapperMarketInfo, Wrapper, WrapperData } from './wrapperObj';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID, PROGRAM_ID } from './manifest';
 import {
@@ -1462,6 +1463,60 @@ export class ManifestClient {
         },
       },
     );
+  }
+
+  /**
+   * CancelAllOnCore instruction. Cancels all orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelAllOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const openOrders: RestingOrder[] = this.market.openOrders();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const openOrder of openOrders) {
+      if (openOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = openOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
   }
 
   /**
