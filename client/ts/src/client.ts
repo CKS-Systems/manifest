@@ -1477,32 +1477,43 @@ export class ManifestClient {
     }
 
     const openOrders: RestingOrder[] = this.market.openOrders();
-    const cancelInstructions: TransactionInstruction[] = [];
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
 
     for (const openOrder of openOrders) {
       if (openOrder.trader.toBase58() === this.payer.toBase58()) {
         const seqNum: bignum = openOrder.sequenceNumber;
-        const cancelInstruction: TransactionInstruction =
-          createBatchUpdateCoreInstruction(
-            {
-              payer: this.payer,
-              market: this.market.address,
-            },
-            {
-              params: {
-                cancels: [
-                  {
-                    orderSequenceNumber: seqNum,
-                    orderIndexHint: null,
-                  },
-                ],
-                orders: [],
-                traderIndexHint: null,
-              },
-            },
-          );
-        cancelInstructions.push(cancelInstruction);
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
       }
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
     }
 
     return cancelInstructions;

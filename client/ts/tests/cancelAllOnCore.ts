@@ -124,14 +124,9 @@ export async function cancelAllOnCore(
     console.log('No orders to cancel');
     return;
   }
-
-  const MAX_INSTRUCTIONS_PER_TX = 25;
-
-  // Split instructions into chunks to avoid transaction size limits
-  for (let i = 0; i < cancelInstructions.length; i += MAX_INSTRUCTIONS_PER_TX) {
-    const chunk = cancelInstructions.slice(i, i + MAX_INSTRUCTIONS_PER_TX);
+  for (let i = 0; i < cancelInstructions.length; i++) {
     const transaction = new Transaction();
-    chunk.forEach((ix) => transaction.add(ix));
+    transaction.add(cancelInstructions[i]);
 
     const signature = await sendAndConfirmTransaction(
       connection,
@@ -142,7 +137,7 @@ export async function cancelAllOnCore(
       },
     );
 
-    console.log(`Canceled reverse orders in transaction: ${signature}`);
+    console.log(`Canceled batch of orders in transaction: ${signature}`);
   }
 }
 
