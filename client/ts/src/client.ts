@@ -25,7 +25,7 @@ import {
   createGlobalDepositInstruction,
   createGlobalWithdrawInstruction,
   createSwapInstruction,
-  createBatchUpdateInstruction as createBatchUpdateCoreInstruction
+  createBatchUpdateInstruction as createBatchUpdateCoreInstruction,
 } from './manifest/instructions';
 import { OrderType, SwapParams } from './manifest/types';
 import { Market, RestingOrder } from './market';
@@ -1465,26 +1465,25 @@ export class ManifestClient {
     );
   }
 
-/**
+  /**
    * CancelAllOnCore instruction. Cancels all orders on a market directly on the core program,
    * including reverse orders and global orders with rent prepayment.
    *
    * @returns TransactionInstruction[]
    */
-    public async cancelAllOnCoreIx(): Promise<TransactionInstruction[]> {
-      if (!this.payer) {
-        throw new Error('Read only');
-      }
+  public async cancelAllOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
 
-      const openOrders: RestingOrder[] = this.market.openOrders();
-      const cancelInstructions: TransactionInstruction[] = [];
-      
-      for (const openOrder of openOrders) {
-        if (
-          openOrder.trader.toBase58() === this.payer.toBase58()
-        ) {
-          const seqNum: bignum = openOrder.sequenceNumber;
-          const cancelInstruction: TransactionInstruction = createBatchUpdateCoreInstruction(
+    const openOrders: RestingOrder[] = this.market.openOrders();
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (const openOrder of openOrders) {
+      if (openOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = openOrder.sequenceNumber;
+        const cancelInstruction: TransactionInstruction =
+          createBatchUpdateCoreInstruction(
             {
               payer: this.payer,
               market: this.market.address,
@@ -1502,12 +1501,12 @@ export class ManifestClient {
               },
             },
           );
-          cancelInstructions.push(cancelInstruction);
-        }
+        cancelInstructions.push(cancelInstruction);
       }
-
-      return cancelInstructions;
     }
+
+    return cancelInstructions;
+  }
 
   /**
    * killSwitchMarket transactions. Pulls all orders
