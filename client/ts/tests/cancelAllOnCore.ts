@@ -22,14 +22,13 @@ async function testCancelAllOnCore(): Promise<void> {
   const payerKeypair: Keypair = Keypair.generate();
 
   // Create a market and load it
-  console.log('Creating market...');
+  console.log('Creating market for cancelAllOnCore test...');
   const marketAddress: PublicKey = await createMarket(connection, payerKeypair);
   const market: Market = await Market.loadFromAddress({
     connection,
     address: marketAddress,
   });
 
-  // Deposit some funds to enable trading
   console.log('Depositing funds...');
   await deposit(connection, payerKeypair, marketAddress, market.baseMint(), 50);
   await deposit(
@@ -64,30 +63,10 @@ async function testCancelAllOnCore(): Promise<void> {
     1,
   );
 
-  // Create a second trader to fill one of the reverse orders
-  const secondTraderKeypair: Keypair = Keypair.generate();
-
-  // Fund the second trader
-  await deposit(
-    connection,
-    secondTraderKeypair,
-    marketAddress,
-    market.baseMint(),
-    20,
-  );
-  await deposit(
-    connection,
-    secondTraderKeypair,
-    marketAddress,
-    market.quoteMint(),
-    20,
-  );
-
-  // Second trader fills one of the reverse orders
   console.log('Filling one of the reverse orders...');
   await placeOrder(
     connection,
-    secondTraderKeypair,
+    payerKeypair,
     marketAddress,
     3, // partial size
     5, // matching price
