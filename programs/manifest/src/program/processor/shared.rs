@@ -91,19 +91,14 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
             expandable_account.key,
             lamports_diff,
         ),
-        &[
-            payer.clone(),
-            expandable_account.clone(),
-        ],
+        &[payer.clone(), expandable_account.clone()],
     )?;
 
     #[cfg(feature = "fuzz")]
     {
         solana_program::program::invoke(
             &solana_program::system_instruction::allocate(expandable_account.key, new_size as u64),
-            &[
-                expandable_account.clone(),
-            ],
+            &[expandable_account.clone()],
         )?;
     }
     #[cfg(not(feature = "fuzz"))]

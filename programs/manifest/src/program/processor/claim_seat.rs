@@ -19,11 +19,7 @@ pub(crate) fn process_claim_seat(
     _data: &[u8],
 ) -> ProgramResult {
     let claim_seat_context: ClaimSeatContext = ClaimSeatContext::load(accounts)?;
-    let ClaimSeatContext {
-        market,
-        payer,
-        ..
-    } = claim_seat_context;
+    let ClaimSeatContext { market, payer, .. } = claim_seat_context;
 
     process_claim_seat_internal(&market, &payer)?;
 

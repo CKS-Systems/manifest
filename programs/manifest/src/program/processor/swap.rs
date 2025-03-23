@@ -2,8 +2,8 @@ use std::cell::RefMut;
 
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
+    program::expand_market_if_needed,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    program::{expand_market_if_needed},
     require,
     state::{
         AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
@@ -96,9 +96,15 @@ pub(crate) fn process_swap_core(
         }
         let trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
 
-        let (initial_base_atoms, initial_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
+        let (initial_base_atoms, initial_quote_atoms) =
+            dynamic_account.get_trader_balance(payer.key);
 
-        (existing_seat_index, trader_index, initial_base_atoms, initial_quote_atoms)
+        (
+            existing_seat_index,
+            trader_index,
+            initial_base_atoms,
+            initial_quote_atoms,
+        )
     };
 
     // Might need a free list spot for both the temporary claimed seat as well
