@@ -274,6 +274,9 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        // Included in case we need to expand for a reverse order.
+        let _system_program: Program =
+            Program::new(next_account_info(account_iter)?, &system_program::id())?;
 
         let market_fixed: Ref<MarketFixed> = market.get_fixed()?;
         let base_mint_key: Pubkey = *market_fixed.get_base_mint();
@@ -403,7 +406,6 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                     gas_payer_opt: None,
                     gas_receiver_opt: Some(payer.clone()),
                     market: *market.info.key,
-                    // System program not included because does not rest an order.
                     system_program: None,
                 });
             }
