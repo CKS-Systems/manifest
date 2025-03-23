@@ -13,8 +13,8 @@ pub(crate) fn process_expand_market(
     let ExpandMarketContext {
         market,
         payer,
-        system_program,
+        ..
     } = expand_market_context;
 
-    expand_market(&payer, &market, &system_program)
+    expand_market(&payer, &market)
 }
