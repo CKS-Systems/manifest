@@ -352,7 +352,6 @@ export class ManifestStatsServer {
   async depthProbe(): Promise<void> {
     console.log('Probing depths for market maker data');
 
-    // Once there are more than 200 accounts, should batch this into multiple fetches.
     const marketKeys: PublicKey[] = Array.from(this.markets.keys()).map(
       (market: string) => {
         return new PublicKey(market);
@@ -360,77 +359,80 @@ export class ManifestStatsServer {
     );
 
     try {
-      const accountInfos: (AccountInfo<Buffer> | null)[] =
-        await this.connection.getMultipleAccountsInfo(marketKeys);
-      accountInfos.forEach(
-        (accountInfo: AccountInfo<Buffer> | null, index: number) => {
-          if (!accountInfo) {
-            return;
-          }
-          const marketPk: PublicKey = marketKeys[index];
-          const market: Market = Market.loadFromBuffer({
-            buffer: accountInfo.data,
-            address: marketPk,
-          });
-          const bids: RestingOrder[] = market.bids();
-          const asks: RestingOrder[] = market.asks();
-          if (bids.length == 0 || asks.length == 0) {
-            return;
-          }
-
-          const midTokens: number =
-            (bids[bids.length - 1].tokenPrice +
-              asks[asks.length - 1].tokenPrice) /
-            2;
-
-          DEPTHS_BPS.forEach((depthBps: number) => {
-            const bidsAtDepth: RestingOrder[] = bids.filter(
-              (bid: RestingOrder) => {
-                return bid.tokenPrice > midTokens * (1 - depthBps * 0.0001);
-              },
-            );
-            const asksAtDepth: RestingOrder[] = asks.filter(
-              (ask: RestingOrder) => {
-                return ask.tokenPrice < midTokens * (1 + depthBps * 0.0001);
-              },
-            );
-
-            const bidTraders: Set<string> = new Set(
-              bidsAtDepth.map((bid: RestingOrder) => bid.trader.toBase58()),
-            );
-
-            bidTraders.forEach((trader: string) => {
-              const bidTokensAtDepth: number = bidsAtDepth
-                .filter((bid: RestingOrder) => {
-                  return bid.trader.toBase58() == trader;
-                })
-                .map((bid: RestingOrder) => {
-                  return Number(bid.numBaseTokens);
-                })
-                .reduce((sum, num) => sum + num, 0);
-              const askTokensAtDepth: number = asksAtDepth
-                .filter((ask: RestingOrder) => {
-                  return ask.trader.toBase58() == trader;
-                })
-                .map((ask: RestingOrder) => {
-                  return Number(ask.numBaseTokens);
-                })
-                .reduce((sum, num) => sum + num, 0);
-
-              if (bidTokensAtDepth > 0 && askTokensAtDepth > 0) {
-                depth.set(
-                  {
-                    depth_bps: depthBps,
-                    market: marketPk.toBase58(),
-                    trader: trader,
-                  },
-                  Math.min(bidTokensAtDepth, askTokensAtDepth) * midTokens,
-                );
-              }
+      const marketKeysChunks: PublicKey[][] = chunks(marketKeys, 100);
+      for (const marketKeysChunk of marketKeysChunks) {
+        const accountInfos: (AccountInfo<Buffer> | null)[] =
+          await this.connection.getMultipleAccountsInfo(marketKeysChunk);
+        accountInfos.forEach(
+          (accountInfo: AccountInfo<Buffer> | null, index: number) => {
+            if (!accountInfo) {
+              return;
+            }
+            const marketPk: PublicKey = marketKeys[index];
+            const market: Market = Market.loadFromBuffer({
+              buffer: accountInfo.data,
+              address: marketPk,
             });
-          });
-        },
-      );
+            const bids: RestingOrder[] = market.bids();
+            const asks: RestingOrder[] = market.asks();
+            if (bids.length == 0 || asks.length == 0) {
+              return;
+            }
+
+            const midTokens: number =
+              (bids[bids.length - 1].tokenPrice +
+                asks[asks.length - 1].tokenPrice) /
+              2;
+
+            DEPTHS_BPS.forEach((depthBps: number) => {
+              const bidsAtDepth: RestingOrder[] = bids.filter(
+                (bid: RestingOrder) => {
+                  return bid.tokenPrice > midTokens * (1 - depthBps * 0.0001);
+                },
+              );
+              const asksAtDepth: RestingOrder[] = asks.filter(
+                (ask: RestingOrder) => {
+                  return ask.tokenPrice < midTokens * (1 + depthBps * 0.0001);
+                },
+              );
+
+              const bidTraders: Set<string> = new Set(
+                bidsAtDepth.map((bid: RestingOrder) => bid.trader.toBase58()),
+              );
+
+              bidTraders.forEach((trader: string) => {
+                const bidTokensAtDepth: number = bidsAtDepth
+                  .filter((bid: RestingOrder) => {
+                    return bid.trader.toBase58() == trader;
+                  })
+                  .map((bid: RestingOrder) => {
+                    return Number(bid.numBaseTokens);
+                  })
+                  .reduce((sum, num) => sum + num, 0);
+                const askTokensAtDepth: number = asksAtDepth
+                  .filter((ask: RestingOrder) => {
+                    return ask.trader.toBase58() == trader;
+                  })
+                  .map((ask: RestingOrder) => {
+                    return Number(ask.numBaseTokens);
+                  })
+                  .reduce((sum, num) => sum + num, 0);
+
+                if (bidTokensAtDepth > 0 && askTokensAtDepth > 0) {
+                  depth.set(
+                    {
+                      depth_bps: depthBps,
+                      market: marketPk.toBase58(),
+                      trader: trader,
+                    },
+                    Math.min(bidTokensAtDepth, askTokensAtDepth) * midTokens,
+                  );
+                }
+              });
+            });
+          },
+        );
+      }
     } catch (err) {
       console.log('Unable to fetch depth probe', err);
     }
@@ -711,3 +713,9 @@ run().catch((e) => {
   console.error('fatal error');
   throw e;
 });
+
+function chunks<T>(array: T[], size: number): T[][] {
+  return Array.apply(0, new Array(Math.ceil(array.length / size))).map(
+    (_, index) => array.slice(index * size, (index + 1) * size),
+  );
+}
