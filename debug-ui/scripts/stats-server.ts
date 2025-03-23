@@ -360,7 +360,7 @@ export class ManifestStatsServer {
 
     try {
       const marketKeysChunks: PublicKey[][] = chunks(marketKeys, 100);
-      for (const marketKeysChunk in marketKeysChunks) {
+      for (const marketKeysChunk of marketKeysChunks) {
         const accountInfos: (AccountInfo<Buffer> | null)[] =
           await this.connection.getMultipleAccountsInfo(marketKeysChunk);
         accountInfos.forEach(
