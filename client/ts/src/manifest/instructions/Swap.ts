@@ -56,7 +56,7 @@ export const SwapStruct = new beet.BeetArgsStruct<
 export type SwapInstructionAccounts = {
   payer: web3.PublicKey;
   market: web3.PublicKey;
-  systemProgram: web3.PublicKey;
+  systemProgram?: web3.PublicKey;
   traderBase: web3.PublicKey;
   traderQuote: web3.PublicKey;
   baseVault: web3.PublicKey;
