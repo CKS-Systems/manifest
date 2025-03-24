@@ -46,16 +46,17 @@ pub enum ManifestInstruction {
     /// Places an order using funds in a wallet instead of on deposit
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "market", desc = "Account holding all market state")]
-    #[account(2, writable, name = "trader_base", desc = "Trader base token account")]
-    #[account(3, writable, name = "trader_quote", desc = "Trader quote token account")]
-    #[account(4, writable, name = "base_vault", desc = "Base vault PDA, seeds are [b'vault', market_address, base_mint]")]
-    #[account(5, writable, name = "quote_vault", desc = "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]")]
-    #[account(6, name = "token_program_base", desc = "Token program(22) base")]
-    #[account(7, optional, name = "base_mint", desc = "Base mint, only included if base is Token22, otherwise not required")]
-    #[account(8, optional, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
-    #[account(9, optional, name = "quote_mint", desc = "Quote mint, only included if base is Token22, otherwise not required")]
-    #[account(10, writable, optional, name = "global", desc = "Global account")]
-    #[account(11, writable, optional, name = "global_vault", desc = "Global vault")]
+    #[account(2, name = "system_program", desc = "System program")]
+    #[account(3, writable, name = "trader_base", desc = "Trader base token account")]
+    #[account(4, writable, name = "trader_quote", desc = "Trader quote token account")]
+    #[account(5, writable, name = "base_vault", desc = "Base vault PDA, seeds are [b'vault', market_address, base_mint]")]
+    #[account(6, writable, name = "quote_vault", desc = "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]")]
+    #[account(7, name = "token_program_base", desc = "Token program(22) base")]
+    #[account(8, optional, name = "base_mint", desc = "Base mint, only included if base is Token22, otherwise not required")]
+    #[account(9, optional, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
+    #[account(10, optional, name = "quote_mint", desc = "Quote mint, only included if base is Token22, otherwise not required")]
+    #[account(11, writable, optional, name = "global", desc = "Global account")]
+    #[account(12, writable, optional, name = "global_vault", desc = "Global vault")]
     Swap = 4,
 
     /// Expand a market.

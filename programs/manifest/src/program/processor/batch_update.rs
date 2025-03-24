@@ -216,8 +216,8 @@ pub(crate) fn process_batch_update_core(
     let BatchUpdateContext {
         market,
         payer,
-        system_program,
         global_trade_accounts_opts,
+        ..
     } = batch_update_context;
 
     let BatchUpdateParams {
@@ -351,7 +351,7 @@ pub(crate) fn process_batch_update_core(
             })?;
             result.push((order_sequence_number, order_index));
         }
-        expand_market_if_needed(&payer, &market, &system_program)?;
+        expand_market_if_needed(&payer, &market)?;
     }
 
     // Formal verification does not cover return values.

@@ -301,6 +301,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(base_vault, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),
@@ -329,6 +330,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(quote_vault, false),
                 AccountMeta::new(base_vault, false),
@@ -357,6 +359,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(*trader_base_account, false),
@@ -385,6 +388,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),
@@ -416,6 +420,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),
@@ -448,6 +453,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),
@@ -483,6 +489,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),
@@ -517,6 +524,7 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
             accounts: vec![
                 AccountMeta::new(*payer, true),
                 AccountMeta::new(*market, false),
+                AccountMeta::new(system_program::id(), false),
                 AccountMeta::new(*trader_base_account, false),
                 AccountMeta::new(*trader_quote_account, false),
                 AccountMeta::new(base_vault, false),

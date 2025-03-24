@@ -83,7 +83,7 @@ impl<'a, 'info> CreateMarketContext<'a, 'info> {
 pub(crate) struct ClaimSeatContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+    pub _system_program: Program<'a, 'info>,
 }
 
 impl<'a, 'info> ClaimSeatContext<'a, 'info> {
@@ -94,12 +94,12 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
+        let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
             payer,
             market,
-            system_program,
+            _system_program,
         })
     }
 }
@@ -108,7 +108,7 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
 pub(crate) struct ExpandMarketContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+    pub _system_program: Program<'a, 'info>,
 }
 
 impl<'a, 'info> ExpandMarketContext<'a, 'info> {
@@ -118,12 +118,12 @@ impl<'a, 'info> ExpandMarketContext<'a, 'info> {
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
+        let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
             payer,
             market,
-            system_program,
+            _system_program,
         })
     }
 }
@@ -274,6 +274,9 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
         let market: ManifestAccountInfo<MarketFixed> =
             ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        // Included in case we need to expand for a reverse order.
+        let _system_program: Program =
+            Program::new(next_account_info(account_iter)?, &system_program::id())?;
 
         let market_fixed: Ref<MarketFixed> = market.get_fixed()?;
         let base_mint_key: Pubkey = *market_fixed.get_base_mint();
@@ -403,7 +406,6 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                     gas_payer_opt: None,
                     gas_receiver_opt: Some(payer.clone()),
                     market: *market.info.key,
-                    // System program not included because does not rest an order.
                     system_program: None,
                 });
             }
@@ -451,7 +453,7 @@ pub struct GlobalTradeAccounts<'a, 'info> {
 pub(crate) struct BatchUpdateContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
-    pub system_program: Program<'a, 'info>,
+    pub _system_program: Program<'a, 'info>,
 
     // One for each side. First is base, then is quote.
     pub global_trade_accounts_opts: [Option<GlobalTradeAccounts<'a, 'info>>; 2],
@@ -560,7 +562,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
         Ok(Self {
             payer,
             market,
-            system_program,
+            _system_program: system_program,
             global_trade_accounts_opts,
         })
     }
@@ -604,7 +606,7 @@ impl<'a, 'info> GlobalCreateContext<'a, 'info> {
 pub(crate) struct GlobalAddTraderContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub system_program: Program<'a, 'info>,
+    pub _system_program: Program<'a, 'info>,
 }
 
 impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
@@ -614,12 +616,12 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
-        let system_program: Program =
+        let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
             payer,
             global,
-            system_program,
+            _system_program,
         })
     }
 }

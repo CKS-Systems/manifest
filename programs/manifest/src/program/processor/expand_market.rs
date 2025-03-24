@@ -10,11 +10,7 @@ pub(crate) fn process_expand_market(
     _data: &[u8],
 ) -> ProgramResult {
     let expand_market_context: ExpandMarketContext = ExpandMarketContext::load(accounts)?;
-    let ExpandMarketContext {
-        market,
-        payer,
-        system_program,
-    } = expand_market_context;
+    let ExpandMarketContext { market, payer, .. } = expand_market_context;
 
-    expand_market(&payer, &market, &system_program)
+    expand_market(&payer, &market)
 }

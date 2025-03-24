@@ -32,7 +32,7 @@ Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
 | Creation Rent|2 SOL |3+ SOL |.007 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
-| Swap accounts| 16 | 8 | 7 |
+| Swap accounts| 16 | 8 | 8 |
 | [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Token 22                                                | No                 | No                 | Yes                                   |
 | Composable wrapper                                      | No                 | No                 | Yes                                   |

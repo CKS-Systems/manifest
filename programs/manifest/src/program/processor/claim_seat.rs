@@ -19,16 +19,12 @@ pub(crate) fn process_claim_seat(
     _data: &[u8],
 ) -> ProgramResult {
     let claim_seat_context: ClaimSeatContext = ClaimSeatContext::load(accounts)?;
-    let ClaimSeatContext {
-        market,
-        payer,
-        system_program,
-    } = claim_seat_context;
+    let ClaimSeatContext { market, payer, .. } = claim_seat_context;
 
     process_claim_seat_internal(&market, &payer)?;
 
     // Leave a free block on the market
-    expand_market_if_needed(&payer, &market, &system_program)?;
+    expand_market_if_needed(&payer, &market)?;
 
     Ok(())
 }
