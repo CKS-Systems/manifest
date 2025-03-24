@@ -2611,7 +2611,7 @@ dependencies = [
 
 [[package]]
 name = "manifest-jupiter"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
