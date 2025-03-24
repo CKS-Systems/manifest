@@ -255,7 +255,7 @@ const AppWalletProvider = ({
         setDailyVolumes(dailyVolumeByAddr);
       } catch (e) {
         console.error('fetching app state:', e);
-        toast.error(`placeOrder: ${ensureError(e).message}`);
+        toast.error(`fetchTickers: ${ensureError(e).message}`);
       } finally {
         setLoading(false);
       }

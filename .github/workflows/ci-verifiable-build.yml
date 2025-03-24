@@ -9,6 +9,8 @@ env:
   MANIFEST_NAME: manifest
   WRAPPER_NAME: wrapper
   UI_WRAPPER_NAME: ui_wrapper
+  RUST_TOOLCHAIN: '1.84.0'
+
 
 jobs:
   build:
@@ -17,6 +19,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set Rust version
+        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component rustfmt
+
+      - name: Remove rust-toolchain.toml
+        run: rm rust-toolchain.toml
 
       - name: Setup solana-verify
         run: |

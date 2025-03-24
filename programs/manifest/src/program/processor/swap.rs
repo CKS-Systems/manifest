@@ -2,6 +2,7 @@ use std::cell::RefMut;
 
 use crate::{
     logs::{emit_stack, PlaceOrderLog},
+    program::expand_market_if_needed,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -84,17 +85,34 @@ pub(crate) fn process_swap_core(
         global_trade_accounts_opts,
     } = swap_context;
 
+    let (existing_seat_index, trader_index, initial_base_atoms, initial_quote_atoms) = {
+        let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
+        let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+
+        // Claim seat if needed
+        let existing_seat_index: DataIndex = dynamic_account.get_trader_index(payer.key);
+        if existing_seat_index == NIL {
+            dynamic_account.claim_seat(payer.key)?;
+        }
+        let trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
+
+        let (initial_base_atoms, initial_quote_atoms) =
+            dynamic_account.get_trader_balance(payer.key);
+
+        (
+            existing_seat_index,
+            trader_index,
+            initial_base_atoms,
+            initial_quote_atoms,
+        )
+    };
+
+    // Might need a free list spot for both the temporary claimed seat as well
+    // as for a partially filled reverse order.
+    expand_market_if_needed(&payer, &market)?;
+
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
     let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-
-    // Claim seat if needed
-    let existing_seat_index: DataIndex = dynamic_account.get_trader_index(payer.key);
-    if existing_seat_index == NIL {
-        dynamic_account.claim_seat(payer.key)?;
-    }
-    let trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
-
-    let (initial_base_atoms, initial_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
 
     let SwapParams {
         in_atoms,

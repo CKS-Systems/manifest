@@ -9,7 +9,7 @@ use crate::{
         claimed_seat::ClaimedSeat, constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed,
         MarketFixed, MarketRefMut, GLOBAL_BLOCK_SIZE,
     },
-    validation::{ManifestAccount, ManifestAccountInfo, Program, Signer},
+    validation::{ManifestAccount, ManifestAccountInfo, Signer},
 };
 use bytemuck::Pod;
 use hypertree::{get_helper, get_mut_helper, DataIndex, Get, RBNode};
@@ -25,7 +25,6 @@ use super::batch_update::MarketDataTreeNodeType;
 pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     market_account_info: &ManifestAccountInfo<'a, 'info, T>,
-    system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
     let need_expand: bool = {
         let market_data: &Ref<&mut [u8]> = &market_account_info.try_borrow_data()?;
@@ -36,15 +35,14 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
-    expand_market(payer, market_account_info, system_program)
+    expand_market(payer, market_account_info)
 }
 
 pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
-    system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
-    expand_dynamic(payer, manifest_account, system_program, MARKET_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, MARKET_BLOCK_SIZE)?;
     expand_market_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -53,11 +51,10 @@ pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
 pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
-    system_program: &Program<'a, 'info>,
 ) -> ProgramResult {
     // Expand twice because of two trees at once.
-    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
-    expand_dynamic(payer, manifest_account, system_program, GLOBAL_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, GLOBAL_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;
     Ok(())
 }
@@ -66,7 +63,6 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
 fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     _payer: &Signer<'a, 'info>,
     _manifest_account: &ManifestAccountInfo<'a, 'info, T>,
-    _system_program: &Program<'a, 'info>,
     _block_size: usize,
 ) -> ProgramResult {
     Ok(())
@@ -75,11 +71,10 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
 fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
-    system_program: &Program<'a, 'info>,
     block_size: usize,
 ) -> ProgramResult {
     // Account types were already validated, so do not need to reverify that the
-    // accounts are in order: payer, expandable_account, system_program, ...
+    // accounts are in order: payer, expandable_account, ...
     let expandable_account: &AccountInfo = manifest_account.info;
     let new_size: usize = expandable_account.data_len() + block_size;
 
@@ -89,7 +84,6 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
     let payer: &AccountInfo = payer.info;
-    let system_program: &AccountInfo = system_program.info;
 
     invoke(
         &solana_program::system_instruction::transfer(
@@ -97,18 +91,14 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
             expandable_account.key,
             lamports_diff,
         ),
-        &[
-            payer.clone(),
-            expandable_account.clone(),
-            system_program.clone(),
-        ],
+        &[payer.clone(), expandable_account.clone()],
     )?;
 
     #[cfg(feature = "fuzz")]
     {
         solana_program::program::invoke(
             &solana_program::system_instruction::allocate(expandable_account.key, new_size as u64),
-            &[expandable_account.clone(), system_program.clone()],
+            &[expandable_account.clone()],
         )?;
     }
     #[cfg(not(feature = "fuzz"))]

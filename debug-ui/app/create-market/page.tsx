@@ -106,7 +106,7 @@ const CreateMarket = (): ReactElement => {
       setMarketAddr(marketKeypair.publicKey.toBase58());
     } catch (e) {
       setMarketAddr('');
-      toast.error(`placeOrder: ${ensureError(e).message}`);
+      toast.error(`setMarketAddr: ${ensureError(e).message}`);
     }
   };
 

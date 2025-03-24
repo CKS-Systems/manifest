@@ -1,6 +1,6 @@
 [package]
 name = "manifest-jupiter"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -12,8 +12,8 @@ test = []
 
 [dependencies]
 anyhow = { workspace = true }
-manifest-dex = { path = "../../programs/manifest", features=['no-clock'] }
-hypertree = { path = "../../lib" }
+manifest-dex = "1.0.1"
+hypertree = "1.0.0"
 jupiter-amm-interface = "=0.4.5"
 solana-sdk = { workspace = true }
 solana-program = { workspace = true }

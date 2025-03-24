@@ -18,14 +18,10 @@ pub(crate) fn process_global_add_trader(
     trace!("process_global_add_trader accs={accounts:?}");
     let global_add_trader_context: GlobalAddTraderContext = GlobalAddTraderContext::load(accounts)?;
 
-    let GlobalAddTraderContext {
-        payer,
-        global,
-        system_program,
-    } = global_add_trader_context;
+    let GlobalAddTraderContext { payer, global, .. } = global_add_trader_context;
 
     // Needs a spot for this trader on the global account.
-    expand_global(&payer, &global, &system_program)?;
+    expand_global(&payer, &global)?;
 
     let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);

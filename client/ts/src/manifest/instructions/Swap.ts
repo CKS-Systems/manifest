@@ -38,6 +38,7 @@ export const SwapStruct = new beet.BeetArgsStruct<
  *
  * @property [_writable_, **signer**] payer
  * @property [_writable_] market
+ * @property [] systemProgram
  * @property [_writable_] traderBase
  * @property [_writable_] traderQuote
  * @property [_writable_] baseVault
@@ -55,6 +56,7 @@ export const SwapStruct = new beet.BeetArgsStruct<
 export type SwapInstructionAccounts = {
   payer: web3.PublicKey;
   market: web3.PublicKey;
+  systemProgram?: web3.PublicKey;
   traderBase: web3.PublicKey;
   traderQuote: web3.PublicKey;
   baseVault: web3.PublicKey;
@@ -102,6 +104,11 @@ export function createSwapInstruction(
     {
       pubkey: accounts.market,
       isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
+      isWritable: false,
       isSigner: false,
     },
     {

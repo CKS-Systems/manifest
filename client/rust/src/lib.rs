@@ -15,7 +15,7 @@ use manifest::{
         loaders::GlobalTradeAccounts, ManifestAccountInfo,
     },
 };
-use solana_program::account_info::AccountInfo;
+use solana_program::{account_info::AccountInfo, system_program};
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::{cell::RefCell, mem::size_of, rc::Rc};
 
@@ -128,12 +128,12 @@ impl Amm for ManifestLocalMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {
@@ -172,6 +172,7 @@ impl Amm for ManifestLocalMarket {
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
+            AccountMeta::new(system_program::id(), false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
             AccountMeta::new(base_vault, false),
@@ -212,15 +213,16 @@ impl Amm for ManifestLocalMarket {
         // 1   Program
         // 2   Market
         // 3   Signer
-        // 4   User Base
-        // 5   User Quote
-        // 6   Vault Base
-        // 7   Vault Quote
-        // 8   Base Token Program
-        // 9   Base Mint
-        // 10  Quote Token Program
-        // 11  Quote Mint
-        11
+        // 4   SystemProgram
+        // 5   User Base
+        // 6   User Quote
+        // 7   Vault Base
+        // 8   Vault Quote
+        // 9   Base Token Program
+        // 10  Base Mint
+        // 11  Quote Token Program
+        // 12  Quote Mint
+        12
     }
 }
 
@@ -394,12 +396,12 @@ impl Amm for ManifestMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {
@@ -443,6 +445,7 @@ impl Amm for ManifestMarket {
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
+            AccountMeta::new(system_program::id(), false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
             AccountMeta::new(base_vault, false),
@@ -485,17 +488,18 @@ impl Amm for ManifestMarket {
         // 1   Program
         // 2   Market
         // 3   Signer
-        // 4   User Base
-        // 5   User Quote
-        // 6   Vault Base
-        // 7   Vault Quote
-        // 8   Base Token Program
-        // 9   Base Mint
-        // 10  Quote Token Program
-        // 11  Quote Mint
-        // 12  Global
-        // 13  Global Vault
-        13
+        // 4   System Program
+        // 5   User Base
+        // 6   User Quote
+        // 7   Vault Base
+        // 8   Vault Quote
+        // 9   Base Token Program
+        // 10  Base Mint
+        // 11  Quote Token Program
+        // 12  Quote Mint
+        // 13  Global
+        // 14  Global Vault
+        14
     }
 }
 
@@ -1107,7 +1111,7 @@ mod test {
         let manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_account, &amm_context).unwrap();
 
-        assert_eq!(manifest_market.get_accounts_len(), 13);
+        assert_eq!(manifest_market.get_accounts_len(), 14);
         assert_eq!(manifest_market.label(), "Manifest");
         assert_eq!(manifest_market.key(), MARKET_KEY);
         assert_eq!(manifest_market.program_id(), manifest::id());
@@ -1162,7 +1166,7 @@ mod test {
         assert_eq!(manifest_local_market.key(), MARKET_KEY);
         assert_eq!(manifest_local_market.program_id(), manifest::id());
         assert_eq!(manifest_local_market.get_accounts_to_update().len(), 3);
-        assert_eq!(manifest_local_market.get_accounts_len(), 11);
+        assert_eq!(manifest_local_market.get_accounts_len(), 12);
         assert_eq!(manifest_local_market.get_reserve_mints()[0], BASE_MINT_KEY);
         manifest_local_market.clone_amm();
         assert!(!manifest_local_market.has_dynamic_accounts());

@@ -23,7 +23,7 @@ pub fn deposit_instruction(
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(*payer, true),
             AccountMeta::new(*market, false),
             AccountMeta::new(*trader_token_account, false),
             AccountMeta::new(vault_address, false),

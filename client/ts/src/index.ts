@@ -7,6 +7,7 @@ export * from './types';
 // to use the client.
 export * from './manifest/errors';
 export * from './manifest/accounts';
+export * from './manifest/instructions';
 export * from './manifest/types/OrderType';
 
 export * from './wrapperObj';

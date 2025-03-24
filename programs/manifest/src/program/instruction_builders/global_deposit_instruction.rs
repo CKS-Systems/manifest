@@ -20,7 +20,7 @@ pub fn global_deposit_instruction(
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(*payer, true),
             AccountMeta::new(global, false),
             AccountMeta::new_readonly(*mint, false),
             AccountMeta::new(global_vault, false),

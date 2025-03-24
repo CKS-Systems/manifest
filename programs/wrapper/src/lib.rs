@@ -12,7 +12,7 @@ pub mod wrapper_state;
 use hypertree::trace;
 use instruction::ManifestWrapperInstruction;
 use processors::{
-    batch_upate::process_batch_update, claim_seat::process_claim_seat,
+    batch_upate::process_batch_update, claim_seat::process_claim_seat, collect::process_collect,
     create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
 };
 use solana_program::{
@@ -59,6 +59,9 @@ pub fn process_instruction(
         }
         ManifestWrapperInstruction::ClaimSeat => {
             process_claim_seat(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::Collect => {
+            process_collect(program_id, accounts, data)?;
         }
         ManifestWrapperInstruction::Deposit => {
             process_deposit(program_id, accounts, data)?;

@@ -8,9 +8,6 @@
 [![codecov](https://codecov.io/gh/CKS-Systems/manifest/graph/badge.svg?token=PJ3Y2BVMM8)](https://codecov.io/gh/CKS-Systems/manifest)
 [![Code Review - Rust](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-rust.yml)
 [![Code Review - Typescript](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-code-review-ts.yml)
-[![Build Docs](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-docs.yml)
-[![Benchmarking](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-benchmark.yml)
-[![Formal Verification](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml/badge.svg)](https://github.com/CKS-Systems/manifest/actions/workflows/ci-certora.yml)
 
 Manifest is the next generation liquidity primitive on Solana.
 No more permissioned markets.
@@ -32,10 +29,10 @@ Read [The Orderbook Manifesto](https://manifest.trade/whitepaper.pdf)
 | Feeless |No |No |Yes|
 | Atomic lot sizes |No |No |Yes|
 | Anchor |Yes |No|No|
-| Creation Rent|2 SOL |3+ SOL |.004 SOL|
+| Creation Rent|2 SOL |3+ SOL |.007 SOL|
 | License|GPL |Business |GPL|
 | Read optimized| Yes | No | Yes |
-| Swap accounts| 16 | 8 | 7 |
+| Swap accounts| 16 | 8 | 8 |
 | [CU](https://cks-systems.github.io/manifest/dev/bench/) | :white_check_mark: | :white_check_mark: | :white_check_mark: :white_check_mark: |
 | Token 22                                                | No                 | No                 | Yes                                   |
 | Composable wrapper                                      | No                 | No                 | Yes                                   |
@@ -83,6 +80,10 @@ Manifest should be interacted with though a wrapper program. Features like Clien
 ### Global Orders
 
 Global orders are a new type of order for trading on Solana. When resting orders across many markets, cost of capital can be expensive. This is the problem that global orders look to address. A global order is an order that does not lock the tokens to support the order on the market. The same tokens that would have supported an order on one market, can now support orders across many markets, with the tokens moved just in time as there is a fill.
+
+### Reverse Orders
+
+Reverse orders are a special type of order available on Manifest designed to replicate the replacement mechanism inherent in Automated Market Makers (AMMs). These are limit orders that automatically switch sides when filled - buys convert to sells, and sells convert to buys using all the proceeds from the prior fill on the new order. These orders also allow configurable spreads, making them a more customizable version of AMMs. This enables users to have various fixed fees across a series of orders. By utilizing a series of reverse orders, users can fully replicate a concentrated liquidity AMM position. Orderbook liquidity providers benefit from reduced gas costs, as there’s no need to replace orders after they are filled. Therefore, reverse orders are permanent discretized liquidity directly on the orderbook. Similar to AMMs, reverse orders on Manifest make on-chain orderbook market making more accessible for everyone.
 
 ### Building
 

@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: yarn
+      - run: yarn install --frozen-lockfile
       - run: yarn build
       - uses: JS-DevTools/npm-publish@v1
         with:

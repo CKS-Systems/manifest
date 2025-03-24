@@ -280,6 +280,14 @@
           ]
         },
         {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
           "name": "traderBase",
           "isMut": true,
           "isSigner": false,

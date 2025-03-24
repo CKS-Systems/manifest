@@ -1837,6 +1837,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hypertree"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c82aa88dee5e1767f4b7862389379d0dd943e87533d8e8b8bf8063b29cb50c9"
+dependencies = [
+ "bytemuck",
+ "solana-program",
+ "static_assertions",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2297,13 +2308,40 @@ dependencies = [
 
 [[package]]
 name = "manifest-dex"
-version = "1.0.0"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42c93ba07891cc55c279651781d2dc016e28ca30afea109d87d41e5a2a6818fb"
+dependencies = [
+ "arrayref",
+ "borsh 0.10.4",
+ "bytemuck",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_enum 0.5.11",
+ "shank",
+ "solana-invoke",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
+name = "manifest-dex"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "arrayref",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "calltrace",
+ "cvt 0.2.0 (git+https://github.com/Certora/solana-cvt.git)",
+ "cvt-macros",
+ "early-panic",
+ "hook_macro",
+ "hypertree 1.0.0",
+ "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -2321,12 +2359,12 @@ dependencies = [
 
 [[package]]
 name = "manifest-jupiter"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
- "hypertree 1.0.0",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
- "manifest-dex",
+ "manifest-dex 1.0.1",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -6060,8 +6098,8 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "manifest-dex",
+ "hypertree 1.0.0",
+ "manifest-dex 2.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -6566,8 +6604,8 @@ dependencies = [
  "anyhow",
  "borsh 0.10.4",
  "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "manifest-dex",
+ "hypertree 1.0.0",
+ "manifest-dex 2.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",

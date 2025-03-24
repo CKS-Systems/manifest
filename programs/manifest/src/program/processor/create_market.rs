@@ -185,7 +185,7 @@ pub(crate) fn process_create_market(
     }
 
     // Leave a free block on the market so takers can use and leave it.
-    expand_market_if_needed(&payer, &market, &system_program)?;
+    expand_market_if_needed(&payer, &market)?;
 
     Ok(())
 }

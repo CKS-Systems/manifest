@@ -1,5 +1,13 @@
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
+import { Mutex } from 'async-mutex';
+import { Metaplex, Pda } from '@metaplex-foundation/js';
+import {
+  ENV,
+  TokenInfo,
+  TokenListContainer,
+  TokenListProvider,
+} from '@solana/spl-token-registry';
 import * as promClient from 'prom-client';
 import cors from 'cors';
 import express, { RequestHandler } from 'express';
@@ -84,7 +92,19 @@ export class ManifestStatsServer {
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
 
+  // Tickers. Ticker from metaplex metadata with a fallback to spl token
+  // registry for old stuff like wsol.
+  private tickers: Map<string, [string, string]> = new Map();
+
   private lastFillSlot: number = 0;
+
+  // Recent fill log results
+  private fillLogResults: Map<string, FillLogResult[]> = new Map();
+
+  // Mutex to guard all the recent fills, volume, ... Most important for recent
+  // fills when a fill spills over to multiple maker orders and bursts in fill
+  // logs.
+  private fillMutex: Mutex = new Mutex();
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
@@ -117,59 +137,72 @@ export class ManifestStatsServer {
       const fill: FillLogResult = JSON.parse(message.data.toString());
       const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
 
-      // Do not accept old spurious messages.
-      if (this.lastFillSlot > slot) {
-        return;
-      }
-      this.lastFillSlot = slot;
+      await this.fillMutex.runExclusive(async () => {
+        // Do not accept old spurious messages.
+        if (this.lastFillSlot > slot) {
+          return;
+        }
+        this.lastFillSlot = slot;
 
-      fills.inc({ market });
-      console.log('Got fill', fill);
+        fills.inc({ market });
+        console.log('Got fill', fill);
 
-      if (this.traderNumTrades.get(taker) == undefined) {
-        this.traderNumTrades.set(taker, 0);
-      }
-      this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+        if (this.traderNumTrades.get(taker) == undefined) {
+          this.traderNumTrades.set(taker, 0);
+        }
+        this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
 
-      if (this.markets.get(market) == undefined) {
-        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        this.baseVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        if (this.markets.get(market) == undefined) {
+          this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+          this.baseVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          this.quoteVolumeAtomsCheckpoints.set(
+            market,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          const marketPk: PublicKey = new PublicKey(market);
+          this.markets.set(
+            market,
+            await Market.loadFromAddress({
+              connection: this.connection,
+              address: marketPk,
+            }),
+          );
+          this.fillLogResults.set(market, []);
+        }
+        if (this.fillLogResults.get(market) == undefined) {
+          this.fillLogResults.set(market, []);
+        }
+        lastPrice.set(
+          { market },
+          priceAtoms *
+            10 **
+              (this.markets.get(market)!.baseDecimals() -
+                this.markets.get(market)!.quoteDecimals()),
         );
-        this.quoteVolumeAtomsCheckpoints.set(
-          market,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
-        const marketPk: PublicKey = new PublicKey(market);
-        this.markets.set(
-          market,
-          await Market.loadFromAddress({
-            connection: this.connection,
-            address: marketPk,
-          }),
-        );
-      }
-      lastPrice.set(
-        { market },
-        priceAtoms *
-          10 **
-            (this.markets.get(market)!.baseDecimals() -
-              this.markets.get(market)!.quoteDecimals()),
-      );
 
-      this.lastPriceByMarket.set(market, priceAtoms);
-      this.baseVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(baseAtoms),
-      );
-      this.quoteVolumeAtomsSinceLastCheckpoint.set(
-        market,
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
-          Number(quoteAtoms),
-      );
+        this.lastPriceByMarket.set(market, priceAtoms);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(baseAtoms),
+        );
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(
+          market,
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
+            Number(quoteAtoms),
+        );
+
+        let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
+        prevFills.push(fill);
+        if (prevFills.length > 10) {
+          prevFills = prevFills.slice(1, 10);
+        }
+        this.fillLogResults.set(market, prevFills);
+      });
     };
   }
 
@@ -206,6 +239,62 @@ export class ManifestStatsServer {
         this.markets.set(marketPk, market);
       },
     );
+
+    const mintToSymbols: Map<string, string> = new Map();
+    const metaplex: Metaplex = Metaplex.make(this.connection);
+    this.markets.forEach(async (market: Market, marketPk: string) => {
+      const baseMint: PublicKey = market.baseMint();
+      const quoteMint: PublicKey = market.quoteMint();
+
+      let baseSymbol = '';
+      let quoteSymbol = '';
+      if (mintToSymbols.has(baseMint.toBase58())) {
+        baseSymbol = mintToSymbols.get(baseMint.toBase58())!;
+      } else {
+        // Sleep to backoff on RPC load.
+        await new Promise((f) => setTimeout(f, 500));
+        baseSymbol = await this.lookupMintTicker(metaplex, baseMint);
+      }
+      mintToSymbols.set(baseMint.toBase58(), baseSymbol);
+
+      if (mintToSymbols.has(quoteMint.toBase58())) {
+        quoteSymbol = mintToSymbols.get(quoteMint.toBase58())!;
+      } else {
+        quoteSymbol = await this.lookupMintTicker(metaplex, quoteMint);
+      }
+      mintToSymbols.set(quoteMint.toBase58(), quoteSymbol);
+
+      this.tickers.set(market.address.toBase58(), [
+        mintToSymbols.get(market.baseMint()!.toBase58())!,
+        mintToSymbols.get(market.quoteMint()!.toBase58())!,
+      ]);
+    });
+  }
+
+  async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
+    const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
+    const metadataAccountInfo =
+      await this.connection.getAccountInfo(metadataAccount);
+    if (metadataAccountInfo) {
+      const token = await metaplex.nfts().findByMint({ mintAddress: mint });
+      return token.symbol;
+    } else {
+      const provider: TokenListContainer =
+        await new TokenListProvider().resolve();
+      const tokenList: TokenInfo[] = provider
+        .filterByChainId(ENV.MainnetBeta)
+        .getList();
+      const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
+        map.set(item.address, item);
+        return map;
+      }, new Map<string, TokenInfo>());
+
+      const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
+      if (token) {
+        return token.symbol;
+      }
+    }
+    return '';
   }
 
   /**
@@ -263,7 +352,6 @@ export class ManifestStatsServer {
   async depthProbe(): Promise<void> {
     console.log('Probing depths for market maker data');
 
-    // Once there are more than 200 accounts, should batch this into multiple fetches.
     const marketKeys: PublicKey[] = Array.from(this.markets.keys()).map(
       (market: string) => {
         return new PublicKey(market);
@@ -271,77 +359,80 @@ export class ManifestStatsServer {
     );
 
     try {
-      const accountInfos: (AccountInfo<Buffer> | null)[] =
-        await this.connection.getMultipleAccountsInfo(marketKeys);
-      accountInfos.forEach(
-        (accountInfo: AccountInfo<Buffer> | null, index: number) => {
-          if (!accountInfo) {
-            return;
-          }
-          const marketPk: PublicKey = marketKeys[index];
-          const market: Market = Market.loadFromBuffer({
-            buffer: accountInfo.data,
-            address: marketPk,
-          });
-          const bids: RestingOrder[] = market.bids();
-          const asks: RestingOrder[] = market.asks();
-          if (bids.length == 0 || asks.length == 0) {
-            return;
-          }
-
-          const midTokens: number =
-            (bids[bids.length - 1].tokenPrice +
-              asks[asks.length - 1].tokenPrice) /
-            2;
-
-          DEPTHS_BPS.forEach((depthBps: number) => {
-            const bidsAtDepth: RestingOrder[] = bids.filter(
-              (bid: RestingOrder) => {
-                return bid.tokenPrice > midTokens * (1 - depthBps * 0.0001);
-              },
-            );
-            const asksAtDepth: RestingOrder[] = asks.filter(
-              (ask: RestingOrder) => {
-                return ask.tokenPrice < midTokens * (1 + depthBps * 0.0001);
-              },
-            );
-
-            const bidTraders: Set<string> = new Set(
-              bidsAtDepth.map((bid: RestingOrder) => bid.trader.toBase58()),
-            );
-
-            bidTraders.forEach((trader: string) => {
-              const bidTokensAtDepth: number = bidsAtDepth
-                .filter((bid: RestingOrder) => {
-                  return bid.trader.toBase58() == trader;
-                })
-                .map((bid: RestingOrder) => {
-                  return Number(bid.numBaseTokens);
-                })
-                .reduce((sum, num) => sum + num, 0);
-              const askTokensAtDepth: number = asksAtDepth
-                .filter((ask: RestingOrder) => {
-                  return ask.trader.toBase58() == trader;
-                })
-                .map((ask: RestingOrder) => {
-                  return Number(ask.numBaseTokens);
-                })
-                .reduce((sum, num) => sum + num, 0);
-
-              if (bidTokensAtDepth > 0 && askTokensAtDepth > 0) {
-                depth.set(
-                  {
-                    depth_bps: depthBps,
-                    market: marketPk.toBase58(),
-                    trader: trader,
-                  },
-                  Math.min(bidTokensAtDepth, askTokensAtDepth) * midTokens,
-                );
-              }
+      const marketKeysChunks: PublicKey[][] = chunks(marketKeys, 100);
+      for (const marketKeysChunk of marketKeysChunks) {
+        const accountInfos: (AccountInfo<Buffer> | null)[] =
+          await this.connection.getMultipleAccountsInfo(marketKeysChunk);
+        accountInfos.forEach(
+          (accountInfo: AccountInfo<Buffer> | null, index: number) => {
+            if (!accountInfo) {
+              return;
+            }
+            const marketPk: PublicKey = marketKeys[index];
+            const market: Market = Market.loadFromBuffer({
+              buffer: accountInfo.data,
+              address: marketPk,
             });
-          });
-        },
-      );
+            const bids: RestingOrder[] = market.bids();
+            const asks: RestingOrder[] = market.asks();
+            if (bids.length == 0 || asks.length == 0) {
+              return;
+            }
+
+            const midTokens: number =
+              (bids[bids.length - 1].tokenPrice +
+                asks[asks.length - 1].tokenPrice) /
+              2;
+
+            DEPTHS_BPS.forEach((depthBps: number) => {
+              const bidsAtDepth: RestingOrder[] = bids.filter(
+                (bid: RestingOrder) => {
+                  return bid.tokenPrice > midTokens * (1 - depthBps * 0.0001);
+                },
+              );
+              const asksAtDepth: RestingOrder[] = asks.filter(
+                (ask: RestingOrder) => {
+                  return ask.tokenPrice < midTokens * (1 + depthBps * 0.0001);
+                },
+              );
+
+              const bidTraders: Set<string> = new Set(
+                bidsAtDepth.map((bid: RestingOrder) => bid.trader.toBase58()),
+              );
+
+              bidTraders.forEach((trader: string) => {
+                const bidTokensAtDepth: number = bidsAtDepth
+                  .filter((bid: RestingOrder) => {
+                    return bid.trader.toBase58() == trader;
+                  })
+                  .map((bid: RestingOrder) => {
+                    return Number(bid.numBaseTokens);
+                  })
+                  .reduce((sum, num) => sum + num, 0);
+                const askTokensAtDepth: number = asksAtDepth
+                  .filter((ask: RestingOrder) => {
+                    return ask.trader.toBase58() == trader;
+                  })
+                  .map((ask: RestingOrder) => {
+                    return Number(ask.numBaseTokens);
+                  })
+                  .reduce((sum, num) => sum + num, 0);
+
+                if (bidTokensAtDepth > 0 && askTokensAtDepth > 0) {
+                  depth.set(
+                    {
+                      depth_bps: depthBps,
+                      market: marketPk.toBase58(),
+                      trader: trader,
+                    },
+                    Math.min(bidTokensAtDepth, askTokensAtDepth) * midTokens,
+                  );
+                }
+              });
+            });
+          },
+        );
+      }
     } catch (err) {
       console.log('Unable to fetch depth probe', err);
     }
@@ -383,6 +474,15 @@ export class ManifestStatsServer {
       });
     });
     return tickers;
+  }
+
+  /**
+   * Would be named tickers if that wasnt reserved for coingecko.
+   *
+   */
+  getMetadata() {
+    console.log('getting metadata', this.tickers);
+    return this.tickers;
   }
 
   /**
@@ -532,6 +632,13 @@ export class ManifestStatsServer {
   getTraders() {
     return Object.fromEntries(this.traderNumTrades);
   }
+
+  /**
+   * Get array of recent fills.
+   */
+  getRecentFills(market: string) {
+    return { [market]: this.fillLogResults.get(market) };
+  }
 }
 
 const run = async () => {
@@ -561,6 +668,9 @@ const run = async () => {
   const tickersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTickers());
   };
+  const metadataHandler: RequestHandler = (_req, res) => {
+    res.send(JSON.stringify(Object.fromEntries(statsServer.getMetadata())));
+  };
   const orderbookHandler: RequestHandler = async (req, res) => {
     res.send(
       await statsServer.getOrderbook(
@@ -575,12 +685,17 @@ const run = async () => {
   const tradersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTraders());
   };
+  const recentFillsHandler: RequestHandler = (req, res) => {
+    res.send(statsServer.getRecentFills(req.query.market as string));
+  };
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
+  app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
   app.get('/trades', tradersHandler);
+  app.get('/recentFills', recentFillsHandler);
   app.listen(Number(PORT!));
 
   while (true) {
@@ -598,3 +713,9 @@ run().catch((e) => {
   console.error('fatal error');
   throw e;
 });
+
+function chunks<T>(array: T[], size: number): T[][] {
+  return Array.apply(0, new Array(Math.ceil(array.length / size))).map(
+    (_, index) => array.slice(index * size, (index + 1) * size),
+  );
+}
