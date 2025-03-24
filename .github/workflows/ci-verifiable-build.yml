@@ -20,7 +20,7 @@ jobs:
 
       - name: Setup solana-verify
         run: |
-          cargo install solana-verify
+          cargo install solana-verify@0.3.1
 
       - name: Verifiable build manifest
         run: |
