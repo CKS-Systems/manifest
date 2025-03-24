@@ -2559,6 +2559,27 @@ dependencies = [
 [[package]]
 name = "manifest-dex"
 version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42c93ba07891cc55c279651781d2dc016e28ca30afea109d87d41e5a2a6818fb"
+dependencies = [
+ "arrayref",
+ "borsh 0.10.4",
+ "bytemuck",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_enum 0.5.11",
+ "shank",
+ "solana-invoke",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
+name = "manifest-dex"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "arrayref",
@@ -2589,34 +2610,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "manifest-dex"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c93ba07891cc55c279651781d2dc016e28ca30afea109d87d41e5a2a6818fb"
-dependencies = [
- "arrayref",
- "borsh 0.10.4",
- "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum 0.5.11",
- "shank",
- "solana-invoke",
- "solana-program",
- "solana-security-txt",
- "spl-token 3.5.0",
- "spl-token-2022 3.0.4",
- "static_assertions",
- "thiserror",
-]
-
-[[package]]
 name = "manifest-jupiter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
- "manifest-dex 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "manifest-dex 1.0.1",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -6455,7 +6455,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 1.0.1",
+ "manifest-dex 2.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -6978,7 +6978,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 1.0.1",
+ "manifest-dex 2.0.0",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",

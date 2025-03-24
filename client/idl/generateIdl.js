@@ -398,6 +398,9 @@ function modifyIdlCore(programName) {
         case 'Expand': {
           break;
         }
+        case 'Collect': {
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');
