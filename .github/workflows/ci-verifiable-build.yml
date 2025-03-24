@@ -23,6 +23,9 @@ jobs:
       - name: Set Rust version
         run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component rustfmt
 
+      - name: Remove rust-toolchain.toml
+        run: rm rust-toolchain.toml
+
       - name: Setup solana-verify
         run: |
           cargo install solana-verify
