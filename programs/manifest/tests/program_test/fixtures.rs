@@ -1,6 +1,8 @@
+use spl_associated_token_account::get_associated_token_address;
 use std::{
     cell::{Ref, RefCell, RefMut},
     io::Error,
+    str::FromStr,
 };
 
 use hypertree::{DataIndex, HyperTreeValueIteratorTrait};
@@ -81,6 +83,64 @@ impl TestFixture {
                 &solana_sdk::system_program::id(),
             ),
         );
+
+        // Add testdata for the reverse coalesce test.
+        for pk in [
+            "ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ",
+            "AKjfJDv4ywdpCDrj7AURuNkGA3696GTVFgrMwk4TjkKs",
+            "FN9K6rTdWtRDUPmLTN2FnGvLZpHVNRN2MeRghKknSGDs",
+        ] {
+            let filename = format!("tests/testdata/{}", pk);
+            let file: std::fs::File = std::fs::File::open(filename)
+                .unwrap_or_else(|_| panic!("{pk} should open read only"));
+            let json: serde_json::Value =
+                serde_json::from_reader(file).expect("file should be proper JSON");
+            program.add_account_with_base64_data(
+                Pubkey::from_str(pk).unwrap(),
+                u32::MAX as u64,
+                Pubkey::from_str(json["result"]["value"]["owner"].as_str().unwrap()).unwrap(),
+                json["result"]["value"]["data"].as_array().unwrap()[0]
+                    .as_str()
+                    .unwrap(),
+            );
+        }
+
+        let second_payer: Pubkey = second_keypair.pubkey();
+        let usdc_mint: Pubkey =
+            Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+        let user_usdc_ata: Pubkey = get_associated_token_address(&second_payer, &usdc_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: usdc_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_usdc_ata, account);
+
+        let sol_mint: Pubkey =
+            Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+        let user_sol_ata: Pubkey = get_associated_token_address(&second_payer, &sol_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: sol_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_sol_ata, account);
 
         let context: Rc<RefCell<ProgramTestContext>> =
             Rc::new(RefCell::new(program.start_with_context().await));
