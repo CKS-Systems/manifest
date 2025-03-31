@@ -1255,7 +1255,7 @@ impl<
                         coalesced = true;
                     }
                 }
-                
+
                 // If there was 1 atom and because taker rounding is in effect,
                 // then this would result in an empty order.
                 if !coalesced && num_base_atoms_reverse.as_u64() > 0 {

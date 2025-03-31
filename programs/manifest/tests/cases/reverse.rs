@@ -1,19 +1,16 @@
-use crate::TestFixture;
-use solana_sdk::{compute_budget::ComputeBudgetInstruction};
-use solana_sdk::pubkey;
-use manifest::state::BooksideReadOnly;
+use crate::{send_tx_with_retry, TestFixture};
 use hypertree::HyperTreeValueIteratorTrait;
-use manifest::state::RestingOrder;
-use crate::send_tx_with_retry;
-use manifest::program::swap_instruction;
-use solana_sdk::instruction::Instruction;
+use manifest::{
+    program::swap_instruction,
+    quantities::WrapperU64,
+    state::{BooksideReadOnly, RestingOrder},
+};
+use solana_sdk::{
+    compute_budget::ComputeBudgetInstruction, instruction::Instruction, pubkey, pubkey::Pubkey,
+    signature::Signer, signer::keypair::Keypair,
+};
 use spl_associated_token_account::get_associated_token_address;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::Signer;
-use std::rc::Rc;
-use solana_sdk::signer::keypair::Keypair;
-use std::str::FromStr;
-use manifest::quantities::WrapperU64;
+use std::{rc::Rc, str::FromStr};
 
 #[tokio::test]
 async fn reverse_coalesce() -> anyhow::Result<()> {
@@ -27,8 +24,7 @@ async fn reverse_coalesce() -> anyhow::Result<()> {
     let second_payer_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
     let usdc_mint: Pubkey =
         Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
-    let sol_mint: Pubkey =
-        Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+    let sol_mint: Pubkey = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
     let user_usdc_ata: Pubkey = get_associated_token_address(&second_payer, &usdc_mint);
     let user_sol_ata: Pubkey = get_associated_token_address(&second_payer, &sol_mint);
 
