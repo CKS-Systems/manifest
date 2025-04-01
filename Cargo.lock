@@ -2558,27 +2558,6 @@ dependencies = [
 
 [[package]]
 name = "manifest-dex"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c93ba07891cc55c279651781d2dc016e28ca30afea109d87d41e5a2a6818fb"
-dependencies = [
- "arrayref",
- "borsh 0.10.4",
- "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum 0.5.11",
- "shank",
- "solana-invoke",
- "solana-program",
- "solana-security-txt",
- "spl-token 3.5.0",
- "spl-token-2022 3.0.4",
- "static_assertions",
- "thiserror",
-]
-
-[[package]]
-name = "manifest-dex"
 version = "2.0.0"
 dependencies = [
  "anyhow",
@@ -2593,6 +2572,7 @@ dependencies = [
  "hypertree 1.0.0",
  "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",
  "num_enum 0.5.11",
+ "serde_json",
  "shank",
  "solana-invoke",
  "solana-logger",
@@ -2601,6 +2581,7 @@ dependencies = [
  "solana-sdk",
  "solana-security-txt",
  "solana_cvt",
+ "spl-associated-token-account 1.1.3",
  "spl-token 3.5.0",
  "spl-token-2022 3.0.4",
  "static_assertions",
@@ -2610,13 +2591,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "manifest-dex"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18ee8a9c2556398e52de40d229e631b86a27c9812d5977a72615d2e962fcf349"
+dependencies = [
+ "arrayref",
+ "borsh 0.10.4",
+ "bytemuck",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_enum 0.5.11",
+ "shank",
+ "solana-invoke",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
 name = "manifest-jupiter"
 version = "0.2.0"
 dependencies = [
  "anyhow",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
- "manifest-dex 1.0.1",
+ "manifest-dex 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -5219,8 +5221,8 @@ dependencies = [
  "serde_json",
  "solana-account-decoder",
  "solana-sdk",
- "spl-associated-token-account",
- "spl-memo",
+ "spl-associated-token-account 2.3.0",
+ "spl-memo 4.0.0",
  "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "thiserror",
@@ -5395,6 +5397,22 @@ dependencies = [
 
 [[package]]
 name = "spl-associated-token-account"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978dba3bcbe88d0c2c58366c254d9ea41c5f73357e72fc0bdee4d6b5fc99c8f4"
+dependencies = [
+ "assert_matches",
+ "borsh 0.9.3",
+ "num-derive 0.3.3",
+ "num-traits",
+ "solana-program",
+ "spl-token 3.5.0",
+ "spl-token-2022 0.6.1",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-associated-token-account"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "992d9c64c2564cc8f63a4b508bf3ebcdf2254b0429b13cd1d31adb6162432a5f"
@@ -5477,6 +5495,15 @@ dependencies = [
  "sha2 0.10.8",
  "syn 2.0.87",
  "thiserror",
+]
+
+[[package]]
+name = "spl-memo"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd0dc6f70db6bacea7ff25870b016a65ba1d1b6013536f08e4fd79a8f9005325"
+dependencies = [
+ "solana-program",
 ]
 
 [[package]]
@@ -5624,6 +5651,24 @@ dependencies = [
 
 [[package]]
 name = "spl-token-2022"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0043b590232c400bad5ee9eb983ced003d15163c4c5d56b090ac6d9a57457b47"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive 0.3.3",
+ "num-traits",
+ "num_enum 0.5.11",
+ "solana-program",
+ "solana-zk-token-sdk",
+ "spl-memo 3.0.1",
+ "spl-token 3.5.0",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-token-2022"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d697fac19fd74ff472dfcc13f0b442dd71403178ce1de7b5d16f83a33561c059"
@@ -5636,7 +5681,7 @@ dependencies = [
  "solana-program",
  "solana-security-txt",
  "solana-zk-token-sdk",
- "spl-memo",
+ "spl-memo 4.0.0",
  "spl-pod 0.1.0",
  "spl-token 4.0.0",
  "spl-token-group-interface 0.1.0",
@@ -5660,7 +5705,7 @@ dependencies = [
  "solana-program",
  "solana-security-txt",
  "solana-zk-token-sdk",
- "spl-memo",
+ "spl-memo 4.0.0",
  "spl-pod 0.2.5",
  "spl-token 4.0.0",
  "spl-token-group-interface 0.2.5",
