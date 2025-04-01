@@ -89,6 +89,9 @@ impl TestFixture {
             "ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ",
             "AKjfJDv4ywdpCDrj7AURuNkGA3696GTVFgrMwk4TjkKs",
             "FN9K6rTdWtRDUPmLTN2FnGvLZpHVNRN2MeRghKknSGDs",
+            "8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ",
+            "CNRQ2Q5YURFcQrATzYeKUWgKUoBDfqzkDrRWf21UXCVo",
+            "FGQoLafigpyVb7mLa6pvsDDpDaEE3JetrzQoAggTo3n7",
         ] {
             let filename = format!("tests/testdata/{}", pk);
             let file: std::fs::File = std::fs::File::open(filename)
@@ -123,6 +126,24 @@ impl TestFixture {
         }
         .pack_into_slice(&mut account.data);
         program.add_account(user_usdc_ata, account);
+
+        let usdt_mint: Pubkey =
+            Pubkey::from_str("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB").unwrap();
+        let user_usdt_ata: Pubkey = get_associated_token_address(&second_payer, &usdt_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: usdt_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_usdt_ata, account);
 
         let sol_mint: Pubkey =
             Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
