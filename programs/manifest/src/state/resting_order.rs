@@ -232,8 +232,7 @@ impl PartialEq for RestingOrder {
                 || u64_slice_to_u128(self.price.inner) + 1 == u64_slice_to_u128(other.price.inner)
                 || u64_slice_to_u128(self.price.inner) - 1 == u64_slice_to_u128(other.price.inner)
         } else {
-            // Only used in equality check of lookups. To enable coalescing, just
-            // check price, trader, and order type.
+            // Only used in equality check of lookups, so we can ignore size, seqnum, ...
             self.price == other.price
         }
     }

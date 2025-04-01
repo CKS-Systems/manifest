@@ -131,11 +131,6 @@ async fn reverse_coalesce_usdt() -> anyhow::Result<()> {
         if ind > 5 {
             break;
         }
-        println!(
-            "Ask {:?}@{:?}",
-            ask.get_num_base_atoms().as_u64(),
-            ask.get_price()
-        );
         assert!(ask.get_num_base_atoms().as_u64() > 0);
     }
     // Show that the top of bids has no empty orders.
@@ -144,11 +139,6 @@ async fn reverse_coalesce_usdt() -> anyhow::Result<()> {
         if ind > 5 {
             break;
         }
-        println!(
-            "Bid {:?}@{:?}",
-            bid.get_num_base_atoms().as_u64(),
-            bid.get_price()
-        );
         assert!(bid.get_num_base_atoms().as_u64() > 0);
     }
 
