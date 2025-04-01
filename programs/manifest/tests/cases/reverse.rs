@@ -76,3 +76,81 @@ async fn reverse_coalesce() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn reverse_coalesce_usdt() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.market_fixture.key = pubkey!("8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ");
+
+    // Swap. second_keypair was loaded with tokens for the correct mints.
+    test_fixture.market_fixture.reload().await;
+
+    let second_payer: Pubkey = test_fixture.second_keypair.pubkey();
+    let second_payer_keypair: Keypair = test_fixture.second_keypair.insecure_clone();
+    let usdt_mint: Pubkey =
+        Pubkey::from_str("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB").unwrap();
+    let usdc_mint: Pubkey =
+        Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+    let user_usdt_ata: Pubkey = get_associated_token_address(&second_payer, &usdt_mint);
+    let user_usdc_ata: Pubkey = get_associated_token_address(&second_payer, &usdc_mint);
+
+    test_fixture.market_fixture.reload().await;
+
+    test_fixture.market_fixture.reload().await;
+
+    let swap_ix: Instruction = swap_instruction(
+        &test_fixture.market_fixture.key,
+        &second_payer,
+        &usdt_mint,
+        &usdc_mint,
+        &user_usdt_ata,
+        &user_usdc_ata,
+        10_000_000_000,
+        0,
+        false,
+        true,
+        spl_token::id(),
+        spl_token::id(),
+        false,
+    );
+    let limit_instruction = ComputeBudgetInstruction::set_compute_unit_limit(1_400_000);
+
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[limit_instruction, swap_ix],
+        Some(&second_payer),
+        &[&second_payer_keypair],
+    )
+    .await?;
+
+    test_fixture.market_fixture.reload().await;
+
+    // Show that the top of asks got the empty orders cleared.
+    let asks: BooksideReadOnly = test_fixture.market_fixture.market.get_asks();
+    for (ind, (_, ask)) in asks.iter::<RestingOrder>().enumerate() {
+        if ind > 5 {
+            break;
+        }
+        println!(
+            "Ask {:?}@{:?}",
+            ask.get_num_base_atoms().as_u64(),
+            ask.get_price()
+        );
+        assert!(ask.get_num_base_atoms().as_u64() > 0);
+    }
+    // Show that the top of bids has no empty orders.
+    let bids: BooksideReadOnly = test_fixture.market_fixture.market.get_bids();
+    for (ind, (_, bid)) in bids.iter::<RestingOrder>().enumerate() {
+        if ind > 5 {
+            break;
+        }
+        println!(
+            "Bid {:?}@{:?}",
+            bid.get_num_base_atoms().as_u64(),
+            bid.get_price()
+        );
+        assert!(bid.get_num_base_atoms().as_u64() > 0);
+    }
+
+    Ok(())
+}

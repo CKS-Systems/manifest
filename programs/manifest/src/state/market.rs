@@ -1242,10 +1242,10 @@ impl<
                         is_bid,
                         OrderType::Reverse,
                     )?;
-                    // There is an edge case where the the price is off by 1 due
-                    // to rounding. This will result in fragmented liquidity,
-                    // however should be infrequent enough to not do a walk of
-                    // the tree.
+
+                    // Because there is a slight relaxation in matching reverse
+                    // orders, do not need to worry about off by one errors
+                    // causing fragmented liqudity.
                     let lookup_index: DataIndex = other_tree.lookup_index(&lookup_resting_order);
                     if lookup_index != NIL {
                         let order_to_coalesce_into: &mut RestingOrder =
