@@ -136,7 +136,8 @@ export class ManifestStatsServer {
 
     this.ws.onmessage = async (message) => {
       const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker, maker } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker, maker } =
+        fill;
 
       await this.fillMutex.runExclusive(async () => {
         // Do not accept old spurious messages.
@@ -151,13 +152,19 @@ export class ManifestStatsServer {
         if (this.traderNumTakerTrades.get(taker) == undefined) {
           this.traderNumTakerTrades.set(taker, 0);
         }
-        this.traderNumTakerTrades.set(taker, this.traderNumTakerTrades.get(taker)! + 1);
-    
+        this.traderNumTakerTrades.set(
+          taker,
+          this.traderNumTakerTrades.get(taker)! + 1,
+        );
+
         if (this.traderNumMakerTrades.get(maker) == undefined) {
           this.traderNumMakerTrades.set(maker, 0);
         }
-        this.traderNumMakerTrades.set(maker, this.traderNumMakerTrades.get(maker)! + 1);
-    
+        this.traderNumMakerTrades.set(
+          maker,
+          this.traderNumMakerTrades.get(maker)! + 1,
+        );
+
         if (this.markets.get(market) == undefined) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
           this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -636,20 +643,16 @@ export class ManifestStatsServer {
    * Returns separate counts for taker trades and maker trades.
    */
   getTraders() {
-    // Create a Set of all trader addresses
     const allTraders = new Set<string>([
       ...Array.from(this.traderNumTakerTrades.keys()),
-      ...Array.from(this.traderNumMakerTrades.keys())
+      ...Array.from(this.traderNumMakerTrades.keys()),
     ]);
-    
-    // Create an object to store the data
-    const traderData: { [key: string]: { taker: number, maker: number } } = {};
 
-    // Process all traders
-    allTraders.forEach(trader => {
+    const traderData: { [key: string]: { taker: number; maker: number } } = {};
+    allTraders.forEach((trader) => {
       traderData[trader] = {
         taker: this.traderNumTakerTrades.get(trader) || 0,
-        maker: this.traderNumMakerTrades.get(trader) || 0
+        maker: this.traderNumMakerTrades.get(trader) || 0,
       };
     });
 
