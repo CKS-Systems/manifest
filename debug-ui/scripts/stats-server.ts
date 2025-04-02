@@ -86,8 +86,9 @@ export class ManifestStatsServer {
   // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
 
-  // Pubkey to the number of trades.
-  private traderNumTrades: Map<string, number> = new Map();
+  // Pubkey to the number of taker & maker trades.
+  private traderNumTakerTrades: Map<string, number> = new Map();
+  private traderNumMakerTrades: Map<string, number> = new Map();
 
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
@@ -135,7 +136,8 @@ export class ManifestStatsServer {
 
     this.ws.onmessage = async (message) => {
       const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker, maker } =
+        fill;
 
       await this.fillMutex.runExclusive(async () => {
         // Do not accept old spurious messages.
@@ -147,10 +149,21 @@ export class ManifestStatsServer {
         fills.inc({ market });
         console.log('Got fill', fill);
 
-        if (this.traderNumTrades.get(taker) == undefined) {
-          this.traderNumTrades.set(taker, 0);
+        if (this.traderNumTakerTrades.get(taker) == undefined) {
+          this.traderNumTakerTrades.set(taker, 0);
         }
-        this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+        this.traderNumTakerTrades.set(
+          taker,
+          this.traderNumTakerTrades.get(taker)! + 1,
+        );
+
+        if (this.traderNumMakerTrades.get(maker) == undefined) {
+          this.traderNumMakerTrades.set(maker, 0);
+        }
+        this.traderNumMakerTrades.set(
+          maker,
+          this.traderNumMakerTrades.get(maker)! + 1,
+        );
 
         if (this.markets.get(market) == undefined) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -625,12 +638,25 @@ export class ManifestStatsServer {
       dailyVolume: Object.fromEntries(dailyVolumesByToken),
     };
   }
-
   /**
-   * Get Traders to be used in a leaderboard if a UI wants to. Only tracks takers.
+   * Get Traders to be used in a leaderboard if a UI wants to.
+   * Returns separate counts for taker trades and maker trades.
    */
   getTraders() {
-    return Object.fromEntries(this.traderNumTrades);
+    const allTraders = new Set<string>([
+      ...Array.from(this.traderNumTakerTrades.keys()),
+      ...Array.from(this.traderNumMakerTrades.keys()),
+    ]);
+
+    const traderData: { [key: string]: { taker: number; maker: number } } = {};
+    allTraders.forEach((trader) => {
+      traderData[trader] = {
+        taker: this.traderNumTakerTrades.get(trader) || 0,
+        maker: this.traderNumMakerTrades.get(trader) || 0,
+      };
+    });
+
+    return traderData;
   }
 
   /**
@@ -694,7 +720,7 @@ const run = async () => {
   app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
-  app.get('/trades', tradersHandler);
+  app.get('/traders', tradersHandler);
   app.get('/recentFills', recentFillsHandler);
   app.listen(Number(PORT!));
 
