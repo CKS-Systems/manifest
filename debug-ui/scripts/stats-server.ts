@@ -107,6 +107,11 @@ export class ManifestStatsServer {
   // logs.
   private fillMutex: Mutex = new Mutex();
 
+  private traderTakerBaseVolumeAtoms: Map<string, number> = new Map();
+  private traderTakerQuoteVolumeAtoms: Map<string, number> = new Map();
+  private traderMakerBaseVolumeAtoms: Map<string, number> = new Map();
+  private traderMakerQuoteVolumeAtoms: Map<string, number> = new Map();
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
@@ -163,6 +168,38 @@ export class ManifestStatsServer {
         this.traderNumMakerTrades.set(
           maker,
           this.traderNumMakerTrades.get(maker)! + 1,
+        );
+
+        if (this.traderTakerBaseVolumeAtoms.get(taker) == undefined) {
+          this.traderTakerBaseVolumeAtoms.set(taker, 0);
+        }
+        if (this.traderTakerQuoteVolumeAtoms.get(taker) == undefined) {
+          this.traderTakerQuoteVolumeAtoms.set(taker, 0);
+        }
+
+        if (this.traderMakerBaseVolumeAtoms.get(maker) == undefined) {
+          this.traderMakerBaseVolumeAtoms.set(maker, 0);
+        }
+        if (this.traderMakerQuoteVolumeAtoms.get(maker) == undefined) {
+          this.traderMakerQuoteVolumeAtoms.set(maker, 0);
+        }
+
+        this.traderTakerBaseVolumeAtoms.set(
+          taker,
+          this.traderTakerBaseVolumeAtoms.get(taker)! + Number(baseAtoms),
+        );
+        this.traderTakerQuoteVolumeAtoms.set(
+          taker,
+          this.traderTakerQuoteVolumeAtoms.get(taker)! + Number(quoteAtoms),
+        );
+
+        this.traderMakerBaseVolumeAtoms.set(
+          maker,
+          this.traderMakerBaseVolumeAtoms.get(maker)! + Number(baseAtoms),
+        );
+        this.traderMakerQuoteVolumeAtoms.set(
+          maker,
+          this.traderMakerQuoteVolumeAtoms.get(maker)! + Number(quoteAtoms),
         );
 
         if (this.markets.get(market) == undefined) {
@@ -640,7 +677,7 @@ export class ManifestStatsServer {
   }
   /**
    * Get Traders to be used in a leaderboard if a UI wants to.
-   * Returns separate counts for taker trades and maker trades.
+   * Returns counts for taker/maker trades and volumes.
    */
   getTraders() {
     const allTraders = new Set<string>([
@@ -648,11 +685,34 @@ export class ManifestStatsServer {
       ...Array.from(this.traderNumMakerTrades.keys()),
     ]);
 
-    const traderData: { [key: string]: { taker: number; maker: number } } = {};
+    const traderData: {
+      [key: string]: {
+        taker: number;
+        maker: number;
+        takerBaseVolumeAtoms: number;
+        takerQuoteVolumeAtoms: number;
+        makerBaseVolumeAtoms: number;
+        makerQuoteVolumeAtoms: number;
+      };
+    } = {};
+
     allTraders.forEach((trader) => {
+      const takerBaseVolumeAtoms =
+        this.traderTakerBaseVolumeAtoms.get(trader) || 0;
+      const takerQuoteVolumeAtoms =
+        this.traderTakerQuoteVolumeAtoms.get(trader) || 0;
+      const makerBaseVolumeAtoms =
+        this.traderMakerBaseVolumeAtoms.get(trader) || 0;
+      const makerQuoteVolumeAtoms =
+        this.traderMakerQuoteVolumeAtoms.get(trader) || 0;
+
       traderData[trader] = {
         taker: this.traderNumTakerTrades.get(trader) || 0,
         maker: this.traderNumMakerTrades.get(trader) || 0,
+        takerBaseVolumeAtoms,
+        takerQuoteVolumeAtoms,
+        makerBaseVolumeAtoms,
+        makerQuoteVolumeAtoms,
       };
     });
 
