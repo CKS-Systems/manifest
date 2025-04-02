@@ -107,10 +107,12 @@ export class ManifestStatsServer {
   // logs.
   private fillMutex: Mutex = new Mutex();
 
-  private traderTakerBaseVolumeAtoms: Map<string, number> = new Map();
-  private traderTakerQuoteVolumeAtoms: Map<string, number> = new Map();
-  private traderMakerBaseVolumeAtoms: Map<string, number> = new Map();
-  private traderMakerQuoteVolumeAtoms: Map<string, number> = new Map();
+  private traderTakerNotionalVolume: Map<string, number> = new Map();
+  private traderMakerNotionalVolume: Map<string, number> = new Map();
+  private readonly SOL_USDC_MARKET =
+    'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ';
+  private readonly USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
@@ -177,37 +179,12 @@ export class ManifestStatsServer {
           this.traderNumMakerTrades.get(maker)! + 1,
         );
 
-        if (this.traderTakerBaseVolumeAtoms.get(taker) == undefined) {
-          this.traderTakerBaseVolumeAtoms.set(taker, 0);
+        if (this.traderTakerNotionalVolume.get(taker) == undefined) {
+          this.traderTakerNotionalVolume.set(taker, 0);
         }
-        if (this.traderTakerQuoteVolumeAtoms.get(taker) == undefined) {
-          this.traderTakerQuoteVolumeAtoms.set(taker, 0);
+        if (this.traderMakerNotionalVolume.get(maker) == undefined) {
+          this.traderMakerNotionalVolume.set(maker, 0);
         }
-
-        if (this.traderMakerBaseVolumeAtoms.get(maker) == undefined) {
-          this.traderMakerBaseVolumeAtoms.set(maker, 0);
-        }
-        if (this.traderMakerQuoteVolumeAtoms.get(maker) == undefined) {
-          this.traderMakerQuoteVolumeAtoms.set(maker, 0);
-        }
-
-        this.traderTakerBaseVolumeAtoms.set(
-          taker,
-          this.traderTakerBaseVolumeAtoms.get(taker)! + Number(baseAtoms),
-        );
-        this.traderTakerQuoteVolumeAtoms.set(
-          taker,
-          this.traderTakerQuoteVolumeAtoms.get(taker)! + Number(quoteAtoms),
-        );
-
-        this.traderMakerBaseVolumeAtoms.set(
-          maker,
-          this.traderMakerBaseVolumeAtoms.get(maker)! + Number(baseAtoms),
-        );
-        this.traderMakerQuoteVolumeAtoms.set(
-          maker,
-          this.traderMakerQuoteVolumeAtoms.get(maker)! + Number(quoteAtoms),
-        );
 
         if (this.markets.get(market) == undefined) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -252,6 +229,53 @@ export class ManifestStatsServer {
           this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
             Number(quoteAtoms),
         );
+
+        const marketObject = this.markets.get(market)!;
+        const quoteMint = marketObject.quoteMint().toBase58();
+
+        if (quoteMint === this.USDC_MINT) {
+          const notionalVolume =
+            Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
+
+          this.traderTakerNotionalVolume.set(
+            taker,
+            this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+          );
+
+          this.traderMakerNotionalVolume.set(
+            maker,
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+          );
+        } else if (quoteMint === this.SOL_MINT) {
+          const solPriceAtoms = this.lastPriceByMarket.get(
+            this.SOL_USDC_MARKET,
+          );
+          if (solPriceAtoms) {
+            const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+            if (solUsdcMarket) {
+              const solPrice =
+                solPriceAtoms *
+                10 **
+                  (solUsdcMarket.baseDecimals() -
+                    solUsdcMarket.quoteDecimals());
+
+              const notionalVolume =
+                (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+                solPrice;
+
+              this.traderTakerNotionalVolume.set(
+                taker,
+                this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+              );
+
+              this.traderMakerNotionalVolume.set(
+                maker,
+                this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+              );
+            }
+            // TODO: Handle notionals for other quote mints
+          }
+        }
 
         let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
         prevFills.push(fill);
@@ -696,30 +720,22 @@ export class ManifestStatsServer {
       [key: string]: {
         taker: number;
         maker: number;
-        takerBaseVolumeAtoms: number;
-        takerQuoteVolumeAtoms: number;
-        makerBaseVolumeAtoms: number;
-        makerQuoteVolumeAtoms: number;
+        takerNotionalVolume: number;
+        makerNotionalVolume: number;
       };
     } = {};
 
     allTraders.forEach((trader) => {
-      const takerBaseVolumeAtoms =
-        this.traderTakerBaseVolumeAtoms.get(trader) || 0;
-      const takerQuoteVolumeAtoms =
-        this.traderTakerQuoteVolumeAtoms.get(trader) || 0;
-      const makerBaseVolumeAtoms =
-        this.traderMakerBaseVolumeAtoms.get(trader) || 0;
-      const makerQuoteVolumeAtoms =
-        this.traderMakerQuoteVolumeAtoms.get(trader) || 0;
+      const takerNotionalVolume =
+        this.traderTakerNotionalVolume.get(trader) || 0;
+      const makerNotionalVolume =
+        this.traderMakerNotionalVolume.get(trader) || 0;
 
       traderData[trader] = {
         taker: this.traderNumTakerTrades.get(trader) || 0,
         maker: this.traderNumMakerTrades.get(trader) || 0,
-        takerBaseVolumeAtoms,
-        takerQuoteVolumeAtoms,
-        makerBaseVolumeAtoms,
-        makerQuoteVolumeAtoms,
+        takerNotionalVolume,
+        makerNotionalVolume,
       };
     });
 
