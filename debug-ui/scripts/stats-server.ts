@@ -139,12 +139,19 @@ export class ManifestStatsServer {
       reconnects.inc();
     };
 
-    this.ws.onmessage = async (message) => {
-      const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker, maker } =
-        fill;
+    this.ws.onmessage = (message) => {
+      this.fillMutex.runExclusive(async () => {
+        const fill: FillLogResult = JSON.parse(message.data.toString());
+        const {
+          market,
+          baseAtoms,
+          quoteAtoms,
+          priceAtoms,
+          slot,
+          taker,
+          maker,
+        } = fill;
 
-      await this.fillMutex.runExclusive(async () => {
         // Do not accept old spurious messages.
         if (this.lastFillSlot > slot) {
           return;
