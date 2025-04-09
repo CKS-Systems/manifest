@@ -24,6 +24,7 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
+import { Pool } from 'pg';
 
 // Stores checkpoints every 5 minutes
 const CHECKPOINT_DURATION_SEC: number = 5 * 60;
@@ -114,9 +115,20 @@ export class ManifestStatsServer {
   private readonly USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
 
+  private pool: Pool;
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
+    this.connection = new Connection(RPC_URL!);
+  
+    this.pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false } // May be needed depending on Fly Postgres configuration
+    });
+    
+    this.resetWebsocket();
+    this.initDatabase(); // Initialize database schema
   }
 
   private resetWebsocket() {
@@ -124,7 +136,7 @@ export class ManifestStatsServer {
     if (this.ws != null) {
       try {
         this.ws.close();
-      } catch (err) {}
+      } catch (err) { /* empty */ }
     }
 
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
@@ -323,7 +335,7 @@ export class ManifestStatsServer {
 
     const mintToSymbols: Map<string, string> = new Map();
     const metaplex: Metaplex = Metaplex.make(this.connection);
-    this.markets.forEach(async (market: Market, marketPk: string) => {
+    this.markets.forEach(async (market: Market) => {
       const baseMint: PublicKey = market.baseMint();
       const quoteMint: PublicKey = market.quoteMint();
 
@@ -748,9 +760,254 @@ export class ManifestStatsServer {
   getRecentFills(market: string) {
     return { [market]: this.fillLogResults.get(market) };
   }
+
+    /**
+   * Set up database schema if needed
+   */
+  async initDatabase(): Promise<void> {
+    try {
+      // Create tables if they don't exist
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS state_checkpoints (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          last_fill_slot BIGINT NOT NULL
+        )
+      `);
+      
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS market_volumes (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          base_volume_since_last_checkpoint NUMERIC,
+          quote_volume_since_last_checkpoint NUMERIC,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+      
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS market_checkpoints (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          base_volume_checkpoints JSONB NOT NULL,
+          quote_volume_checkpoints JSONB NOT NULL,
+          last_price NUMERIC,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+      
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS trader_stats (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          trader TEXT NOT NULL,
+          num_taker_trades INTEGER DEFAULT 0,
+          num_maker_trades INTEGER DEFAULT 0,
+          taker_notional_volume NUMERIC DEFAULT 0,
+          maker_notional_volume NUMERIC DEFAULT 0,
+          PRIMARY KEY (checkpoint_id, trader)
+        )
+      `);
+      
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS fill_log_results (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          fill_data JSONB NOT NULL,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+      
+      console.log('Database schema initialized');
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save current state to database
+   */
+  async saveState(): Promise<void> {
+    console.log('Saving state to database...');
+    
+    // Start a transaction
+    const client = await this.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Insert a new checkpoint
+      const checkpointResult = await client.query(
+        'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id',
+        [this.lastFillSlot]
+      );
+      
+      const checkpointId = checkpointResult.rows[0].id;
+      
+      // Save market volumes
+      const volumePromises = [];
+      for (const [market, baseVolume] of this.baseVolumeAtomsSinceLastCheckpoint.entries()) {
+        const quoteVolume = this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
+        
+        volumePromises.push(client.query(
+          'INSERT INTO market_volumes (checkpoint_id, market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint) VALUES ($1, $2, $3, $4)',
+          [checkpointId, market, baseVolume, quoteVolume]
+        ));
+      }
+      
+      // Save market checkpoints
+      const checkpointPromises = [];
+      for (const [market, baseCheckpoints] of this.baseVolumeAtomsCheckpoints.entries()) {
+        const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(market) || [];
+        const lastPrice = this.lastPriceByMarket.get(market) || 0;
+        
+        checkpointPromises.push(client.query(
+          'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, last_price) VALUES ($1, $2, $3, $4, $5)',
+          [checkpointId, market, JSON.stringify(baseCheckpoints), JSON.stringify(quoteCheckpoints), lastPrice]
+        ));
+      }
+      
+      // Save trader stats
+      const traderPromises = [];
+      const allTraders = new Set([
+        ...Array.from(this.traderNumTakerTrades.keys()),
+        ...Array.from(this.traderNumMakerTrades.keys())
+      ]);
+      
+      for (const trader of allTraders) {
+        const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
+        const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
+        const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
+        const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
+        
+        traderPromises.push(client.query(
+          'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
+          [checkpointId, trader, numTakerTrades, numMakerTrades, takerVolume, makerVolume]
+        ));
+      }
+      
+      // Save fill logs
+      const fillPromises = [];
+      for (const [market, fills] of this.fillLogResults.entries()) {
+        fillPromises.push(client.query(
+          'INSERT INTO fill_log_results (checkpoint_id, market, fill_data) VALUES ($1, $2, $3)',
+          [checkpointId, market, JSON.stringify(fills)]
+        ));
+      }
+      
+      // Wait for all queries to complete
+      await Promise.all([
+        ...volumePromises,
+        ...checkpointPromises,
+        ...traderPromises,
+        ...fillPromises
+      ]);
+      
+      // Clean up old checkpoints - keep only the most recent one
+      await client.query(
+        'DELETE FROM state_checkpoints WHERE id != $1',
+        [checkpointId]
+      );
+      
+      await client.query('COMMIT');
+      console.log('State saved successfully to database');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error saving state to database:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Load state from database
+   */
+  async loadState(): Promise<boolean> {
+    console.log('Loading state from database...');
+    
+    try {
+      // Get the most recent checkpoint
+      const checkpointResultRecent = await this.pool.query(
+        'SELECT id, last_fill_slot FROM state_checkpoints ORDER BY created_at DESC LIMIT 1'
+      );
+      
+      if (checkpointResultRecent.rowCount === 0) {
+        console.log('No saved state found in database');
+        return false;
+      }
+      
+      const checkpointId = checkpointResultRecent.rows[0].id;
+      this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
+      
+      // Load market volumes
+      const volumeResult = await this.pool.query(
+        'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1',
+        [checkpointId]
+      );
+      
+      for (const row of volumeResult.rows) {
+        this.baseVolumeAtomsSinceLastCheckpoint.set(row.market, Number(row.base_volume_since_last_checkpoint));
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(row.market, Number(row.quote_volume_since_last_checkpoint));
+      }
+      
+      // Load market checkpoints
+      const checkpointResult = await this.pool.query(
+        'SELECT market, base_volume_checkpoints, quote_volume_checkpoints, last_price FROM market_checkpoints WHERE checkpoint_id = $1',
+        [checkpointId]
+      );
+      
+      for (const row of checkpointResult.rows) {
+        this.baseVolumeAtomsCheckpoints.set(row.market, row.base_volume_checkpoints);
+        this.quoteVolumeAtomsCheckpoints.set(row.market, row.quote_volume_checkpoints);
+        this.lastPriceByMarket.set(row.market, Number(row.last_price));
+      }
+      
+      // Load trader stats
+      const traderResult = await this.pool.query(
+        'SELECT trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume FROM trader_stats WHERE checkpoint_id = $1',
+        [checkpointId]
+      );
+      
+      for (const row of traderResult.rows) {
+        this.traderNumTakerTrades.set(row.trader, Number(row.num_taker_trades));
+        this.traderNumMakerTrades.set(row.trader, Number(row.num_maker_trades));
+        this.traderTakerNotionalVolume.set(row.trader, Number(row.taker_notional_volume));
+        this.traderMakerNotionalVolume.set(row.trader, Number(row.maker_notional_volume));
+      }
+      
+      // Load fill logs
+      const fillResult = await this.pool.query(
+        'SELECT market, fill_data FROM fill_log_results WHERE checkpoint_id = $1',
+        [checkpointId]
+      );
+      
+      for (const row of fillResult.rows) {
+        this.fillLogResults.set(row.market, row.fill_data);
+      }
+      
+      console.log('State loaded successfully from database');
+      return true;
+    } catch (error) {
+      console.error('Error loading state from database:', error);
+      return false;
+    }
+  }
 }
 
 const run = async () => {
+  // Validate environment variables
+  const { RPC_URL, DATABASE_URL } = process.env;
+
+  if (!RPC_URL) {
+    throw new Error('RPC_URL missing from env');
+  }
+
+  if (!DATABASE_URL) {
+    console.warn('WARNING: DATABASE_URL not found in environment. Data persistence will not work!');
+  }
+
+  // Set up Prometheus metrics
   promClient.collectDefaultMetrics({
     labels: {
       app: 'stats',
@@ -771,9 +1028,17 @@ const run = async () => {
   });
   metricsApp.use(promMetrics);
 
+  // Initialize the stats server
   const statsServer: ManifestStatsServer = new ManifestStatsServer();
-  await statsServer.initialize();
+  
+  try {
+    await statsServer.initialize();
+  } catch (error) {
+    console.error('Error initializing server:', error);
+    throw error;
+  }
 
+  // Set up Express routes
   const tickersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTickers());
   };
@@ -797,6 +1062,7 @@ const run = async () => {
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
+  
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
@@ -805,16 +1071,54 @@ const run = async () => {
   app.get('/volume', volumeHandler);
   app.get('/traders', tradersHandler);
   app.get('/recentFills', recentFillsHandler);
-  app.listen(Number(PORT!));
+  
+  // Add health check endpoint for Fly.io
+  app.get('/health', (_req, res) => {
+    res.status(200).send('OK');
+  });
+  
+  app.listen(Number(PORT!), () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 
+  // Set up graceful shutdown
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`Received ${signal}, saving state before exit...`);
+    try {
+      if (DATABASE_URL) {
+        await statsServer.saveState();
+      }
+      console.log('State saved, exiting');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+  // Main loop with periodic state saving and checkpointing
+  // eslint-disable-next-line no-constant-condition
   while (true) {
-    statsServer.saveCheckpoints();
-    // Promise.all here so depth probing doesnt get the save checkpoints off
-    // schedule. Could be done with separate setInterval instead.
-    await Promise.all([
-      statsServer.depthProbe(),
-      sleep(CHECKPOINT_DURATION_SEC * 1_000),
-    ]);
+    try {
+      statsServer.saveCheckpoints();
+      
+      // Save state to database after saving checkpoints
+      if (DATABASE_URL) {
+        await statsServer.saveState();
+      }
+      
+      // Run depth probe and wait for next checkpoint
+      await Promise.all([
+        statsServer.depthProbe(),
+        sleep(CHECKPOINT_DURATION_SEC * 1_000),
+      ]);
+    } catch (error) {
+      console.error('Error in main loop:', error);
+      // Continue the loop instead of crashing
+    }
   }
 };
 
