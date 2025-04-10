@@ -17,7 +17,7 @@ use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder,
-        MARKET_FIXED_SIZE,
+        MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
     },
     validation::{ManifestAccountInfo, Program, Signer},
 };
@@ -276,7 +276,7 @@ fn prepare_orders(
                 {
                     now_slot + order.last_valid_slot
                 } else {
-                    order.last_valid_slot;
+                    order.last_valid_slot
                 };
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(
                     num_base_atoms,
