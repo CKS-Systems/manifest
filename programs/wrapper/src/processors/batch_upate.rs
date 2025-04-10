@@ -284,7 +284,7 @@ fn prepare_orders(
                     order.price_exponent,
                     order.is_bid,
                     order.order_type,
-                    order.last_valid_slot,
+                    expiration,
                 );
                 core_place
             })

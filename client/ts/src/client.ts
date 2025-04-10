@@ -45,7 +45,6 @@ import {
 } from './wrapper';
 import {
   FIXED_WRAPPER_HEADER_SIZE,
-  NO_EXPIRATION_LAST_VALID_SLOT,
 } from './constants';
 import { getVaultAddress } from './utils/market';
 import { genAccDiscriminator } from './utils/discriminator';
