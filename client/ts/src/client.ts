@@ -1726,7 +1726,10 @@ export type WrapperPlaceOrderParamsExternal = {
   tokenPrice: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
-  /** Last slot before this order is invalid and will be removed. */
+  /** Last slot before this order is invalid and will be removed. If below
+   * 1_000_000, then will be treated as slots in force when it lands in the
+   * wrapper onchain.
+   */
   lastValidSlot: number;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
@@ -1763,14 +1766,6 @@ function toWrapperPlaceOrderParams(
     wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(
       wrapperPlaceOrderParamsExternal['spreadBps'] * 10,
     );
-  } else if (
-    wrapperPlaceOrderParamsExternal['lastValidSlot'] < 100_000 &&
-    wrapperPlaceOrderParamsExternal['lastValidSlot'] !=
-      NO_EXPIRATION_LAST_VALID_SLOT
-  ) {
-    // 100_000 is way earlier than the current slot. This check ensures that
-    // users are intentionally choosing the right type.
-    throw new Error('Last valid slot on order not valid');
   }
 
   const quoteAtomsPerToken = 10 ** market.quoteDecimals();

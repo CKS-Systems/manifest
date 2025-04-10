@@ -172,6 +172,8 @@ fn prepare_orders(
     // trivially ignored. Does not prevent unbacked global orders, but that
     // would require global accounts and be too complicated to do here because
     // this is only best-effort.
+    // Also, changes orders with last_valid_slot < 1_000_000 to now +
+    // last_valid_slot.
     let now_slot: u32 = get_now_slot();
 
     while best_ask_index != NIL
@@ -269,6 +271,13 @@ fn prepare_orders(
                         }
                     }
                 }
+                let expiration = if order.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
+                    && order.last_valid_slot < 1_000_000
+                {
+                    now_slot + order.last_valid_slot
+                } else {
+                    order.last_valid_slot;
+                };
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(
                     num_base_atoms,
                     order.price_mantissa,
