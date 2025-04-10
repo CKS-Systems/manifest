@@ -17,7 +17,7 @@ use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
         utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder,
-        MARKET_FIXED_SIZE,
+        MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
     },
     validation::{ManifestAccountInfo, Program, Signer},
 };
@@ -172,6 +172,8 @@ fn prepare_orders(
     // trivially ignored. Does not prevent unbacked global orders, but that
     // would require global accounts and be too complicated to do here because
     // this is only best-effort.
+    // Also, changes orders with last_valid_slot < 1_000_000 to now +
+    // last_valid_slot.
     let now_slot: u32 = get_now_slot();
 
     while best_ask_index != NIL
@@ -269,13 +271,21 @@ fn prepare_orders(
                         }
                     }
                 }
+                let expiration = if order.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
+                    && order.last_valid_slot < 10_000_000
+                    && order.order_type != OrderType::Reverse
+                {
+                    now_slot + order.last_valid_slot
+                } else {
+                    order.last_valid_slot
+                };
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(
                     num_base_atoms,
                     order.price_mantissa,
                     order.price_exponent,
                     order.is_bid,
                     order.order_type,
-                    order.last_valid_slot,
+                    expiration,
                 );
                 core_place
             })
