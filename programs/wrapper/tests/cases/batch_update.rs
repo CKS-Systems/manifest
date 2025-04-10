@@ -480,3 +480,65 @@ async fn wrapper_ignore_post_only() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn wrapper_batch_update_slots_from_now() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+    test_fixture.claim_seat().await?;
+    test_fixture.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+
+    let payer: Pubkey = test_fixture.payer();
+    let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
+
+    // There is no order 0 for the cancel to get, but it will fail silently and continue on.
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market.key,
+        &payer,
+        &test_fixture.wrapper.key,
+        vec![WrapperCancelOrderParams::new(0)],
+        false,
+        vec![WrapperPlaceOrderParams::new(
+            0,
+            1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            false,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )],
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    // Cancel and place, so we have enough funds for the second one.
+    let batch_update_ix: Instruction = batch_update_instruction(
+        &test_fixture.market.key,
+        &payer,
+        &test_fixture.wrapper.key,
+        vec![WrapperCancelOrderParams::new(0)],
+        false,
+        vec![WrapperPlaceOrderParams::new(
+            0,
+            1 * SOL_UNIT_SIZE,
+            1,
+            0,
+            false,
+            NO_EXPIRATION_LAST_VALID_SLOT,
+            OrderType::Limit,
+        )],
+    );
+    send_tx_with_retry(
+        Rc::clone(&test_fixture.context),
+        &[batch_update_ix],
+        Some(&payer),
+        &[&payer_keypair],
+    )
+    .await?;
+
+    Ok(())
+}
