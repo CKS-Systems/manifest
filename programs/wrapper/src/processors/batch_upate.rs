@@ -272,7 +272,7 @@ fn prepare_orders(
                     }
                 }
                 let expiration = if order.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
-                    && order.last_valid_slot < 1_000_000
+                    && order.last_valid_slot < 10_000_000
                 {
                     now_slot + order.last_valid_slot
                 } else {

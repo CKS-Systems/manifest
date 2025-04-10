@@ -1724,7 +1724,7 @@ export type WrapperPlaceOrderParamsExternal = {
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
   /** Last slot before this order is invalid and will be removed. If below
-   * 1_000_000, then will be treated as slots in force when it lands in the
+   * 10_000_000, then will be treated as slots in force when it lands in the
    * wrapper onchain.
    */
   lastValidSlot: number;
