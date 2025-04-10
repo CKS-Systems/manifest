@@ -43,9 +43,7 @@ import {
   createDepositInstruction,
   createWithdrawInstruction,
 } from './wrapper';
-import {
-  FIXED_WRAPPER_HEADER_SIZE,
-} from './constants';
+import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 import { genAccDiscriminator } from './utils/discriminator';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
