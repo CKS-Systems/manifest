@@ -1394,15 +1394,11 @@ const run = async () => {
     try {
       statsServer.saveCheckpoints();
 
-      // Save state to database after saving checkpoints
-      if (DATABASE_URL) {
-        await statsServer.saveState();
-      }
-
       // Run depth probe and wait for next checkpoint
       await Promise.all([
         statsServer.depthProbe(),
         sleep(CHECKPOINT_DURATION_SEC * 1_000),
+        DATABASE_URL ? statsServer.saveState() : () => {},
       ]);
     } catch (error) {
       console.error('Error in main loop:', error);
