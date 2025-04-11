@@ -91,6 +91,9 @@ export class ManifestStatsServer {
   private traderNumTakerTrades: Map<string, number> = new Map();
   private traderNumMakerTrades: Map<string, number> = new Map();
 
+  private traderPositions: Map<string, Map<string, number>> = new Map();
+  private traderAcquisitionValue: Map<string, Map<string, number>> = new Map();
+
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
 
@@ -129,6 +132,155 @@ export class ManifestStatsServer {
 
     this.resetWebsocket();
     this.initDatabase(); // Initialize database schema
+  }
+
+  private initTraderPositionTracking(trader: string): void {
+    if (!this.traderPositions.has(trader)) {
+      this.traderPositions.set(trader, new Map<string, number>());
+    }
+    if (!this.traderAcquisitionValue.has(trader)) {
+      this.traderAcquisitionValue.set(trader, new Map<string, number>());
+    }
+  }
+
+  private updateTraderPosition(
+    trader: string,
+    baseMint: string,
+    baseAtomsDelta: number,
+    quoteAtoms: number,
+    market: Market,
+  ): void {
+    const positions = this.traderPositions.get(trader)!;
+    const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
+
+    // Get current position
+    const currentPosition = positions.get(baseMint) || 0;
+    const newPosition = currentPosition + baseAtomsDelta;
+
+    // Update position
+    positions.set(baseMint, newPosition);
+
+    // Get current acquisition value
+    const currentValue = acquisitionValues.get(baseMint) || 0;
+    const usdcValue = Number(quoteAtoms) / 10 ** market.quoteDecimals();
+
+    if (baseAtomsDelta > 0) {
+      // Buying base (long or covering short)
+      if (currentPosition < 0) {
+        if (newPosition <= 0) {
+          // Partially covering a short position
+          const coverRatio = baseAtomsDelta / Math.abs(currentPosition);
+          acquisitionValues.set(baseMint, currentValue * (1 - coverRatio));
+        } else {
+          // Transitioning from short to long
+          const shortCoverAmount = Math.abs(currentPosition);
+          const longEstablishAmount = baseAtomsDelta - shortCoverAmount;
+
+          // Calculate the proportion for establishing long position
+          const longEstablishRatio = longEstablishAmount / baseAtomsDelta;
+
+          // Calculate the USDC value for the long establish portion
+          const longEstablishValue = usdcValue * longEstablishRatio;
+
+          // Set acquisition value to the new long position's cost
+          acquisitionValues.set(baseMint, longEstablishValue);
+        }
+      } else {
+        // Adding to existing long position
+        acquisitionValues.set(baseMint, currentValue + usdcValue);
+      }
+    } else if (baseAtomsDelta < 0) {
+      // Selling base (reducing long or adding to short)
+      if (currentPosition > 0) {
+        if (newPosition >= 0) {
+          // Partially reducing a long position
+          const reductionRatio = Math.abs(baseAtomsDelta) / currentPosition;
+          acquisitionValues.set(baseMint, currentValue * (1 - reductionRatio));
+        } else {
+          // Transitioning from long to short
+          const shortEstablishAmount =
+            Math.abs(baseAtomsDelta) - currentPosition;
+
+          // Calculate the proportion for establishing short position
+          const shortEstablishRatio =
+            shortEstablishAmount / Math.abs(baseAtomsDelta);
+
+          // Calculate the USDC value for the short establish portion
+          const shortEstablishValue = usdcValue * shortEstablishRatio;
+
+          // Set acquisition value to the new short position's proceeds
+          acquisitionValues.set(baseMint, shortEstablishValue);
+        }
+      } else {
+        // Adding to existing short position or opening a new short
+        acquisitionValues.set(baseMint, currentValue + usdcValue);
+      }
+    }
+  }
+
+  // TODO: PnL on all quote asset markets
+  private calculateTraderPnL(trader: string): number {
+    let totalPnL = 0;
+
+    if (!this.traderPositions.has(trader)) {
+      return 0;
+    }
+
+    const positions = this.traderPositions.get(trader)!;
+    const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
+
+    // Calculate PnL for each base token position
+    for (const [baseMint, baseAtomPosition] of positions.entries()) {
+      // Skip zero positions
+      if (baseAtomPosition === 0) continue;
+
+      // Find USDC market for this base token
+      let usdcMarket: Market | null = null;
+      let marketKey: string | null = null;
+
+      for (const [marketPk, market] of this.markets.entries()) {
+        if (
+          market.baseMint().toBase58() === baseMint &&
+          market.quoteMint().toBase58() === this.USDC_MINT
+        ) {
+          usdcMarket = market;
+          marketKey = marketPk;
+          break;
+        }
+      }
+
+      // Skip if no USDC market found for this token
+      if (!usdcMarket || !marketKey) continue;
+
+      // Get last price in this market
+      const lastPrice = this.lastPriceByMarket.get(marketKey) || 0;
+
+      // Calculate current value in USDC
+      const baseDecimals = usdcMarket.baseDecimals();
+      const baseTokens = Math.abs(baseAtomPosition) / 10 ** baseDecimals;
+
+      // Convert price from atoms to actual price
+      const priceInQuote =
+        lastPrice *
+        10 ** (usdcMarket.baseDecimals() - usdcMarket.quoteDecimals());
+
+      // Current market value in USDC
+      const currentValue = baseTokens * priceInQuote;
+
+      // Get acquisition value
+      const acquisitionValue = acquisitionValues.get(baseMint) || 0;
+
+      // Add to total PnL
+      if (baseAtomPosition > 0) {
+        // Long position: profit when price increases
+        totalPnL += currentValue - acquisitionValue;
+      } else {
+        // Short position: profit when price decreases
+        totalPnL += acquisitionValue - currentValue;
+      }
+    }
+
+    return totalPnL;
   }
 
   private resetWebsocket() {
@@ -259,6 +411,29 @@ export class ManifestStatsServer {
           this.traderMakerNotionalVolume.set(
             maker,
             this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+          );
+          const baseMint = marketObject.baseMint().toBase58();
+
+          // Initialize position tracking maps if needed
+          this.initTraderPositionTracking(taker);
+          this.initTraderPositionTracking(maker);
+
+          // Update taker position (taker sells base, gets quote)
+          this.updateTraderPosition(
+            taker,
+            baseMint,
+            -Number(baseAtoms),
+            Number(quoteAtoms),
+            marketObject,
+          );
+
+          // Update maker position (maker buys base, gives quote)
+          this.updateTraderPosition(
+            maker,
+            baseMint,
+            Number(baseAtoms),
+            Number(quoteAtoms),
+            marketObject,
           );
         } else if (quoteMint === this.SOL_MINT) {
           const solPriceAtoms = this.lastPriceByMarket.get(
@@ -737,6 +912,7 @@ export class ManifestStatsServer {
         maker: number;
         takerNotionalVolume: number;
         makerNotionalVolume: number;
+        pnl: number; // Add PnL field
       };
     } = {};
 
@@ -746,11 +922,15 @@ export class ManifestStatsServer {
       const makerNotionalVolume =
         this.traderMakerNotionalVolume.get(trader) || 0;
 
+      // Calculate PnL
+      const pnl = this.calculateTraderPnL(trader);
+
       traderData[trader] = {
         taker: this.traderNumTakerTrades.get(trader) || 0,
         maker: this.traderNumMakerTrades.get(trader) || 0,
         takerNotionalVolume,
         makerNotionalVolume,
+        pnl,
       };
     });
 
@@ -817,6 +997,17 @@ export class ManifestStatsServer {
           market TEXT NOT NULL,
           fill_data JSONB NOT NULL,
           PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS trader_positions (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          trader TEXT NOT NULL,
+          mint TEXT NOT NULL,
+          position NUMERIC NOT NULL,
+          acquisition_value NUMERIC NOT NULL,
+          PRIMARY KEY (checkpoint_id, trader, mint)
         )
       `);
 
@@ -927,12 +1118,30 @@ export class ManifestStatsServer {
         );
       }
 
+      const positionPromises = [];
+      for (const [trader, positions] of this.traderPositions.entries()) {
+        const acquisitionValues =
+          this.traderAcquisitionValue.get(trader) || new Map();
+
+        for (const [mint, position] of positions.entries()) {
+          const acquisitionValue = acquisitionValues.get(mint) || 0;
+
+          positionPromises.push(
+            client.query(
+              'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
+              [checkpointId, trader, mint, position, acquisitionValue],
+            ),
+          );
+        }
+      }
+
       // Wait for all queries to complete
       await Promise.all([
         ...volumePromises,
         ...checkpointPromises,
         ...traderPromises,
         ...fillPromises,
+        ...positionPromises,
       ]);
 
       // Clean up old checkpoints - keep only the most recent one
@@ -1023,6 +1232,28 @@ export class ManifestStatsServer {
           row.trader,
           Number(row.maker_notional_volume),
         );
+      }
+
+      // Load trader positions
+      const positionResult = await this.pool.query(
+        'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of positionResult.rows) {
+        if (!this.traderPositions.has(row.trader)) {
+          this.traderPositions.set(row.trader, new Map());
+        }
+        if (!this.traderAcquisitionValue.has(row.trader)) {
+          this.traderAcquisitionValue.set(row.trader, new Map());
+        }
+
+        this.traderPositions
+          .get(row.trader)!
+          .set(row.mint, Number(row.position));
+        this.traderAcquisitionValue
+          .get(row.trader)!
+          .set(row.mint, Number(row.acquisition_value));
       }
 
       // Load fill logs
