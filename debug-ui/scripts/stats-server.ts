@@ -305,6 +305,7 @@ export class ManifestStatsServer {
    * Initialize at the start with a get program accounts.
    */
   async initialize(): Promise<void> {
+    await this.loadState();
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
     marketProgramAccounts.forEach(
