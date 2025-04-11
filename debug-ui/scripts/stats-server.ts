@@ -1024,13 +1024,15 @@ export class ManifestStatsServer {
   async saveState(): Promise<void> {
     console.log('Saving state to database...');
 
-    // Start a transaction
+    console.log('Getting db client');
     const client = await this.pool.connect();
-
     try {
+      // Start a transaction
+      console.log('Querying begin');
       await client.query('BEGIN');
 
       // Insert a new checkpoint
+      console.log('Inserting checkpoint');
       const checkpointResult = await client.query(
         'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id',
         [this.lastFillSlot],
@@ -1079,8 +1081,19 @@ export class ManifestStatsServer {
         );
       }
 
+      console.log('Awaiting all inserts to complete');
+      // Wait for all queries to complete
+      await Promise.all([
+        ...volumePromises,
+        ...checkpointPromises,
+        // ...traderPromises,
+        // ...fillPromises,
+        // ...positionPromises,
+      ]);
+
       // Save trader stats
-      const traderPromises = [];
+      // Because this can scale to a large number, do not burst in parallel.
+      // const traderPromises = [];
       const allTraders = new Set([
         ...Array.from(this.traderNumTakerTrades.keys()),
         ...Array.from(this.traderNumMakerTrades.keys()),
@@ -1092,21 +1105,21 @@ export class ManifestStatsServer {
         const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
         const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
 
-        traderPromises.push(
-          client.query(
-            'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
-            [
-              checkpointId,
-              trader,
-              numTakerTrades,
-              numMakerTrades,
-              takerVolume,
-              makerVolume,
-            ],
-          ),
+        await client.query(
+          'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            checkpointId,
+            trader,
+            numTakerTrades,
+            numMakerTrades,
+            takerVolume,
+            makerVolume,
+          ],
         );
       }
 
+      // Disabled because they are spammy and overload the db connection.
+      /*
       // Save fill logs
       const fillPromises = [];
       for (const [market, fills] of this.fillLogResults.entries()) {
@@ -1134,21 +1147,15 @@ export class ManifestStatsServer {
           );
         }
       }
+      */
 
-      // Wait for all queries to complete
-      await Promise.all([
-        ...volumePromises,
-        ...checkpointPromises,
-        ...traderPromises,
-        ...fillPromises,
-        ...positionPromises,
-      ]);
-
+      console.log('Cleaning up old checkpoints');
       // Clean up old checkpoints - keep only the most recent one
       await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
         checkpointId,
       ]);
 
+      console.log('Committing');
       await client.query('COMMIT');
       console.log('State saved successfully to database');
     } catch (error) {
