@@ -1083,29 +1083,28 @@ export class ManifestStatsServer {
 
       console.log('Awaiting all inserts to complete');
       // Wait for all queries to complete
-      await Promise.all([
-        ...volumePromises,
-        ...checkpointPromises,
-      ]);
+      await Promise.all([...volumePromises, ...checkpointPromises]);
 
       // Save trader stats in batches
       console.log('Saving trader stats in batches');
-      const traderArray = Array.from(new Set([
-        ...Array.from(this.traderNumTakerTrades.keys()),
-        ...Array.from(this.traderNumMakerTrades.keys()),
-      ]));
+      const traderArray = Array.from(
+        new Set([
+          ...Array.from(this.traderNumTakerTrades.keys()),
+          ...Array.from(this.traderNumMakerTrades.keys()),
+        ]),
+      );
       const TRADER_BATCH_SIZE = 20; // Process 20 traders at a time
 
       for (let i = 0; i < traderArray.length; i += TRADER_BATCH_SIZE) {
         const batch = traderArray.slice(i, i + TRADER_BATCH_SIZE);
         const batchPromises = [];
-        
+
         for (const trader of batch) {
           const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
           const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
           const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
           const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
-          
+
           batchPromises.push(
             client.query(
               'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -1116,11 +1115,11 @@ export class ManifestStatsServer {
                 numMakerTrades,
                 takerVolume,
                 makerVolume,
-              ]
-            )
+              ],
+            ),
           );
         }
-        
+
         await Promise.all(batchPromises);
       }
 
@@ -1129,25 +1128,29 @@ export class ManifestStatsServer {
       const POSITION_THRESHOLD = 1; // Only save positions with significant value ($1+)
 
       for (const [trader, positions] of this.traderPositions.entries()) {
-        const acquisitionValues = this.traderAcquisitionValue.get(trader) || new Map();
+        const acquisitionValues =
+          this.traderAcquisitionValue.get(trader) || new Map();
         const positionBatchPromises = [];
-        
+
         for (const [mint, position] of positions.entries()) {
           const acquisitionValue = acquisitionValues.get(mint) || 0;
-          
+
           // Skip insignificant positions to reduce database load
-          if (Math.abs(position) === 0 || Math.abs(acquisitionValue) < POSITION_THRESHOLD) {
+          if (
+            Math.abs(position) === 0 ||
+            Math.abs(acquisitionValue) < POSITION_THRESHOLD
+          ) {
             continue;
           }
-          
+
           positionBatchPromises.push(
             client.query(
               'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
-              [checkpointId, trader, mint, position, acquisitionValue]
-            )
+              [checkpointId, trader, mint, position, acquisitionValue],
+            ),
           );
         }
-        
+
         // Execute all position queries for this trader in parallel
         if (positionBatchPromises.length > 0) {
           await Promise.all(positionBatchPromises);
