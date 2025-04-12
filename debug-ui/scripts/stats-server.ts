@@ -1086,68 +1086,73 @@ export class ManifestStatsServer {
       await Promise.all([
         ...volumePromises,
         ...checkpointPromises,
-        // ...traderPromises,
-        // ...fillPromises,
-        // ...positionPromises,
       ]);
 
-      // Save trader stats
-      // Because this can scale to a large number, do not burst in parallel.
-      // const traderPromises = [];
-      const allTraders = new Set([
+      // Save trader stats in batches
+      console.log('Saving trader stats in batches');
+      const traderArray = Array.from(new Set([
         ...Array.from(this.traderNumTakerTrades.keys()),
         ...Array.from(this.traderNumMakerTrades.keys()),
-      ]);
+      ]));
+      const TRADER_BATCH_SIZE = 20; // Process 20 traders at a time
 
-      for (const trader of allTraders) {
-        const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
-        const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
-        const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
-        const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
-
-        await client.query(
-          'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
-          [
-            checkpointId,
-            trader,
-            numTakerTrades,
-            numMakerTrades,
-            takerVolume,
-            makerVolume,
-          ],
-        );
-      }
-
-      // Disabled because they are spammy and overload the db connection.
-      /*
-      // Save fill logs
-      const fillPromises = [];
-      for (const [market, fills] of this.fillLogResults.entries()) {
-        fillPromises.push(
-          client.query(
-            'INSERT INTO fill_log_results (checkpoint_id, market, fill_data) VALUES ($1, $2, $3)',
-            [checkpointId, market, JSON.stringify(fills)],
-          ),
-        );
-      }
-
-      const positionPromises = [];
-      for (const [trader, positions] of this.traderPositions.entries()) {
-        const acquisitionValues =
-          this.traderAcquisitionValue.get(trader) || new Map();
-
-        for (const [mint, position] of positions.entries()) {
-          const acquisitionValue = acquisitionValues.get(mint) || 0;
-
-          positionPromises.push(
+      for (let i = 0; i < traderArray.length; i += TRADER_BATCH_SIZE) {
+        const batch = traderArray.slice(i, i + TRADER_BATCH_SIZE);
+        const batchPromises = [];
+        
+        for (const trader of batch) {
+          const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
+          const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
+          const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
+          const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
+          
+          batchPromises.push(
             client.query(
-              'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
-              [checkpointId, trader, mint, position, acquisitionValue],
-            ),
+              'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
+              [
+                checkpointId,
+                trader,
+                numTakerTrades,
+                numMakerTrades,
+                takerVolume,
+                makerVolume,
+              ]
+            )
           );
         }
+        
+        await Promise.all(batchPromises);
       }
-      */
+
+      // Save trader positions with filtering and batching
+      console.log('Saving trader positions with filtering');
+      const POSITION_THRESHOLD = 1; // Only save positions with significant value ($1+)
+
+      for (const [trader, positions] of this.traderPositions.entries()) {
+        const acquisitionValues = this.traderAcquisitionValue.get(trader) || new Map();
+        const positionBatchPromises = [];
+        
+        for (const [mint, position] of positions.entries()) {
+          const acquisitionValue = acquisitionValues.get(mint) || 0;
+          
+          // Skip insignificant positions to reduce database load
+          if (Math.abs(position) === 0 || Math.abs(acquisitionValue) < POSITION_THRESHOLD) {
+            continue;
+          }
+          
+          positionBatchPromises.push(
+            client.query(
+              'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
+              [checkpointId, trader, mint, position, acquisitionValue]
+            )
+          );
+        }
+        
+        // Execute all position queries for this trader in parallel
+        if (positionBatchPromises.length > 0) {
+          await Promise.all(positionBatchPromises);
+        }
+      }
 
       console.log('Cleaning up old checkpoints');
       // Clean up old checkpoints - keep only the most recent one
