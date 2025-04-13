@@ -1221,11 +1221,11 @@ export class ManifestStatsServer {
       for (const row of checkpointResult.rows) {
         this.baseVolumeAtomsCheckpoints.set(
           row.market,
-          row.base_volume_checkpoints,
+          JSON.parse(row.base_volume_checkpoints)
         );
         this.quoteVolumeAtomsCheckpoints.set(
           row.market,
-          row.quote_volume_checkpoints,
+          JSON.parse(row.quote_volume_checkpoints)
         );
         this.lastPriceByMarket.set(row.market, Number(row.last_price));
       }
