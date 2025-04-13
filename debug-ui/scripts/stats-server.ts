@@ -569,52 +569,6 @@ export class ManifestStatsServer {
   }
 
   /**
-   * Periodically save the volume so a 24 hour rolling volume can be calculated.
-   */
-  saveCheckpoints(): void {
-    console.log('Saving checkpoints');
-
-    // Reset the websocket. It sometimes disconnects quietly, so just to be
-    // safe, do it here.
-    this.resetWebsocket();
-
-    this.markets.forEach((value: Market, market: string) => {
-      console.log(
-        'Saving checkpoints for market',
-        market,
-        'base since last',
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market),
-      );
-      this.baseVolumeAtomsCheckpoints.set(market, [
-        ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
-      ]);
-      this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
-
-      this.quoteVolumeAtomsCheckpoints.set(market, [
-        ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
-      ]);
-      this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-
-      const baseMint: string = value.baseMint().toBase58();
-      const quoteMint: string = value.quoteMint().toBase58();
-      volume.set(
-        { market, mint: baseMint, side: 'base' },
-        this.baseVolumeAtomsCheckpoints
-          .get(market)!
-          .reduce((sum, num) => sum + num, 0),
-      );
-      volume.set(
-        { market, mint: quoteMint, side: 'quote' },
-        this.quoteVolumeAtomsCheckpoints
-          .get(market)!
-          .reduce((sum, num) => sum + num, 0),
-      );
-    });
-  }
-
-  /**
    * Periodically save to prometheus the depths of different market makers. This
    * is expensive, so it will only be run every few minutes at most. If we
    * wanted more frequent, should subscribe to market accounts. Because the
@@ -1040,7 +994,40 @@ export class ManifestStatsServer {
 
       const checkpointId = checkpointResult.rows[0].id;
 
-      // Save market volumes
+      // Update the checkpoint arrays (previously in saveCheckpoints)
+      this.markets.forEach((value: Market, market: string) => {
+        // Update the checkpoint arrays with latest data
+        this.baseVolumeAtomsCheckpoints.set(market, [
+          ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ]);
+
+        this.quoteVolumeAtomsCheckpoints.set(market, [
+          ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ]);
+
+        // Reset the counters
+        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+
+        // Update volume metrics
+        const baseMint: string = value.baseMint().toBase58();
+        const quoteMint: string = value.quoteMint().toBase58();
+        volume.set(
+          { market, mint: baseMint, side: 'base' },
+          this.baseVolumeAtomsCheckpoints
+            .get(market)!
+            .reduce((sum, num) => sum + num, 0),
+        );
+        volume.set(
+          { market, mint: quoteMint, side: 'quote' },
+          this.quoteVolumeAtomsCheckpoints
+            .get(market)!
+            .reduce((sum, num) => sum + num, 0),
+        );
+      });
+
       const volumePromises = [];
       for (const [
         market,
@@ -1219,14 +1206,40 @@ export class ManifestStatsServer {
       );
 
       for (const row of checkpointResult.rows) {
-        this.baseVolumeAtomsCheckpoints.set(
-          row.market,
-          JSON.parse(row.base_volume_checkpoints),
-        );
-        this.quoteVolumeAtomsCheckpoints.set(
-          row.market,
-          JSON.parse(row.quote_volume_checkpoints),
-        );
+        // Parse JSON if stored as strings
+        let baseCheckpoints = row.base_volume_checkpoints;
+        let quoteCheckpoints = row.quote_volume_checkpoints;
+
+        // Convert to arrays if needed
+        if (typeof baseCheckpoints === 'string') {
+          baseCheckpoints = JSON.parse(baseCheckpoints);
+        }
+
+        if (typeof quoteCheckpoints === 'string') {
+          quoteCheckpoints = JSON.parse(quoteCheckpoints);
+        }
+
+        // Ensure they are arrays
+        if (!Array.isArray(baseCheckpoints)) {
+          console.warn(
+            `Market ${row.market} has invalid base checkpoints, resetting`,
+          );
+          baseCheckpoints = new Array<number>(
+            ONE_DAY_SEC / CHECKPOINT_DURATION_SEC,
+          ).fill(0);
+        }
+
+        if (!Array.isArray(quoteCheckpoints)) {
+          console.warn(
+            `Market ${row.market} has invalid quote checkpoints, resetting`,
+          );
+          quoteCheckpoints = new Array<number>(
+            ONE_DAY_SEC / CHECKPOINT_DURATION_SEC,
+          ).fill(0);
+        }
+
+        this.baseVolumeAtomsCheckpoints.set(row.market, baseCheckpoints);
+        this.quoteVolumeAtomsCheckpoints.set(row.market, quoteCheckpoints);
         this.lastPriceByMarket.set(row.market, Number(row.last_price));
       }
 
@@ -1400,8 +1413,6 @@ const run = async () => {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      statsServer.saveCheckpoints();
-
       // Run depth probe and wait for next checkpoint
       await Promise.all([
         statsServer.depthProbe(),
