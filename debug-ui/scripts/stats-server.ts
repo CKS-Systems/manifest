@@ -165,56 +165,9 @@ export class ManifestStatsServer {
     const usdcValue = Number(quoteAtoms) / 10 ** market.quoteDecimals();
 
     if (baseAtomsDelta > 0) {
-      // Buying base (long or covering short)
-      if (currentPosition < 0) {
-        if (newPosition <= 0) {
-          // Partially covering a short position
-          const coverRatio = baseAtomsDelta / Math.abs(currentPosition);
-          acquisitionValues.set(baseMint, currentValue * (1 - coverRatio));
-        } else {
-          // Transitioning from short to long
-          const shortCoverAmount = Math.abs(currentPosition);
-          const longEstablishAmount = baseAtomsDelta - shortCoverAmount;
-
-          // Calculate the proportion for establishing long position
-          const longEstablishRatio = longEstablishAmount / baseAtomsDelta;
-
-          // Calculate the USDC value for the long establish portion
-          const longEstablishValue = usdcValue * longEstablishRatio;
-
-          // Set acquisition value to the new long position's cost
-          acquisitionValues.set(baseMint, longEstablishValue);
-        }
-      } else {
-        // Adding to existing long position
-        acquisitionValues.set(baseMint, currentValue + usdcValue);
-      }
-    } else if (baseAtomsDelta < 0) {
-      // Selling base (reducing long or adding to short)
-      if (currentPosition > 0) {
-        if (newPosition >= 0) {
-          // Partially reducing a long position
-          const reductionRatio = Math.abs(baseAtomsDelta) / currentPosition;
-          acquisitionValues.set(baseMint, currentValue * (1 - reductionRatio));
-        } else {
-          // Transitioning from long to short
-          const shortEstablishAmount =
-            Math.abs(baseAtomsDelta) - currentPosition;
-
-          // Calculate the proportion for establishing short position
-          const shortEstablishRatio =
-            shortEstablishAmount / Math.abs(baseAtomsDelta);
-
-          // Calculate the USDC value for the short establish portion
-          const shortEstablishValue = usdcValue * shortEstablishRatio;
-
-          // Set acquisition value to the new short position's proceeds
-          acquisitionValues.set(baseMint, shortEstablishValue);
-        }
-      } else {
-        // Adding to existing short position or opening a new short
-        acquisitionValues.set(baseMint, currentValue + usdcValue);
-      }
+      acquisitionValues.set(baseMint, currentValue + usdcValue);
+    } else {
+      acquisitionValues.set(baseMint, currentValue - usdcValue);
     }
   }
 
@@ -258,26 +211,19 @@ export class ManifestStatsServer {
       // Calculate current value in USDC
       const baseDecimals = usdcMarket.baseDecimals();
       const quoteDecimals = usdcMarket.quoteDecimals();
-      const baseTokens = Math.abs(baseAtomPosition) / 10 ** baseDecimals;
+      const basePosition = baseAtomPosition / 10 ** baseDecimals;
 
       // Convert price from atoms to actual price
-      const priceInQuote =
-        lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
-
-      // Current market value in USDC
-      const currentValue = baseTokens * priceInQuote;
+      const priceInQuote = lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
+      
+      // Calculate current market value
+      const currentPositionValue = basePosition * priceInQuote;
 
       // Get acquisition value
       const acquisitionValue = acquisitionValues.get(baseMint) || 0;
-
-      // Add to total PnL
-      if (baseAtomPosition > 0) {
-        // Long position: profit when price increases
-        totalPnL += currentValue - acquisitionValue;
-      } else {
-        // Short position: profit when price decreases
-        totalPnL += acquisitionValue - currentValue;
-      }
+      
+      // PnL = current value - cost basis
+      totalPnL += currentPositionValue - acquisitionValue;
     }
 
     return totalPnL;
