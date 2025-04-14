@@ -172,12 +172,43 @@ export class ManifestStatsServer {
   }
 
   // TODO: PnL on all quote asset markets
-  private calculateTraderPnL(trader: string): number {
+  private calculateTraderPnL(
+    trader: string,
+    includeDetails: boolean = false,
+  ):
+    | number
+    | {
+        totalPnL: number;
+        positions: {
+          [mint: string]: {
+            tokenMint: string;
+            marketKey: string | null;
+            position: number;
+            acquisitionValue: number;
+            currentPrice: number;
+            marketValue: number;
+            pnl: number;
+          };
+        };
+      } {
     let totalPnL = 0;
 
     if (!this.traderPositions.has(trader)) {
-      return 0;
+      return includeDetails ? { totalPnL: 0, positions: {} } : 0;
     }
+
+    // Setup for detailed return if needed
+    const positionDetails: {
+      [mint: string]: {
+        tokenMint: string;
+        marketKey: string | null;
+        position: number;
+        acquisitionValue: number;
+        currentPrice: number;
+        marketValue: number;
+        pnl: number;
+      };
+    } = {};
 
     const positions = this.traderPositions.get(trader)!;
     const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
@@ -224,10 +255,27 @@ export class ManifestStatsServer {
       const acquisitionValue = acquisitionValues.get(baseMint) || 0;
 
       // PnL = current value - cost basis
-      totalPnL += currentPositionValue - acquisitionValue;
+      const positionPnL = currentPositionValue - acquisitionValue;
+
+      // Add to total PnL
+      totalPnL += positionPnL;
+
+      // Store detailed position info if requested
+      if (includeDetails) {
+        positionDetails[baseMint] = {
+          tokenMint: baseMint,
+          marketKey,
+          position: basePosition,
+          acquisitionValue,
+          currentPrice: priceInQuote,
+          marketValue: currentPositionValue,
+          pnl: positionPnL,
+        };
+      }
     }
 
-    return totalPnL;
+    // Return either detailed object or just the total PnL number
+    return includeDetails ? { totalPnL, positions: positionDetails } : totalPnL;
   }
 
   private resetWebsocket() {
@@ -847,7 +895,7 @@ export class ManifestStatsServer {
    * Get Traders to be used in a leaderboard if a UI wants to.
    * Returns counts for taker/maker trades and volumes.
    */
-  getTraders() {
+  getTraders(includeDebug: boolean = false) {
     const allTraders = new Set<string>([
       ...Array.from(this.traderNumTakerTrades.keys()),
       ...Array.from(this.traderNumMakerTrades.keys()),
@@ -859,7 +907,8 @@ export class ManifestStatsServer {
         maker: number;
         takerNotionalVolume: number;
         makerNotionalVolume: number;
-        pnl: number; // Add PnL field
+        pnl: number;
+        _debug?: any;
       };
     } = {};
 
@@ -869,8 +918,10 @@ export class ManifestStatsServer {
       const makerNotionalVolume =
         this.traderMakerNotionalVolume.get(trader) || 0;
 
-      // Calculate PnL
-      const pnl = this.calculateTraderPnL(trader);
+      const pnlResult = this.calculateTraderPnL(trader, includeDebug);
+
+      const pnl =
+        typeof pnlResult === 'number' ? pnlResult : pnlResult.totalPnL;
 
       traderData[trader] = {
         taker: this.traderNumTakerTrades.get(trader) || 0,
@@ -879,6 +930,10 @@ export class ManifestStatsServer {
         makerNotionalVolume,
         pnl,
       };
+
+      if (includeDebug && typeof pnlResult !== 'number') {
+        traderData[trader]._debug = pnlResult;
+      }
     });
 
     return traderData;
@@ -1300,8 +1355,9 @@ const run = async () => {
   const volumeHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getVolume());
   };
-  const tradersHandler: RequestHandler = (_req, res) => {
-    res.send(statsServer.getTraders());
+  const tradersHandler: RequestHandler = (req, res) => {
+    const includeDebug = req.query.debug === 'true';
+    res.send(statsServer.getTraders(includeDebug));
   };
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
@@ -1314,6 +1370,9 @@ const run = async () => {
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
   app.get('/traders', tradersHandler);
+  app.get('/traders/debug', (req, res) => {
+    res.send(statsServer.getTraders(true));
+  });
   app.get('/recentFills', recentFillsHandler);
 
   // Add health check endpoint for Fly.io
