@@ -492,16 +492,19 @@ export class ManifestStatsServer {
         if (Number(market.quoteVolume()) == 0) {
           return;
         }
-        this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
-        this.baseVolumeAtomsCheckpoints.set(
-          marketPk,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
-        this.quoteVolumeAtomsCheckpoints.set(
-          marketPk,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
+
+        if (!this.baseVolumeAtomsCheckpoints.has(marketPk)) {
+          this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
+          this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
+          this.baseVolumeAtomsCheckpoints.set(
+            marketPk,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          this.quoteVolumeAtomsCheckpoints.set(
+            marketPk,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+        }
         this.markets.set(marketPk, market);
       },
     );
@@ -1216,19 +1219,30 @@ export class ManifestStatsServer {
 
       // Load market checkpoints
       const checkpointResult = await this.pool.query(
-        'SELECT market, base_volume_checkpoints, quote_volume_checkpoints, last_price FROM market_checkpoints WHERE checkpoint_id = $1',
+        'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1',
         [checkpointId],
       );
 
       for (const row of checkpointResult.rows) {
-        this.baseVolumeAtomsCheckpoints.set(
-          row.market,
-          row.base_volume_checkpoints,
-        );
-        this.quoteVolumeAtomsCheckpoints.set(
-          row.market,
-          row.quote_volume_checkpoints,
-        );
+        let baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
+        let quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
+
+        if (!Array.isArray(baseCheckpoints)) {
+          console.log(
+            `Base checkpoints for market ${row.market} is not an array, converting`,
+          );
+          baseCheckpoints = Object.values(baseCheckpoints);
+        }
+
+        if (!Array.isArray(quoteCheckpoints)) {
+          console.log(
+            `Quote checkpoints for market ${row.market} is not an array, converting`,
+          );
+          quoteCheckpoints = Object.values(quoteCheckpoints);
+        }
+
+        this.baseVolumeAtomsCheckpoints.set(row.market, baseCheckpoints);
+        this.quoteVolumeAtomsCheckpoints.set(row.market, quoteCheckpoints);
         this.lastPriceByMarket.set(row.market, Number(row.last_price));
       }
 
