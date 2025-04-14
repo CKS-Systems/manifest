@@ -253,16 +253,16 @@ export class ManifestStatsServer {
       if (!usdcMarket || !marketKey) continue;
 
       // Get last price in this market
-      const lastPrice = this.lastPriceByMarket.get(marketKey) || 0;
+      const lastPriceAtoms = this.lastPriceByMarket.get(marketKey) || 0;
 
       // Calculate current value in USDC
       const baseDecimals = usdcMarket.baseDecimals();
+      const quoteDecimals = usdcMarket.quoteDecimals();
       const baseTokens = Math.abs(baseAtomPosition) / 10 ** baseDecimals;
 
       // Convert price from atoms to actual price
       const priceInQuote =
-        lastPrice *
-        10 ** (usdcMarket.baseDecimals() - usdcMarket.quoteDecimals());
+        lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
 
       // Current market value in USDC
       const currentValue = baseTokens * priceInQuote;
