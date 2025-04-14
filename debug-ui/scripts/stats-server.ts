@@ -246,7 +246,7 @@ export class ManifestStatsServer {
 
       // Convert price from atoms to actual price
       const priceInQuote =
-        lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
+        lastPriceAtoms * 10 ** (baseDecimals - quoteDecimals);
 
       // Calculate current market value
       const currentPositionValue = basePosition * priceInQuote;
