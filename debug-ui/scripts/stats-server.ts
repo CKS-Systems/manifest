@@ -214,14 +214,15 @@ export class ManifestStatsServer {
       const basePosition = baseAtomPosition / 10 ** baseDecimals;
 
       // Convert price from atoms to actual price
-      const priceInQuote = lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
-      
+      const priceInQuote =
+        lastPriceAtoms * 10 ** (quoteDecimals - baseDecimals);
+
       // Calculate current market value
       const currentPositionValue = basePosition * priceInQuote;
 
       // Get acquisition value
       const acquisitionValue = acquisitionValues.get(baseMint) || 0;
-      
+
       // PnL = current value - cost basis
       totalPnL += currentPositionValue - acquisitionValue;
     }
