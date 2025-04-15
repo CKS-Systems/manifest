@@ -1195,21 +1195,12 @@ export class ManifestStatsServer {
     } catch (error) {
       console.error('Error saving state to database:', error);
       if (client) {
-        try {
-          await client.query('ROLLBACK');
-        } catch (rollbackError) {
-          console.error('Error during rollback:', rollbackError);
-        }
+        await client.query('ROLLBACK');
       }
-      // Don't throw here - log error but allow server to continue
+      throw error;
     } finally {
-      // Make sure client is always released
       if (client) {
-        try {
           client.release();
-        } catch (releaseError) {
-          console.error('Error releasing client:', releaseError);
-        }
       }
     }
   }
@@ -1354,16 +1345,6 @@ const run = async () => {
     );
   }
 
-  process.on('uncaughtException', (err) => {
-    console.error('Uncaught exception:', err);
-    // Log but don't exit - allow graceful recovery
-  });
-
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled rejection at:', promise, 'reason:', reason);
-    // Log error without crashing
-  });
-
   // Set up Prometheus metrics
   promClient.collectDefaultMetrics({
     labels: {
@@ -1464,24 +1445,14 @@ const run = async () => {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      // Do checkpoint operations first
       statsServer.saveCheckpoints();
 
-      // Run depth probe
-      await statsServer.depthProbe();
-
-      // Handle database operations separately with their own error handling
-      if (DATABASE_URL) {
-        try {
-          await statsServer.saveState();
-        } catch (dbError) {
-          console.error('Database save error (continuing operation):', dbError);
-          // Allow continuing even if DB save fails
-        }
-      }
-
-      // Sleep until next checkpoint
-      await sleep(CHECKPOINT_DURATION_SEC * 1_000);
+      // Run depth probe and wait for next checkpoint
+      await Promise.all([
+        statsServer.depthProbe(),
+        sleep(CHECKPOINT_DURATION_SEC * 1_000),
+        DATABASE_URL ? statsServer.saveState() : () => {},
+      ]);
     } catch (error) {
       console.error('Error in main loop:', error);
       // Continue the loop instead of crashing
