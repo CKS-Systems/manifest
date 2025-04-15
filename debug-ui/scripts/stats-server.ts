@@ -130,6 +130,11 @@ export class ManifestStatsServer {
       ssl: { rejectUnauthorized: false }, // May be needed depending on Fly Postgres configuration
     });
 
+    this.pool.on('error', (err) => {
+      console.error('Unexpected database pool error:', err);
+      // Continue operation - don't let DB errors crash the server
+    });
+
     this.resetWebsocket();
     this.initDatabase(); // Initialize database schema
   }
@@ -1029,9 +1034,11 @@ export class ManifestStatsServer {
   async saveState(): Promise<void> {
     console.log('Saving state to database...');
 
-    console.log('Getting db client');
-    const client = await this.pool.connect();
+    let client;
     try {
+      console.log('Getting db client');
+      client = await this.pool.connect();
+
       // Start a transaction
       console.log('Querying begin');
       await client.query('BEGIN');
@@ -1131,7 +1138,15 @@ export class ManifestStatsServer {
       // Save trader positions with filtering and batching
       console.log('Saving trader positions with filtering');
       const POSITION_THRESHOLD = 1; // Only save positions with significant value ($1+)
+      const BATCH_SIZE = 10; // Smaller batch size
+      const DELAY_BETWEEN_BATCHES = 50; // ms
 
+      // Helper function for delay
+      const delay = (ms: number | undefined) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
+      // Process traders in smaller batches with delays
+      let traderCount = 0;
       for (const [trader, positions] of this.traderPositions.entries()) {
         const acquisitionValues =
           this.traderAcquisitionValue.get(trader) || new Map();
@@ -1159,6 +1174,12 @@ export class ManifestStatsServer {
         // Execute all position queries for this trader in parallel
         if (positionBatchPromises.length > 0) {
           await Promise.all(positionBatchPromises);
+
+          // Add throttling delay every BATCH_SIZE traders
+          traderCount++;
+          if (traderCount % BATCH_SIZE === 0) {
+            await delay(DELAY_BETWEEN_BATCHES);
+          }
         }
       }
 
@@ -1172,11 +1193,15 @@ export class ManifestStatsServer {
       await client.query('COMMIT');
       console.log('State saved successfully to database');
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error saving state to database:', error);
+      if (client) {
+        await client.query('ROLLBACK');
+      }
       throw error;
     } finally {
-      client.release();
+      if (client) {
+        client.release();
+      }
     }
   }
 
@@ -1431,6 +1456,7 @@ const run = async () => {
     } catch (error) {
       console.error('Error in main loop:', error);
       // Continue the loop instead of crashing
+      await sleep(5000); // Add a short delay before retrying
     }
   }
 };
