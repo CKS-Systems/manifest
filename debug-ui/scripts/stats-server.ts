@@ -1200,7 +1200,7 @@ export class ManifestStatsServer {
       throw error;
     } finally {
       if (client) {
-          client.release();
+        client.release();
       }
     }
   }
