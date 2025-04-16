@@ -226,23 +226,37 @@ export class ManifestStatsServer {
       // Find USDC market for this base token
       let usdcMarket: Market | null = null;
       let marketKey: string | null = null;
+      let lastPriceAtoms = 0;
 
-      for (const [marketPk, market] of this.markets.entries()) {
-        if (
-          market.baseMint().toBase58() === baseMint &&
-          market.quoteMint().toBase58() === this.USDC_MINT
-        ) {
-          usdcMarket = market;
-          marketKey = marketPk;
-          break;
+      // Special handling for wSOL - directly use the preferred market
+      if (baseMint === this.SOL_MINT) {
+        if (this.markets.has(this.SOL_USDC_MARKET)) {
+          usdcMarket = this.markets.get(this.SOL_USDC_MARKET)!;
+          marketKey = this.SOL_USDC_MARKET;
+          lastPriceAtoms = this.lastPriceByMarket.get(marketKey) || 0;
         }
       }
 
-      // Skip if no USDC market found for this token
-      if (!usdcMarket || !marketKey) continue;
+      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) {
+        for (const [marketPk, market] of this.markets.entries()) {
+          if (
+            market.baseMint().toBase58() === baseMint &&
+            market.quoteMint().toBase58() === this.USDC_MINT
+          ) {
+            // Skip markets with zero price
+            const price = this.lastPriceByMarket.get(marketPk) || 0;
+            if (price > 0) {
+              usdcMarket = market;
+              marketKey = marketPk;
+              lastPriceAtoms = price;
+              break;
+            }
+          }
+        }
+      }
 
-      // Get last price in this market
-      const lastPriceAtoms = this.lastPriceByMarket.get(marketKey) || 0;
+      // Skip if no USDC market found for this token or if price is zero
+      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) continue;
 
       // Calculate current value in USDC
       const baseDecimals = usdcMarket.baseDecimals();
