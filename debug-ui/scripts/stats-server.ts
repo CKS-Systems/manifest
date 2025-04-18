@@ -1198,6 +1198,38 @@ export class ManifestStatsServer {
         }
       }
 
+      console.log('Saving fill log results with batching');
+
+      const markets = Array.from(this.fillLogResults.keys());
+      for (let i = 0; i < markets.length; i += BATCH_SIZE) {
+        const batchMarkets = markets.slice(i, i + BATCH_SIZE);
+        const batchPromises = [];
+
+        for (const market of batchMarkets) {
+          const fills = this.fillLogResults.get(market);
+          if (fills && fills.length > 0) {
+            batchPromises.push(
+              client.query(
+                'INSERT INTO fill_log_results (checkpoint_id, market, fill_data) VALUES ($1, $2, $3)',
+                [checkpointId, market, JSON.stringify(fills)],
+              ),
+            );
+          }
+        }
+
+        // Process each batch sequentially
+        if (batchPromises.length > 0) {
+          console.log(
+            `Saving batch ${i / BATCH_SIZE + 1} of ${Math.ceil(markets.length / BATCH_SIZE)} (${batchPromises.length} markets)`,
+          );
+          await Promise.all(batchPromises);
+          // Add a small delay between batches to give the database breathing room
+          if (i + BATCH_SIZE < markets.length) {
+            await delay(DELAY_BETWEEN_BATCHES);
+          }
+        }
+      }
+
       console.log('Cleaning up old checkpoints');
       // Clean up old checkpoints - keep only the most recent one
       await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
