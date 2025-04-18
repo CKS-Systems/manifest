@@ -482,8 +482,9 @@ export class ManifestStatsServer {
 
         let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
         prevFills.push(fill);
-        if (prevFills.length > 10) {
-          prevFills = prevFills.slice(1, 10);
+        const FILLS_TO_SAVE = 1000;
+        if (prevFills.length > FILLS_TO_SAVE) {
+          prevFills = prevFills.slice(1, FILLS_TO_SAVE);
         }
         this.fillLogResults.set(market, prevFills);
       });
