@@ -389,7 +389,7 @@ export class UiWrapper {
       traderTokenProgram,
     );
     const vault = getVaultAddress(market.address, mint);
-    const clientOrderId = args.orderId ?? Date.now();
+    const clientOrderId = args.orderId || Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
     let priceExponent = market.quoteDecimals() - market.baseDecimals();
@@ -614,7 +614,7 @@ export class UiWrapper {
       traderTokenProgram,
     );
     const vault = getVaultAddress(market.address, mint);
-    const clientOrderId = args.orderId ?? Date.now();
+    const clientOrderId = args.orderId || Date.now();
     const baseAtoms = Math.round(args.amount * 10 ** market.baseDecimals());
     let priceMantissa = args.price;
     let priceExponent = market.quoteDecimals() - market.baseDecimals();
