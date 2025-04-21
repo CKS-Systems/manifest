@@ -525,9 +525,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.83"
+version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "721cae7de5c34fbb2acd27e21e6d2cf7b886dce0c27388d46c4e6c47ea4318dd"
+checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2508,9 +2508,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.22"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "lru"
@@ -2619,6 +2619,25 @@ dependencies = [
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
  "manifest-dex 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-program",
+ "solana-sdk",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "tokio",
+]
+
+[[package]]
+name = "manifest-okx"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log",
+ "manifest-dex 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json",
+ "solana-account-decoder",
+ "solana-client",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -3966,9 +3985,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.133"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
 dependencies = [
  "itoa",
  "memchr",
