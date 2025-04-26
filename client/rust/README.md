@@ -15,6 +15,13 @@ one. When lock contention becomes a concern for the global accounts, it will
 become worthwhile to also utilize the local one which will have less trouble
 landing tx, but might not see the global orders.
 
+There is a swap_v2 instruction that can be swapped in for the swap instruction
+if required. The call data is the same, the only difference is that the swap_v2
+allows a separate owner of the user token accounts from the gas/rent payer of
+the tx. This is useful when a router has intermediate token accounts owned by
+their program and not the user. If that is not the case, the normal swap ix
+should suffice.
+
 ### Testing
 
 ```

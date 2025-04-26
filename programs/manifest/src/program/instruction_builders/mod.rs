@@ -10,6 +10,7 @@ pub mod global_deposit_instruction;
 pub mod global_evict_instruction;
 pub mod global_withdraw_instruction;
 pub mod swap_instruction;
+pub mod swap_v2_instruction;
 pub mod withdraw_instruction;
 
 pub use batch_update_instruction::*;
@@ -24,4 +25,5 @@ pub use global_deposit_instruction::*;
 pub use global_evict_instruction::*;
 pub use global_withdraw_instruction::*;
 pub use swap_instruction::*;
+pub use swap_v2_instruction::*;
 pub use withdraw_instruction::*;

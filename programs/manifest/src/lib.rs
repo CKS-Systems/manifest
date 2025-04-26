@@ -122,6 +122,9 @@ pub fn process_instruction(
         ManifestInstruction::Swap => {
             process_swap(program_id, accounts, data)?;
         }
+        ManifestInstruction::SwapV2 => {
+            process_swap(program_id, accounts, data)?;
+        }
         ManifestInstruction::Expand => {
             process_expand_market(program_id, accounts, data)?;
         }

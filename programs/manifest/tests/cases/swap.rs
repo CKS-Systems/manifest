@@ -39,6 +39,21 @@ async fn swap_test() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn swap_v2_test() -> anyhow::Result<()> {
+    let mut test_fixture: TestFixture = TestFixture::new().await;
+
+    test_fixture
+        .sol_mint_fixture
+        .mint_to(&test_fixture.payer_sol_fixture.key, 1 * SOL_UNIT_SIZE)
+        .await;
+
+    // No deposits or seat claims needed
+    test_fixture.swap_v2(SOL_UNIT_SIZE, 0, true, true).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn swap_full_match_test_sell_exact_in() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
 

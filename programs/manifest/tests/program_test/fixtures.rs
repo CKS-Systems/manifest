@@ -15,7 +15,7 @@ use manifest::{
         global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
         global_deposit_instruction, global_withdraw_instruction, swap_instruction,
-        withdraw_instruction,
+        swap_v2_instruction, withdraw_instruction,
     },
     quantities::WrapperU64,
     state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType, RestingOrder},
@@ -598,6 +598,44 @@ impl TestFixture {
             &[place_order_ix],
             Some(&keypair.pubkey()),
             &[keypair],
+        )
+        .await
+    }
+
+    // Similar to swap, but the second_keypair is the gas/rent payer and normal
+    // keypair owns the token accounts.
+    pub async fn swap_v2(
+        &mut self,
+        in_atoms: u64,
+        out_atoms: u64,
+        is_base_in: bool,
+        is_exact_in: bool,
+    ) -> anyhow::Result<(), BanksClientError> {
+        let payer: Pubkey = self.context.borrow().payer.pubkey();
+        let payer_keypair: Keypair = self.context.borrow().payer.insecure_clone();
+
+        let swap_ix: Instruction = swap_v2_instruction(
+            &self.market_fixture.key,
+            &self.second_keypair.pubkey(),
+            &payer,
+            &self.sol_mint_fixture.key,
+            &self.usdc_mint_fixture.key,
+            &self.payer_sol_fixture.key,
+            &self.payer_usdc_fixture.key,
+            in_atoms,
+            out_atoms,
+            is_base_in,
+            is_exact_in,
+            spl_token::id(),
+            spl_token::id(),
+            false,
+        );
+
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[swap_ix],
+            Some(&self.second_keypair.pubkey()),
+            &[&payer_keypair, &self.second_keypair.insecure_clone()],
         )
         .await
     }

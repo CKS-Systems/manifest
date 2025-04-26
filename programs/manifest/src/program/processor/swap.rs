@@ -74,6 +74,7 @@ pub(crate) fn process_swap_core(
     let SwapContext {
         market,
         payer,
+        owner,
         trader_base: trader_base_account,
         trader_quote: trader_quote_account,
         base_vault,
@@ -90,14 +91,14 @@ pub(crate) fn process_swap_core(
         let mut dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
 
         // Claim seat if needed
-        let existing_seat_index: DataIndex = dynamic_account.get_trader_index(payer.key);
+        let existing_seat_index: DataIndex = dynamic_account.get_trader_index(owner.key);
         if existing_seat_index == NIL {
-            dynamic_account.claim_seat(payer.key)?;
+            dynamic_account.claim_seat(owner.key)?;
         }
-        let trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
+        let trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
 
         let (initial_base_atoms, initial_quote_atoms) =
-            dynamic_account.get_trader_balance(payer.key);
+            dynamic_account.get_trader_balance(owner.key);
 
         (
             existing_seat_index,
@@ -259,7 +260,7 @@ pub(crate) fn process_swap_core(
         )?;
     }
 
-    let (end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
+    let (end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(owner.key);
 
     let extra_base_atoms: BaseAtoms = end_base_atoms.checked_sub(initial_base_atoms)?;
     let extra_quote_atoms: QuoteAtoms = end_quote_atoms.checked_sub(initial_quote_atoms)?;
@@ -281,7 +282,7 @@ pub(crate) fn process_swap_core(
                 base_mint,
                 dynamic_account.fixed.get_base_mint(),
                 &base_vault,
-                &payer,
+                &owner,
                 (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
                 dynamic_account.fixed.get_base_mint_decimals(),
             )?;
@@ -290,7 +291,7 @@ pub(crate) fn process_swap_core(
                 &token_program_base,
                 &trader_base_account,
                 &base_vault,
-                &payer,
+                &owner,
                 (initial_credit_base_atoms.checked_sub(extra_base_atoms)?).as_u64(),
             )?;
         }
@@ -335,7 +336,7 @@ pub(crate) fn process_swap_core(
                 quote_mint,
                 dynamic_account.fixed.get_quote_mint(),
                 &quote_vault,
-                &payer,
+                &owner,
                 (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
                 dynamic_account.fixed.get_quote_mint_decimals(),
             )?;
@@ -344,7 +345,7 @@ pub(crate) fn process_swap_core(
                 &token_program_quote,
                 &trader_quote_account,
                 &quote_vault,
-                &payer,
+                &owner,
                 (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)?).as_u64(),
             )?;
         }
@@ -377,7 +378,7 @@ pub(crate) fn process_swap_core(
     }
 
     if existing_seat_index == NIL {
-        dynamic_account.release_seat(payer.key)?;
+        dynamic_account.release_seat(owner.key)?;
     } else {
         // Withdraw in case there already was a seat so it doesnt mess with their
         // balances. Need to withdraw base and quote in case the order wasnt fully
@@ -394,7 +395,7 @@ pub(crate) fn process_swap_core(
 
     emit_stack(PlaceOrderLog {
         market: *market.key,
-        trader: *payer.key,
+        trader: *owner.key,
         base_atoms,
         price,
         order_type,
@@ -430,7 +431,7 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
     token_program: &TokenProgram<'a, 'info>,
     trader_account: &TokenAccountInfo<'a, 'info>,
     vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    owner: &Signer<'a, 'info>,
     amount: u64,
 ) -> ProgramResult {
     invoke(
@@ -438,7 +439,7 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
             token_program.key,
             trader_account.key,
             vault.key,
-            payer.key,
+            owner.key,
             &[],
             amount,
         )?,
@@ -446,7 +447,7 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
             token_program.as_ref().clone(),
             trader_account.as_ref().clone(),
             vault.as_ref().clone(),
-            payer.as_ref().clone(),
+            owner.as_ref().clone(),
         ],
     )
 }
@@ -456,10 +457,10 @@ fn spl_token_transfer_from_trader_to_vault<'a, 'info>(
     _token_program: &TokenProgram<'a, 'info>,
     trader_account: &TokenAccountInfo<'a, 'info>,
     vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    owner: &Signer<'a, 'info>,
     amount: u64,
 ) -> ProgramResult {
-    spl_token_transfer(trader_account.info, vault.info, payer.info, amount)
+    spl_token_transfer(trader_account.info, vault.info, owner.info, amount)
 }
 
 /** Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
@@ -470,7 +471,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
     mint: Option<MintAccountInfo<'a, 'info>>,
     mint_pubkey: &Pubkey,
     vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    owner: &Signer<'a, 'info>,
     amount: u64,
     decimals: u8,
 ) -> ProgramResult {
@@ -480,7 +481,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
             trader_account.key,
             mint_pubkey,
             vault.key,
-            payer.key,
+            owner.key,
             &[],
             amount,
             decimals,
@@ -490,7 +491,7 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
             trader_account.as_ref().clone(),
             vault.as_ref().clone(),
             mint.unwrap().as_ref().clone(),
-            payer.as_ref().clone(),
+            owner.as_ref().clone(),
         ],
     )
 }
@@ -503,11 +504,11 @@ fn spl_token_2022_transfer_from_trader_to_vault<'a, 'info>(
     _mint: Option<MintAccountInfo<'a, 'info>>,
     _mint_pubkey: &Pubkey,
     vault: &TokenAccountInfo<'a, 'info>,
-    payer: &Signer<'a, 'info>,
+    owner: &Signer<'a, 'info>,
     amount: u64,
     _decimals: u8,
 ) -> ProgramResult {
-    spl_token_2022_transfer(trader_account.info, vault.info, payer.info, amount)
+    spl_token_2022_transfer(trader_account.info, vault.info, owner.info, amount)
 }
 
 /** Transfer from base (quote) vault to base (quote) trader using SPL Token **/

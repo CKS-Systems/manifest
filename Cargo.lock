@@ -2559,6 +2559,27 @@ dependencies = [
 [[package]]
 name = "manifest-dex"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18ee8a9c2556398e52de40d229e631b86a27c9812d5977a72615d2e962fcf349"
+dependencies = [
+ "arrayref",
+ "borsh 0.10.4",
+ "bytemuck",
+ "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_enum 0.5.11",
+ "shank",
+ "solana-invoke",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token 3.5.0",
+ "spl-token-2022 3.0.4",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
+name = "manifest-dex"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "arrayref",
@@ -2591,34 +2612,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "manifest-dex"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18ee8a9c2556398e52de40d229e631b86a27c9812d5977a72615d2e962fcf349"
-dependencies = [
- "arrayref",
- "borsh 0.10.4",
- "bytemuck",
- "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum 0.5.11",
- "shank",
- "solana-invoke",
- "solana-program",
- "solana-security-txt",
- "spl-token 3.5.0",
- "spl-token-2022 3.0.4",
- "static_assertions",
- "thiserror",
-]
-
-[[package]]
 name = "manifest-jupiter"
 version = "0.2.0"
 dependencies = [
  "anyhow",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jupiter-amm-interface",
- "manifest-dex 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "manifest-dex 2.0.0",
  "solana-program",
  "solana-sdk",
  "spl-token 3.5.0",
@@ -2634,7 +2634,7 @@ dependencies = [
  "async-trait",
  "hypertree 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
- "manifest-dex 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "manifest-dex 2.0.0",
  "serde_json",
  "solana-account-decoder",
  "solana-client",
@@ -6519,7 +6519,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 2.0.0",
+ "manifest-dex 2.0.1",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
@@ -7042,7 +7042,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "hypertree 1.0.0",
- "manifest-dex 2.0.0",
+ "manifest-dex 2.0.1",
  "num_enum 0.5.11",
  "shank",
  "solana-invoke",
