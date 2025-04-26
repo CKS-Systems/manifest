@@ -1,7 +1,7 @@
 use std::cell::RefMut;
 
 use crate::{
-    logs::{emit_stack, PlaceOrderLog},
+    logs::{emit_stack, PlaceOrderLogV2},
     program::expand_market_if_needed,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
@@ -393,9 +393,10 @@ pub(crate) fn process_swap_core(
         "Cannot swap against a reverse order unless there is a free block"
     )?;
 
-    emit_stack(PlaceOrderLog {
+    emit_stack(PlaceOrderLogV2 {
         market: *market.key,
         trader: *owner.key,
+        payer: *payer.key,
         base_atoms,
         price,
         order_type,

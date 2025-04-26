@@ -104,6 +104,22 @@ pub struct PlaceOrderLog {
 
 #[repr(C)]
 #[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
+pub struct PlaceOrderLogV2 {
+    pub market: Pubkey,
+    pub trader: Pubkey,
+    pub payer: Pubkey,
+    pub price: QuoteAtomsPerBaseAtom,
+    pub base_atoms: BaseAtoms,
+    pub order_sequence_number: u64,
+    pub order_index: u32,
+    pub last_valid_slot: u32,
+    pub order_type: OrderType,
+    pub is_bid: PodBool,
+    pub _padding: [u8; 6],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod, ShankAccount)]
 pub struct CancelOrderLog {
     pub market: Pubkey,
     pub trader: Pubkey,
@@ -194,6 +210,7 @@ const DEPOSIT_LOG_DISCRIMINANT: [u8; 8] = [23, 214, 24, 34, 52, 104, 109, 188];
 const WITHDRAW_LOG_DISCRIMINANT: [u8; 8] = [112, 218, 111, 63, 18, 95, 136, 35];
 const FILL_LOG_DISCRIMINANT: [u8; 8] = [58, 230, 242, 3, 75, 113, 4, 169];
 const PLACE_ORDER_LOG_DISCRIMINANT: [u8; 8] = [157, 118, 247, 213, 47, 19, 164, 120];
+const PLACE_ORDER_LOG_V2_DISCRIMINANT: [u8; 8] = [189, 97, 159, 235, 136, 5, 1, 141];
 const CANCEL_ORDER_LOG_DISCRIMINANT: [u8; 8] = [22, 65, 71, 33, 244, 235, 255, 215];
 const GLOBAL_CREATE_LOG_DISCRIMINANT: [u8; 8] = [188, 25, 199, 77, 26, 15, 142, 193];
 const GLOBAL_ADD_TRADER_LOG_DISCRIMINANT: [u8; 8] = [129, 246, 90, 94, 87, 186, 242, 7];
@@ -220,6 +237,11 @@ discriminant!(
     PlaceOrderLog,
     PLACE_ORDER_LOG_DISCRIMINANT,
     test_place_order
+);
+discriminant!(
+    PlaceOrderLogV2,
+    PLACE_ORDER_LOG_V2_DISCRIMINANT,
+    test_place_order_v2
 );
 discriminant!(
     CancelOrderLog,
