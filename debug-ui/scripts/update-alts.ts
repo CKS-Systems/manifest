@@ -56,7 +56,7 @@ async function findMarketsWithoutAlt(
     ),
   );
   const altQueryResult = await pool.query('SELECT market from alt_markets');
-  const altMarketPks = new Set(altQueryResult.rows.map((r: any) => r.market));
+  const altMarketPks = new Set(altQueryResult.rows.map((r: any) => r.market as string));
   return allMarketPks.difference(altMarketPks).values().toArray();
 }
 

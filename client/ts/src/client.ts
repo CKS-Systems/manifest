@@ -161,7 +161,7 @@ export class ManifestClient {
     if (useApi) {
       const responseJson = await (
         await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
-      ).json();
+      ).json() as any[];
       const tickers: PublicKey[] = responseJson
         .filter((ticker) => {
           return (
