@@ -1456,7 +1456,7 @@ const run = async () => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
   const altsHandler: RequestHandler = async (_req, res) => {
-    res.send(statsServer.getAlts());
+    res.send(await statsServer.getAlts());
   };
 
   const app = express();
