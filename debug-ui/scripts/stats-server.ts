@@ -760,7 +760,6 @@ export class ManifestStatsServer {
         // "ask": 0,
         // "high": 0,
         // "low": 0,
-        // TODO: add ALT
       });
     });
     return tickers;
@@ -961,6 +960,11 @@ export class ManifestStatsServer {
     });
 
     return traderData;
+  }
+
+  async getAlts(): Promise<{alt: string, market: string}[]>  {
+    const response = await this.pool.query("SELECT alt, market FROM alt_markets");
+    return response.rows;
   }
 
   /**
@@ -1449,6 +1453,9 @@ const run = async () => {
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
+  const altsHandler: RequestHandler = async (req, res) => {
+    res.send(statsServer.getAlts())
+  }
 
   const app = express();
   app.use(cors());
@@ -1461,6 +1468,7 @@ const run = async () => {
     res.send(statsServer.getTraders(true));
   });
   app.get('/recentFills', recentFillsHandler);
+  app.get('/alts', altsHandler);
 
   // Add health check endpoint for Fly.io
   app.get('/health', (_req, res) => {
