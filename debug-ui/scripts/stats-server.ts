@@ -760,6 +760,7 @@ export class ManifestStatsServer {
         // "ask": 0,
         // "high": 0,
         // "low": 0,
+        // TODO: add ALT
       });
     });
     return tickers;

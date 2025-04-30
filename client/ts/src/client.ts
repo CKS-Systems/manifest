@@ -1200,6 +1200,52 @@ export class ManifestClient {
     );
   }
 
+  public getSwapAltPks(): Set<string> {
+    const pks = new Set<string>();
+
+    pks.add(MANIFEST_PROGRAM_ID.toString());
+    pks.add(SystemProgram.programId.toString());
+    pks.add(this.market.address.toString());
+    if (this.isBase22) {
+      pks.add(this.baseMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+    if (this.isQuote22) {
+      pks.add(this.quoteMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+
+    const baseVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.baseMint.address,
+    );
+    pks.add(baseVault.toString());
+
+    const quoteVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.quoteMint.address,
+    );
+    pks.add(quoteVault.toString());
+
+    const baseGlobal: PublicKey = getGlobalAddress(this.baseMint.address);
+    pks.add(baseGlobal.toString());
+
+    const quoteGlobal: PublicKey = getGlobalAddress(this.quoteMint.address);
+    pks.add(quoteGlobal.toString());
+
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(this.baseMint.address);
+    pks.add(baseGlobalVault.toString());
+
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(this.baseMint.address);
+    pks.add(quoteGlobalVault.toString());
+
+    return pks;
+  }
+
   /**
    * CancelOrder instruction
    *
