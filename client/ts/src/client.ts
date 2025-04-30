@@ -159,9 +159,9 @@ export class ManifestClient {
     useApi?: boolean,
   ): Promise<PublicKey[]> {
     if (useApi) {
-      const responseJson = await (
+      const responseJson = (await (
         await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
-      ).json() as any[];
+      ).json()) as any[];
       const tickers: PublicKey[] = responseJson
         .filter((ticker) => {
           return (
