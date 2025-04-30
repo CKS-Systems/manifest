@@ -1237,10 +1237,14 @@ export class ManifestClient {
     const quoteGlobal: PublicKey = getGlobalAddress(this.quoteMint.address);
     pks.add(quoteGlobal.toString());
 
-    const baseGlobalVault: PublicKey = getGlobalVaultAddress(this.baseMint.address);
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
     pks.add(baseGlobalVault.toString());
 
-    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(this.baseMint.address);
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
     pks.add(quoteGlobalVault.toString());
 
     return pks;
