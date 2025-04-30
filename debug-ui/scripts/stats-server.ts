@@ -962,9 +962,11 @@ export class ManifestStatsServer {
     return traderData;
   }
 
-  async getAlts(): Promise<{alt: string, market: string}[]>  {
-    const response = await this.pool.query("SELECT alt, market FROM alt_markets");
-    return response.rows;
+  async getAlts(): Promise<{ alt: string; market: string }[]> {
+    const response = await this.pool.query(
+      'SELECT alt, market FROM alt_markets',
+    );
+    return response.rows.map((r) => ({ alt: r.alt, market: r.market }));
   }
 
   /**
@@ -1453,9 +1455,9 @@ const run = async () => {
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
-  const altsHandler: RequestHandler = async (req, res) => {
-    res.send(statsServer.getAlts())
-  }
+  const altsHandler: RequestHandler = async (_req, res) => {
+    res.send(statsServer.getAlts());
+  };
 
   const app = express();
   app.use(cors());
