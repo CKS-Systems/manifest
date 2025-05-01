@@ -12,5 +12,9 @@ pub(crate) fn process_expand_market(
     let expand_market_context: ExpandMarketContext = ExpandMarketContext::load(accounts)?;
     let ExpandMarketContext { market, payer, .. } = expand_market_context;
 
-    expand_market(&payer, &market)
+    if !market.has_two_free_blocks() {
+        expand_market(&payer, &market)
+    } else {
+        Ok(())
+    }
 }
