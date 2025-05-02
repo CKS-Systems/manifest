@@ -1228,60 +1228,59 @@ export class ManifestStatsServer {
         }
       }
 
-      // Save fill logs with improved batching
-      console.log('Saving fill log results with batching');
-
+      // Save fill logs using bulk insertion
+      console.log('Saving fill log results with bulk insertion');
+      
       const markets = Array.from(this.fillLogResults.keys());
-      const FILL_BATCH_SIZE = 100;
-
-      for (let i = 0; i < markets.length; i += FILL_BATCH_SIZE) {
-        const batchMarkets = markets.slice(i, i + FILL_BATCH_SIZE);
-        const fillsToInsert = [];
-
-        // Prepare batch data
+      const BULK_INSERT_SIZE = 100; // Can be increased for better performance
+      
+      for (let i = 0; i < markets.length; i += BULK_INSERT_SIZE) {
+        const batchMarkets = markets.slice(i, i + BULK_INSERT_SIZE);
+        const bulkData = [];
+        
+        // Prepare bulk data
         for (const market of batchMarkets) {
           const fills = this.fillLogResults.get(market);
           if (fills && fills.length > 0) {
-            fillsToInsert.push({
+            bulkData.push({
               checkpoint_id: checkpointId,
               market: market,
-              fill_data: JSON.stringify(fills),
+              fill_data: JSON.stringify(fills)
             });
           }
         }
-
+        
         // Skip if nothing to insert
-        if (fillsToInsert.length === 0) continue;
-
-        // Build the query with placeholders
-        const placeholders = fillsToInsert
-          .map(
-            (_, idx) => `($${idx * 3 + 1}, $${idx * 3 + 2}, $${idx * 3 + 3})`,
-          )
-          .join(', ');
-
-        // Flatten the values for the query
-        const values = fillsToInsert.flatMap((item) => [
-          item.checkpoint_id,
-          item.market,
-          item.fill_data,
-        ]);
-
-        // Execute single batch query instead of multiple individual queries
-        if (values.length > 0) {
-          console.log(
-            `Inserting batch of ${fillsToInsert.length} fill records`,
-          );
-          await client.query(
-            `INSERT INTO fill_log_results 
-            (checkpoint_id, market, fill_data) 
-            VALUES ${placeholders}`,
-            values,
-          );
+        if (bulkData.length === 0) continue;
+        
+        // Execute bulk insertion
+        if (bulkData.length > 0) {
+          console.log(`Bulk inserting ${bulkData.length} fill records`);
+          
+          // Generate a parameterized query for the bulk insertion
+          const columns = ['checkpoint_id', 'market', 'fill_data'];
+          const columnStr = columns.join(', ');
+          const placeholders = bulkData.map((_, index) => {
+            const offset = index * columns.length;
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
+          }).join(', ');
+          
+          const values = bulkData.flatMap(row => [
+            row.checkpoint_id,
+            row.market,
+            row.fill_data
+          ]);
+          
+          const query = `
+            INSERT INTO fill_log_results (${columnStr})
+            VALUES ${placeholders}
+          `;
+          
+          await client.query(query, values);
         }
-
-        // Add a small delay between batches to prevent overwhelming the database
-        if (i + FILL_BATCH_SIZE < markets.length) {
+        
+        // Add a small delay between batches
+        if (i + BULK_INSERT_SIZE < markets.length) {
           await delay(100);
         }
       }
@@ -1302,6 +1301,7 @@ export class ManifestStatsServer {
           await client.query('ROLLBACK');
         } catch (rollbackError) {
           console.error('Error during rollback:', rollbackError);
+          // Continue execution even if rollback fails
         }
       }
       // Don't re-throw - we want to continue operation even after errors
