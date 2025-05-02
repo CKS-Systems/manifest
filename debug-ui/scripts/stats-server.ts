@@ -1230,14 +1230,14 @@ export class ManifestStatsServer {
 
       // Save fill logs using bulk insertion
       console.log('Saving fill log results with bulk insertion');
-      
+
       const markets = Array.from(this.fillLogResults.keys());
       const BULK_INSERT_SIZE = 100; // Can be increased for better performance
-      
+
       for (let i = 0; i < markets.length; i += BULK_INSERT_SIZE) {
         const batchMarkets = markets.slice(i, i + BULK_INSERT_SIZE);
         const bulkData = [];
-        
+
         // Prepare bulk data
         for (const market of batchMarkets) {
           const fills = this.fillLogResults.get(market);
@@ -1245,40 +1245,42 @@ export class ManifestStatsServer {
             bulkData.push({
               checkpoint_id: checkpointId,
               market: market,
-              fill_data: JSON.stringify(fills)
+              fill_data: JSON.stringify(fills),
             });
           }
         }
-        
+
         // Skip if nothing to insert
         if (bulkData.length === 0) continue;
-        
+
         // Execute bulk insertion
         if (bulkData.length > 0) {
           console.log(`Bulk inserting ${bulkData.length} fill records`);
-          
+
           // Generate a parameterized query for the bulk insertion
           const columns = ['checkpoint_id', 'market', 'fill_data'];
           const columnStr = columns.join(', ');
-          const placeholders = bulkData.map((_, index) => {
-            const offset = index * columns.length;
-            return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
-          }).join(', ');
-          
-          const values = bulkData.flatMap(row => [
+          const placeholders = bulkData
+            .map((_, index) => {
+              const offset = index * columns.length;
+              return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
+            })
+            .join(', ');
+
+          const values = bulkData.flatMap((row) => [
             row.checkpoint_id,
             row.market,
-            row.fill_data
+            row.fill_data,
           ]);
-          
+
           const query = `
             INSERT INTO fill_log_results (${columnStr})
             VALUES ${placeholders}
           `;
-          
+
           await client.query(query, values);
         }
-        
+
         // Add a small delay between batches
         if (i + BULK_INSERT_SIZE < markets.length) {
           await delay(100);
