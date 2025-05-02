@@ -139,13 +139,20 @@ export class ManifestStatsServer {
     this.initDatabase(); // Initialize database schema
   }
 
-  private async withRetry<T>(operation: () => Promise<T>, maxRetries = 3, delay = 1000): Promise<T> {
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 3,
+    delay = 1000,
+  ): Promise<T> {
     let lastError;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
-        console.error(`Database operation failed (attempt ${attempt+1}/${maxRetries}):`, error);
+        console.error(
+          `Database operation failed (attempt ${attempt + 1}/${maxRetries}):`,
+          error,
+        );
         lastError = error;
         if (attempt < maxRetries - 1) {
           await sleep(delay * Math.pow(2, attempt)); // Exponential backoff
@@ -1266,25 +1273,25 @@ export class ManifestStatsServer {
       } catch (error) {
         console.error('Error saving state to database:', error);
         if (client) {
-        try {
-          await client.query('ROLLBACK');
-        } catch (rollbackError) {
-          console.error('Error during rollback:', rollbackError);
+          try {
+            await client.query('ROLLBACK');
+          } catch (rollbackError) {
+            console.error('Error during rollback:', rollbackError);
+          }
+        }
+        throw error;
+      } finally {
+        if (client) {
+          try {
+            client.release();
+          } catch (releaseError) {
+            console.error('Error releasing client:', releaseError);
+            // Don't throw release errors, just log them
+          }
         }
       }
-      throw error;
-    } finally {
-      if (client) {
-        try {
-          client.release();
-        } catch (releaseError) {
-          console.error('Error releasing client:', releaseError);
-          // Don't throw release errors, just log them
-        }
-      }
-    }
-  });
-}
+    });
+  }
 
   /**
    * Load state from database
