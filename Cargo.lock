@@ -1818,6 +1818,16 @@ dependencies = [
 [[package]]
 name = "hypertree"
 version = "1.0.0"
+dependencies = [
+ "bytemuck",
+ "colored",
+ "solana-program",
+ "static_assertions",
+]
+
+[[package]]
+name = "hypertree"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c82aa88dee5e1767f4b7862389379d0dd943e87533d8e8b8bf8063b29cb50c9"
 dependencies = [
