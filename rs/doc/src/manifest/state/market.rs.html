@@ -1,6 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/state/market.rs`."><title>market.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0 (9b00956e5 2024-04-29)" data-channel="1.78.0" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../manifest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/state/market.rs`."><title>market.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.1 (e71f9a9a9 2025-01-27)" data-channel="1.84.1" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">manifest/state/</div>market.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1837,7 +1836,37 @@
 <a href="#1835" id="1835">1835</a>
 <a href="#1836" id="1836">1836</a>
 <a href="#1837" id="1837">1837</a>
-</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
+<a href="#1838" id="1838">1838</a>
+<a href="#1839" id="1839">1839</a>
+<a href="#1840" id="1840">1840</a>
+<a href="#1841" id="1841">1841</a>
+<a href="#1842" id="1842">1842</a>
+<a href="#1843" id="1843">1843</a>
+<a href="#1844" id="1844">1844</a>
+<a href="#1845" id="1845">1845</a>
+<a href="#1846" id="1846">1846</a>
+<a href="#1847" id="1847">1847</a>
+<a href="#1848" id="1848">1848</a>
+<a href="#1849" id="1849">1849</a>
+<a href="#1850" id="1850">1850</a>
+<a href="#1851" id="1851">1851</a>
+<a href="#1852" id="1852">1852</a>
+<a href="#1853" id="1853">1853</a>
+<a href="#1854" id="1854">1854</a>
+<a href="#1855" id="1855">1855</a>
+<a href="#1856" id="1856">1856</a>
+<a href="#1857" id="1857">1857</a>
+<a href="#1858" id="1858">1858</a>
+<a href="#1859" id="1859">1859</a>
+<a href="#1860" id="1860">1860</a>
+<a href="#1861" id="1861">1861</a>
+<a href="#1862" id="1862">1862</a>
+<a href="#1863" id="1863">1863</a>
+<a href="#1864" id="1864">1864</a>
+<a href="#1865" id="1865">1865</a>
+<a href="#1866" id="1866">1866</a>
+<a href="#1867" id="1867">1867</a>
+<a href="#1868" id="1868">1868</a></pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"certora"</span>)]
 </span><span class="kw">use </span>{
     <span class="kw">crate</span>::certora::hooks::<span class="kw-2">*</span>, <span class="kw">crate</span>::certora::summaries::impact_base_atoms::impact_base_atoms,
     hook_macro::cvt_hook_end, nondet::nondet,
@@ -2312,7 +2341,21 @@
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtoms, ProgramError&gt; {
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
+        <span class="self">self</span>.impact_quote_atoms_with_slot(
+            is_bid,
+            limit_base_atoms,
+            global_trade_accounts_opts,
+            now_slot,
+        )
+    }
 
+    <span class="kw">pub fn </span>impact_quote_atoms_with_slot(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        is_bid: bool,
+        limit_base_atoms: BaseAtoms,
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+        now_slot: u32,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteAtoms, ProgramError&gt; {
         <span class="kw">let </span>book: BooksideReadOnly = <span class="kw">if </span>is_bid {
             <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
@@ -2386,11 +2429,10 @@
         limit_quote_atoms: QuoteAtoms,
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
-        impact_base_atoms(<span class="self">self</span>, is_bid, limit_quote_atoms, global_trade_accounts_opts)
+        impact_base_atoms_with_slot(<span class="self">self</span>, is_bid, limit_quote_atoms, global_trade_accounts_opts)
     }
 
-    <span class="doccomment">/// How many base atoms you get when you trade in limit_quote_atoms.
-    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
     </span><span class="kw">pub fn </span>impact_base_atoms(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         is_bid: bool,
@@ -2398,7 +2440,23 @@
         global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
         <span class="kw">let </span>now_slot: u32 = get_now_slot();
+        <span class="self">self</span>.impact_base_atoms_with_slot(
+            is_bid,
+            limit_quote_atoms,
+            global_trade_accounts_opts,
+            now_slot,
+        )
+    }
 
+    <span class="doccomment">/// How many base atoms you get when you trade in limit_quote_atoms.
+    </span><span class="attr">#[cfg(not(feature = <span class="string">"certora"</span>))]
+    </span><span class="kw">pub fn </span>impact_base_atoms_with_slot(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        is_bid: bool,
+        limit_quote_atoms: QuoteAtoms,
+        global_trade_accounts_opts: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&gt;; <span class="number">2</span>],
+        now_slot: u32,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;BaseAtoms, ProgramError&gt; {
         <span class="kw">let </span>book: RedBlackTreeReadOnly&lt;<span class="lifetime">'_</span>, RestingOrder&gt; = <span class="kw">if </span>is_bid {
             <span class="self">self</span>.get_asks()
         } <span class="kw">else </span>{
@@ -2754,8 +2812,8 @@
             <span class="kw">let </span>maker_order: <span class="kw-2">&amp;</span>RestingOrder =
                 get_helper::&lt;RBNode&lt;RestingOrder&gt;&gt;(dynamic, current_maker_order_index).get_value();
 
-            <span class="comment">// Remove the resting order if expired.
-            </span><span class="kw">if </span>maker_order.is_expired(now_slot) {
+            <span class="comment">// Remove the resting order if expired or somehow a zero order got on the book.
+            </span><span class="kw">if </span>maker_order.is_expired(now_slot) || maker_order.get_num_base_atoms().as_u64() == <span class="number">0 </span>{
                 <span class="kw">let </span>next_maker_order_index: DataIndex = get_next_candidate_match_index(
                     fixed,
                     dynamic,
@@ -3045,17 +3103,17 @@
                     };
                     <span class="kw">let </span>lookup_resting_order: RestingOrder = RestingOrder::new(
                         maker_trader_index,
-                        num_base_atoms_reverse,
-                        price_reverse,
+                        BaseAtoms::ZERO, <span class="comment">// Size does not matter, just price.
+                        </span>price_reverse,
                         <span class="number">0</span>, <span class="comment">// Sequence number does not matter, just price
                         </span>NO_EXPIRATION_LAST_VALID_SLOT,
                         is_bid,
                         OrderType::Reverse,
                     )<span class="question-mark">?</span>;
-                    <span class="comment">// There is an edge case where the the price is off by 1 due
-                    // to rounding. This will result in fragmented liquidity,
-                    // however should be infrequent enough to not do a walk of
-                    // the tree.
+
+                    <span class="comment">// Because there is a slight relaxation in matching reverse
+                    // orders, do not need to worry about off by one errors
+                    // causing fragmented liqudity.
                     </span><span class="kw">let </span>lookup_index: DataIndex = other_tree.lookup_index(<span class="kw-2">&amp;</span>lookup_resting_order);
                     <span class="kw">if </span>lookup_index != NIL {
                         <span class="kw">let </span>order_to_coalesce_into: <span class="kw-2">&amp;mut </span>RestingOrder =
@@ -3066,7 +3124,9 @@
                     }
                 }
 
-                <span class="kw">if </span>!coalesced {
+                <span class="comment">// If there was 1 atom and because taker rounding is in effect,
+                // then this would result in an empty order.
+                </span><span class="kw">if </span>!coalesced &amp;&amp; num_base_atoms_reverse.as_u64() &gt; <span class="number">0 </span>{
                     <span class="comment">// This code is similar to rest_remaining except it doesnt
                     // require borrowing data.  Non-trivial to combine the code
                     // because the certora formal verification inserted itself

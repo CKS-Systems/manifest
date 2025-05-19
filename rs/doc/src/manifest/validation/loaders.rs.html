@@ -1,6 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/validation/loaders.rs`."><title>loaders.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0 (9b00956e5 2024-04-29)" data-channel="1.78.0" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../manifest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/validation/loaders.rs`."><title>loaders.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.1 (e71f9a9a9 2025-01-27)" data-channel="1.84.1" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">manifest/validation/</div>loaders.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -798,7 +797,29 @@
 <a href="#796" id="796">796</a>
 <a href="#797" id="797">797</a>
 <a href="#798" id="798">798</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{cell::Ref, slice::Iter};
 
 <span class="kw">use </span>hypertree::{get_helper, trace};
 <span class="kw">use </span>solana_program::{
@@ -883,7 +904,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ClaimSeatContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
-    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>_system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; ClaimSeatContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -891,15 +912,15 @@
     </span><span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
-        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
             ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>system_program: Program =
+        <span class="kw">let </span>_system_program: Program =
             Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
             market,
-            system_program,
+            _system_program,
         })
     }
 }
@@ -908,7 +929,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ExpandMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
-    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>_system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; ExpandMarketContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -918,12 +939,12 @@
         <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
             ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>system_program: Program =
+        <span class="kw">let </span>_system_program: Program =
             Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
             market,
-            system_program,
+            _system_program,
         })
     }
 }
@@ -1052,6 +1073,7 @@
 <span class="doccomment">/// Swap account infos
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>SwapContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>owner: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
     <span class="kw">pub </span>trader_base: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>trader_quote: TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
@@ -1072,8 +1094,28 @@
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
         <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
-            ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>owner_or_market: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AccountInfo&lt;<span class="lifetime">'info</span>&gt; = next_account_info(account_iter)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(owner, market): (Signer, ManifestAccountInfo&lt;MarketFixed&gt;) =
+            <span class="kw">if </span><span class="kw-2">*</span>owner_or_market.owner == <span class="kw">crate</span>::ID {
+                <span class="comment">// Normal case where the payer of rent is the same as the token account
+                // owners and the caller has only included one to save ix call data
+                // bytes.
+                </span>(
+                    payer.clone(),
+                    ManifestAccountInfo::&lt;MarketFixed&gt;::new(owner_or_market)<span class="question-mark">?</span>,
+                )
+            } <span class="kw">else </span>{
+                <span class="comment">// Separate token account owner from rent payer. This is SwapV2.
+                </span>(
+                    Signer::new(owner_or_market)<span class="question-mark">?</span>,
+                    ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>,
+                )
+            };
+
+        <span class="comment">// Included in case we need to expand for a reverse order.
+        </span><span class="kw">let </span>_system_program: Program =
+            Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
 
         <span class="kw">let </span>market_fixed: Ref&lt;MarketFixed&gt; = market.get_fixed()<span class="question-mark">?</span>;
         <span class="kw">let </span>base_mint_key: Pubkey = <span class="kw-2">*</span>market_fixed.get_base_mint();
@@ -1082,12 +1124,12 @@
         <span class="kw">let </span>trader_base: TokenAccountInfo = TokenAccountInfo::new_with_owner(
             next_account_info(account_iter)<span class="question-mark">?</span>,
             <span class="kw-2">&amp;</span>base_mint_key,
-            payer.key,
+            owner.key,
         )<span class="question-mark">?</span>;
         <span class="kw">let </span>trader_quote: TokenAccountInfo = TokenAccountInfo::new_with_owner(
             next_account_info(account_iter)<span class="question-mark">?</span>,
             <span class="kw-2">&amp;</span>quote_mint_key,
-            payer.key,
+            owner.key,
         )<span class="question-mark">?</span>;
         <span class="kw">let </span>base_vault_address: <span class="kw-2">&amp;</span>Pubkey = market_fixed.get_base_vault();
         <span class="kw">let </span>quote_vault_address: <span class="kw-2">&amp;</span>Pubkey = market_fixed.get_quote_vault();
@@ -1203,14 +1245,14 @@
                     gas_payer_opt: <span class="prelude-val">None</span>,
                     gas_receiver_opt: <span class="prelude-val">Some</span>(payer.clone()),
                     market: <span class="kw-2">*</span>market.info.key,
-                    <span class="comment">// System program not included because does not rest an order.
-                    </span>system_program: <span class="prelude-val">None</span>,
+                    system_program: <span class="prelude-val">None</span>,
                 });
             }
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
+            owner,
             market,
             trader_base,
             trader_quote,
@@ -1251,7 +1293,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BatchUpdateContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>market: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, MarketFixed&gt;,
-    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>_system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 
     <span class="comment">// One for each side. First is base, then is quote.
     </span><span class="kw">pub </span>global_trade_accounts_opts: [<span class="prelude-ty">Option</span>&lt;GlobalTradeAccounts&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;; <span class="number">2</span>],
@@ -1261,7 +1303,9 @@
     <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
-        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Does not have to be writable, but this ix will fail if removing a
+        // global or requiring expanding.
+        </span><span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>market: ManifestAccountInfo&lt;MarketFixed&gt; =
             ManifestAccountInfo::&lt;MarketFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>system_program: Program =
@@ -1358,7 +1402,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
             market,
-            system_program,
+            _system_program: system_program,
             global_trade_accounts_opts,
         })
     }
@@ -1402,7 +1446,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GlobalAddTraderContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
     <span class="kw">pub </span>payer: Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     <span class="kw">pub </span>global: ManifestAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>, GlobalFixed&gt;,
-    <span class="kw">pub </span>system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    <span class="kw">pub </span>_system_program: Program&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; GlobalAddTraderContext&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt; {
@@ -1412,12 +1456,12 @@
         <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
             ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>system_program: Program =
+        <span class="kw">let </span>_system_program: Program =
             Program::new(next_account_info(account_iter)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>system_program::id())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             payer,
             global,
-            system_program,
+            _system_program,
         })
     }
 }
@@ -1436,7 +1480,7 @@
     <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
-        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
             ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
 
@@ -1483,7 +1527,7 @@
     <span class="kw">pub fn </span>load(accounts: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[AccountInfo&lt;<span class="lifetime">'info</span>&gt;]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, ProgramError&gt; {
         <span class="kw">let </span>account_iter: <span class="kw-2">&amp;mut </span>Iter&lt;AccountInfo&lt;<span class="lifetime">'info</span>&gt;&gt; = <span class="kw-2">&amp;mut </span>accounts.iter();
 
-        <span class="kw">let </span>payer: Signer = Signer::new_payer(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>payer: Signer = Signer::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>global: ManifestAccountInfo&lt;GlobalFixed&gt; =
             ManifestAccountInfo::&lt;GlobalFixed&gt;::new(next_account_info(account_iter)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
 

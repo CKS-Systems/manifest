@@ -1,6 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/program/processor/swap.rs`."><title>swap.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0 (9b00956e5 2024-04-29)" data-channel="1.78.0" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../manifest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `programs/manifest/src/program/processor/swap.rs`."><title>swap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="manifest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.1 (e71f9a9a9 2025-01-27)" data-channel="1.84.1" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../../static.files/storage-59e33391.js"></script><script defer src="../../../../static.files/src-script-56102188.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">manifest/program/processor/</div>swap.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -586,10 +585,30 @@
 <a href="#584" id="584">584</a>
 <a href="#585" id="585">585</a>
 <a href="#586" id="586">586</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
 
 <span class="kw">use crate</span>::{
-    logs::{emit_stack, PlaceOrderLog},
+    logs::{emit_stack, PlaceOrderLogV2},
+    program::expand_market_if_needed,
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
@@ -661,6 +680,7 @@
     <span class="kw">let </span>SwapContext {
         market,
         payer,
+        owner,
         trader_base: trader_base_account,
         trader_quote: trader_quote_account,
         base_vault,
@@ -672,17 +692,34 @@
         global_trade_accounts_opts,
     } = swap_context;
 
+    <span class="kw">let </span>(existing_seat_index, trader_index, initial_base_atoms, initial_quote_atoms) = {
+        <span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>market.try_borrow_mut_data()<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
+
+        <span class="comment">// Claim seat if needed
+        </span><span class="kw">let </span>existing_seat_index: DataIndex = dynamic_account.get_trader_index(owner.key);
+        <span class="kw">if </span>existing_seat_index == NIL {
+            dynamic_account.claim_seat(owner.key)<span class="question-mark">?</span>;
+        }
+        <span class="kw">let </span>trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
+
+        <span class="kw">let </span>(initial_base_atoms, initial_quote_atoms) =
+            dynamic_account.get_trader_balance(owner.key);
+
+        (
+            existing_seat_index,
+            trader_index,
+            initial_base_atoms,
+            initial_quote_atoms,
+        )
+    };
+
+    <span class="comment">// Might need a free list spot for both the temporary claimed seat as well
+    // as for a partially filled reverse order.
+    </span>expand_market_if_needed(<span class="kw-2">&amp;</span>payer, <span class="kw-2">&amp;</span>market)<span class="question-mark">?</span>;
+
     <span class="kw">let </span>market_data: <span class="kw-2">&amp;mut </span>RefMut&lt;<span class="kw-2">&amp;mut </span>[u8]&gt; = <span class="kw-2">&amp;mut </span>market.try_borrow_mut_data()<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
-
-    <span class="comment">// Claim seat if needed
-    </span><span class="kw">let </span>existing_seat_index: DataIndex = dynamic_account.get_trader_index(payer.key);
-    <span class="kw">if </span>existing_seat_index == NIL {
-        dynamic_account.claim_seat(payer.key)<span class="question-mark">?</span>;
-    }
-    <span class="kw">let </span>trader_index: DataIndex = dynamic_account.get_trader_index(payer.key);
-
-    <span class="kw">let </span>(initial_base_atoms, initial_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
 
     <span class="kw">let </span>SwapParams {
         in_atoms,
@@ -829,7 +866,7 @@
         )<span class="question-mark">?</span>;
     }
 
-    <span class="kw">let </span>(end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(payer.key);
+    <span class="kw">let </span>(end_base_atoms, end_quote_atoms) = dynamic_account.get_trader_balance(owner.key);
 
     <span class="kw">let </span>extra_base_atoms: BaseAtoms = end_base_atoms.checked_sub(initial_base_atoms)<span class="question-mark">?</span>;
     <span class="kw">let </span>extra_quote_atoms: QuoteAtoms = end_quote_atoms.checked_sub(initial_quote_atoms)<span class="question-mark">?</span>;
@@ -851,7 +888,7 @@
                 base_mint,
                 dynamic_account.fixed.get_base_mint(),
                 <span class="kw-2">&amp;</span>base_vault,
-                <span class="kw-2">&amp;</span>payer,
+                <span class="kw-2">&amp;</span>owner,
                 (initial_credit_base_atoms.checked_sub(extra_base_atoms)<span class="question-mark">?</span>).as_u64(),
                 dynamic_account.fixed.get_base_mint_decimals(),
             )<span class="question-mark">?</span>;
@@ -860,7 +897,7 @@
                 <span class="kw-2">&amp;</span>token_program_base,
                 <span class="kw-2">&amp;</span>trader_base_account,
                 <span class="kw-2">&amp;</span>base_vault,
-                <span class="kw-2">&amp;</span>payer,
+                <span class="kw-2">&amp;</span>owner,
                 (initial_credit_base_atoms.checked_sub(extra_base_atoms)<span class="question-mark">?</span>).as_u64(),
             )<span class="question-mark">?</span>;
         }
@@ -905,7 +942,7 @@
                 quote_mint,
                 dynamic_account.fixed.get_quote_mint(),
                 <span class="kw-2">&amp;</span>quote_vault,
-                <span class="kw-2">&amp;</span>payer,
+                <span class="kw-2">&amp;</span>owner,
                 (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)<span class="question-mark">?</span>).as_u64(),
                 dynamic_account.fixed.get_quote_mint_decimals(),
             )<span class="question-mark">?</span>;
@@ -914,7 +951,7 @@
                 <span class="kw-2">&amp;</span>token_program_quote,
                 <span class="kw-2">&amp;</span>trader_quote_account,
                 <span class="kw-2">&amp;</span>quote_vault,
-                <span class="kw-2">&amp;</span>payer,
+                <span class="kw-2">&amp;</span>owner,
                 (initial_credit_quote_atoms.checked_sub(extra_quote_atoms)<span class="question-mark">?</span>).as_u64(),
             )<span class="question-mark">?</span>;
         }
@@ -947,7 +984,7 @@
     }
 
     <span class="kw">if </span>existing_seat_index == NIL {
-        dynamic_account.release_seat(payer.key)<span class="question-mark">?</span>;
+        dynamic_account.release_seat(owner.key)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
         <span class="comment">// Withdraw in case there already was a seat so it doesnt mess with their
         // balances. Need to withdraw base and quote in case the order wasnt fully
@@ -962,9 +999,10 @@
         <span class="string">"Cannot swap against a reverse order unless there is a free block"
     </span>)<span class="question-mark">?</span>;
 
-    emit_stack(PlaceOrderLog {
+    emit_stack(PlaceOrderLogV2 {
         market: <span class="kw-2">*</span>market.key,
-        trader: <span class="kw-2">*</span>payer.key,
+        trader: <span class="kw-2">*</span>owner.key,
+        payer: <span class="kw-2">*</span>payer.key,
         base_atoms,
         price,
         order_type,
@@ -1000,7 +1038,7 @@
     token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    owner: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     amount: u64,
 ) -&gt; ProgramResult {
     invoke(
@@ -1008,7 +1046,7 @@
             token_program.key,
             trader_account.key,
             vault.key,
-            payer.key,
+            owner.key,
             <span class="kw-2">&amp;</span>[],
             amount,
         )<span class="question-mark">?</span>,
@@ -1016,7 +1054,7 @@
             token_program.as_ref().clone(),
             trader_account.as_ref().clone(),
             vault.as_ref().clone(),
-            payer.as_ref().clone(),
+            owner.as_ref().clone(),
         ],
     )
 }
@@ -1026,10 +1064,10 @@
     _token_program: <span class="kw-2">&amp;</span>TokenProgram&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     trader_account: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    owner: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     amount: u64,
 ) -&gt; ProgramResult {
-    spl_token_transfer(trader_account.info, vault.info, payer.info, amount)
+    spl_token_transfer(trader_account.info, vault.info, owner.info, amount)
 }
 
 <span class="doccomment">/** Transfer from base (quote) trader to base (quote) vault using SPL Token 2022 **/
@@ -1040,7 +1078,7 @@
     mint: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
     mint_pubkey: <span class="kw-2">&amp;</span>Pubkey,
     vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    owner: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     amount: u64,
     decimals: u8,
 ) -&gt; ProgramResult {
@@ -1050,7 +1088,7 @@
             trader_account.key,
             mint_pubkey,
             vault.key,
-            payer.key,
+            owner.key,
             <span class="kw-2">&amp;</span>[],
             amount,
             decimals,
@@ -1060,7 +1098,7 @@
             trader_account.as_ref().clone(),
             vault.as_ref().clone(),
             mint.unwrap().as_ref().clone(),
-            payer.as_ref().clone(),
+            owner.as_ref().clone(),
         ],
     )
 }
@@ -1073,11 +1111,11 @@
     _mint: <span class="prelude-ty">Option</span>&lt;MintAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;&gt;,
     _mint_pubkey: <span class="kw-2">&amp;</span>Pubkey,
     vault: <span class="kw-2">&amp;</span>TokenAccountInfo&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
-    payer: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
+    owner: <span class="kw-2">&amp;</span>Signer&lt;<span class="lifetime">'a</span>, <span class="lifetime">'info</span>&gt;,
     amount: u64,
     _decimals: u8,
 ) -&gt; ProgramResult {
-    spl_token_2022_transfer(trader_account.info, vault.info, payer.info, amount)
+    spl_token_2022_transfer(trader_account.info, vault.info, owner.info, amount)
 }
 
 <span class="doccomment">/** Transfer from base (quote) vault to base (quote) trader using SPL Token **/

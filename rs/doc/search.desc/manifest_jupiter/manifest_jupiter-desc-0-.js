@@ -1,0 +1,1 @@
+searchState.loadedDescShard("manifest_jupiter", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nManifestLocalMarket::update should be called once before …\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")
