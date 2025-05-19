@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use crate::quantities::{BaseAtoms, QuoteAtomsPerBaseAtom};
+use crate::quantities::{u64_slice_to_u128, BaseAtoms, QuoteAtomsPerBaseAtom};
 #[cfg(feature = "certora")]
 use crate::quantities::{QuoteAtoms, WrapperU64};
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -223,11 +223,18 @@ impl PartialOrd for RestingOrder {
 
 impl PartialEq for RestingOrder {
     fn eq(&self, other: &Self) -> bool {
-        // Only used in equality check of lookups. To enable coalescing, just
-        // check price, trader, and order type.
-        (self.price == other.price)
-            && (self.trader_index == other.trader_index)
-            && (self.order_type == other.order_type)
+        if self.trader_index != other.trader_index || self.order_type != other.order_type {
+            return false;
+        }
+        if self.order_type == OrderType::Reverse {
+            // Allow off by 1 for reverse orders to enable coalescing. Otherwise there is a back and forth that fragments into many orders.
+            self.price == other.price
+                || u64_slice_to_u128(self.price.inner) + 1 == u64_slice_to_u128(other.price.inner)
+                || u64_slice_to_u128(self.price.inner) - 1 == u64_slice_to_u128(other.price.inner)
+        } else {
+            // Only used in equality check of lookups, so we can ignore size, seqnum, ...
+            self.price == other.price
+        }
     }
 }
 

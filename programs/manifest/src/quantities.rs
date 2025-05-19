@@ -227,7 +227,7 @@ basic_u64!(GlobalAtoms);
 #[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
 #[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
-    inner: [u64; 2],
+    pub(crate) inner: [u64; 2],
 }
 
 // These conversions are necessary, bc. the compiler forces 16 byte alignment
@@ -241,7 +241,7 @@ const fn u128_to_u64_slice(a: u128) -> [u64; 2] {
         *ptr.cast::<[u64; 2]>()
     }
 }
-fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
+pub(crate) fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
     unsafe {
         let ptr: *const [u64; 2] = &a;
         *ptr.cast::<u128>()

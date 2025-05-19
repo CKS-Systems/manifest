@@ -17,7 +17,9 @@ impl<'a, 'info> Program<'a, 'info> {
         require!(
             info.key == expected_program_id,
             ProgramError::IncorrectProgramId,
-            "Incorrect program id",
+            "Incorrect program id expected {:?} actual {:?}",
+            expected_program_id,
+            info.key
         )?;
         Ok(Self { info })
     }
@@ -70,7 +72,8 @@ impl<'a, 'info> Signer<'a, 'info> {
         require!(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
-            "Missing required signature",
+            "Missing required signature for {:?}",
+            info.key
         )?;
         Ok(Self { info })
     }
@@ -79,12 +82,14 @@ impl<'a, 'info> Signer<'a, 'info> {
         require!(
             info.is_writable,
             ProgramError::InvalidInstructionData,
-            "Payer is not writable",
+            "Payer is not writable. Key {:?}",
+            info.key
         )?;
         require!(
             info.is_signer,
             ProgramError::MissingRequiredSignature,
-            "Missing required signature for payer",
+            "Missing required signature for payer {:?}",
+            info.key
         )?;
         Ok(Self { info })
     }
@@ -114,12 +119,14 @@ impl<'a, 'info> EmptyAccount<'a, 'info> {
         require!(
             info.data_is_empty(),
             ProgramError::InvalidAccountData,
-            "Account must be uninitialized",
+            "Account must be uninitialized {:?}",
+            info.key
         )?;
         require!(
             info.owner == &system_program::id(),
             ProgramError::IllegalOwner,
-            "Empty accounts must be owned by the system program",
+            "Empty accounts must be owned by the system program {:?}",
+            info.key
         )?;
         Ok(Self { info })
     }

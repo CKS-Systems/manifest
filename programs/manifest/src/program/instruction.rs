@@ -141,6 +141,27 @@ pub enum ManifestInstruction {
     #[account(2, name = "system_program", desc = "System program")]
     #[account(3, writable, name = "global", desc = "Global account")]
     GlobalClean = 12,
+
+    
+    /// Places an order using funds in a wallet instead of on deposit. Separates
+    /// the owner of the token accounts and the payer. This allows routers to
+    /// swap and have intermediate hops go through PDAs, rather than all token
+    /// accounts owned by the user.
+    #[account(0, writable, signer, name = "payer", desc = "Payer")]
+    #[account(1, writable, signer, name = "owner", desc = "Owner")]
+    #[account(2, writable, name = "market", desc = "Account holding all market state")]
+    #[account(3, name = "system_program", desc = "System program")]
+    #[account(4, writable, name = "trader_base", desc = "Trader base token account")]
+    #[account(5, writable, name = "trader_quote", desc = "Trader quote token account")]
+    #[account(6, writable, name = "base_vault", desc = "Base vault PDA, seeds are [b'vault', market_address, base_mint]")]
+    #[account(7, writable, name = "quote_vault", desc = "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]")]
+    #[account(8, name = "token_program_base", desc = "Token program(22) base")]
+    #[account(9, optional, name = "base_mint", desc = "Base mint, only included if base is Token22, otherwise not required")]
+    #[account(10, optional, name = "token_program_quote", desc = "Token program(22) quote. Optional. Only include if different from base")]
+    #[account(11, optional, name = "quote_mint", desc = "Quote mint, only included if base is Token22, otherwise not required")]
+    #[account(12, writable, optional, name = "global", desc = "Global account")]
+    #[account(13, writable, optional, name = "global_vault", desc = "Global vault")]
+    SwapV2 = 13,
 }
 
 impl ManifestInstruction {
@@ -151,7 +172,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 12;
+    let num_instructions: u8 = 13;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {

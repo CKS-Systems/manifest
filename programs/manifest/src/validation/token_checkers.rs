@@ -91,7 +91,8 @@ impl<'a, 'info> TokenAccountInfo<'a, 'info> {
         require!(
             info.key == key,
             ProgramError::InvalidInstructionData,
-            "Invalid pubkey for Token Account",
+            "Invalid pubkey for Token Account {:?}",
+            info.key
         )?;
         Self::new_with_owner(info, mint, owner)
     }

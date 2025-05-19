@@ -1,10 +1,11 @@
 {
-    "extends": "./tsconfig",
-    "compilerOptions": {
-      "declaration": false,
-      "declarationMap": false,
-      "module": "esnext",
-      "outDir": "dist/esm",
-      "sourceMap": false,
-    }
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "module": "esnext",
+    "outDir": "dist/esm",
+    "sourceMap": false
+  },
+  "include": ["client/ts/src"]
 }

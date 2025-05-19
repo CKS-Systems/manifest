@@ -43,10 +43,7 @@ import {
   createDepositInstruction,
   createWithdrawInstruction,
 } from './wrapper';
-import {
-  FIXED_WRAPPER_HEADER_SIZE,
-  NO_EXPIRATION_LAST_VALID_SLOT,
-} from './constants';
+import { FIXED_WRAPPER_HEADER_SIZE } from './constants';
 import { getVaultAddress } from './utils/market';
 import { genAccDiscriminator } from './utils/discriminator';
 import { getGlobalAddress, getGlobalVaultAddress } from './utils/global';
@@ -162,9 +159,9 @@ export class ManifestClient {
     useApi?: boolean,
   ): Promise<PublicKey[]> {
     if (useApi) {
-      const responseJson = await (
+      const responseJson = (await (
         await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
-      ).json();
+      ).json()) as any[];
       const tickers: PublicKey[] = responseJson
         .filter((ticker) => {
           return (
@@ -1203,6 +1200,56 @@ export class ManifestClient {
     );
   }
 
+  public getSwapAltPks(): Set<string> {
+    const pks = new Set<string>();
+
+    pks.add(MANIFEST_PROGRAM_ID.toString());
+    pks.add(SystemProgram.programId.toString());
+    pks.add(this.market.address.toString());
+    if (this.isBase22) {
+      pks.add(this.baseMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+    if (this.isQuote22) {
+      pks.add(this.quoteMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+
+    const baseVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.baseMint.address,
+    );
+    pks.add(baseVault.toString());
+
+    const quoteVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.quoteMint.address,
+    );
+    pks.add(quoteVault.toString());
+
+    const baseGlobal: PublicKey = getGlobalAddress(this.baseMint.address);
+    pks.add(baseGlobal.toString());
+
+    const quoteGlobal: PublicKey = getGlobalAddress(this.quoteMint.address);
+    pks.add(quoteGlobal.toString());
+
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
+    pks.add(baseGlobalVault.toString());
+
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
+    pks.add(quoteGlobalVault.toString());
+
+    return pks;
+  }
+
   /**
    * CancelOrder instruction
    *
@@ -1726,7 +1773,10 @@ export type WrapperPlaceOrderParamsExternal = {
   tokenPrice: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
-  /** Last slot before this order is invalid and will be removed. */
+  /** Last slot before this order is invalid and will be removed. If below
+   * 10_000_000, then will be treated as slots in force when it lands in the
+   * wrapper onchain.
+   */
   lastValidSlot: number;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
@@ -1763,14 +1813,6 @@ function toWrapperPlaceOrderParams(
     wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(
       wrapperPlaceOrderParamsExternal['spreadBps'] * 10,
     );
-  } else if (
-    wrapperPlaceOrderParamsExternal['lastValidSlot'] < 100_000 &&
-    wrapperPlaceOrderParamsExternal['lastValidSlot'] !=
-      NO_EXPIRATION_LAST_VALID_SLOT
-  ) {
-    // 100_000 is way earlier than the current slot. This check ensures that
-    // users are intentionally choosing the right type.
-    throw new Error('Last valid slot on order not valid');
   }
 
   const quoteAtomsPerToken = 10 ** market.quoteDecimals();

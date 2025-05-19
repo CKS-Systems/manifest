@@ -3,6 +3,7 @@
         "baseUrl": "src",
         "module": "esnext",
         "target": "esnext",
+        "lib": ["ESNext"],
         "esModuleInterop": true,
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true,

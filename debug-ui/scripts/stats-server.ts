@@ -24,6 +24,7 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
+import { Pool } from 'pg';
 
 // Stores checkpoints every 5 minutes
 const CHECKPOINT_DURATION_SEC: number = 5 * 60;
@@ -86,8 +87,12 @@ export class ManifestStatsServer {
   // Last price by market. Price is in atoms per atom.
   private lastPriceByMarket: Map<string, number> = new Map();
 
-  // Pubkey to the number of trades.
-  private traderNumTrades: Map<string, number> = new Map();
+  // Pubkey to the number of taker & maker trades.
+  private traderNumTakerTrades: Map<string, number> = new Map();
+  private traderNumMakerTrades: Map<string, number> = new Map();
+
+  private traderPositions: Map<string, Map<string, number>> = new Map();
+  private traderAcquisitionValue: Map<string, Map<string, number>> = new Map();
 
   // Market objects used for mints and decimals.
   private markets: Map<string, Market> = new Map();
@@ -106,9 +111,213 @@ export class ManifestStatsServer {
   // logs.
   private fillMutex: Mutex = new Mutex();
 
+  private traderTakerNotionalVolume: Map<string, number> = new Map();
+  private traderMakerNotionalVolume: Map<string, number> = new Map();
+  private readonly SOL_USDC_MARKET =
+    'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ';
+  private readonly USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
+
+  private pool: Pool;
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
+    this.connection = new Connection(RPC_URL!);
+
+    this.pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // May be needed depending on Fly Postgres configuration
+    });
+
+    this.pool.on('error', (err) => {
+      console.error('Unexpected database pool error:', err);
+      // Continue operation - don't let DB errors crash the server
+    });
+
+    this.resetWebsocket();
+    this.initDatabase(); // Initialize database schema
+  }
+
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 3,
+    delay = 1000,
+  ): Promise<T> {
+    let lastError;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.error(
+          `Database operation failed (attempt ${attempt + 1}/${maxRetries}):`,
+          error,
+        );
+        lastError = error;
+        if (attempt < maxRetries - 1) {
+          await sleep(delay * Math.pow(2, attempt)); // Exponential backoff
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  private initTraderPositionTracking(trader: string): void {
+    if (!this.traderPositions.has(trader)) {
+      this.traderPositions.set(trader, new Map<string, number>());
+    }
+    if (!this.traderAcquisitionValue.has(trader)) {
+      this.traderAcquisitionValue.set(trader, new Map<string, number>());
+    }
+  }
+
+  private updateTraderPosition(
+    trader: string,
+    baseMint: string,
+    baseAtomsDelta: number,
+    quoteAtoms: number,
+    market: Market,
+  ): void {
+    const positions = this.traderPositions.get(trader)!;
+    const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
+
+    // Get current position
+    const currentPosition = positions.get(baseMint) || 0;
+    const newPosition = currentPosition + baseAtomsDelta;
+
+    // Update position
+    positions.set(baseMint, newPosition);
+
+    // Get current acquisition value
+    const currentValue = acquisitionValues.get(baseMint) || 0;
+    const usdcValue = Number(quoteAtoms) / 10 ** market.quoteDecimals();
+
+    if (baseAtomsDelta > 0) {
+      acquisitionValues.set(baseMint, currentValue + usdcValue);
+    } else {
+      acquisitionValues.set(baseMint, currentValue - usdcValue);
+    }
+  }
+
+  // TODO: PnL on all quote asset markets
+  private calculateTraderPnL(
+    trader: string,
+    includeDetails: boolean = false,
+  ):
+    | number
+    | {
+        totalPnL: number;
+        positions: {
+          [mint: string]: {
+            tokenMint: string;
+            marketKey: string | null;
+            position: number;
+            acquisitionValue: number;
+            currentPrice: number;
+            marketValue: number;
+            pnl: number;
+          };
+        };
+      } {
+    let totalPnL = 0;
+
+    if (!this.traderPositions.has(trader)) {
+      return includeDetails ? { totalPnL: 0, positions: {} } : 0;
+    }
+
+    // Setup for detailed return if needed
+    const positionDetails: {
+      [mint: string]: {
+        tokenMint: string;
+        marketKey: string | null;
+        position: number;
+        acquisitionValue: number;
+        currentPrice: number;
+        marketValue: number;
+        pnl: number;
+      };
+    } = {};
+
+    const positions = this.traderPositions.get(trader)!;
+    const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
+
+    // Calculate PnL for each base token position
+    for (const [baseMint, baseAtomPosition] of positions.entries()) {
+      // Skip zero positions
+      if (baseAtomPosition === 0) continue;
+
+      // Find USDC market for this base token
+      let usdcMarket: Market | null = null;
+      let marketKey: string | null = null;
+      let lastPriceAtoms = 0;
+
+      // Special handling for wSOL - directly use the preferred market
+      if (baseMint === this.SOL_MINT) {
+        if (this.markets.has(this.SOL_USDC_MARKET)) {
+          usdcMarket = this.markets.get(this.SOL_USDC_MARKET)!;
+          marketKey = this.SOL_USDC_MARKET;
+          lastPriceAtoms = this.lastPriceByMarket.get(marketKey) || 0;
+        }
+      }
+
+      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) {
+        for (const [marketPk, market] of this.markets.entries()) {
+          if (
+            market.baseMint().toBase58() === baseMint &&
+            market.quoteMint().toBase58() === this.USDC_MINT
+          ) {
+            // Skip markets with zero price
+            const price = this.lastPriceByMarket.get(marketPk) || 0;
+            if (price > 0) {
+              usdcMarket = market;
+              marketKey = marketPk;
+              lastPriceAtoms = price;
+              break;
+            }
+          }
+        }
+      }
+
+      // Skip if no USDC market found for this token or if price is zero
+      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) continue;
+
+      // Calculate current value in USDC
+      const baseDecimals = usdcMarket.baseDecimals();
+      const quoteDecimals = usdcMarket.quoteDecimals();
+      const basePosition = baseAtomPosition / 10 ** baseDecimals;
+
+      // Convert price from atoms to actual price
+      const priceInQuote =
+        lastPriceAtoms * 10 ** (baseDecimals - quoteDecimals);
+
+      // Calculate current market value
+      const currentPositionValue = basePosition * priceInQuote;
+
+      // Get acquisition value
+      const acquisitionValue = acquisitionValues.get(baseMint) || 0;
+
+      // PnL = current value - cost basis
+      const positionPnL = currentPositionValue - acquisitionValue;
+
+      // Add to total PnL
+      totalPnL += positionPnL;
+
+      // Store detailed position info if requested
+      if (includeDetails) {
+        positionDetails[baseMint] = {
+          tokenMint: baseMint,
+          marketKey,
+          position: basePosition,
+          acquisitionValue,
+          currentPrice: priceInQuote,
+          marketValue: currentPositionValue,
+          pnl: positionPnL,
+        };
+      }
+    }
+
+    // Return either detailed object or just the total PnL number
+    return includeDetails ? { totalPnL, positions: positionDetails } : totalPnL;
   }
 
   private resetWebsocket() {
@@ -116,7 +325,9 @@ export class ManifestStatsServer {
     if (this.ws != null) {
       try {
         this.ws.close();
-      } catch (err) {}
+      } catch (err) {
+        /* empty */
+      }
     }
 
     this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
@@ -133,11 +344,19 @@ export class ManifestStatsServer {
       reconnects.inc();
     };
 
-    this.ws.onmessage = async (message) => {
-      const fill: FillLogResult = JSON.parse(message.data.toString());
-      const { market, baseAtoms, quoteAtoms, priceAtoms, slot, taker } = fill;
+    this.ws.onmessage = (message) => {
+      this.fillMutex.runExclusive(async () => {
+        const fill: FillLogResult = JSON.parse(message.data.toString());
+        const {
+          market,
+          baseAtoms,
+          quoteAtoms,
+          priceAtoms,
+          slot,
+          taker,
+          maker,
+        } = fill;
 
-      await this.fillMutex.runExclusive(async () => {
         // Do not accept old spurious messages.
         if (this.lastFillSlot > slot) {
           return;
@@ -147,10 +366,28 @@ export class ManifestStatsServer {
         fills.inc({ market });
         console.log('Got fill', fill);
 
-        if (this.traderNumTrades.get(taker) == undefined) {
-          this.traderNumTrades.set(taker, 0);
+        if (this.traderNumTakerTrades.get(taker) == undefined) {
+          this.traderNumTakerTrades.set(taker, 0);
         }
-        this.traderNumTrades.set(taker, this.traderNumTrades.get(taker)! + 1);
+        this.traderNumTakerTrades.set(
+          taker,
+          this.traderNumTakerTrades.get(taker)! + 1,
+        );
+
+        if (this.traderNumMakerTrades.get(maker) == undefined) {
+          this.traderNumMakerTrades.set(maker, 0);
+        }
+        this.traderNumMakerTrades.set(
+          maker,
+          this.traderNumMakerTrades.get(maker)! + 1,
+        );
+
+        if (this.traderTakerNotionalVolume.get(taker) == undefined) {
+          this.traderTakerNotionalVolume.set(taker, 0);
+        }
+        if (this.traderMakerNotionalVolume.get(maker) == undefined) {
+          this.traderMakerNotionalVolume.set(maker, 0);
+        }
 
         if (this.markets.get(market) == undefined) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
@@ -196,10 +433,81 @@ export class ManifestStatsServer {
             Number(quoteAtoms),
         );
 
+        const marketObject = this.markets.get(market)!;
+        const quoteMint = marketObject.quoteMint().toBase58();
+
+        if (quoteMint === this.USDC_MINT) {
+          const notionalVolume =
+            Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
+
+          this.traderTakerNotionalVolume.set(
+            taker,
+            this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+          );
+
+          this.traderMakerNotionalVolume.set(
+            maker,
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+          );
+          const baseMint = marketObject.baseMint().toBase58();
+
+          // Initialize position tracking maps if needed
+          this.initTraderPositionTracking(taker);
+          this.initTraderPositionTracking(maker);
+
+          // Update taker position (taker sells base, gets quote)
+          this.updateTraderPosition(
+            taker,
+            baseMint,
+            -Number(baseAtoms),
+            Number(quoteAtoms),
+            marketObject,
+          );
+
+          // Update maker position (maker buys base, gives quote)
+          this.updateTraderPosition(
+            maker,
+            baseMint,
+            Number(baseAtoms),
+            Number(quoteAtoms),
+            marketObject,
+          );
+        } else if (quoteMint === this.SOL_MINT) {
+          const solPriceAtoms = this.lastPriceByMarket.get(
+            this.SOL_USDC_MARKET,
+          );
+          if (solPriceAtoms) {
+            const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+            if (solUsdcMarket) {
+              const solPrice =
+                solPriceAtoms *
+                10 **
+                  (solUsdcMarket.baseDecimals() -
+                    solUsdcMarket.quoteDecimals());
+
+              const notionalVolume =
+                (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+                solPrice;
+
+              this.traderTakerNotionalVolume.set(
+                taker,
+                this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+              );
+
+              this.traderMakerNotionalVolume.set(
+                maker,
+                this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+              );
+            }
+            // TODO: Handle notionals for other quote mints
+          }
+        }
+
         let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
         prevFills.push(fill);
-        if (prevFills.length > 10) {
-          prevFills = prevFills.slice(1, 10);
+        const FILLS_TO_SAVE = 1000;
+        if (prevFills.length > FILLS_TO_SAVE) {
+          prevFills = prevFills.slice(1, FILLS_TO_SAVE);
         }
         this.fillLogResults.set(market, prevFills);
       });
@@ -210,6 +518,7 @@ export class ManifestStatsServer {
    * Initialize at the start with a get program accounts.
    */
   async initialize(): Promise<void> {
+    await this.loadState();
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
     marketProgramAccounts.forEach(
@@ -226,23 +535,26 @@ export class ManifestStatsServer {
         if (Number(market.quoteVolume()) == 0) {
           return;
         }
-        this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
-        this.baseVolumeAtomsCheckpoints.set(
-          marketPk,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
-        this.quoteVolumeAtomsCheckpoints.set(
-          marketPk,
-          new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-        );
+
+        if (!this.baseVolumeAtomsCheckpoints.has(marketPk)) {
+          this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
+          this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
+          this.baseVolumeAtomsCheckpoints.set(
+            marketPk,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+          this.quoteVolumeAtomsCheckpoints.set(
+            marketPk,
+            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+          );
+        }
         this.markets.set(marketPk, market);
       },
     );
 
     const mintToSymbols: Map<string, string> = new Map();
     const metaplex: Metaplex = Metaplex.make(this.connection);
-    this.markets.forEach(async (market: Market, marketPk: string) => {
+    this.markets.forEach(async (market: Market) => {
       const baseMint: PublicKey = market.baseMint();
       const quoteMint: PublicKey = market.quoteMint();
 
@@ -625,12 +937,59 @@ export class ManifestStatsServer {
       dailyVolume: Object.fromEntries(dailyVolumesByToken),
     };
   }
-
   /**
-   * Get Traders to be used in a leaderboard if a UI wants to. Only tracks takers.
+   * Get Traders to be used in a leaderboard if a UI wants to.
+   * Returns counts for taker/maker trades and volumes.
    */
-  getTraders() {
-    return Object.fromEntries(this.traderNumTrades);
+  getTraders(includeDebug: boolean = false) {
+    const allTraders = new Set<string>([
+      ...Array.from(this.traderNumTakerTrades.keys()),
+      ...Array.from(this.traderNumMakerTrades.keys()),
+    ]);
+
+    const traderData: {
+      [key: string]: {
+        taker: number;
+        maker: number;
+        takerNotionalVolume: number;
+        makerNotionalVolume: number;
+        pnl: number;
+        _debug?: any;
+      };
+    } = {};
+
+    allTraders.forEach((trader) => {
+      const takerNotionalVolume =
+        this.traderTakerNotionalVolume.get(trader) || 0;
+      const makerNotionalVolume =
+        this.traderMakerNotionalVolume.get(trader) || 0;
+
+      const pnlResult = this.calculateTraderPnL(trader, includeDebug);
+
+      const pnl =
+        typeof pnlResult === 'number' ? pnlResult : pnlResult.totalPnL;
+
+      traderData[trader] = {
+        taker: this.traderNumTakerTrades.get(trader) || 0,
+        maker: this.traderNumMakerTrades.get(trader) || 0,
+        takerNotionalVolume,
+        makerNotionalVolume,
+        pnl,
+      };
+
+      if (includeDebug && typeof pnlResult !== 'number') {
+        traderData[trader]._debug = pnlResult;
+      }
+    });
+
+    return traderData;
+  }
+
+  async getAlts(): Promise<{ alt: string; market: string }[]> {
+    const response = await this.pool.query(
+      'SELECT alt, market FROM alt_markets',
+    );
+    return response.rows.map((r) => ({ alt: r.alt, market: r.market }));
   }
 
   /**
@@ -639,9 +998,468 @@ export class ManifestStatsServer {
   getRecentFills(market: string) {
     return { [market]: this.fillLogResults.get(market) };
   }
+
+  /**
+   * Set up database schema if needed
+   */
+  async initDatabase(): Promise<void> {
+    try {
+      // Create tables if they don't exist
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS state_checkpoints (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          last_fill_slot BIGINT NOT NULL
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS market_volumes (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          base_volume_since_last_checkpoint NUMERIC,
+          quote_volume_since_last_checkpoint NUMERIC,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS market_checkpoints (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          base_volume_checkpoints JSONB NOT NULL,
+          quote_volume_checkpoints JSONB NOT NULL,
+          last_price NUMERIC,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS trader_stats (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          trader TEXT NOT NULL,
+          num_taker_trades INTEGER DEFAULT 0,
+          num_maker_trades INTEGER DEFAULT 0,
+          taker_notional_volume NUMERIC DEFAULT 0,
+          maker_notional_volume NUMERIC DEFAULT 0,
+          PRIMARY KEY (checkpoint_id, trader)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS fill_log_results (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          market TEXT NOT NULL,
+          fill_data JSONB NOT NULL,
+          PRIMARY KEY (checkpoint_id, market)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS trader_positions (
+          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
+          trader TEXT NOT NULL,
+          mint TEXT NOT NULL,
+          position NUMERIC NOT NULL,
+          acquisition_value NUMERIC NOT NULL,
+          PRIMARY KEY (checkpoint_id, trader, mint)
+        )
+      `);
+
+      console.log('Database schema initialized');
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save current state to database
+   */
+  async saveState(): Promise<void> {
+    console.log('Saving state to database...');
+
+    let client;
+    try {
+      console.log('Getting db client');
+      client = await this.pool.connect();
+
+      // Start a transaction
+      console.log('Querying begin');
+      await client.query('BEGIN');
+
+      // Insert a new checkpoint
+      console.log('Inserting checkpoint');
+      const checkpointResult = await client.query(
+        'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id',
+        [this.lastFillSlot],
+      );
+
+      const checkpointId = checkpointResult.rows[0].id;
+
+      // Save market volumes
+      const volumePromises = [];
+      for (const [
+        market,
+        baseVolume,
+      ] of this.baseVolumeAtomsSinceLastCheckpoint.entries()) {
+        const quoteVolume =
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
+
+        volumePromises.push(
+          client.query(
+            'INSERT INTO market_volumes (checkpoint_id, market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint) VALUES ($1, $2, $3, $4)',
+            [checkpointId, market, baseVolume, quoteVolume],
+          ),
+        );
+      }
+
+      // Save market checkpoints
+      const checkpointPromises = [];
+      for (const [
+        market,
+        baseCheckpoints,
+      ] of this.baseVolumeAtomsCheckpoints.entries()) {
+        const quoteCheckpoints =
+          this.quoteVolumeAtomsCheckpoints.get(market) || [];
+        const lastPrice = this.lastPriceByMarket.get(market) || 0;
+
+        checkpointPromises.push(
+          client.query(
+            'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, last_price) VALUES ($1, $2, $3, $4, $5)',
+            [
+              checkpointId,
+              market,
+              JSON.stringify(baseCheckpoints),
+              JSON.stringify(quoteCheckpoints),
+              lastPrice,
+            ],
+          ),
+        );
+      }
+
+      console.log('Awaiting all inserts to complete');
+      // Wait for all queries to complete
+      await Promise.all([...volumePromises, ...checkpointPromises]);
+
+      // Save trader stats in batches
+      console.log('Saving trader stats in batches');
+      const traderArray = Array.from(
+        new Set([
+          ...Array.from(this.traderNumTakerTrades.keys()),
+          ...Array.from(this.traderNumMakerTrades.keys()),
+        ]),
+      );
+      const TRADER_BATCH_SIZE = 20; // Process 20 traders at a time
+
+      for (let i = 0; i < traderArray.length; i += TRADER_BATCH_SIZE) {
+        const batch = traderArray.slice(i, i + TRADER_BATCH_SIZE);
+        const batchPromises = [];
+
+        for (const trader of batch) {
+          const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
+          const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
+          const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
+          const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
+
+          batchPromises.push(
+            client.query(
+              'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
+              [
+                checkpointId,
+                trader,
+                numTakerTrades,
+                numMakerTrades,
+                takerVolume,
+                makerVolume,
+              ],
+            ),
+          );
+        }
+
+        await Promise.all(batchPromises);
+      }
+
+      // Save trader positions with filtering and batching
+      console.log('Saving trader positions with filtering');
+      const POSITION_THRESHOLD = 1; // Only save positions with significant value ($1+)
+      const BATCH_SIZE = 10; // Smaller batch size
+      const DELAY_BETWEEN_BATCHES = 50; // ms
+
+      // Helper function for delay
+      const delay = (ms: number | undefined) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
+      // Process traders in smaller batches with delays
+      let traderCount = 0;
+      for (const [trader, positions] of this.traderPositions.entries()) {
+        const acquisitionValues =
+          this.traderAcquisitionValue.get(trader) || new Map();
+        const positionBatchPromises = [];
+
+        for (const [mint, position] of positions.entries()) {
+          const acquisitionValue = acquisitionValues.get(mint) || 0;
+
+          // Skip insignificant positions to reduce database load
+          if (
+            Math.abs(position) === 0 ||
+            Math.abs(acquisitionValue) < POSITION_THRESHOLD
+          ) {
+            continue;
+          }
+
+          positionBatchPromises.push(
+            client.query(
+              'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
+              [checkpointId, trader, mint, position, acquisitionValue],
+            ),
+          );
+        }
+
+        // Execute all position queries for this trader in parallel
+        if (positionBatchPromises.length > 0) {
+          await Promise.all(positionBatchPromises);
+
+          // Add throttling delay every BATCH_SIZE traders
+          traderCount++;
+          if (traderCount % BATCH_SIZE === 0) {
+            await delay(DELAY_BETWEEN_BATCHES);
+          }
+        }
+      }
+
+      // Save fill logs using bulk insertion
+      console.log('Saving fill log results with bulk insertion');
+
+      const markets = Array.from(this.fillLogResults.keys());
+      const BULK_INSERT_SIZE = 100; // Can be increased for better performance
+
+      for (let i = 0; i < markets.length; i += BULK_INSERT_SIZE) {
+        const batchMarkets = markets.slice(i, i + BULK_INSERT_SIZE);
+        const bulkData = [];
+
+        // Prepare bulk data
+        for (const market of batchMarkets) {
+          const fills = this.fillLogResults.get(market);
+          if (fills && fills.length > 0) {
+            bulkData.push({
+              checkpoint_id: checkpointId,
+              market: market,
+              fill_data: JSON.stringify(fills),
+            });
+          }
+        }
+
+        // Skip if nothing to insert
+        if (bulkData.length === 0) continue;
+
+        // Execute bulk insertion
+        if (bulkData.length > 0) {
+          console.log(`Bulk inserting ${bulkData.length} fill records`);
+
+          // Generate a parameterized query for the bulk insertion
+          const columns = ['checkpoint_id', 'market', 'fill_data'];
+          const columnStr = columns.join(', ');
+          const placeholders = bulkData
+            .map((_, index) => {
+              const offset = index * columns.length;
+              return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
+            })
+            .join(', ');
+
+          const values = bulkData.flatMap((row) => [
+            row.checkpoint_id,
+            row.market,
+            row.fill_data,
+          ]);
+
+          const query = `
+            INSERT INTO fill_log_results (${columnStr})
+            VALUES ${placeholders}
+          `;
+
+          await client.query(query, values);
+        }
+
+        // Add a small delay between batches
+        if (i + BULK_INSERT_SIZE < markets.length) {
+          await delay(100);
+        }
+      }
+
+      console.log('Cleaning up old checkpoints');
+      // Clean up old checkpoints - keep only the most recent one
+      await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
+        checkpointId,
+      ]);
+
+      console.log('Committing');
+      await client.query('COMMIT');
+      console.log('State saved successfully to database');
+    } catch (error) {
+      console.error('Error saving state to database:', error);
+      if (client) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('Error during rollback:', rollbackError);
+          // Continue execution even if rollback fails
+        }
+      }
+      // Don't re-throw - we want to continue operation even after errors
+    } finally {
+      if (client) {
+        try {
+          client.release();
+        } catch (releaseError) {
+          console.error('Error releasing client:', releaseError);
+          // Don't throw release errors, just log them
+        }
+      }
+    }
+  }
+
+  /**
+   * Load state from database
+   */
+  async loadState(): Promise<boolean> {
+    console.log('Loading state from database...');
+
+    try {
+      // Get the most recent checkpoint
+      const checkpointResultRecent = await this.pool.query(
+        'SELECT id, last_fill_slot FROM state_checkpoints ORDER BY created_at DESC LIMIT 1',
+      );
+
+      if (checkpointResultRecent.rowCount === 0) {
+        console.log('No saved state found in database');
+        return false;
+      }
+
+      const checkpointId = checkpointResultRecent.rows[0].id;
+      this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
+
+      // Load market volumes
+      const volumeResult = await this.pool.query(
+        'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of volumeResult.rows) {
+        this.baseVolumeAtomsSinceLastCheckpoint.set(
+          row.market,
+          Number(row.base_volume_since_last_checkpoint),
+        );
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(
+          row.market,
+          Number(row.quote_volume_since_last_checkpoint),
+        );
+      }
+
+      // Load market checkpoints
+      const checkpointResult = await this.pool.query(
+        'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of checkpointResult.rows) {
+        let baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
+        let quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
+
+        if (!Array.isArray(baseCheckpoints)) {
+          console.log(
+            `Base checkpoints for market ${row.market} is not an array, converting`,
+          );
+          baseCheckpoints = Object.values(baseCheckpoints);
+        }
+
+        if (!Array.isArray(quoteCheckpoints)) {
+          console.log(
+            `Quote checkpoints for market ${row.market} is not an array, converting`,
+          );
+          quoteCheckpoints = Object.values(quoteCheckpoints);
+        }
+
+        this.baseVolumeAtomsCheckpoints.set(row.market, baseCheckpoints);
+        this.quoteVolumeAtomsCheckpoints.set(row.market, quoteCheckpoints);
+        this.lastPriceByMarket.set(row.market, Number(row.last_price));
+      }
+
+      // Load trader stats
+      const traderResult = await this.pool.query(
+        'SELECT trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume FROM trader_stats WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of traderResult.rows) {
+        this.traderNumTakerTrades.set(row.trader, Number(row.num_taker_trades));
+        this.traderNumMakerTrades.set(row.trader, Number(row.num_maker_trades));
+        this.traderTakerNotionalVolume.set(
+          row.trader,
+          Number(row.taker_notional_volume),
+        );
+        this.traderMakerNotionalVolume.set(
+          row.trader,
+          Number(row.maker_notional_volume),
+        );
+      }
+
+      // Load trader positions
+      const positionResult = await this.pool.query(
+        'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of positionResult.rows) {
+        if (!this.traderPositions.has(row.trader)) {
+          this.traderPositions.set(row.trader, new Map());
+        }
+        if (!this.traderAcquisitionValue.has(row.trader)) {
+          this.traderAcquisitionValue.set(row.trader, new Map());
+        }
+
+        this.traderPositions
+          .get(row.trader)!
+          .set(row.mint, Number(row.position));
+        this.traderAcquisitionValue
+          .get(row.trader)!
+          .set(row.mint, Number(row.acquisition_value));
+      }
+
+      // Load fill logs
+      const fillResult = await this.pool.query(
+        'SELECT market, fill_data FROM fill_log_results WHERE checkpoint_id = $1',
+        [checkpointId],
+      );
+
+      for (const row of fillResult.rows) {
+        this.fillLogResults.set(row.market, row.fill_data);
+      }
+
+      console.log('State loaded successfully from database');
+      return true;
+    } catch (error) {
+      console.error('Error loading state from database:', error);
+      return false;
+    }
+  }
 }
 
 const run = async () => {
+  // Validate environment variables
+  const { RPC_URL, DATABASE_URL } = process.env;
+
+  if (!RPC_URL) {
+    throw new Error('RPC_URL missing from env');
+  }
+
+  if (!DATABASE_URL) {
+    console.warn(
+      'WARNING: DATABASE_URL not found in environment. Data persistence will not work!',
+    );
+  }
+
+  // Set up Prometheus metrics
   promClient.collectDefaultMetrics({
     labels: {
       app: 'stats',
@@ -662,9 +1480,17 @@ const run = async () => {
   });
   metricsApp.use(promMetrics);
 
+  // Initialize the stats server
   const statsServer: ManifestStatsServer = new ManifestStatsServer();
-  await statsServer.initialize();
 
+  try {
+    await statsServer.initialize();
+  } catch (error) {
+    console.error('Error initializing server:', error);
+    throw error;
+  }
+
+  // Set up Express routes
   const tickersHandler: RequestHandler = (_req, res) => {
     res.send(statsServer.getTickers());
   };
@@ -682,30 +1508,74 @@ const run = async () => {
   const volumeHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getVolume());
   };
-  const tradersHandler: RequestHandler = (_req, res) => {
-    res.send(statsServer.getTraders());
+  const tradersHandler: RequestHandler = (req, res) => {
+    const includeDebug = req.query.debug === 'true';
+    res.send(statsServer.getTraders(includeDebug));
   };
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
+  const altsHandler: RequestHandler = async (_req, res) => {
+    res.send(await statsServer.getAlts());
+  };
+
   const app = express();
   app.use(cors());
   app.get('/tickers', tickersHandler);
   app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
   app.get('/volume', volumeHandler);
-  app.get('/trades', tradersHandler);
+  app.get('/traders', tradersHandler);
+  app.get('/traders/debug', (req, res) => {
+    res.send(statsServer.getTraders(true));
+  });
   app.get('/recentFills', recentFillsHandler);
-  app.listen(Number(PORT!));
+  app.get('/alts', altsHandler);
 
+  // Add health check endpoint for Fly.io
+  app.get('/health', (_req, res) => {
+    res.status(200).send('OK');
+  });
+
+  app.listen(Number(PORT!), () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
+  // Set up graceful shutdown
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`Received ${signal}, saving state before exit...`);
+    try {
+      if (DATABASE_URL) {
+        await statsServer.saveState();
+      }
+      console.log('State saved, exiting');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+  // Main loop with periodic state saving and checkpointing
+  // eslint-disable-next-line no-constant-condition
   while (true) {
-    statsServer.saveCheckpoints();
-    // Promise.all here so depth probing doesnt get the save checkpoints off
-    // schedule. Could be done with separate setInterval instead.
-    await Promise.all([
-      statsServer.depthProbe(),
-      sleep(CHECKPOINT_DURATION_SEC * 1_000),
-    ]);
+    try {
+      statsServer.saveCheckpoints();
+
+      // Run depth probe and wait for next checkpoint
+      await Promise.all([
+        statsServer.depthProbe(),
+        sleep(CHECKPOINT_DURATION_SEC * 1_000),
+        DATABASE_URL ? statsServer.saveState() : () => {},
+      ]);
+    } catch (error) {
+      console.error('Error in main loop:', error);
+      // Continue the loop instead of crashing
+      await sleep(5000); // Add a short delay before retrying
+    }
   }
 };
 

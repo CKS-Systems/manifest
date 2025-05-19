@@ -944,8 +944,8 @@ impl<
             let maker_order: &RestingOrder =
                 get_helper::<RBNode<RestingOrder>>(dynamic, current_maker_order_index).get_value();
 
-            // Remove the resting order if expired.
-            if maker_order.is_expired(now_slot) {
+            // Remove the resting order if expired or somehow a zero order got on the book.
+            if maker_order.is_expired(now_slot) || maker_order.get_num_base_atoms().as_u64() == 0 {
                 let next_maker_order_index: DataIndex = get_next_candidate_match_index(
                     fixed,
                     dynamic,
@@ -1235,17 +1235,17 @@ impl<
                     };
                     let lookup_resting_order: RestingOrder = RestingOrder::new(
                         maker_trader_index,
-                        num_base_atoms_reverse,
+                        BaseAtoms::ZERO, // Size does not matter, just price.
                         price_reverse,
                         0, // Sequence number does not matter, just price
                         NO_EXPIRATION_LAST_VALID_SLOT,
                         is_bid,
                         OrderType::Reverse,
                     )?;
-                    // There is an edge case where the the price is off by 1 due
-                    // to rounding. This will result in fragmented liquidity,
-                    // however should be infrequent enough to not do a walk of
-                    // the tree.
+
+                    // Because there is a slight relaxation in matching reverse
+                    // orders, do not need to worry about off by one errors
+                    // causing fragmented liqudity.
                     let lookup_index: DataIndex = other_tree.lookup_index(&lookup_resting_order);
                     if lookup_index != NIL {
                         let order_to_coalesce_into: &mut RestingOrder =
@@ -1256,7 +1256,9 @@ impl<
                     }
                 }
 
-                if !coalesced {
+                // If there was 1 atom and because taker rounding is in effect,
+                // then this would result in an empty order.
+                if !coalesced && num_base_atoms_reverse.as_u64() > 0 {
                     // This code is similar to rest_remaining except it doesnt
                     // require borrowing data.  Non-trivial to combine the code
                     // because the certora formal verification inserted itself

@@ -1,6 +1,8 @@
+use spl_associated_token_account::get_associated_token_address;
 use std::{
     cell::{Ref, RefCell, RefMut},
     io::Error,
+    str::FromStr,
 };
 
 use hypertree::{DataIndex, HyperTreeValueIteratorTrait};
@@ -13,7 +15,7 @@ use manifest::{
         global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
         global_deposit_instruction, global_withdraw_instruction, swap_instruction,
-        withdraw_instruction,
+        swap_v2_instruction, withdraw_instruction,
     },
     quantities::WrapperU64,
     state::{GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType, RestingOrder},
@@ -81,6 +83,85 @@ impl TestFixture {
                 &solana_sdk::system_program::id(),
             ),
         );
+
+        // Add testdata for the reverse coalesce test.
+        for pk in [
+            "ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ",
+            "AKjfJDv4ywdpCDrj7AURuNkGA3696GTVFgrMwk4TjkKs",
+            "FN9K6rTdWtRDUPmLTN2FnGvLZpHVNRN2MeRghKknSGDs",
+            "8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ",
+            "CNRQ2Q5YURFcQrATzYeKUWgKUoBDfqzkDrRWf21UXCVo",
+            "FGQoLafigpyVb7mLa6pvsDDpDaEE3JetrzQoAggTo3n7",
+        ] {
+            let filename = format!("tests/testdata/{}", pk);
+            let file: std::fs::File = std::fs::File::open(filename)
+                .unwrap_or_else(|_| panic!("{pk} should open read only"));
+            let json: serde_json::Value =
+                serde_json::from_reader(file).expect("file should be proper JSON");
+            program.add_account_with_base64_data(
+                Pubkey::from_str(pk).unwrap(),
+                u32::MAX as u64,
+                Pubkey::from_str(json["result"]["value"]["owner"].as_str().unwrap()).unwrap(),
+                json["result"]["value"]["data"].as_array().unwrap()[0]
+                    .as_str()
+                    .unwrap(),
+            );
+        }
+
+        let second_payer: Pubkey = second_keypair.pubkey();
+        let usdc_mint: Pubkey =
+            Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+        let user_usdc_ata: Pubkey = get_associated_token_address(&second_payer, &usdc_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: usdc_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_usdc_ata, account);
+
+        let usdt_mint: Pubkey =
+            Pubkey::from_str("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB").unwrap();
+        let user_usdt_ata: Pubkey = get_associated_token_address(&second_payer, &usdt_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: usdt_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_usdt_ata, account);
+
+        let sol_mint: Pubkey =
+            Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+        let user_sol_ata: Pubkey = get_associated_token_address(&second_payer, &sol_mint);
+        let mut account: solana_sdk::account::Account = solana_sdk::account::Account::new(
+            u32::MAX as u64,
+            spl_token::state::Account::get_packed_len(),
+            &spl_token::id(),
+        );
+        let _ = &spl_token::state::Account {
+            mint: sol_mint,
+            owner: second_payer,
+            amount: 1_000_000_000_000,
+            state: spl_token::state::AccountState::Initialized,
+            ..spl_token::state::Account::default()
+        }
+        .pack_into_slice(&mut account.data);
+        program.add_account(user_sol_ata, account);
 
         let context: Rc<RefCell<ProgramTestContext>> =
             Rc::new(RefCell::new(program.start_with_context().await));
@@ -517,6 +598,44 @@ impl TestFixture {
             &[place_order_ix],
             Some(&keypair.pubkey()),
             &[keypair],
+        )
+        .await
+    }
+
+    // Similar to swap, but the second_keypair is the gas/rent payer and normal
+    // keypair owns the token accounts.
+    pub async fn swap_v2(
+        &mut self,
+        in_atoms: u64,
+        out_atoms: u64,
+        is_base_in: bool,
+        is_exact_in: bool,
+    ) -> anyhow::Result<(), BanksClientError> {
+        let payer: Pubkey = self.context.borrow().payer.pubkey();
+        let payer_keypair: Keypair = self.context.borrow().payer.insecure_clone();
+
+        let swap_ix: Instruction = swap_v2_instruction(
+            &self.market_fixture.key,
+            &self.second_keypair.pubkey(),
+            &payer,
+            &self.sol_mint_fixture.key,
+            &self.usdc_mint_fixture.key,
+            &self.payer_sol_fixture.key,
+            &self.payer_usdc_fixture.key,
+            in_atoms,
+            out_atoms,
+            is_base_in,
+            is_exact_in,
+            spl_token::id(),
+            spl_token::id(),
+            false,
+        );
+
+        send_tx_with_retry(
+            Rc::clone(&self.context),
+            &[swap_ix],
+            Some(&self.second_keypair.pubkey()),
+            &[&payer_keypair, &self.second_keypair.insecure_clone()],
         )
         .await
     }
