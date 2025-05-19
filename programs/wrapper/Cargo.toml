@@ -19,7 +19,7 @@ trace = [ "manifest-dex/trace" ]
 test = []
 
 [dependencies]
-manifest-dex = { path = "../manifest", features = ["no-entrypoint"]  }
+manifest-dex = { version = "2.0.0", features = ["no-entrypoint"]  }
 hypertree = "1.0.0"
 # Cannot use workspace because the generator needs to see a version here
 shank = "0.4.2"
