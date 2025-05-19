@@ -34,7 +34,7 @@ jobs:
         run: yarn typedoc client/ts/src/index.ts --readme none --out ./docs/ts/client/
 
       - name: Build Rust Docs
-        run: cargo doc --no-deps --package manifest-jupiter --package manifest@2.0.1 --target-dir ./docs/rs/ && rm -rf ./docs/rs/debug
+        run: cargo doc --no-deps --package manifest-jupiter --package manifest-dex@2.0.1 --target-dir ./docs/rs/ && rm -rf ./docs/rs/debug
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.5
