@@ -193,6 +193,8 @@ impl<'a, 'info> DepositContext<'a, 'info> {
 
 /// Withdraw account infos
 pub(crate) struct WithdrawContext<'a, 'info> {
+    // TODO: Separate owner and payer so you can crank a withdraw on behalf of
+    // someone else to their token account.
     pub payer: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
     pub trader_token: TokenAccountInfo<'a, 'info>,
@@ -300,15 +302,13 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let base_mint_key: Pubkey = *market_fixed.get_base_mint();
         let quote_mint_key: Pubkey = *market_fixed.get_quote_mint();
 
-        let trader_base: TokenAccountInfo = TokenAccountInfo::new_with_owner(
+        let trader_base: TokenAccountInfo = TokenAccountInfo::new(
             next_account_info(account_iter)?,
             &base_mint_key,
-            owner.key,
         )?;
-        let trader_quote: TokenAccountInfo = TokenAccountInfo::new_with_owner(
+        let trader_quote: TokenAccountInfo = TokenAccountInfo::new(
             next_account_info(account_iter)?,
             &quote_mint_key,
-            owner.key,
         )?;
         let base_vault_address: &Pubkey = market_fixed.get_base_vault();
         let quote_vault_address: &Pubkey = market_fixed.get_quote_vault();
