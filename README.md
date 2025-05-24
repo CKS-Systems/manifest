@@ -1,6 +1,4 @@
-# ![Logo](assets/brown-contrast-split.png)
-
-# <span style="font-family: 'Vollkorn', serif;">MANIFEST</span>
+# ![Logo](assets/manifest-wide.png)
 
 *The Unlimited Orderbook*
 
