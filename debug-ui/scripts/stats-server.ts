@@ -381,7 +381,7 @@ export class ManifestStatsServer {
         console.log('Got fill', fill);
 
         const actualTaker = this.resolveActualTrader(taker, originalSigner);
-        const actualMaker = this.resolveActualTrader(maker, originalSigner);
+        // Assumes maker cannot be from an aggregator
 
         if (this.traderNumTakerTrades.get(actualTaker) == undefined) {
           this.traderNumTakerTrades.set(actualTaker, 0);
@@ -391,19 +391,19 @@ export class ManifestStatsServer {
           this.traderNumTakerTrades.get(actualTaker)! + 1,
         );
 
-        if (this.traderNumMakerTrades.get(actualMaker) == undefined) {
-          this.traderNumMakerTrades.set(actualMaker, 0);
+        if (this.traderNumMakerTrades.get(maker) == undefined) {
+          this.traderNumMakerTrades.set(maker, 0);
         }
         this.traderNumMakerTrades.set(
-          actualMaker,
-          this.traderNumMakerTrades.get(actualMaker)! + 1,
+          maker,
+          this.traderNumMakerTrades.get(maker)! + 1,
         );
 
         if (this.traderTakerNotionalVolume.get(actualTaker) == undefined) {
           this.traderTakerNotionalVolume.set(actualTaker, 0);
         }
-        if (this.traderMakerNotionalVolume.get(actualMaker) == undefined) {
-          this.traderMakerNotionalVolume.set(actualMaker, 0);
+        if (this.traderMakerNotionalVolume.get(maker) == undefined) {
+          this.traderMakerNotionalVolume.set(maker, 0);
         }
 
         if (this.markets.get(market) == undefined) {
@@ -463,14 +463,14 @@ export class ManifestStatsServer {
           );
 
           this.traderMakerNotionalVolume.set(
-            actualMaker,
-            this.traderMakerNotionalVolume.get(actualMaker)! + notionalVolume,
+            maker,
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
           );
           const baseMint = marketObject.baseMint().toBase58();
 
           // Initialize position tracking maps if needed
           this.initTraderPositionTracking(actualTaker);
-          this.initTraderPositionTracking(actualMaker);
+          this.initTraderPositionTracking(maker);
 
           // Update taker position (taker sells base, gets quote)
           this.updateTraderPosition(
@@ -483,7 +483,7 @@ export class ManifestStatsServer {
 
           // Update maker position (maker buys base, gives quote)
           this.updateTraderPosition(
-            actualMaker,
+            maker,
             baseMint,
             Number(baseAtoms),
             Number(quoteAtoms),
@@ -512,8 +512,8 @@ export class ManifestStatsServer {
               );
 
               this.traderMakerNotionalVolume.set(
-                actualMaker,
-                this.traderMakerNotionalVolume.get(actualMaker)! + notionalVolume,
+                maker,
+                this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
               );
             }
             // TODO: Handle notionals for other quote mints
