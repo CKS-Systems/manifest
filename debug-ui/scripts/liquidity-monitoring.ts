@@ -9,7 +9,7 @@ import promBundle from 'express-prom-bundle';
 import cors from 'cors';
 
 // Configuration constants
-const MONITORING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MONITORING_INTERVAL_MS = 60 * 1000; // 1 minutes
 const MIN_VOLUME_THRESHOLD_USD = 10_000; // $10k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
 const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
@@ -249,7 +249,14 @@ export class LiquidityMonitor {
     const bids = market.bids();
     const asks = market.asks();
 
+    console.log(
+      `Market ${market.address.toBase58()}: ${bids.length} bids, ${asks.length} asks`,
+    );
+
     if (bids.length === 0 || asks.length === 0) {
+      console.log(
+        `Skipping market ${market.address.toBase58()}: no bids or asks`,
+      );
       return [];
     }
 
@@ -258,11 +265,20 @@ export class LiquidityMonitor {
     const bestAsk = asks[asks.length - 1].tokenPrice;
     const midPrice = (bestBid + bestAsk) / 2;
 
+    console.log(
+      `Market ${market.address.toBase58()}: bestBid=${bestBid}, bestAsk=${bestAsk}, midPrice=${midPrice}`,
+    );
+
     // Track unique traders
     const traders = new Set<string>();
     [...bids, ...asks].forEach((order) => traders.add(order.trader.toBase58()));
 
+    console.log(
+      `Market ${market.address.toBase58()}: ${traders.size} unique traders found`,
+    );
+
     const stats: MarketMakerStats[] = [];
+    let filteredCount = 0;
 
     for (const trader of traders) {
       const traderBids = bids.filter(
@@ -270,6 +286,10 @@ export class LiquidityMonitor {
       );
       const traderAsks = asks.filter(
         (order) => order.trader.toBase58() === trader,
+      );
+
+      console.log(
+        `Trader ${trader}: ${traderBids.length} bids, ${traderAsks.length} asks`,
       );
 
       const bidDepth: { [spreadBps: number]: number } = {};
@@ -301,12 +321,24 @@ export class LiquidityMonitor {
       const totalNotionalUsd =
         baseTokensToUsd / Math.pow(10, market.quoteDecimals());
 
+      console.log(
+        `Trader ${trader}: totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, baseDecimals=${market.baseDecimals()}, quoteDecimals=${market.quoteDecimals()}, totalNotionalUsd=${totalNotionalUsd}`,
+      );
+
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
+        console.log(
+          `Trader ${trader}: Filtered out (notional ${totalNotionalUsd} < ${MIN_NOTIONAL_USD})`,
+        );
+        filteredCount++;
         continue;
       }
 
       const isActive = traderBids.length > 0 || traderAsks.length > 0;
+
+      console.log(
+        `Trader ${trader}: QUALIFIED with ${totalNotionalUsd} USD notional, active=${isActive}`,
+      );
 
       stats.push({
         trader,
@@ -319,6 +351,9 @@ export class LiquidityMonitor {
       });
     }
 
+    console.log(
+      `Market ${market.address.toBase58()}: ${stats.length} qualified market makers, ${filteredCount} filtered out`,
+    );
     return stats;
   }
 
