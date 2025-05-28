@@ -36,7 +36,7 @@ const marketMakerDepth = new promClient.Gauge({
 
 const marketMakerUptime = new promClient.Gauge({
   name: 'market_maker_uptime',
-  help: 'Market maker uptime percentage over last 24 hours',
+  help: 'Market maker uptime percentage',
   labelNames: ['market', 'trader'] as const,
 });
 
@@ -68,7 +68,7 @@ interface MarketInfo {
 
 export class LiquidityMonitor {
   private connection: Connection;
-  private pool: Pool;
+  public pool: Pool;
   private markets: Map<string, Market> = new Map();
   private marketInfo: Map<string, MarketInfo> = new Map();
 
@@ -123,21 +123,6 @@ export class LiquidityMonitor {
         )
       `);
 
-      // Market maker summary table for efficient querying
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS market_maker_summary (
-          market TEXT NOT NULL,
-          trader TEXT NOT NULL,
-          last_active TIMESTAMP WITH TIME ZONE,
-          uptime_24h NUMERIC DEFAULT 0,
-          avg_bid_depth_100_bps NUMERIC DEFAULT 0,
-          avg_ask_depth_100_bps NUMERIC DEFAULT 0,
-          total_samples_24h INTEGER DEFAULT 0,
-          active_samples_24h INTEGER DEFAULT 0,
-          PRIMARY KEY (market, trader)
-        )
-      `);
-
       // Create indexes for performance
       await this.pool.query(`
         CREATE INDEX IF NOT EXISTS idx_market_maker_stats_timestamp 
@@ -147,6 +132,12 @@ export class LiquidityMonitor {
       await this.pool.query(`
         CREATE INDEX IF NOT EXISTS idx_market_maker_stats_market_trader 
         ON market_maker_stats(market, trader)
+      `);
+
+      // Add composite index for time-range queries
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_market_maker_stats_market_trader_timestamp 
+        ON market_maker_stats(market, trader, timestamp)
       `);
 
       console.log('Database schema initialized');
@@ -419,8 +410,8 @@ export class LiquidityMonitor {
     // Save stats to database
     await this.saveStatsToDatabase(allStats);
 
-    // Update summary statistics
-    await this.updateMarketMakerSummaries();
+    // Update summary statistics (using 24h for Prometheus)
+    await this.updatePrometheusMetrics();
 
     console.log(
       `Monitoring cycle complete. Processed ${allStats.length} total market maker entries.`,
@@ -460,7 +451,7 @@ export class LiquidityMonitor {
         const placeholders = batch
           .map((_, index) => {
             const offset = index * 13;
-            return `(${offset + 1}, ${offset + 2}, ${offset + 3}, ${offset + 4}, ${offset + 5}, ${offset + 6}, ${offset + 7}, ${offset + 8}, ${offset + 9}, ${offset + 10}, ${offset + 11}, ${offset + 12}, ${offset + 13})`;
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13})`;
           })
           .join(', ');
 
@@ -503,71 +494,31 @@ export class LiquidityMonitor {
   }
 
   /**
-   * Update market maker summary statistics
+   * Update Prometheus metrics (still using 24h for consistency)
    */
-  async updateMarketMakerSummaries(): Promise<void> {
+  async updatePrometheusMetrics(): Promise<void> {
     try {
-      console.log('Updating market maker summaries...');
-
-      const query = `
+      const uptimeQuery = `
         WITH recent_stats AS (
           SELECT 
             market,
             trader,
-            timestamp,
-            is_active,
-            total_notional_usd,
-            bid_depth_100_bps,
-            ask_depth_100_bps
+            is_active
           FROM market_maker_stats
           WHERE timestamp > NOW() - INTERVAL '24 hours'
             AND total_notional_usd >= ${MIN_NOTIONAL_USD}
-        ),
-        summary_stats AS (
-          SELECT 
-            market,
-            trader,
-            MAX(timestamp) as last_active,
-            COUNT(*) as total_samples_24h,
-            COUNT(*) FILTER (WHERE is_active) as active_samples_24h,
-            CASE 
-              WHEN COUNT(*) > 0 THEN 
-                (COUNT(*) FILTER (WHERE is_active)::NUMERIC / COUNT(*)) * 100
-              ELSE 0 
-            END as uptime_24h,
-            -- Only calculate averages when active (non-zero depth)
-            AVG(bid_depth_100_bps) FILTER (WHERE is_active AND bid_depth_100_bps > 0) as avg_bid_depth_100_bps,
-            AVG(ask_depth_100_bps) FILTER (WHERE is_active AND ask_depth_100_bps > 0) as avg_ask_depth_100_bps
-          FROM recent_stats
-          GROUP BY market, trader
-        )
-        INSERT INTO market_maker_summary (
-          market, trader, last_active, uptime_24h, 
-          avg_bid_depth_100_bps, avg_ask_depth_100_bps,
-          total_samples_24h, active_samples_24h
         )
         SELECT 
-          market, trader, last_active, uptime_24h,
-          COALESCE(avg_bid_depth_100_bps, 0),
-          COALESCE(avg_ask_depth_100_bps, 0),
-          total_samples_24h, active_samples_24h
-        FROM summary_stats
-        ON CONFLICT (market, trader) DO UPDATE SET
-          last_active = EXCLUDED.last_active,
-          uptime_24h = EXCLUDED.uptime_24h,
-          avg_bid_depth_100_bps = EXCLUDED.avg_bid_depth_100_bps,
-          avg_ask_depth_100_bps = EXCLUDED.avg_ask_depth_100_bps,
-          total_samples_24h = EXCLUDED.total_samples_24h,
-          active_samples_24h = EXCLUDED.active_samples_24h
-      `;
-
-      await this.pool.query(query);
-
-      // Update Prometheus uptime metrics
-      const uptimeQuery = `
-        SELECT market, trader, uptime_24h 
-        FROM market_maker_summary 
-        WHERE uptime_24h > 0
+          market,
+          trader,
+          CASE 
+            WHEN COUNT(*) > 0 THEN 
+              (COUNT(*) FILTER (WHERE is_active)::NUMERIC / COUNT(*)) * 100
+            ELSE 0 
+          END as uptime_24h
+        FROM recent_stats
+        GROUP BY market, trader
+        HAVING COUNT(*) > 0
       `;
 
       const uptimeResult = await this.pool.query(uptimeQuery);
@@ -578,50 +529,140 @@ export class LiquidityMonitor {
         );
       }
 
-      console.log('Successfully updated market maker summaries');
+      console.log('Successfully updated Prometheus metrics');
     } catch (error) {
-      console.error('Error updating market maker summaries:', error);
+      console.error('Error updating Prometheus metrics:', error);
     }
   }
 
   /**
-   * Get market maker leaderboard
+   * Get market maker statistics for a specific time period
    */
-  async getMarketMakerLeaderboard(market?: string): Promise<any[]> {
+  async getMarketMakerStats(
+    options: {
+      market?: string;
+      trader?: string;
+      hours?: number; // How many hours back to look
+      startTimestamp?: number; // Unix timestamp (seconds)
+      endTimestamp?: number; // Unix timestamp (seconds)
+      limit?: number;
+    } = {},
+  ): Promise<any[]> {
     try {
+      const {
+        market,
+        trader,
+        hours = 24,
+        startTimestamp,
+        endTimestamp,
+        limit = 100,
+      } = options;
+
+      // Build time filter - prioritize timestamps over hours
+      let timeFilter = '';
+      if (startTimestamp && endTimestamp) {
+        timeFilter = `timestamp >= to_timestamp(${startTimestamp}) AND timestamp <= to_timestamp(${endTimestamp})`;
+      } else if (startTimestamp) {
+        timeFilter = `timestamp >= to_timestamp(${startTimestamp})`;
+      } else if (endTimestamp) {
+        timeFilter = `timestamp <= to_timestamp(${endTimestamp})`;
+      } else {
+        timeFilter = `timestamp > NOW() - INTERVAL '${hours} hours'`;
+      }
+
       let query = `
-        SELECT 
-          mms.*,
-          mis.volume_24h_usd,
-          mis.last_price
-        FROM market_maker_summary mms
-        LEFT JOIN LATERAL (
-          SELECT volume_24h_usd, last_price
-          FROM market_info_snapshots mis_inner
-          WHERE mis_inner.market = mms.market
-          ORDER BY timestamp DESC
-          LIMIT 1
-        ) mis ON true
-        WHERE mms.total_samples_24h > 0
+        WITH recent_stats AS (
+          SELECT 
+            market,
+            trader,
+            timestamp,
+            is_active,
+            total_notional_usd,
+            bid_depth_100_bps,
+            ask_depth_100_bps,
+            -- Track first and last seen times
+            MIN(timestamp) OVER (PARTITION BY market, trader) as first_seen,
+            MAX(timestamp) OVER (PARTITION BY market, trader) as last_seen
+          FROM market_maker_stats
+          WHERE ${timeFilter}
+            AND total_notional_usd >= ${MIN_NOTIONAL_USD}
       `;
 
       const params = [];
+      let paramIndex = 1;
+
       if (market) {
-        query += ' AND mms.market = $1';
+        query += ` AND market = ${paramIndex++}`;
         params.push(market);
       }
 
-      query += ` 
+      if (trader) {
+        query += ` AND trader = ${paramIndex++}`;
+        params.push(trader);
+      }
+
+      query += `
+        ),
+        summary_stats AS (
+          SELECT 
+            market,
+            trader,
+            MAX(last_seen) as last_active,
+            MIN(first_seen) as first_seen,
+            COUNT(*) as total_samples,
+            COUNT(*) FILTER (WHERE is_active) as active_samples,
+            CASE 
+              WHEN COUNT(*) > 0 THEN 
+                (COUNT(*) FILTER (WHERE is_active)::NUMERIC / COUNT(*)) * 100
+              ELSE 0 
+            END as uptime_percentage,
+            -- Calculate tracking period in hours
+            EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen))) / 3600 as tracking_hours,
+            -- Average depths when active
+            AVG(bid_depth_100_bps) FILTER (WHERE is_active AND bid_depth_100_bps > 0) as avg_bid_depth,
+            AVG(ask_depth_100_bps) FILTER (WHERE is_active AND ask_depth_100_bps > 0) as avg_ask_depth,
+            AVG(total_notional_usd) FILTER (WHERE is_active) as avg_notional_usd
+          FROM recent_stats
+          GROUP BY market, trader
+        )
+        SELECT 
+          ss.*,
+          COALESCE(ss.avg_bid_depth, 0) as avg_bid_depth_100_bps,
+          COALESCE(ss.avg_ask_depth, 0) as avg_ask_depth_100_bps,
+          COALESCE(ss.avg_bid_depth, 0) + COALESCE(ss.avg_ask_depth, 0) as total_avg_depth,
+          -- Market info
+          mis.volume_24h_usd,
+          mis.last_price,
+          -- Helpful display fields
+          CASE 
+            WHEN ss.tracking_hours < 1 THEN 'Less than 1 hour'
+            WHEN ss.tracking_hours < 24 THEN ROUND(ss.tracking_hours, 1) || ' hours'
+            ELSE ROUND(ss.tracking_hours / 24, 1) || ' days'
+          END as tracking_period,
+          ROUND(ss.uptime_percentage, 1) as uptime_percent,
+          -- Add timestamps for reference
+          EXTRACT(EPOCH FROM ss.first_seen) as first_seen_timestamp,
+          EXTRACT(EPOCH FROM ss.last_active) as last_active_timestamp
+        FROM summary_stats ss
+        LEFT JOIN LATERAL (
+          SELECT volume_24h_usd, last_price
+          FROM market_info_snapshots mis_inner
+          WHERE mis_inner.market = ss.market
+          ORDER BY timestamp DESC
+          LIMIT 1
+        ) mis ON true
         ORDER BY 
-          mms.uptime_24h DESC,
-          (mms.avg_bid_depth_100_bps + mms.avg_ask_depth_100_bps) DESC
-        LIMIT 100
+          ss.uptime_percentage DESC,
+          (COALESCE(ss.avg_bid_depth, 0) + COALESCE(ss.avg_ask_depth, 0)) DESC
+        LIMIT ${paramIndex}
       `;
+
+      params.push(limit);
 
       const result = await this.pool.query(query, params);
       return result.rows;
     } catch (error) {
-      console.error('Error getting market maker leaderboard:', error);
+      console.error('Error getting market maker stats:', error);
       return [];
     }
   }
@@ -637,11 +678,16 @@ export class LiquidityMonitor {
           mis.volume_24h_usd,
           mis.last_price,
           mis.timestamp,
-          COUNT(DISTINCT mms.trader) as unique_makers,
-          AVG(mms.uptime_24h) as avg_uptime,
-          SUM(mms.avg_bid_depth_100_bps + mms.avg_ask_depth_100_bps) as total_depth
+          COUNT(DISTINCT mms.trader) as unique_makers_24h,
+          -- Get current stats (last hour)
+          COUNT(DISTINCT mms_current.trader) as unique_makers_current
         FROM market_info_snapshots mis
-        LEFT JOIN market_maker_summary mms ON mis.market = mms.market
+        LEFT JOIN market_maker_stats mms ON mis.market = mms.market 
+          AND mms.timestamp > NOW() - INTERVAL '24 hours'
+          AND mms.total_notional_usd >= ${MIN_NOTIONAL_USD}
+        LEFT JOIN market_maker_stats mms_current ON mis.market = mms_current.market 
+          AND mms_current.timestamp > NOW() - INTERVAL '1 hour'
+          AND mms_current.total_notional_usd >= ${MIN_NOTIONAL_USD}
         WHERE mis.timestamp > NOW() - INTERVAL '1 hour'
         GROUP BY mis.market, mis.volume_24h_usd, mis.last_price, mis.timestamp
         ORDER BY mis.market, mis.timestamp DESC
@@ -694,14 +740,41 @@ const setupAPI = (monitor: LiquidityMonitor) => {
   app.use(cors());
   app.use(express.json());
 
-  // Market maker leaderboard
+  // Market maker statistics with flexible time periods
   app.get('/market-makers', async (req, res) => {
-    const market = req.query.market as string;
     try {
-      const leaderboard = await monitor.getMarketMakerLeaderboard(market);
-      res.json(leaderboard);
+      const market = req.query.market as string;
+      const trader = req.query.trader as string;
+      const hours = req.query.hours ? parseInt(req.query.hours as string) : 24;
+      const startTimestamp = req.query.start
+        ? parseInt(req.query.start as string)
+        : undefined;
+      const endTimestamp = req.query.end
+        ? parseInt(req.query.end as string)
+        : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+
+      const stats = await monitor.getMarketMakerStats({
+        market,
+        trader,
+        hours,
+        startTimestamp,
+        endTimestamp,
+        limit,
+      });
+
+      res.json({
+        data: stats,
+        meta: {
+          timeframe_hours: hours,
+          start_timestamp: startTimestamp,
+          end_timestamp: endTimestamp,
+          total_results: stats.length,
+          query_timestamp: new Date().toISOString(),
+        },
+      });
     } catch (error) {
-      console.error('Error getting leaderboard:', error);
+      console.error('Error getting market maker stats:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -713,6 +786,76 @@ const setupAPI = (monitor: LiquidityMonitor) => {
       res.json(stats);
     } catch (error) {
       console.error('Error getting market stats:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Raw market maker data for custom queries
+  app.get('/market-makers/raw', async (req, res) => {
+    try {
+      const market = req.query.market as string;
+      const trader = req.query.trader as string;
+      const hours = req.query.hours ? parseInt(req.query.hours as string) : 24;
+      const startTimestamp = req.query.start
+        ? parseInt(req.query.start as string)
+        : undefined;
+      const endTimestamp = req.query.end
+        ? parseInt(req.query.end as string)
+        : undefined;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string)
+        : 1000;
+
+      // Build time filter - prioritize timestamps over hours
+      let timeFilter = '';
+      if (startTimestamp && endTimestamp) {
+        timeFilter = `timestamp >= to_timestamp(${startTimestamp}) AND timestamp <= to_timestamp(${endTimestamp})`;
+      } else if (startTimestamp) {
+        timeFilter = `timestamp >= to_timestamp(${startTimestamp})`;
+      } else if (endTimestamp) {
+        timeFilter = `timestamp <= to_timestamp(${endTimestamp})`;
+      } else {
+        timeFilter = `timestamp > NOW() - INTERVAL '${hours} hours'`;
+      }
+
+      let query = `
+        SELECT *,
+          EXTRACT(EPOCH FROM timestamp) as timestamp_unix
+        FROM market_maker_stats
+        WHERE ${timeFilter}
+          AND total_notional_usd >= ${MIN_NOTIONAL_USD}
+      `;
+
+      const params = [];
+      let paramIndex = 1;
+
+      if (market) {
+        query += ` AND market = ${paramIndex++}`;
+        params.push(market);
+      }
+
+      if (trader) {
+        query += ` AND trader = ${paramIndex++}`;
+        params.push(trader);
+      }
+
+      query += ` ORDER BY timestamp DESC LIMIT ${paramIndex}`;
+      params.push(limit);
+
+      const result = await monitor.pool.query(query, params);
+
+      res.json({
+        data: result.rows,
+        meta: {
+          timeframe_hours: hours,
+          start_timestamp: startTimestamp,
+          end_timestamp: endTimestamp,
+          total_results: result.rows.length,
+          query_timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('Error getting raw market maker data:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
