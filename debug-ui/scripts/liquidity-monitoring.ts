@@ -588,17 +588,19 @@ export class LiquidityMonitor {
             AND total_notional_usd >= ${MIN_NOTIONAL_USD}
       `;
 
-      const params = [];
+      const params: any[] = [];
       let paramIndex = 1;
 
       if (market) {
-        query += ` AND market = ${paramIndex++}`;
+        query += ` AND market = $${paramIndex}`;
         params.push(market);
+        paramIndex++;
       }
 
       if (trader) {
-        query += ` AND trader = ${paramIndex++}`;
+        query += ` AND trader = $${paramIndex}`;
         params.push(trader);
+        paramIndex++;
       }
 
       query += `
@@ -654,7 +656,7 @@ export class LiquidityMonitor {
         ORDER BY 
           ss.uptime_percentage DESC,
           (COALESCE(ss.avg_bid_depth, 0) + COALESCE(ss.avg_ask_depth, 0)) DESC
-        LIMIT ${paramIndex}
+        LIMIT $${paramIndex}
       `;
 
       params.push(limit);
@@ -826,20 +828,22 @@ const setupAPI = (monitor: LiquidityMonitor) => {
           AND total_notional_usd >= ${MIN_NOTIONAL_USD}
       `;
 
-      const params = [];
+      const params: any[] = [];
       let paramIndex = 1;
 
       if (market) {
-        query += ` AND market = ${paramIndex++}`;
+        query += ` AND market = $${paramIndex}`;
         params.push(market);
+        paramIndex++;
       }
 
       if (trader) {
-        query += ` AND trader = ${paramIndex++}`;
+        query += ` AND trader = $${paramIndex}`;
         params.push(trader);
+        paramIndex++;
       }
 
-      query += ` ORDER BY timestamp DESC LIMIT ${paramIndex}`;
+      query += ` ORDER BY timestamp DESC LIMIT $${paramIndex}`;
       params.push(limit);
 
       const result = await monitor.pool.query(query, params);
