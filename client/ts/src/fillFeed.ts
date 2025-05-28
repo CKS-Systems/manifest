@@ -154,7 +154,7 @@ export class FillFeed {
     let originalSigner: string | undefined;
     try {
       const message = tx.transaction.message;
-      
+
       if ('accountKeys' in message) {
         // Legacy transaction
         originalSigner = message.accountKeys[0]?.toBase58();

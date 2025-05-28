@@ -119,7 +119,7 @@ export class ManifestStatsServer {
   private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
   private readonly KNOWN_AGGREGATORS = new Set([
     'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
- ]);
+  ]);
   private pool: Pool;
 
   constructor() {
@@ -508,7 +508,8 @@ export class ManifestStatsServer {
 
               this.traderTakerNotionalVolume.set(
                 actualTaker,
-                this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
+                this.traderTakerNotionalVolume.get(actualTaker)! +
+                  notionalVolume,
               );
 
               this.traderMakerNotionalVolume.set(

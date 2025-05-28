@@ -26,8 +26,8 @@ export type FillLogResult = {
   slot: number;
   /** Signature of the tx where the fill happened. */
   signature: string;
-  /** 
-   * Public key of the original transaction signer as base58. 
+  /**
+   * Public key of the original transaction signer as base58.
    * This represents the actual user when trades go through aggregators.
    * Optional for backwards compatibility.
    */
