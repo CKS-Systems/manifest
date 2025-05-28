@@ -202,7 +202,7 @@ export class FillFeed {
         takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
       });
       this.wss.clients.forEach((client) => {
-        client.send(JSON.stringify(fillResult));
+        client.send(fillResult);
       });
     }
   }
