@@ -117,7 +117,9 @@ export class ManifestStatsServer {
     'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ';
   private readonly USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
-
+  private readonly KNOWN_AGGREGATORS = new Set([
+    'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
+  ]);
   private pool: Pool;
 
   constructor() {
@@ -197,6 +199,17 @@ export class ManifestStatsServer {
     } else {
       acquisitionValues.set(baseMint, currentValue - usdcValue);
     }
+  }
+
+  private isKnownAggregator(address: string): boolean {
+    return this.KNOWN_AGGREGATORS.has(address);
+  }
+
+  private resolveActualTrader(trader: string, originalSigner?: string): string {
+    if (originalSigner && this.isKnownAggregator(trader)) {
+      return originalSigner;
+    }
+    return trader;
   }
 
   // TODO: PnL on all quote asset markets
@@ -355,6 +368,7 @@ export class ManifestStatsServer {
           slot,
           taker,
           maker,
+          originalSigner,
         } = fill;
 
         // Do not accept old spurious messages.
@@ -366,12 +380,15 @@ export class ManifestStatsServer {
         fills.inc({ market });
         console.log('Got fill', fill);
 
-        if (this.traderNumTakerTrades.get(taker) == undefined) {
-          this.traderNumTakerTrades.set(taker, 0);
+        const actualTaker = this.resolveActualTrader(taker, originalSigner);
+        // Assumes maker cannot be from an aggregator
+
+        if (this.traderNumTakerTrades.get(actualTaker) == undefined) {
+          this.traderNumTakerTrades.set(actualTaker, 0);
         }
         this.traderNumTakerTrades.set(
-          taker,
-          this.traderNumTakerTrades.get(taker)! + 1,
+          actualTaker,
+          this.traderNumTakerTrades.get(actualTaker)! + 1,
         );
 
         if (this.traderNumMakerTrades.get(maker) == undefined) {
@@ -382,8 +399,8 @@ export class ManifestStatsServer {
           this.traderNumMakerTrades.get(maker)! + 1,
         );
 
-        if (this.traderTakerNotionalVolume.get(taker) == undefined) {
-          this.traderTakerNotionalVolume.set(taker, 0);
+        if (this.traderTakerNotionalVolume.get(actualTaker) == undefined) {
+          this.traderTakerNotionalVolume.set(actualTaker, 0);
         }
         if (this.traderMakerNotionalVolume.get(maker) == undefined) {
           this.traderMakerNotionalVolume.set(maker, 0);
@@ -441,8 +458,8 @@ export class ManifestStatsServer {
             Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
 
           this.traderTakerNotionalVolume.set(
-            taker,
-            this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+            actualTaker,
+            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
           );
 
           this.traderMakerNotionalVolume.set(
@@ -452,12 +469,12 @@ export class ManifestStatsServer {
           const baseMint = marketObject.baseMint().toBase58();
 
           // Initialize position tracking maps if needed
-          this.initTraderPositionTracking(taker);
+          this.initTraderPositionTracking(actualTaker);
           this.initTraderPositionTracking(maker);
 
           // Update taker position (taker sells base, gets quote)
           this.updateTraderPosition(
-            taker,
+            actualTaker,
             baseMint,
             -Number(baseAtoms),
             Number(quoteAtoms),
@@ -490,8 +507,9 @@ export class ManifestStatsServer {
                 solPrice;
 
               this.traderTakerNotionalVolume.set(
-                taker,
-                this.traderTakerNotionalVolume.get(taker)! + notionalVolume,
+                actualTaker,
+                this.traderTakerNotionalVolume.get(actualTaker)! +
+                  notionalVolume,
               );
 
               this.traderMakerNotionalVolume.set(

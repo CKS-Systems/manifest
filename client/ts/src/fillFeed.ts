@@ -150,6 +150,22 @@ export class FillFeed {
       return;
     }
 
+    // Extract the original signer (fee payer/first signer)
+    let originalSigner: string | undefined;
+    try {
+      const message = tx.transaction.message;
+
+      if ('accountKeys' in message) {
+        // Legacy transaction
+        originalSigner = message.accountKeys[0]?.toBase58();
+      } else {
+        // Versioned transaction (v0) - use staticAccountKeys for the main accounts
+        originalSigner = message.staticAccountKeys[0]?.toBase58();
+      }
+    } catch (error) {
+      console.error('Error extracting original signer:', error);
+    }
+
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
       return message.includes('Program data:');
@@ -172,13 +188,13 @@ export class FillFeed {
       const deserializedFillLog: FillLog = FillLog.deserialize(
         buffer.subarray(8),
       )[0];
-      const resultString: string = JSON.stringify(
-        toFillLogResult(
-          deserializedFillLog,
-          signature.slot,
-          signature.signature,
-        ),
+      const fillResult = toFillLogResult(
+        deserializedFillLog,
+        signature.slot,
+        signature.signature,
+        originalSigner,
       );
+      const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
       fills.inc({
         market: deserializedFillLog.market.toString(),
@@ -186,15 +202,7 @@ export class FillFeed {
         takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
       });
       this.wss.clients.forEach((client) => {
-        client.send(
-          JSON.stringify(
-            toFillLogResult(
-              deserializedFillLog,
-              signature.slot,
-              signature.signature,
-            ),
-          ),
-        );
+        client.send(fillResult);
       });
     }
   }
@@ -206,8 +214,9 @@ function toFillLogResult(
   fillLog: FillLog,
   slot: number,
   signature: string,
+  originalSigner?: string,
 ): FillLogResult {
-  return {
+  const result: FillLogResult = {
     market: fillLog.market.toBase58(),
     maker: fillLog.maker.toBase58(),
     taker: fillLog.taker.toBase58(),
@@ -221,4 +230,10 @@ function toFillLogResult(
     signature,
     slot,
   };
+
+  if (originalSigner) {
+    result.originalSigner = originalSigner;
+  }
+
+  return result;
 }
