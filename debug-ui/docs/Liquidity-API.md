@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:3001
+https://mfx-liquidity-monitor-mainnet.fly.dev
 ```
 
 ## Authentication
@@ -46,25 +46,25 @@ Returns aggregated market maker statistics with uptime and depth averages.
 
 ```bash
 # Get daily market makers (default)
-curl "http://localhost:3001/market-makers"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers"
 
 # Get market makers for last 6 hours
-curl "http://localhost:3001/market-makers?hours=6"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?hours=6"
 
 # Get specific market's makers for last week
-curl "http://localhost:3001/market-makers?market=ABC123&hours=168"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?market=ABC123&hours=168"
 
 # Get specific trader's performance
-curl "http://localhost:3001/market-makers?trader=XYZ789&hours=24"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?trader=XYZ789&hours=24"
 
 # Use unix timestamps for precise time range
-curl "http://localhost:3001/market-makers?start=1640995200&end=1641081600"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?start=1640995200&end=1641081600"
 
 # Mixed: from timestamp to now
-curl "http://localhost:3001/market-makers?start=1640995200"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?start=1640995200"
 
 # Limit results
-curl "http://localhost:3001/market-makers?limit=20"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?limit=20"
 ```
 
 #### Response Format
@@ -144,13 +144,13 @@ Same as `/market-makers` endpoint.
 
 ```bash
 # Get raw data for charting
-curl "http://localhost:3001/market-makers/raw?trader=XYZ789&hours=24"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers/raw?trader=XYZ789&hours=24"
 
 # Get raw data for specific time period
-curl "http://localhost:3001/market-makers/raw?start=1640995200&end=1641081600"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers/raw?start=1640995200&end=1641081600"
 
 # Get raw data for specific market
-curl "http://localhost:3001/market-makers/raw?market=ABC123&limit=500"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers/raw?market=ABC123&limit=500"
 ```
 
 #### Response Format
@@ -211,7 +211,7 @@ Returns overview statistics for all monitored markets.
 #### Example Request
 
 ```bash
-curl "http://localhost:3001/markets"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/markets"
 ```
 
 #### Response Format
@@ -240,7 +240,7 @@ Simple health check endpoint.
 #### Example Request
 
 ```bash
-curl "http://localhost:3001/health"
+curl "https://mfx-liquidity-monitor-mainnet.fly.dev/health"
 ```
 
 #### Response Format
