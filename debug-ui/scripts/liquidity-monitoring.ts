@@ -18,6 +18,8 @@ import cors from 'cors';
 const MONITORING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_VOLUME_THRESHOLD_USD = 10_000; // $10k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
+const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const PORT = 3001;
 
 // Environment variables
@@ -55,6 +57,7 @@ interface MarketMakerStats {
   market: string;
   bidDepth: { [spreadBps: number]: number };
   askDepth: { [spreadBps: number]: number };
+  totalNotionalUsd: number;
   isActive: boolean;
   timestamp: Date;
 }
@@ -100,6 +103,7 @@ export class LiquidityMonitor {
           trader TEXT NOT NULL,
           timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           is_active BOOLEAN NOT NULL,
+          total_notional_usd NUMERIC DEFAULT 0,
           bid_depth_10_bps NUMERIC DEFAULT 0,
           bid_depth_50_bps NUMERIC DEFAULT 0,
           bid_depth_100_bps NUMERIC DEFAULT 0,
@@ -169,6 +173,10 @@ export class LiquidityMonitor {
       const volumeMap = new Map<string, number>();
       
       for (const ticker of tickers) {
+        const quoteMint = ticker.target_currency;
+          if (quoteMint !== USDC_MINT) {
+            continue;
+          }
         // Convert to USD using quote volume (assuming USDC quote)
         const volumeUsd = ticker.target_volume || 0;
         volumeMap.set(ticker.ticker_id, volumeUsd);
@@ -182,7 +190,7 @@ export class LiquidityMonitor {
   }
 
   /**
-   * Load eligible markets (>$10k 24hr volume)
+   * Load eligible markets (>$10k 24hr volume and USDC quote)
    */
   async loadEligibleMarkets(): Promise<void> {
     console.log('Loading eligible markets...');
@@ -210,26 +218,32 @@ export class LiquidityMonitor {
             continue;
           }
 
+          // Only include USDC quote markets
+          const quoteMint = market.quoteMint().toBase58();
+          if (quoteMint !== USDC_MINT) {
+            continue;
+          }
+
           this.markets.set(marketPk, market);
           
           this.marketInfo.set(marketPk, {
             address: marketPk,
             baseMint: market.baseMint().toBase58(),
-            quoteMint: market.quoteMint().toBase58(),
+            quoteMint: quoteMint,
             volume24hUsd: volume24h,
             lastPrice: 0, // Will be updated during monitoring
             baseDecimals: market.baseDecimals(),
             quoteDecimals: market.quoteDecimals(),
           });
 
-          console.log(`Added market ${marketPk} with $${volume24h.toLocaleString()} 24h volume`);
+          console.log(`Added USDC market ${marketPk} with ${volume24h.toLocaleString()} 24h volume`);
         } catch (error) {
           console.error(`Error loading market ${marketPk}:`, error);
         }
       }
     }
 
-    console.log(`Loaded ${this.markets.size} eligible markets`);
+    console.log(`Loaded ${this.markets.size} eligible USDC markets`);
   }
 
   /**
@@ -282,6 +296,17 @@ export class LiquidityMonitor {
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
       }
 
+      // Calculate total notional in USD (using 100bps depth as representative)
+      const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
+      const baseTokensToUsd = totalBaseTokens * midPrice * 
+        Math.pow(10, market.quoteDecimals() - market.baseDecimals());
+      const totalNotionalUsd = baseTokensToUsd / Math.pow(10, market.quoteDecimals());
+
+      // Only include if they meet minimum notional threshold
+      if (totalNotionalUsd < MIN_NOTIONAL_USD) {
+        continue;
+      }
+
       const isActive = traderBids.length > 0 || traderAsks.length > 0;
 
       stats.push({
@@ -289,6 +314,7 @@ export class LiquidityMonitor {
         market: market.address.toBase58(),
         bidDepth,
         askDepth,
+        totalNotionalUsd,
         isActive,
         timestamp: new Date(),
       });
@@ -377,6 +403,7 @@ export class LiquidityMonitor {
           stat.trader,
           stat.timestamp,
           stat.isActive,
+          stat.totalNotionalUsd,
           stat.bidDepth[10] || 0,
           stat.bidDepth[50] || 0,
           stat.bidDepth[100] || 0,
@@ -388,13 +415,13 @@ export class LiquidityMonitor {
         ]);
 
         const placeholders = batch.map((_, index) => {
-          const offset = index * 12;
-          return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12})`;
+          const offset = index * 13;
+          return `(${offset + 1}, ${offset + 2}, ${offset + 3}, ${offset + 4}, ${offset + 5}, ${offset + 6}, ${offset + 7}, ${offset + 8}, ${offset + 9}, ${offset + 10}, ${offset + 11}, ${offset + 12}, ${offset + 13})`;
         }).join(', ');
 
         const query = `
           INSERT INTO market_maker_stats (
-            market, trader, timestamp, is_active,
+            market, trader, timestamp, is_active, total_notional_usd,
             bid_depth_10_bps, bid_depth_50_bps, bid_depth_100_bps, bid_depth_200_bps,
             ask_depth_10_bps, ask_depth_50_bps, ask_depth_100_bps, ask_depth_200_bps
           ) VALUES ${placeholders}
@@ -445,10 +472,12 @@ export class LiquidityMonitor {
             trader,
             timestamp,
             is_active,
+            total_notional_usd,
             bid_depth_100_bps,
             ask_depth_100_bps
           FROM market_maker_stats
           WHERE timestamp > NOW() - INTERVAL '24 hours'
+            AND total_notional_usd >= ${MIN_NOTIONAL_USD}
         ),
         summary_stats AS (
           SELECT 
@@ -462,8 +491,9 @@ export class LiquidityMonitor {
                 (COUNT(*) FILTER (WHERE is_active)::NUMERIC / COUNT(*)) * 100
               ELSE 0 
             END as uptime_24h,
-            AVG(bid_depth_100_bps) FILTER (WHERE is_active) as avg_bid_depth_100_bps,
-            AVG(ask_depth_100_bps) FILTER (WHERE is_active) as avg_ask_depth_100_bps
+            -- Only calculate averages when active (non-zero depth)
+            AVG(bid_depth_100_bps) FILTER (WHERE is_active AND bid_depth_100_bps > 0) as avg_bid_depth_100_bps,
+            AVG(ask_depth_100_bps) FILTER (WHERE is_active AND ask_depth_100_bps > 0) as avg_ask_depth_100_bps
           FROM recent_stats
           GROUP BY market, trader
         )
