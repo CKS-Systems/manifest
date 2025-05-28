@@ -314,15 +314,10 @@ export class LiquidityMonitor {
 
       // Calculate total notional in USD (using 100bps depth as representative)
       const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
-      const baseTokensToUsd =
-        totalBaseTokens *
-        midPrice *
-        Math.pow(10, market.quoteDecimals() - market.baseDecimals());
-      const totalNotionalUsd =
-        baseTokensToUsd / Math.pow(10, market.quoteDecimals());
+      const totalNotionalUsd = totalBaseTokens * midPrice;
 
       console.log(
-        `Trader ${trader}: totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, baseDecimals=${market.baseDecimals()}, quoteDecimals=${market.quoteDecimals()}, totalNotionalUsd=${totalNotionalUsd}`,
+        `Trader ${trader}: totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, totalNotionalUsd=${totalNotionalUsd}`,
       );
 
       // Only include if they meet minimum notional threshold
