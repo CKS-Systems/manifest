@@ -240,7 +240,7 @@ export class LiquidityMonitor {
   /**
    * Calculate market maker depths at various spreads
    */
-  calculateMarketMakerDepths(market: Market): MarketMakerStats[] {
+  calculateMarketMakerDepths(market: Market, timestamp: Date): MarketMakerStats[] {
     const bids = market.bids();
     const asks = market.asks();
 
@@ -330,7 +330,7 @@ export class LiquidityMonitor {
         askDepth,
         totalNotionalUsd,
         isActive,
-        timestamp: new Date(),
+        timestamp: timestamp,
       });
     }
 
@@ -344,7 +344,8 @@ export class LiquidityMonitor {
    * Monitor all eligible markets
    */
   async monitorMarkets(): Promise<void> {
-    console.log('Starting market monitoring cycle...');
+    const cycleTimestamp = new Date();
+    console.log('Starting market monitoring cycle...', cycleTimestamp);
 
     const allStats: MarketMakerStats[] = [];
 
@@ -354,7 +355,7 @@ export class LiquidityMonitor {
         await market.reload(this.connection);
 
         // Calculate market maker stats
-        const marketStats = this.calculateMarketMakerDepths(market);
+        const marketStats = this.calculateMarketMakerDepths(market, cycleTimestamp);
         allStats.push(...marketStats);
 
         // Update last price in market info
@@ -405,7 +406,7 @@ export class LiquidityMonitor {
     }
 
     // Save stats to database
-    await this.saveStatsToDatabase(allStats);
+    await this.saveStatsToDatabase(allStats, cycleTimestamp);
 
     // Update summary statistics (using 24h for Prometheus)
     await this.updatePrometheusMetrics();
@@ -418,7 +419,7 @@ export class LiquidityMonitor {
   /**
    * Save market maker stats to database
    */
-  async saveStatsToDatabase(stats: MarketMakerStats[]): Promise<void> {
+  async saveStatsToDatabase(stats: MarketMakerStats[], timestamp: Date): Promise<void> {
     if (stats.length === 0) return;
 
     try {
@@ -469,7 +470,7 @@ export class LiquidityMonitor {
 
       // Save market info snapshots
       const marketInfoValues = Array.from(this.marketInfo.values()).flatMap(
-        (info) => [info.address, new Date(), info.volume24hUsd, info.lastPrice],
+        (info) => [info.address, timestamp, info.volume24hUsd, info.lastPrice],
       );
 
       if (marketInfoValues.length > 0) {
@@ -583,7 +584,7 @@ export class LiquidityMonitor {
         total_cycles_per_market AS (
           SELECT 
             market,
-            COUNT(DISTINCT timestamp) as total_possible_cycles
+            COUNT(DISTINCT DATE_TRUNC('minute', timestamp)) as total_possible_cycles
           FROM market_maker_stats
           WHERE ${timeFilter}
           GROUP BY market
