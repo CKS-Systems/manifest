@@ -9,8 +9,8 @@ import promBundle from 'express-prom-bundle';
 import cors from 'cors';
 
 // Configuration constants
-const MONITORING_INTERVAL_MS = 60 * 1000; // 1 minutes
-const MIN_VOLUME_THRESHOLD_USD = 10_000; // $10k minimum 24hr volume
+const MONITORING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MIN_VOLUME_THRESHOLD_USD = 1_000; // $1k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
 const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -77,6 +77,10 @@ export class LiquidityMonitor {
     this.pool = new Pool({
       connectionString: DATABASE_URL!,
       ssl: { rejectUnauthorized: false },
+      max: 3,
+      min: 1,
+      idleTimeoutMillis: 20000,
+      connectionTimeoutMillis: 8000,
     });
 
     this.pool.on('error', (err) => {
@@ -428,7 +432,7 @@ export class LiquidityMonitor {
       console.log('Saving market maker stats to database...');
 
       // Batch insert market maker stats
-      const batchSize = 100;
+      const batchSize = 50;
       for (let i = 0; i < stats.length; i += batchSize) {
         const batch = stats.slice(i, i + batchSize);
 
@@ -464,6 +468,10 @@ export class LiquidityMonitor {
         `;
 
         await this.pool.query(query, values);
+
+        if (i + batchSize < stats.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
 
       // Save market info snapshots
