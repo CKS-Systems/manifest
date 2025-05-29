@@ -589,11 +589,11 @@ export class LiquidityMonitor {
           WHERE ${timeFilter}
         ),
         total_cycles_per_market AS (
-          -- Count total monitoring cycles per market
           SELECT 
             market,
-            COUNT(*) as total_possible_cycles
-          FROM market_monitoring_cycles
+            COUNT(DISTINCT timestamp) as total_possible_cycles
+          FROM market_maker_stats
+          WHERE ${timeFilter}
           GROUP BY market
         ),
         recent_stats AS (
