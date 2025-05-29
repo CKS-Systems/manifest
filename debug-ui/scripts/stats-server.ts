@@ -365,6 +365,7 @@ export class ManifestStatsServer {
           baseAtoms,
           quoteAtoms,
           priceAtoms,
+          takerIsBuy,
           slot,
           taker,
           maker,
@@ -472,21 +473,20 @@ export class ManifestStatsServer {
           this.initTraderPositionTracking(actualTaker);
           this.initTraderPositionTracking(maker);
 
-          // Update taker position (taker sells base, gets quote)
           this.updateTraderPosition(
             actualTaker,
             baseMint,
-            -Number(baseAtoms),
-            Number(quoteAtoms),
+            takerIsBuy ? Number(baseAtoms) : -Number(baseAtoms),
+            takerIsBuy ? -Number(quoteAtoms) : Number(quoteAtoms),
             marketObject,
           );
 
-          // Update maker position (maker buys base, gives quote)
+          // Update maker position - opposite of taker
           this.updateTraderPosition(
             maker,
             baseMint,
-            Number(baseAtoms),
-            Number(quoteAtoms),
+            takerIsBuy ? -Number(baseAtoms) : Number(baseAtoms),
+            takerIsBuy ? Number(quoteAtoms) : -Number(quoteAtoms),
             marketObject,
           );
         } else if (quoteMint === this.SOL_MINT) {
