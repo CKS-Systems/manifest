@@ -283,10 +283,6 @@ export class LiquidityMonitor {
         (order) => order.trader.toBase58() === trader,
       );
 
-      console.log(
-        `Trader ${trader}: ${traderBids.length} bids, ${traderAsks.length} asks`,
-      );
-
       const bidDepth: { [spreadBps: number]: number } = {};
       const askDepth: { [spreadBps: number]: number } = {};
 
@@ -312,14 +308,11 @@ export class LiquidityMonitor {
       const totalNotionalUsd = totalBaseTokens * midPrice;
 
       console.log(
-        `Trader ${trader}: totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, totalNotionalUsd=${totalNotionalUsd}`,
+        `Trader ${trader}: ${traderBids.length} bids, ${traderAsks.length} asks, totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, totalNotionalUsd=${totalNotionalUsd}`,
       );
 
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
-        console.log(
-          `Trader ${trader}: Filtered out (notional ${totalNotionalUsd} < ${MIN_NOTIONAL_USD})`,
-        );
         filteredCount++;
         continue;
       }
@@ -579,15 +572,46 @@ export class LiquidityMonitor {
       }
 
       let query = `
-        WITH recent_stats AS (
+        WITH time_bounds AS (
+          -- Get the actual time range we're analyzing
+          SELECT 
+            MIN(timestamp) as start_time,
+            MAX(timestamp) as end_time
+          FROM market_maker_stats
+          WHERE ${timeFilter}
+        ),
+        market_monitoring_cycles AS (
+          -- Get all unique monitoring timestamps per market
+          SELECT DISTINCT 
+            market,
+            timestamp
+          FROM market_maker_stats
+          WHERE ${timeFilter}
+        ),
+        total_cycles_per_market AS (
+          -- Count total monitoring cycles per market
+          SELECT 
+            market,
+            COUNT(*) as total_possible_cycles
+          FROM market_monitoring_cycles
+          GROUP BY market
+        ),
+        recent_stats AS (
           SELECT 
             market,
             trader,
             timestamp,
             is_active,
             total_notional_usd,
+            -- Include ALL spread levels
+            bid_depth_10_bps,
+            bid_depth_50_bps,
             bid_depth_100_bps,
+            bid_depth_200_bps,
+            ask_depth_10_bps,
+            ask_depth_50_bps,
             ask_depth_100_bps,
+            ask_depth_200_bps,
             -- Track first and last seen times
             MIN(timestamp) OVER (PARTITION BY market, trader) as first_seen,
             MAX(timestamp) OVER (PARTITION BY market, trader) as last_seen
@@ -615,31 +639,56 @@ export class LiquidityMonitor {
         ),
         summary_stats AS (
           SELECT 
-            market,
-            trader,
-            MAX(last_seen) as last_active,
-            MIN(first_seen) as first_seen,
+            rs.market,
+            rs.trader,
+            MAX(rs.last_seen) as last_active,
+            MIN(rs.first_seen) as first_seen,
             COUNT(*) as total_samples,
-            COUNT(*) FILTER (WHERE is_active) as active_samples,
+            COUNT(*) FILTER (WHERE rs.is_active) as active_samples,
+            -- TRUE UPTIME: active samples / total possible cycles for this market
+            tcpm.total_possible_cycles,
             CASE 
-              WHEN COUNT(*) > 0 THEN 
-                (COUNT(*) FILTER (WHERE is_active)::NUMERIC / COUNT(*)) * 100
+              WHEN tcpm.total_possible_cycles > 0 THEN 
+                (COUNT(*) FILTER (WHERE rs.is_active)::NUMERIC / tcpm.total_possible_cycles) * 100
               ELSE 0 
             END as uptime_percentage,
+            -- PRESENCE: how often they appeared / total possible cycles
+            CASE 
+              WHEN tcpm.total_possible_cycles > 0 THEN 
+                (COUNT(*)::NUMERIC / tcpm.total_possible_cycles) * 100
+              ELSE 0 
+            END as presence_percentage,
             -- Calculate tracking period in hours
-            EXTRACT(EPOCH FROM (MAX(last_seen) - MIN(first_seen))) / 3600 as tracking_hours,
-            -- Average depths when active
-            AVG(bid_depth_100_bps) FILTER (WHERE is_active AND bid_depth_100_bps > 0) as avg_bid_depth,
-            AVG(ask_depth_100_bps) FILTER (WHERE is_active AND ask_depth_100_bps > 0) as avg_ask_depth,
-            AVG(total_notional_usd) FILTER (WHERE is_active) as avg_notional_usd
-          FROM recent_stats
-          GROUP BY market, trader
+            EXTRACT(EPOCH FROM (MAX(rs.last_seen) - MIN(rs.first_seen))) / 3600 as tracking_hours,
+            -- Average depths when active for ALL spread levels
+            AVG(rs.bid_depth_10_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_10_bps > 0) as avg_bid_depth_10_bps,
+            AVG(rs.bid_depth_50_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_50_bps > 0) as avg_bid_depth_50_bps,
+            AVG(rs.bid_depth_100_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_100_bps > 0) as avg_bid_depth_100_bps,
+            AVG(rs.bid_depth_200_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_200_bps > 0) as avg_bid_depth_200_bps,
+            AVG(rs.ask_depth_10_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_10_bps > 0) as avg_ask_depth_10_bps,
+            AVG(rs.ask_depth_50_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_50_bps > 0) as avg_ask_depth_50_bps,
+            AVG(rs.ask_depth_100_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_100_bps > 0) as avg_ask_depth_100_bps,
+            AVG(rs.ask_depth_200_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_200_bps > 0) as avg_ask_depth_200_bps,
+            AVG(rs.total_notional_usd) FILTER (WHERE rs.is_active) as avg_notional_usd
+          FROM recent_stats rs
+          JOIN total_cycles_per_market tcpm ON rs.market = tcpm.market
+          GROUP BY rs.market, rs.trader, tcpm.total_possible_cycles
         )
         SELECT 
           ss.*,
-          COALESCE(ss.avg_bid_depth, 0) as avg_bid_depth_100_bps,
-          COALESCE(ss.avg_ask_depth, 0) as avg_ask_depth_100_bps,
-          COALESCE(ss.avg_bid_depth, 0) + COALESCE(ss.avg_ask_depth, 0) as total_avg_depth,
+          -- Include all spread levels with COALESCE for null handling
+          COALESCE(ss.avg_bid_depth_10_bps, 0) as avg_bid_depth_10_bps,
+          COALESCE(ss.avg_bid_depth_50_bps, 0) as avg_bid_depth_50_bps,
+          COALESCE(ss.avg_bid_depth_100_bps, 0) as avg_bid_depth_100_bps,
+          COALESCE(ss.avg_bid_depth_200_bps, 0) as avg_bid_depth_200_bps,
+          COALESCE(ss.avg_ask_depth_10_bps, 0) as avg_ask_depth_10_bps,
+          COALESCE(ss.avg_ask_depth_50_bps, 0) as avg_ask_depth_50_bps,
+          COALESCE(ss.avg_ask_depth_100_bps, 0) as avg_ask_depth_100_bps,
+          COALESCE(ss.avg_ask_depth_200_bps, 0) as avg_ask_depth_200_bps,
+          -- Legacy fields for backward compatibility
+          COALESCE(ss.avg_bid_depth_100_bps, 0) as avg_bid_depth,
+          COALESCE(ss.avg_ask_depth_100_bps, 0) as avg_ask_depth,
+          COALESCE(ss.avg_bid_depth_100_bps, 0) + COALESCE(ss.avg_ask_depth_100_bps, 0) as total_avg_depth,
           -- Market info
           mis.volume_24h_usd,
           mis.last_price,
@@ -650,6 +699,7 @@ export class LiquidityMonitor {
             ELSE ROUND(ss.tracking_hours / 24, 1) || ' days'
           END as tracking_period,
           ROUND(ss.uptime_percentage, 1) as uptime_percent,
+          ROUND(ss.presence_percentage, 1) as presence_percent,
           -- Add timestamps for reference
           EXTRACT(EPOCH FROM ss.first_seen) as first_seen_timestamp,
           EXTRACT(EPOCH FROM ss.last_active) as last_active_timestamp
@@ -663,7 +713,7 @@ export class LiquidityMonitor {
         ) mis ON true
         ORDER BY 
           ss.uptime_percentage DESC,
-          (COALESCE(ss.avg_bid_depth, 0) + COALESCE(ss.avg_ask_depth, 0)) DESC
+          (COALESCE(ss.avg_bid_depth_100_bps, 0) + COALESCE(ss.avg_ask_depth_100_bps, 0)) DESC
         LIMIT $${paramIndex}
       `;
 
