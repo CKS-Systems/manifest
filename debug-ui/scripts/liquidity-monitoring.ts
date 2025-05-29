@@ -580,14 +580,6 @@ export class LiquidityMonitor {
           FROM market_maker_stats
           WHERE ${timeFilter}
         ),
-        market_monitoring_cycles AS (
-          -- Get all unique monitoring timestamps per market
-          SELECT DISTINCT 
-            market,
-            timestamp
-          FROM market_maker_stats
-          WHERE ${timeFilter}
-        ),
         total_cycles_per_market AS (
           SELECT 
             market,
