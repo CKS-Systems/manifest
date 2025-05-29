@@ -10,6 +10,7 @@
     "start:feed": "tsx scripts/start-fill-feed.ts",
     "run:pk-solflare-to-phantom": "tsx scripts/pk-solflare-to-phantom.ts",
     "stats": "tsx scripts/stats-server.ts",
+    "liquidity-monitoring": "tsx scripts/liquidity-monitoring.ts",
     "check-all": "yarn format && yarn lint",
     "fix-all": "yarn format:fix && yarn lint:fix",
     "format": "prettier -c app/ lib/ scripts/",
