@@ -463,7 +463,7 @@ export class LiquidityMonitor {
         await this.pool.query(query, values);
 
         if (i + batchSize < stats.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
       }
 
