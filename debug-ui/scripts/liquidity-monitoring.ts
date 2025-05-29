@@ -240,7 +240,10 @@ export class LiquidityMonitor {
   /**
    * Calculate market maker depths at various spreads
    */
-  calculateMarketMakerDepths(market: Market, timestamp: Date): MarketMakerStats[] {
+  calculateMarketMakerDepths(
+    market: Market,
+    timestamp: Date,
+  ): MarketMakerStats[] {
     const bids = market.bids();
     const asks = market.asks();
 
@@ -355,7 +358,10 @@ export class LiquidityMonitor {
         await market.reload(this.connection);
 
         // Calculate market maker stats
-        const marketStats = this.calculateMarketMakerDepths(market, cycleTimestamp);
+        const marketStats = this.calculateMarketMakerDepths(
+          market,
+          cycleTimestamp,
+        );
         allStats.push(...marketStats);
 
         // Update last price in market info
@@ -419,7 +425,10 @@ export class LiquidityMonitor {
   /**
    * Save market maker stats to database
    */
-  async saveStatsToDatabase(stats: MarketMakerStats[], timestamp: Date): Promise<void> {
+  async saveStatsToDatabase(
+    stats: MarketMakerStats[],
+    timestamp: Date,
+  ): Promise<void> {
     if (stats.length === 0) return;
 
     try {
