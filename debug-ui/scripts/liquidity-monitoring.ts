@@ -72,6 +72,8 @@ export class LiquidityMonitor {
   private markets: Map<string, Market> = new Map();
   private marketInfo: Map<string, MarketInfo> = new Map();
 
+   private isMonitoring = false;
+
   constructor() {
     this.connection = new Connection(RPC_URL!);
     this.pool = new Pool({
@@ -142,6 +144,12 @@ export class LiquidityMonitor {
       await this.pool.query(`
         CREATE INDEX IF NOT EXISTS idx_market_maker_stats_market_trader_timestamp 
         ON market_maker_stats(market, trader, timestamp)
+      `);
+
+      await this.pool.query(`
+        ALTER TABLE market_maker_stats 
+        ADD CONSTRAINT IF NOT EXISTS unique_market_trader_timestamp 
+        UNIQUE (market, trader, timestamp)
       `);
 
       console.log('Database schema initialized');
@@ -346,80 +354,91 @@ export class LiquidityMonitor {
   /**
    * Monitor all eligible markets
    */
-  async monitorMarkets(): Promise<void> {
-    const cycleTimestamp = new Date();
-    console.log('Starting market monitoring cycle...', cycleTimestamp);
-
-    const allStats: MarketMakerStats[] = [];
-
-    for (const [marketPk, market] of this.markets) {
-      try {
-        // Reload market data
-        await market.reload(this.connection);
-
-        // Calculate market maker stats
-        const marketStats = this.calculateMarketMakerDepths(
-          market,
-          cycleTimestamp,
-        );
-        allStats.push(...marketStats);
-
-        // Update last price in market info
-        const bids = market.bids();
-        const asks = market.asks();
-        if (bids.length > 0 && asks.length > 0) {
-          const bestBid = bids[bids.length - 1].tokenPrice;
-          const bestAsk = asks[asks.length - 1].tokenPrice;
-          const lastPrice = (bestBid + bestAsk) / 2;
-
-          const marketInfo = this.marketInfo.get(marketPk)!;
-          marketInfo.lastPrice = lastPrice;
-
-          // Update Prometheus metrics
-          marketVolume24h.set({ market: marketPk }, marketInfo.volume24hUsd);
-        }
-
-        // Update Prometheus metrics for market makers
-        for (const stat of marketStats) {
-          for (const spreadBps of SPREAD_BPS) {
-            marketMakerDepth.set(
-              {
-                market: marketPk,
-                trader: stat.trader,
-                side: 'bid',
-                spread_bps: spreadBps.toString(),
-              },
-              stat.bidDepth[spreadBps] || 0,
-            );
-            marketMakerDepth.set(
-              {
-                market: marketPk,
-                trader: stat.trader,
-                side: 'ask',
-                spread_bps: spreadBps.toString(),
-              },
-              stat.askDepth[spreadBps] || 0,
-            );
-          }
-        }
-
-        console.log(
-          `Processed ${marketStats.length} market makers for market ${marketPk}`,
-        );
-      } catch (error) {
-        console.error(`Error monitoring market ${marketPk}:`, error);
-      }
+async monitorMarkets(): Promise<void> {
+    if (this.isMonitoring) {
+      console.log('Previous monitoring cycle still running, skipping...');
+      return;
     }
 
-    // Save stats to database
-    await this.saveStatsToDatabase(allStats, cycleTimestamp);
+    this.isMonitoring = true;
+    
+    try {
+      const cycleTimestamp = new Date();
+      console.log('Starting market monitoring cycle...', cycleTimestamp);
 
-    // Update summary statistics (using 24h for Prometheus)
-    await this.updatePrometheusMetrics();
+      const allStats: MarketMakerStats[] = [];
 
-    console.log(
-      `Monitoring cycle complete. Processed ${allStats.length} total market maker entries.`,
-    );
+      for (const [marketPk, market] of this.markets) {
+        try {
+          // Reload market data
+          await market.reload(this.connection);
+
+          // Calculate market maker stats
+          const marketStats = this.calculateMarketMakerDepths(
+            market,
+            cycleTimestamp,
+          );
+          allStats.push(...marketStats);
+
+          // Update last price in market info
+          const bids = market.bids();
+          const asks = market.asks();
+          if (bids.length > 0 && asks.length > 0) {
+            const bestBid = bids[bids.length - 1].tokenPrice;
+            const bestAsk = asks[asks.length - 1].tokenPrice;
+            const lastPrice = (bestBid + bestAsk) / 2;
+
+            const marketInfo = this.marketInfo.get(marketPk)!;
+            marketInfo.lastPrice = lastPrice;
+
+            // Update Prometheus metrics
+            marketVolume24h.set({ market: marketPk }, marketInfo.volume24hUsd);
+          }
+
+          // Update Prometheus metrics for market makers
+          for (const stat of marketStats) {
+            for (const spreadBps of SPREAD_BPS) {
+              marketMakerDepth.set(
+                {
+                  market: marketPk,
+                  trader: stat.trader,
+                  side: 'bid',
+                  spread_bps: spreadBps.toString(),
+                },
+                stat.bidDepth[spreadBps] || 0,
+              );
+              marketMakerDepth.set(
+                {
+                  market: marketPk,
+                  trader: stat.trader,
+                  side: 'ask',
+                  spread_bps: spreadBps.toString(),
+                },
+                stat.askDepth[spreadBps] || 0,
+              );
+            }
+          }
+
+          console.log(
+            `Processed ${marketStats.length} market makers for market ${marketPk}`,
+          );
+        } catch (error) {
+          console.error(`Error monitoring market ${marketPk}:`, error);
+        }
+      }
+
+      // Save stats to database
+      await this.saveStatsToDatabase(allStats, cycleTimestamp);
+
+      // Update summary statistics (using 24h for Prometheus)
+      await this.updatePrometheusMetrics();
+
+      console.log(
+        `Monitoring cycle complete. Processed ${allStats.length} total market maker entries.`,
+      );
+    } finally {
+      this.isMonitoring = false;
+    }
   }
 
   /**
@@ -434,7 +453,7 @@ export class LiquidityMonitor {
     try {
       console.log('Saving market maker stats to database...');
 
-      // Batch insert market maker stats
+      // Batch insert market maker stats with UPSERT
       const batchSize = 50;
       for (let i = 0; i < stats.length; i += batchSize) {
         const batch = stats.slice(i, i + batchSize);
@@ -468,6 +487,18 @@ export class LiquidityMonitor {
             bid_depth_10_bps, bid_depth_50_bps, bid_depth_100_bps, bid_depth_200_bps,
             ask_depth_10_bps, ask_depth_50_bps, ask_depth_100_bps, ask_depth_200_bps
           ) VALUES ${placeholders}
+          ON CONFLICT (market, trader, timestamp) 
+          DO UPDATE SET 
+            is_active = EXCLUDED.is_active,
+            total_notional_usd = EXCLUDED.total_notional_usd,
+            bid_depth_10_bps = EXCLUDED.bid_depth_10_bps,
+            bid_depth_50_bps = EXCLUDED.bid_depth_50_bps,
+            bid_depth_100_bps = EXCLUDED.bid_depth_100_bps,
+            bid_depth_200_bps = EXCLUDED.bid_depth_200_bps,
+            ask_depth_10_bps = EXCLUDED.ask_depth_10_bps,
+            ask_depth_50_bps = EXCLUDED.ask_depth_50_bps,
+            ask_depth_100_bps = EXCLUDED.ask_depth_100_bps,
+            ask_depth_200_bps = EXCLUDED.ask_depth_200_bps
         `;
 
         await this.pool.query(query, values);
