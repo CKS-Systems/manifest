@@ -1423,26 +1423,26 @@ export class ManifestStatsServer {
       }
 
       // Load trader positions
-      const positionResult = await this.pool.query(
-        'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1',
-        [checkpointId],
-      );
+      // const positionResult = await this.pool.query(
+      //   'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1',
+      //   [checkpointId],
+      // );
 
-      for (const row of positionResult.rows) {
-        if (!this.traderPositions.has(row.trader)) {
-          this.traderPositions.set(row.trader, new Map());
-        }
-        if (!this.traderAcquisitionValue.has(row.trader)) {
-          this.traderAcquisitionValue.set(row.trader, new Map());
-        }
+      // for (const row of positionResult.rows) {
+      //   if (!this.traderPositions.has(row.trader)) {
+      //     this.traderPositions.set(row.trader, new Map());
+      //   }
+      //   if (!this.traderAcquisitionValue.has(row.trader)) {
+      //     this.traderAcquisitionValue.set(row.trader, new Map());
+      //   }
 
-        this.traderPositions
-          .get(row.trader)!
-          .set(row.mint, Number(row.position));
-        this.traderAcquisitionValue
-          .get(row.trader)!
-          .set(row.mint, Number(row.acquisition_value));
-      }
+      //   this.traderPositions
+      //     .get(row.trader)!
+      //     .set(row.mint, Number(row.position));
+      //   this.traderAcquisitionValue
+      //     .get(row.trader)!
+      //     .set(row.mint, Number(row.acquisition_value));
+      // }
 
       // Load fill logs
       const fillResult = await this.pool.query(
