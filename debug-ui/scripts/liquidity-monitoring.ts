@@ -146,11 +146,22 @@ export class LiquidityMonitor {
         ON market_maker_stats(market, trader, timestamp)
       `);
 
-      await this.pool.query(`
-        ALTER TABLE market_maker_stats 
-        ADD CONSTRAINT IF NOT EXISTS unique_market_trader_timestamp 
-        UNIQUE (market, trader, timestamp)
+      const constraintExists = await this.pool.query(`
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE table_name = 'market_maker_stats' 
+        AND constraint_name = 'unique_market_trader_timestamp'
       `);
+      
+      if (constraintExists.rows.length === 0) {
+        await this.pool.query(`
+          ALTER TABLE market_maker_stats 
+          ADD CONSTRAINT unique_market_trader_timestamp 
+          UNIQUE (market, trader, timestamp)
+        `);
+        console.log('Added unique constraint to prevent duplicate records');
+      } else {
+        console.log('Unique constraint already exists');
+      }
 
       console.log('Database schema initialized');
     } catch (error) {
