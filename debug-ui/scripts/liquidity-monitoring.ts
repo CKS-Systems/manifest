@@ -569,7 +569,7 @@ export class LiquidityMonitor {
         limit = 100,
       } = options;
 
-      // Build time filter - prioritize timestamps over hours
+      // Build time filter
       let timeFilter = '';
       if (startTimestamp && endTimestamp) {
         timeFilter = `timestamp >= to_timestamp(${startTimestamp}) AND timestamp <= to_timestamp(${endTimestamp})`;
@@ -581,16 +581,15 @@ export class LiquidityMonitor {
         timeFilter = `timestamp > NOW() - INTERVAL '${hours} hours'`;
       }
 
+      // Build market and trader filters safely
+      const marketFilter = market ? `AND market = '${market}'` : '';
+      const traderFilter = trader ? `AND trader = '${trader}'` : '';
+      const marketValue = market || 'ALL_MARKETS';
+      const marketCondition = market ? `mis_inner.market = '${market}'` : 'true';
+
+      // Build the query with proper string concatenation
       const query = `
-        WITH time_bounds AS (
-          SELECT 
-            MIN(timestamp) as start_time,
-            MAX(timestamp) as end_time
-          FROM market_maker_stats
-          WHERE ${timeFilter}
-        ),
-        -- For each trader-market combination, check if they were "up" in each cycle
-        trader_market_uptime AS (
+        WITH trader_market_uptime AS (
           SELECT 
             mms.market,
             mms.trader,
@@ -612,7 +611,7 @@ export class LiquidityMonitor {
             mms.ask_depth_100_bps,
             mms.ask_depth_200_bps
           FROM market_maker_stats mms
-          WHERE ${timeFilter}
+          WHERE ` + timeFilter + marketFilter + traderFilter + `
         ),
         -- Calculate per-market uptime for each trader
         per_market_uptime AS (
@@ -627,7 +626,7 @@ export class LiquidityMonitor {
             END as market_uptime_percentage,
             MIN(timestamp) as first_seen,
             MAX(timestamp) as last_active,
-            -- Average depths when up
+            -- Average depths when up (only calculate if they were up at least once)
             AVG(bid_depth_10_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_10_bps,
             AVG(bid_depth_50_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_50_bps,
             AVG(bid_depth_100_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_100_bps,
@@ -639,7 +638,7 @@ export class LiquidityMonitor {
             AVG(total_notional_usd) FILTER (WHERE is_up = 1) as avg_notional_usd
           FROM trader_market_uptime
           GROUP BY market, trader
-          HAVING COUNT(*) > 0
+          HAVING COUNT(*) > 0  -- Only include traders who appeared at least once
         ),
         -- Calculate trader-level statistics by averaging across their markets
         trader_summary AS (
@@ -647,14 +646,14 @@ export class LiquidityMonitor {
             trader,
             COUNT(DISTINCT market) as markets_active_on,
             -- Average uptime across all markets this trader operates on
-            AVG(market_uptime_percentage) as overall_uptime_percentage,
+            ROUND(AVG(market_uptime_percentage), 2) as overall_uptime_percentage,
             MIN(first_seen) as first_seen_overall,
             MAX(last_active) as last_active_overall,
             SUM(total_cycles_present) as total_samples,
             SUM(cycles_up) as active_samples,
-            -- Calculate tracking period
-            EXTRACT(EPOCH FROM (MAX(last_active) - MIN(first_seen))) / 3600 as tracking_hours,
-            -- Average depths across all markets
+            -- Calculate tracking period in hours
+            ROUND(EXTRACT(EPOCH FROM (MAX(last_active) - MIN(first_seen))) / 3600, 4) as tracking_hours,
+            -- Average depths across all markets (weighted equally per market)
             AVG(avg_bid_depth_10_bps) as avg_bid_depth_10_bps,
             AVG(avg_bid_depth_50_bps) as avg_bid_depth_50_bps,
             AVG(avg_bid_depth_100_bps) as avg_bid_depth_100_bps,
@@ -669,10 +668,7 @@ export class LiquidityMonitor {
         )
         -- Final result
         SELECT 
-          CASE 
-            WHEN $1 IS NOT NULL AND $1 != '' THEN pmu.market
-            ELSE 'ALL_MARKETS'
-          END as market,
+          '` + marketValue + `' as market,
           ts.trader,
           ts.last_active_overall as last_active,
           ts.first_seen_overall as first_seen,
@@ -682,6 +678,7 @@ export class LiquidityMonitor {
           ts.overall_uptime_percentage as uptime_percentage,
           ts.overall_uptime_percentage as presence_percentage,
           ts.tracking_hours,
+          -- Include all spread levels with proper null handling
           COALESCE(ts.avg_bid_depth_10_bps, 0) as avg_bid_depth_10_bps,
           COALESCE(ts.avg_bid_depth_50_bps, 0) as avg_bid_depth_50_bps,
           COALESCE(ts.avg_bid_depth_100_bps, 0) as avg_bid_depth_100_bps,
@@ -691,14 +688,14 @@ export class LiquidityMonitor {
           COALESCE(ts.avg_ask_depth_100_bps, 0) as avg_ask_depth_100_bps,
           COALESCE(ts.avg_ask_depth_200_bps, 0) as avg_ask_depth_200_bps,
           COALESCE(ts.avg_notional_usd, 0) as avg_notional_usd,
-          -- Legacy compatibility
+          -- Legacy compatibility fields
           COALESCE(ts.avg_bid_depth_100_bps, 0) as avg_bid_depth,
           COALESCE(ts.avg_ask_depth_100_bps, 0) as avg_ask_depth,
           COALESCE(ts.avg_bid_depth_100_bps, 0) + COALESCE(ts.avg_ask_depth_100_bps, 0) as total_avg_depth,
-          -- Market info
+          -- Get market info from latest snapshot
           mis.volume_24h_usd,
           mis.last_price,
-          -- Display fields
+          -- Display-friendly fields
           CASE 
             WHEN ts.tracking_hours < 1 THEN 'Less than 1 hour'
             WHEN ts.tracking_hours < 24 THEN ROUND(ts.tracking_hours, 1) || ' hours'
@@ -710,34 +707,26 @@ export class LiquidityMonitor {
           EXTRACT(EPOCH FROM ts.last_active_overall) as last_active_timestamp,
           ts.markets_active_on
         FROM trader_summary ts
-        LEFT JOIN per_market_uptime pmu ON (
-          ts.trader = pmu.trader 
-          AND ($1 IS NULL OR $1 = '' OR pmu.market = $1)
-        )
         LEFT JOIN LATERAL (
           SELECT volume_24h_usd, last_price
           FROM market_info_snapshots mis_inner
-          WHERE ($1 IS NULL OR $1 = '' OR mis_inner.market = $1)
+          WHERE ` + marketCondition + `
           ORDER BY timestamp DESC
           LIMIT 1
-        ) mis ON ($1 IS NOT NULL AND $1 != '')
-        WHERE ($2 IS NULL OR $2 = '' OR ts.trader = $2)
-          AND ($1 IS NULL OR $1 = '' OR pmu.market = $1)
+        ) mis ON true
         ORDER BY 
           ts.overall_uptime_percentage DESC,
           (COALESCE(ts.avg_bid_depth_100_bps, 0) + COALESCE(ts.avg_ask_depth_100_bps, 0)) DESC
-        LIMIT $3
+        LIMIT ` + limit + `
       `;
 
-      const params: any[] = [market || null, trader || null, limit];
-
-      const result = await this.pool.query(query, params);
+      const result = await this.pool.query(query);
       return result.rows;
     } catch (error) {
       console.error('Error getting market maker stats:', error);
       return [];
     }
-  }
+  };
 
   /**
    * Get market statistics
