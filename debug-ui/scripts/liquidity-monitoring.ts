@@ -72,7 +72,7 @@ export class LiquidityMonitor {
   private markets: Map<string, Market> = new Map();
   private marketInfo: Map<string, MarketInfo> = new Map();
 
-   private isMonitoring = false;
+  private isMonitoring = false;
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
@@ -151,7 +151,7 @@ export class LiquidityMonitor {
         WHERE table_name = 'market_maker_stats' 
         AND constraint_name = 'unique_market_trader_timestamp'
       `);
-      
+
       if (constraintExists.rows.length === 0) {
         await this.pool.query(`
           ALTER TABLE market_maker_stats 
@@ -365,14 +365,14 @@ export class LiquidityMonitor {
   /**
    * Monitor all eligible markets
    */
-async monitorMarkets(): Promise<void> {
+  async monitorMarkets(): Promise<void> {
     if (this.isMonitoring) {
       console.log('Previous monitoring cycle still running, skipping...');
       return;
     }
 
     this.isMonitoring = true;
-    
+
     try {
       const cycleTimestamp = new Date();
       console.log('Starting market monitoring cycle...', cycleTimestamp);
@@ -769,7 +769,7 @@ async monitorMarkets(): Promise<void> {
       console.error('Error getting market maker stats:', error);
       return [];
     }
-  };
+  }
 
   /**
    * Get market statistics
