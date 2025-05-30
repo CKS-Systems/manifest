@@ -581,145 +581,155 @@ export class LiquidityMonitor {
         timeFilter = `timestamp > NOW() - INTERVAL '${hours} hours'`;
       }
 
-      let query = `
+      const query = `
         WITH time_bounds AS (
-          -- Get the actual time range we're analyzing
           SELECT 
             MIN(timestamp) as start_time,
             MAX(timestamp) as end_time
           FROM market_maker_stats
           WHERE ${timeFilter}
         ),
-        total_cycles_per_market AS (
+        -- For each trader-market combination, check if they were "up" in each cycle
+        trader_market_uptime AS (
           SELECT 
-            market,
-            COUNT(DISTINCT timestamp) as total_possible_cycles
-          FROM market_maker_stats
+            mms.market,
+            mms.trader,
+            mms.timestamp,
+            -- Trader is "up" if they have ANY orders within 200bps spread AND meet min notional
+            CASE 
+              WHEN mms.total_notional_usd >= ${MIN_NOTIONAL_USD} 
+                  AND (mms.bid_depth_200_bps > 0 OR mms.ask_depth_200_bps > 0)
+              THEN 1 
+              ELSE 0 
+            END as is_up,
+            mms.total_notional_usd,
+            mms.bid_depth_10_bps,
+            mms.bid_depth_50_bps,
+            mms.bid_depth_100_bps,
+            mms.bid_depth_200_bps,
+            mms.ask_depth_10_bps,
+            mms.ask_depth_50_bps,
+            mms.ask_depth_100_bps,
+            mms.ask_depth_200_bps
+          FROM market_maker_stats mms
           WHERE ${timeFilter}
-          GROUP BY market
         ),
-        recent_stats AS (
+        -- Calculate per-market uptime for each trader
+        per_market_uptime AS (
           SELECT 
             market,
             trader,
-            timestamp,
-            is_active,
-            total_notional_usd,
-            -- Include ALL spread levels
-            bid_depth_10_bps,
-            bid_depth_50_bps,
-            bid_depth_100_bps,
-            bid_depth_200_bps,
-            ask_depth_10_bps,
-            ask_depth_50_bps,
-            ask_depth_100_bps,
-            ask_depth_200_bps,
-            -- Track first and last seen times
-            MIN(timestamp) OVER (PARTITION BY market, trader) as first_seen,
-            MAX(timestamp) OVER (PARTITION BY market, trader) as last_seen
-          FROM market_maker_stats
-          WHERE ${timeFilter}
-            AND total_notional_usd >= ${MIN_NOTIONAL_USD}
-      `;
-
-      const params: any[] = [];
-      let paramIndex = 1;
-
-      if (market) {
-        query += ` AND market = $${paramIndex}`;
-        params.push(market);
-        paramIndex++;
-      }
-
-      if (trader) {
-        query += ` AND trader = $${paramIndex}`;
-        params.push(trader);
-        paramIndex++;
-      }
-
-      query += `
+            COUNT(*) as total_cycles_present,
+            SUM(is_up) as cycles_up,
+            CASE 
+              WHEN COUNT(*) > 0 THEN (SUM(is_up)::NUMERIC / COUNT(*)) * 100
+              ELSE 0 
+            END as market_uptime_percentage,
+            MIN(timestamp) as first_seen,
+            MAX(timestamp) as last_active,
+            -- Average depths when up
+            AVG(bid_depth_10_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_10_bps,
+            AVG(bid_depth_50_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_50_bps,
+            AVG(bid_depth_100_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_100_bps,
+            AVG(bid_depth_200_bps) FILTER (WHERE is_up = 1) as avg_bid_depth_200_bps,
+            AVG(ask_depth_10_bps) FILTER (WHERE is_up = 1) as avg_ask_depth_10_bps,
+            AVG(ask_depth_50_bps) FILTER (WHERE is_up = 1) as avg_ask_depth_50_bps,
+            AVG(ask_depth_100_bps) FILTER (WHERE is_up = 1) as avg_ask_depth_100_bps,
+            AVG(ask_depth_200_bps) FILTER (WHERE is_up = 1) as avg_ask_depth_200_bps,
+            AVG(total_notional_usd) FILTER (WHERE is_up = 1) as avg_notional_usd
+          FROM trader_market_uptime
+          GROUP BY market, trader
+          HAVING COUNT(*) > 0
         ),
-        summary_stats AS (
+        -- Calculate trader-level statistics by averaging across their markets
+        trader_summary AS (
           SELECT 
-            rs.market,
-            rs.trader,
-            MAX(rs.last_seen) as last_active,
-            MIN(rs.first_seen) as first_seen,
-            COUNT(*) as total_samples,
-            COUNT(*) FILTER (WHERE rs.is_active) as active_samples,
-            -- TRUE UPTIME: active samples / total possible cycles for this market
-            tcpm.total_possible_cycles,
-            CASE 
-              WHEN tcpm.total_possible_cycles > 0 THEN 
-                (COUNT(*) FILTER (WHERE rs.is_active)::NUMERIC / tcpm.total_possible_cycles) * 100
-              ELSE 0 
-            END as uptime_percentage,
-            -- PRESENCE: how often they appeared / total possible cycles
-            CASE 
-              WHEN tcpm.total_possible_cycles > 0 THEN 
-                (COUNT(*)::NUMERIC / tcpm.total_possible_cycles) * 100
-              ELSE 0 
-            END as presence_percentage,
-            -- Calculate tracking period in hours
-            EXTRACT(EPOCH FROM (MAX(rs.last_seen) - MIN(rs.first_seen))) / 3600 as tracking_hours,
-            -- Average depths when active for ALL spread levels
-            AVG(rs.bid_depth_10_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_10_bps > 0) as avg_bid_depth_10_bps,
-            AVG(rs.bid_depth_50_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_50_bps > 0) as avg_bid_depth_50_bps,
-            AVG(rs.bid_depth_100_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_100_bps > 0) as avg_bid_depth_100_bps,
-            AVG(rs.bid_depth_200_bps) FILTER (WHERE rs.is_active AND rs.bid_depth_200_bps > 0) as avg_bid_depth_200_bps,
-            AVG(rs.ask_depth_10_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_10_bps > 0) as avg_ask_depth_10_bps,
-            AVG(rs.ask_depth_50_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_50_bps > 0) as avg_ask_depth_50_bps,
-            AVG(rs.ask_depth_100_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_100_bps > 0) as avg_ask_depth_100_bps,
-            AVG(rs.ask_depth_200_bps) FILTER (WHERE rs.is_active AND rs.ask_depth_200_bps > 0) as avg_ask_depth_200_bps,
-            AVG(rs.total_notional_usd) FILTER (WHERE rs.is_active) as avg_notional_usd
-          FROM recent_stats rs
-          JOIN total_cycles_per_market tcpm ON rs.market = tcpm.market
-          GROUP BY rs.market, rs.trader, tcpm.total_possible_cycles
+            trader,
+            COUNT(DISTINCT market) as markets_active_on,
+            -- Average uptime across all markets this trader operates on
+            AVG(market_uptime_percentage) as overall_uptime_percentage,
+            MIN(first_seen) as first_seen_overall,
+            MAX(last_active) as last_active_overall,
+            SUM(total_cycles_present) as total_samples,
+            SUM(cycles_up) as active_samples,
+            -- Calculate tracking period
+            EXTRACT(EPOCH FROM (MAX(last_active) - MIN(first_seen))) / 3600 as tracking_hours,
+            -- Average depths across all markets
+            AVG(avg_bid_depth_10_bps) as avg_bid_depth_10_bps,
+            AVG(avg_bid_depth_50_bps) as avg_bid_depth_50_bps,
+            AVG(avg_bid_depth_100_bps) as avg_bid_depth_100_bps,
+            AVG(avg_bid_depth_200_bps) as avg_bid_depth_200_bps,
+            AVG(avg_ask_depth_10_bps) as avg_ask_depth_10_bps,
+            AVG(avg_ask_depth_50_bps) as avg_ask_depth_50_bps,
+            AVG(avg_ask_depth_100_bps) as avg_ask_depth_100_bps,
+            AVG(avg_ask_depth_200_bps) as avg_ask_depth_200_bps,
+            AVG(avg_notional_usd) as avg_notional_usd
+          FROM per_market_uptime
+          GROUP BY trader
         )
+        -- Final result
         SELECT 
-          ss.*,
-          -- Include all spread levels with COALESCE for null handling
-          COALESCE(ss.avg_bid_depth_10_bps, 0) as avg_bid_depth_10_bps,
-          COALESCE(ss.avg_bid_depth_50_bps, 0) as avg_bid_depth_50_bps,
-          COALESCE(ss.avg_bid_depth_100_bps, 0) as avg_bid_depth_100_bps,
-          COALESCE(ss.avg_bid_depth_200_bps, 0) as avg_bid_depth_200_bps,
-          COALESCE(ss.avg_ask_depth_10_bps, 0) as avg_ask_depth_10_bps,
-          COALESCE(ss.avg_ask_depth_50_bps, 0) as avg_ask_depth_50_bps,
-          COALESCE(ss.avg_ask_depth_100_bps, 0) as avg_ask_depth_100_bps,
-          COALESCE(ss.avg_ask_depth_200_bps, 0) as avg_ask_depth_200_bps,
-          -- Legacy fields for backward compatibility
-          COALESCE(ss.avg_bid_depth_100_bps, 0) as avg_bid_depth,
-          COALESCE(ss.avg_ask_depth_100_bps, 0) as avg_ask_depth,
-          COALESCE(ss.avg_bid_depth_100_bps, 0) + COALESCE(ss.avg_ask_depth_100_bps, 0) as total_avg_depth,
+          CASE 
+            WHEN $1 IS NOT NULL AND $1 != '' THEN pmu.market
+            ELSE 'ALL_MARKETS'
+          END as market,
+          ts.trader,
+          ts.last_active_overall as last_active,
+          ts.first_seen_overall as first_seen,
+          ts.total_samples,
+          ts.active_samples,
+          NULL as total_possible_cycles,
+          ts.overall_uptime_percentage as uptime_percentage,
+          ts.overall_uptime_percentage as presence_percentage,
+          ts.tracking_hours,
+          COALESCE(ts.avg_bid_depth_10_bps, 0) as avg_bid_depth_10_bps,
+          COALESCE(ts.avg_bid_depth_50_bps, 0) as avg_bid_depth_50_bps,
+          COALESCE(ts.avg_bid_depth_100_bps, 0) as avg_bid_depth_100_bps,
+          COALESCE(ts.avg_bid_depth_200_bps, 0) as avg_bid_depth_200_bps,
+          COALESCE(ts.avg_ask_depth_10_bps, 0) as avg_ask_depth_10_bps,
+          COALESCE(ts.avg_ask_depth_50_bps, 0) as avg_ask_depth_50_bps,
+          COALESCE(ts.avg_ask_depth_100_bps, 0) as avg_ask_depth_100_bps,
+          COALESCE(ts.avg_ask_depth_200_bps, 0) as avg_ask_depth_200_bps,
+          COALESCE(ts.avg_notional_usd, 0) as avg_notional_usd,
+          -- Legacy compatibility
+          COALESCE(ts.avg_bid_depth_100_bps, 0) as avg_bid_depth,
+          COALESCE(ts.avg_ask_depth_100_bps, 0) as avg_ask_depth,
+          COALESCE(ts.avg_bid_depth_100_bps, 0) + COALESCE(ts.avg_ask_depth_100_bps, 0) as total_avg_depth,
           -- Market info
           mis.volume_24h_usd,
           mis.last_price,
-          -- Helpful display fields
+          -- Display fields
           CASE 
-            WHEN ss.tracking_hours < 1 THEN 'Less than 1 hour'
-            WHEN ss.tracking_hours < 24 THEN ROUND(ss.tracking_hours, 1) || ' hours'
-            ELSE ROUND(ss.tracking_hours / 24, 1) || ' days'
+            WHEN ts.tracking_hours < 1 THEN 'Less than 1 hour'
+            WHEN ts.tracking_hours < 24 THEN ROUND(ts.tracking_hours, 1) || ' hours'
+            ELSE ROUND(ts.tracking_hours / 24, 1) || ' days'
           END as tracking_period,
-          ROUND(ss.uptime_percentage, 1) as uptime_percent,
-          ROUND(ss.presence_percentage, 1) as presence_percent,
-          -- Add timestamps for reference
-          EXTRACT(EPOCH FROM ss.first_seen) as first_seen_timestamp,
-          EXTRACT(EPOCH FROM ss.last_active) as last_active_timestamp
-        FROM summary_stats ss
+          ROUND(ts.overall_uptime_percentage, 1) as uptime_percent,
+          ROUND(ts.overall_uptime_percentage, 1) as presence_percent,
+          EXTRACT(EPOCH FROM ts.first_seen_overall) as first_seen_timestamp,
+          EXTRACT(EPOCH FROM ts.last_active_overall) as last_active_timestamp,
+          ts.markets_active_on
+        FROM trader_summary ts
+        LEFT JOIN per_market_uptime pmu ON (
+          ts.trader = pmu.trader 
+          AND ($1 IS NULL OR $1 = '' OR pmu.market = $1)
+        )
         LEFT JOIN LATERAL (
           SELECT volume_24h_usd, last_price
           FROM market_info_snapshots mis_inner
-          WHERE mis_inner.market = ss.market
+          WHERE ($1 IS NULL OR $1 = '' OR mis_inner.market = $1)
           ORDER BY timestamp DESC
           LIMIT 1
-        ) mis ON true
+        ) mis ON ($1 IS NOT NULL AND $1 != '')
+        WHERE ($2 IS NULL OR $2 = '' OR ts.trader = $2)
+          AND ($1 IS NULL OR $1 = '' OR pmu.market = $1)
         ORDER BY 
-          ss.uptime_percentage DESC,
-          (COALESCE(ss.avg_bid_depth_100_bps, 0) + COALESCE(ss.avg_ask_depth_100_bps, 0)) DESC
-        LIMIT $${paramIndex}
+          ts.overall_uptime_percentage DESC,
+          (COALESCE(ts.avg_bid_depth_100_bps, 0) + COALESCE(ts.avg_ask_depth_100_bps, 0)) DESC
+        LIMIT $3
       `;
 
-      params.push(limit);
+      const params: any[] = [market || null, trader || null, limit];
 
       const result = await this.pool.query(query, params);
       return result.rows;
