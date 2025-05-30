@@ -477,7 +477,7 @@ export class ManifestStatsServer {
             actualTaker,
             baseMint,
             takerIsBuy ? Number(baseAtoms) : -Number(baseAtoms),
-            takerIsBuy ? -Number(quoteAtoms) : Number(quoteAtoms),
+            Number(quoteAtoms), // Set to opposite sign of base atoms in updateTraderPosition
             marketObject,
           );
 
@@ -486,7 +486,7 @@ export class ManifestStatsServer {
             maker,
             baseMint,
             takerIsBuy ? -Number(baseAtoms) : Number(baseAtoms),
-            takerIsBuy ? Number(quoteAtoms) : -Number(quoteAtoms),
+            Number(quoteAtoms), // Set to opposite sign of base atoms in updateTraderPosition
             marketObject,
           );
         } else if (quoteMint === this.SOL_MINT) {
