@@ -365,9 +365,6 @@ export class LiquidityMonitor {
   /**
    * Monitor all eligible markets
    */
-/**
-   * Monitor all eligible markets
-   */
   async monitorMarkets(): Promise<void> {
     if (this.isMonitoring) {
       console.log('Previous monitoring cycle still running, skipping...');
@@ -547,6 +544,59 @@ export class LiquidityMonitor {
 
       // Save stats to database
       await this.saveStatsToDatabase(uniqueStats, cycleTimestamp);
+
+      // SAMPLE COUNT TRACKING - Query current sample counts after save
+      console.log(`\n📊 SAMPLE COUNT TRACKING:`);
+      try {
+        const sampleCountQuery = `
+          SELECT 
+            market,
+            trader,
+            COUNT(*) as current_total_samples,
+            COUNT(*) FILTER (WHERE is_active) as current_active_samples,
+            MIN(timestamp) as first_seen,
+            MAX(timestamp) as last_seen
+          FROM market_maker_stats 
+          WHERE timestamp > NOW() - INTERVAL '24 hours'
+            AND total_notional_usd >= ${MIN_NOTIONAL_USD}
+          GROUP BY market, trader
+          ORDER BY current_total_samples DESC
+          LIMIT 10
+        `;
+        
+        const sampleResult = await this.pool.query(sampleCountQuery);
+        
+        for (const row of sampleResult.rows) {
+          const marketShort = row.market.slice(-8);
+          const traderShort = row.trader.slice(-8);
+          console.log(`   ...${marketShort} | ...${traderShort}: ${row.current_total_samples} total, ${row.current_active_samples} active`);
+        }
+        
+        // Special focus on CDY trader
+        const cdyQuery = `
+          SELECT 
+            market,
+            COUNT(*) as total_samples,
+            COUNT(*) FILTER (WHERE is_active) as active_samples,
+            MAX(timestamp) as last_update
+          FROM market_maker_stats 
+          WHERE trader = 'CDY3cxDRUrcJp8DNhPS8X6CR3FGDjrErYv1PcgsEeNMV'
+            AND timestamp > NOW() - INTERVAL '24 hours'
+          GROUP BY market
+        `;
+        
+        const cdyResult = await this.pool.query(cdyQuery);
+        if (cdyResult.rows.length > 0) {
+          console.log(`\n🎯 CDY TRADER SAMPLE TRACKING:`);
+          for (const row of cdyResult.rows) {
+            const marketShort = row.market.slice(-8);
+            console.log(`   Market ...${marketShort}: ${row.total_samples} samples, last update: ${row.last_update}`);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error querying sample counts:', error);
+      }
 
       // Update summary statistics (using 24h for Prometheus)
       await this.updatePrometheusMetrics();
