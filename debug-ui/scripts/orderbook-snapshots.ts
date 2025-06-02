@@ -491,18 +491,39 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
       }
 
       // Get total count for pagination
-      const countQuery = `
-        SELECT COUNT(DISTINCT os.id) as total
-        FROM orderbook_snapshots os
-        ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
-        WHERE ${timeFilter} ${additionalFilters.replace(/\$\d+/g, (match) => {
-          const num = parseInt(match.substring(1));
-          return num <= paramIndex - 2 ? match : `$${num - 2}`;
-        })}
-      `;
-      const countParams = params.slice(0, paramIndex - 2);
-      const countResult = await monitor.pool.query(countQuery, countParams);
-      const totalSnapshots = parseInt(countResult.rows[0].total);
+    let countQuery = `
+    SELECT COUNT(DISTINCT os.id) as total
+    FROM orderbook_snapshots os
+    ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
+    WHERE ${timeFilter}
+    `;
+
+    // Build count query parameters (exclude limit and offset)
+    const countParams = [];
+    let countParamIndex = 1;
+
+    // Add time parameters
+    if (startTime && endTime) {
+    countParams.push(startTime, endTime);
+    countParamIndex += 2;
+    }
+
+    // Add market filter if present
+    if (market) {
+    countQuery += ` AND os.market = $${countParamIndex}`;
+    countParams.push(market);
+    countParamIndex++;
+    }
+
+    // Add trader filter if present
+    if (trader) {
+    countQuery += ` AND o.trader = $${countParamIndex}`;
+    countParams.push(trader);
+    countParamIndex++;
+    }
+
+    const countResult = await monitor.pool.query(countQuery, countParams);
+    const totalSnapshots = parseInt(countResult.rows[0].total);
 
       // Then get all orders for those snapshots
       const orderQuery = `
