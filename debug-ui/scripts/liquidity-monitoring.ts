@@ -379,7 +379,9 @@ export class LiquidityMonitor {
 
       const allStats: MarketMakerStats[] = [];
 
-      for (const [marketPk, market] of this.markets) {
+      const marketsSnapshot = new Map(this.markets);
+
+      for (const [marketPk, market] of marketsSnapshot) {
         try {
           // Reload market data
           await market.reload(this.connection);
@@ -461,13 +463,27 @@ export class LiquidityMonitor {
   ): Promise<void> {
     if (stats.length === 0) return;
 
+    // Remove duplicates before batch insert
+    const uniqueStats = stats.filter((stat, index, array) => {
+      return index === array.findIndex(s => 
+        s.market === stat.market && 
+        s.trader === stat.trader && 
+        s.timestamp.getTime() === stat.timestamp.getTime()
+      );
+    });
+    
+    console.log(`Filtered ${stats.length - uniqueStats.length} duplicate records`);
+    if (stats.length - uniqueStats.length > 0) {
+      console.warn(`⚠️  Detected ${stats.length - uniqueStats.length} duplicates - race condition may exist`);
+    }
+
     try {
       console.log('Saving market maker stats to database...');
 
       // Batch insert market maker stats with UPSERT
       const batchSize = 50;
-      for (let i = 0; i < stats.length; i += batchSize) {
-        const batch = stats.slice(i, i + batchSize);
+      for (let i = 0; i < uniqueStats.length; i += batchSize) {
+        const batch = uniqueStats.slice(i, i + batchSize);
 
         const values = batch.flatMap((stat) => [
           stat.market,
@@ -514,7 +530,7 @@ export class LiquidityMonitor {
 
         await this.pool.query(query, values);
 
-        if (i + batchSize < stats.length) {
+        if (i + batchSize < uniqueStats.length) {
           await new Promise((resolve) => setTimeout(resolve, 200));
         }
       }
