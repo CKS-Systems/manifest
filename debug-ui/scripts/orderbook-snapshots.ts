@@ -460,18 +460,18 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
       }
 
       // First, get the snapshot IDs we want (limited by number of snapshots)
-      const snapshotQuery = `
-        SELECT DISTINCT os.id
-        FROM orderbook_snapshots os
-        ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
-        WHERE ${timeFilter} ${additionalFilters}
-        ORDER BY os.timestamp DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `;
-      params.push(snapshotLimit, offset);
+        const snapshotQuery = `
+            SELECT DISTINCT os.id, os.timestamp
+            FROM orderbook_snapshots os
+            ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
+            WHERE ${timeFilter} ${additionalFilters}
+            ORDER BY os.timestamp DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+            `;
+        params.push(snapshotLimit, offset);
 
-      const snapshotResult = await monitor.pool.query(snapshotQuery, params.slice(0, paramIndex + 1));
-      const snapshotIds = snapshotResult.rows.map(row => row.id);
+        const snapshotResult = await monitor.pool.query(snapshotQuery, params.slice(0, paramIndex + 1));
+        const snapshotIds = snapshotResult.rows.map(row => row.id);
 
       if (snapshotIds.length === 0) {
         return res.json({
