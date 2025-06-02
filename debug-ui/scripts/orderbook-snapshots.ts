@@ -282,56 +282,56 @@ export class MarketMakerLeaderboard {
   /**
    * Save orderbook snapshot to database
    */
-  async saveSnapshot(snapshot: OrderbookSnapshot): Promise<void> {
+    async saveSnapshot(snapshot: OrderbookSnapshot): Promise<void> {
     const client = await this.pool.connect();
     
     try {
-      await client.query('BEGIN');
+        await client.query('BEGIN');
 
-      // Insert snapshot record
-      const snapshotResult = await client.query(`
+        // Insert snapshot record
+        const snapshotResult = await client.query(`
         INSERT INTO orderbook_snapshots (market, timestamp, mid_price, best_bid, best_ask, volume_24h_usd)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
-      `, [
+        `, [
         snapshot.market, 
         snapshot.timestamp, 
         snapshot.midPrice, 
         snapshot.bestBid, 
         snapshot.bestAsk, 
         snapshot.volume24hUsd
-      ]);
+        ]);
 
-      const snapshotId = snapshotResult.rows[0].id;
+        const snapshotId = snapshotResult.rows[0].id;
 
-      // Batch insert orders
-      const allOrders = [
+        // Batch insert orders
+        const allOrders = [
         ...snapshot.bids.map(order => ['bid', order.price, order.quantity, order.trader]),
         ...snapshot.asks.map(order => ['ask', order.price, order.quantity, order.trader])
-      ];
+        ];
 
-      if (allOrders.length > 0) {
-        const orderValues = allOrders.map((order, index) => {
-          const offset = index * 4;
-          return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+        if (allOrders.length > 0) {
+        const orderValues = allOrders.map((_, index) => {
+            const offset = index * 5;
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
         }).join(', ');
 
         const orderParams = allOrders.flatMap(order => [snapshotId, ...order]);
 
         await client.query(`
-          INSERT INTO orders (snapshot_id, side, price, quantity, trader)
-          VALUES ${orderValues}
+            INSERT INTO orders (snapshot_id, side, price, quantity, trader)
+            VALUES ${orderValues}
         `, orderParams);
-      }
+        }
 
-      await client.query('COMMIT');
+        await client.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
+        await client.query('ROLLBACK');
+        throw error;
     } finally {
-      client.release();
+        client.release();
     }
-  }
+}
 
   /**
    * Take snapshots of all markets
