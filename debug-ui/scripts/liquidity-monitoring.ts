@@ -365,6 +365,9 @@ export class LiquidityMonitor {
   /**
    * Monitor all eligible markets
    */
+/**
+   * Monitor all eligible markets
+   */
   async monitorMarkets(): Promise<void> {
     if (this.isMonitoring) {
       console.log('Previous monitoring cycle still running, skipping...');
@@ -377,12 +380,35 @@ export class LiquidityMonitor {
       const cycleTimestamp = new Date();
       console.log('Starting market monitoring cycle...', cycleTimestamp);
 
+      // Track processing to detect duplicates
+      const processedMarkets = new Set<string>();
+      const duplicateDetection = new Map<string, number>();
       const allStats: MarketMakerStats[] = [];
 
+      // Create snapshot to prevent concurrent modification
       const marketsSnapshot = new Map(this.markets);
+      console.log(`📊 Processing ${marketsSnapshot.size} markets in snapshot`);
 
       for (const [marketPk, market] of marketsSnapshot) {
         try {
+          // DUPLICATE DETECTION LOGGING
+          if (processedMarkets.has(marketPk)) {
+            const count = duplicateDetection.get(marketPk) || 1;
+            duplicateDetection.set(marketPk, count + 1);
+            console.error(`🚨 DUPLICATE MARKET PROCESSING DETECTED!`);
+            console.error(`   Market: ${marketPk}`);
+            console.error(`   Processing attempt #${count + 1}`);
+            console.error(`   This should NEVER happen - investigating...`);
+            
+            // Log the current markets snapshot state
+            console.error(`   Markets in snapshot: ${marketsSnapshot.size}`);
+            console.error(`   Already processed: ${processedMarkets.size}`);
+            continue; // Skip duplicate processing
+          }
+          
+          processedMarkets.add(marketPk);
+          console.log(`🔍 Processing market ${processedMarkets.size}/${marketsSnapshot.size}: ${marketPk}`);
+
           // Reload market data
           await market.reload(this.connection);
 
@@ -391,7 +417,21 @@ export class LiquidityMonitor {
             market,
             cycleTimestamp,
           );
+          
+          console.log(`   Generated ${marketStats.length} market maker entries for ${marketPk}`);
+          
+          // CHECK FOR DUPLICATE MARKET MAKER ENTRIES FROM SINGLE MARKET
+          const statsBeforeAdd = allStats.length;
           allStats.push(...marketStats);
+          const statsAfterAdd = allStats.length;
+          const expectedIncrease = marketStats.length;
+          const actualIncrease = statsAfterAdd - statsBeforeAdd;
+          
+          if (expectedIncrease !== actualIncrease) {
+            console.error(`🚨 UNEXPECTED STATS ARRAY BEHAVIOR!`);
+            console.error(`   Expected increase: ${expectedIncrease}`);
+            console.error(`   Actual increase: ${actualIncrease}`);
+          }
 
           // Update last price in market info
           const bids = market.bids();
@@ -401,11 +441,12 @@ export class LiquidityMonitor {
             const bestAsk = asks[asks.length - 1].tokenPrice;
             const lastPrice = (bestBid + bestAsk) / 2;
 
-            const marketInfo = this.marketInfo.get(marketPk)!;
-            marketInfo.lastPrice = lastPrice;
-
-            // Update Prometheus metrics
-            marketVolume24h.set({ market: marketPk }, marketInfo.volume24hUsd);
+            const marketInfo = this.marketInfo.get(marketPk);
+            if (marketInfo) {
+              marketInfo.lastPrice = lastPrice;
+              // Update Prometheus metrics
+              marketVolume24h.set({ market: marketPk }, marketInfo.volume24hUsd);
+            }
           }
 
           // Update Prometheus metrics for market makers
@@ -433,21 +474,85 @@ export class LiquidityMonitor {
           }
 
           console.log(
-            `Processed ${marketStats.length} market makers for market ${marketPk}`,
+            `✅ Processed ${marketStats.length} market makers for market ${marketPk}`,
           );
         } catch (error) {
-          console.error(`Error monitoring market ${marketPk}:`, error);
+          console.error(`❌ Error monitoring market ${marketPk}:`, error);
         }
       }
 
+      // FINAL DUPLICATE ANALYSIS BEFORE DATABASE SAVE
+      console.log(`\n📈 CYCLE SUMMARY:`);
+      console.log(`   Markets in snapshot: ${marketsSnapshot.size}`);
+      console.log(`   Markets processed: ${processedMarkets.size}`);
+      console.log(`   Total stats generated: ${allStats.length}`);
+      
+      if (duplicateDetection.size > 0) {
+        console.error(`🚨 DUPLICATE MARKET PROCESSING SUMMARY:`);
+        for (const [market, count] of duplicateDetection) {
+          console.error(`   ${market}: processed ${count + 1} times`);
+        }
+      }
+
+      // ANALYZE STATS FOR DUPLICATES
+      const statsByKey = new Map<string, number>();
+      const duplicateStats: MarketMakerStats[] = [];
+      
+      for (const stat of allStats) {
+        const key = `${stat.market}|${stat.trader}|${stat.timestamp.getTime()}`;
+        const existing = statsByKey.get(key) || 0;
+        statsByKey.set(key, existing + 1);
+        
+        if (existing > 0) {
+          duplicateStats.push(stat);
+          console.error(`🚨 DUPLICATE STAT DETECTED:`);
+          console.error(`   Market: ${stat.market}`);
+          console.error(`   Trader: ${stat.trader}`);
+          console.error(`   Timestamp: ${stat.timestamp.toISOString()}`);
+          console.error(`   Occurrence #${existing + 1}`);
+        }
+      }
+
+      // Enhanced duplicate filtering with logging
+      const uniqueStats = allStats.filter((stat, index, array) => {
+        return index === array.findIndex(s => 
+          s.market === stat.market && 
+          s.trader === stat.trader && 
+          s.timestamp.getTime() === stat.timestamp.getTime()
+        );
+      });
+      
+      const duplicateCount = allStats.length - uniqueStats.length;
+      if (duplicateCount > 0) {
+        console.error(`🚨 FILTERED ${duplicateCount} DUPLICATE RECORDS`);
+        console.error(`   Original stats: ${allStats.length}`);
+        console.error(`   Unique stats: ${uniqueStats.length}`);
+        console.error(`   Duplicates removed: ${duplicateCount}`);
+        
+        // Log details about what was duplicated
+        const duplicateBreakdown = new Map<string, number>();
+        for (const duplicate of duplicateStats) {
+          const market = duplicate.market.slice(-8); // Last 8 chars for brevity
+          const count = duplicateBreakdown.get(market) || 0;
+          duplicateBreakdown.set(market, count + 1);
+        }
+        
+        console.error(`   Duplicate breakdown by market:`);
+        for (const [market, count] of duplicateBreakdown) {
+          console.error(`     ...${market}: ${count} duplicates`);
+        }
+      } else {
+        console.log(`✅ No duplicates detected in stats array`);
+      }
+
       // Save stats to database
-      await this.saveStatsToDatabase(allStats, cycleTimestamp);
+      await this.saveStatsToDatabase(uniqueStats, cycleTimestamp);
 
       // Update summary statistics (using 24h for Prometheus)
       await this.updatePrometheusMetrics();
 
       console.log(
-        `Monitoring cycle complete. Processed ${allStats.length} total market maker entries.`,
+        `✅ Monitoring cycle complete. Processed ${uniqueStats.length} total market maker entries.`,
       );
     } finally {
       this.isMonitoring = false;
