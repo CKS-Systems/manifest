@@ -105,6 +105,8 @@ export class ManifestStatsServer {
 
   // Recent fill log results
   private fillLogResults: Map<string, FillLogResult[]> = new Map();
+  private processedFills: Set<string> = new Set();
+  private readonly MAX_PROCESSED_FILLS = 10000;
 
   // Mutex to guard all the recent fills, volume, ... Most important for recent
   // fills when a fill spills over to multiple maker orders and bursts in fill
@@ -121,6 +123,38 @@ export class ManifestStatsServer {
     'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
   ]);
   private pool: Pool;
+
+  private createFillKey(fill: FillLogResult): string {
+    const { 
+      market, 
+      maker, 
+      taker, 
+      makerSequenceNumber, 
+      takerSequenceNumber, 
+      signature 
+    } = fill;
+        return `${market}:${maker}:${taker}:${makerSequenceNumber}:${takerSequenceNumber}:${signature}`;
+  }
+
+  private isDuplicateFill(fill: FillLogResult): boolean {
+    const fillKey = this.createFillKey(fill);
+    return this.processedFills.has(fillKey);
+  }
+
+  private markFillAsProcessed(fill: FillLogResult): void {
+    const fillKey = this.createFillKey(fill);
+    
+    this.processedFills.add(fillKey);
+    
+    // Prevent memory bloat by keeping only recent fills
+    if (this.processedFills.size > this.MAX_PROCESSED_FILLS) {
+      // Convert to array, remove oldest 20%, convert back to set
+      const fillArray = Array.from(this.processedFills);
+      const removeCount = Math.floor(this.MAX_PROCESSED_FILLS * 0.2);
+      const keepFills = fillArray.slice(removeCount);
+      this.processedFills = new Set(keepFills);
+    }
+  }
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
@@ -360,26 +394,29 @@ export class ManifestStatsServer {
     this.ws.onmessage = (message) => {
       this.fillMutex.runExclusive(async () => {
         const fill: FillLogResult = JSON.parse(message.data.toString());
+        
+        // Check for duplicate fill using robust key
+        if (this.isDuplicateFill(fill)) {
+          console.log('Duplicate fill detected, skipping:', this.createFillKey(fill));
+          return;
+        }
+
+        // Mark fill as processed
+        this.markFillAsProcessed(fill);
+
         const {
           market,
           baseAtoms,
           quoteAtoms,
           priceAtoms,
           takerIsBuy,
-          slot,
           taker,
           maker,
           originalSigner,
         } = fill;
 
-        // Do not accept old spurious messages.
-        if (this.lastFillSlot > slot) {
-          return;
-        }
-        this.lastFillSlot = slot;
-
         fills.inc({ market });
-        console.log('Got fill', fill);
+        console.log('Processing new fill:', this.createFillKey(fill));
 
         const actualTaker = this.resolveActualTrader(taker, originalSigner);
         // Assumes maker cannot be from an aggregator
@@ -537,6 +574,7 @@ export class ManifestStatsServer {
    */
   async initialize(): Promise<void> {
     await this.loadState();
+    await this.loadProcessedFills();
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
     marketProgramAccounts.forEach(
@@ -1084,6 +1122,24 @@ export class ManifestStatsServer {
         )
       `);
 
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS processed_fills (
+          id SERIAL PRIMARY KEY,
+          fill_key TEXT UNIQUE NOT NULL,
+          processed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          slot BIGINT,
+          signature TEXT
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_processed_fills_key ON processed_fills(fill_key)
+      `);
+
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_processed_fills_processed_at ON processed_fills(processed_at)
+      `);
+
       console.log('Database schema initialized');
     } catch (error) {
       console.error('Error initializing database:', error);
@@ -1096,6 +1152,7 @@ export class ManifestStatsServer {
    */
   async saveState(): Promise<void> {
     console.log('Saving state to database...');
+    await this.saveProcessedFills();
 
     let client;
     try {
@@ -1459,6 +1516,54 @@ export class ManifestStatsServer {
     } catch (error) {
       console.error('Error loading state from database:', error);
       return false;
+    }
+  }
+
+  // Load processed fills from database on startup
+  async loadProcessedFills(): Promise<void> {
+    try {
+      // Load recent processed fills to prevent reprocessing after restart
+      const result = await this.pool.query(`
+        SELECT fill_key 
+        FROM processed_fills 
+        WHERE processed_at > NOW() - INTERVAL '24 hours'
+        ORDER BY processed_at DESC
+        LIMIT $1
+      `, [this.MAX_PROCESSED_FILLS]);
+
+      this.processedFills = new Set(result.rows.map(row => row.fill_key));
+      console.log(`Loaded ${this.processedFills.size} processed fills from database`);
+    } catch (error) {
+      console.error('Error loading processed fills:', error);
+    }
+  }
+
+  // Save processed fills to database
+  async saveProcessedFills(): Promise<void> {
+    try {
+      // Clean up old entries first (keep last 30 days)
+      await this.pool.query(`
+        DELETE FROM processed_fills 
+        WHERE processed_at < NOW() - INTERVAL '30 days'
+      `);
+
+      // Insert new processed fills (using ON CONFLICT to handle duplicates)
+      const fillKeys = Array.from(this.processedFills);
+      
+      if (fillKeys.length === 0) return;
+
+      // Batch insert for efficiency
+      const values = fillKeys.map((_, index) => `($${index + 1})`).join(',');
+      const query = `
+        INSERT INTO processed_fills (fill_key) 
+        VALUES ${values}
+        ON CONFLICT (fill_key) DO NOTHING
+      `;
+
+      await this.pool.query(query, fillKeys);
+      console.log(`Saved ${fillKeys.length} processed fill keys to database`);
+    } catch (error) {
+      console.error('Error saving processed fills:', error);
     }
   }
 }
