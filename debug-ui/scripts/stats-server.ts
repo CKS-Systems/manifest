@@ -366,17 +366,10 @@ export class ManifestStatsServer {
           quoteAtoms,
           priceAtoms,
           takerIsBuy,
-          slot,
           taker,
           maker,
           originalSigner,
         } = fill;
-
-        // Do not accept old spurious messages.
-        if (this.lastFillSlot > slot) {
-          return;
-        }
-        this.lastFillSlot = slot;
 
         fills.inc({ market });
         console.log('Got fill', fill);
