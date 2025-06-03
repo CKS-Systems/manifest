@@ -100,11 +100,24 @@ export class FillFeed {
       // Flip it so we do oldest first.
       signatures.reverse();
 
-      // If there is only 1, do not use it because it could get stuck on the same sig.
-      if (signatures.length <= 1) {
+      // Process even single signatures, but handle the edge case differently
+      if (signatures.length === 0) {
+        continue;
+      }
+
+      // If we only got back the same signature we already processed, skip it
+      if (
+        signatures.length === 1 &&
+        signatures[0].signature === lastSignature
+      ) {
         continue;
       }
       for (const signature of signatures) {
+        // Skip if we already processed this signature
+        if (signature.signature === lastSignature) {
+          continue;
+        }
+
         // Separately track the last slot. This is necessary because sometimes
         // gsfa ignores the until param and just gives 1_000 signatures.
         if (signature.slot < lastSlot) {
