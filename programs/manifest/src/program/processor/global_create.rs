@@ -38,12 +38,19 @@ pub(crate) fn process_global_create(
 
         // Make the global account.
         {
-            let (_global_key, global_bump) = get_global_address(global_mint.info.key);
+            let (expected_global_key, global_bump) = get_global_address(global_mint.info.key);
             let global_seeds: Vec<Vec<u8>> = vec![
                 b"global".to_vec(),
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_bump],
             ];
+            assert_eq!(expected_global_key, *global.info.key);
+            // Known griefing attack vector where somebody can send rent to this
+            // address which will make this fail. If that becomes an issue, we
+            // will evaluate addressing here and below for the vault. The reason
+            // it would be a problem is that globals are at a fixed permanent
+            // address for a mint. Since the most likely to be used globals are
+            // already initialized (SOL, USDC), prefer not to change the code.
             create_account(
                 payer.as_ref(),
                 global.as_ref(),
@@ -74,13 +81,14 @@ pub(crate) fn process_global_create(
                 spl_token::id()
             };
 
-            let (_global_vault_key, global_vault_bump) =
+            let (expected_global_vault_key, global_vault_bump) =
                 get_global_vault_address(global_mint.info.key);
             let global_vault_seeds: Vec<Vec<u8>> = vec![
                 b"global-vault".to_vec(),
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_vault_bump],
             ];
+            assert_eq!(expected_global_vault_key, *global_vault.info.key);
             let rent: Rent = Rent::get()?;
 
             if is_mint_22 {
