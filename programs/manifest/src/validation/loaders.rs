@@ -12,7 +12,7 @@ use crate::{
     program::ManifestError,
     require,
     state::{GlobalFixed, MarketFixed},
-    validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo},
+    validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo, get_global_address},
 };
 
 use super::{get_vault_address, ManifestAccountInfo, TokenProgram};
@@ -391,6 +391,19 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                         &expected_global_vault_address,
                     )?;
 
+                // Assert that the global itself is at the expected address.
+                // This prevents an attack where the attacker maliciously makes
+                // an account and then assigns it to our program. They can make
+                // the discriminator and owner match, however they cannot put it
+                // at the correct address because that requires signing the PDA
+                // which only happens through our init.
+                let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+                require!(
+                    expected_global_key == *global.info.key,
+                    ManifestError::MissingGlobal,
+                    "Unexpected global accounts",
+                )?;
+
                 let index: usize = if *global_mint_key == base_mint_key {
                     0
                 } else {
@@ -543,6 +556,14 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     let global_data: Ref<&mut [u8]> = global.data.borrow();
                     let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                     let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
+                    
+                    let global_mint_key: &Pubkey = global_fixed.get_mint();
+                    let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+                    require!(
+                        expected_global_key == *global.info.key,
+                        ManifestError::MissingGlobal,
+                        "Unexpected global accounts",
+                    )?;
 
                     let global_vault: TokenAccountInfo<'a, 'info> =
                         TokenAccountInfo::new_with_owner_and_key(
