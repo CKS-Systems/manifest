@@ -218,11 +218,11 @@ export class ManifestStatsServer {
       // Update trader counts
       this.traderNumTakerTrades.set(
         actualTaker,
-        (this.traderNumTakerTrades.get(actualTaker) || 0) + 1
+        (this.traderNumTakerTrades.get(actualTaker) || 0) + 1,
       );
       this.traderNumMakerTrades.set(
         maker,
-        (this.traderNumMakerTrades.get(maker) || 0) + 1
+        (this.traderNumMakerTrades.get(maker) || 0) + 1,
       );
 
       // Initialize notional volumes if needed
@@ -246,24 +246,31 @@ export class ManifestStatsServer {
       // Update price and volume
       lastPrice.set(
         { market },
-        priceAtoms * 10 ** (marketObject.baseDecimals() - marketObject.quoteDecimals())
+        priceAtoms *
+          10 ** (marketObject.baseDecimals() - marketObject.quoteDecimals()),
       );
 
       this.lastPriceByMarket.set(market, priceAtoms);
       this.baseVolumeAtomsSinceLastCheckpoint.set(
         market,
-        (this.baseVolumeAtomsSinceLastCheckpoint.get(market) || 0) + Number(baseAtoms)
+        (this.baseVolumeAtomsSinceLastCheckpoint.get(market) || 0) +
+          Number(baseAtoms),
       );
       this.quoteVolumeAtomsSinceLastCheckpoint.set(
         market,
-        (this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0) + Number(quoteAtoms)
+        (this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0) +
+          Number(quoteAtoms),
       );
 
       // Process notional volumes and positions
       await this.updateTradingMetrics(fill, marketObject, actualTaker);
-
     } catch (error) {
-      console.error('Error in background fill processing:', error, 'Fill:', fill);
+      console.error(
+        'Error in background fill processing:',
+        error,
+        'Fill:',
+        fill,
+      );
       // Don't throw - this is fire-and-forget
     }
   }
@@ -275,11 +282,11 @@ export class ManifestStatsServer {
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
       this.baseVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0)
+        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
       );
       this.quoteVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0)
+        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
       );
 
       const marketPk = new PublicKey(market);
@@ -287,7 +294,7 @@ export class ManifestStatsServer {
         connection: this.connection,
         address: marketPk,
       });
-      
+
       this.markets.set(market, marketObject);
       return marketObject;
     } catch (error) {
@@ -298,23 +305,24 @@ export class ManifestStatsServer {
 
   // Helper method for trading metrics
   private async updateTradingMetrics(
-    fill: FillLogResult, 
-    marketObject: Market, 
-    actualTaker: string
+    fill: FillLogResult,
+    marketObject: Market,
+    actualTaker: string,
   ): Promise<void> {
     const { baseAtoms, quoteAtoms, takerIsBuy, maker } = fill;
     const quoteMint = marketObject.quoteMint().toBase58();
 
     if (quoteMint === this.USDC_MINT) {
-      const notionalVolume = Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
+      const notionalVolume =
+        Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
 
       this.traderTakerNotionalVolume.set(
         actualTaker,
-        this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume
+        this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
       );
       this.traderMakerNotionalVolume.set(
         maker,
-        this.traderMakerNotionalVolume.get(maker)! + notionalVolume
+        this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
       );
 
       const baseMint = marketObject.baseMint().toBase58();
@@ -326,7 +334,7 @@ export class ManifestStatsServer {
         baseMint,
         takerIsBuy ? Number(baseAtoms) : -Number(baseAtoms),
         Number(quoteAtoms),
-        marketObject
+        marketObject,
       );
 
       this.updateTraderPosition(
@@ -334,23 +342,28 @@ export class ManifestStatsServer {
         baseMint,
         takerIsBuy ? -Number(baseAtoms) : Number(baseAtoms),
         Number(quoteAtoms),
-        marketObject
+        marketObject,
       );
     } else if (quoteMint === this.SOL_MINT) {
       const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
       if (solPriceAtoms) {
         const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
         if (solUsdcMarket) {
-          const solPrice = solPriceAtoms * 10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
-          const notionalVolume = (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) * solPrice;
+          const solPrice =
+            solPriceAtoms *
+            10 **
+              (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+          const notionalVolume =
+            (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+            solPrice;
 
           this.traderTakerNotionalVolume.set(
             actualTaker,
-            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume
+            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
           );
           this.traderMakerNotionalVolume.set(
             maker,
-            this.traderMakerNotionalVolume.get(maker)! + notionalVolume
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
           );
         }
       }
@@ -516,7 +529,7 @@ export class ManifestStatsServer {
     this.ws.onmessage = (message) => {
       this.fillMutex.runExclusive(async () => {
         let fill: FillLogResult;
-        
+
         try {
           fill = JSON.parse(message.data.toString());
         } catch (error) {
@@ -532,10 +545,10 @@ export class ManifestStatsServer {
         if (!this.fillLogResults.has(market)) {
           this.fillLogResults.set(market, []);
         }
-        
+
         const prevFills = this.fillLogResults.get(market)!;
         prevFills.push(fill);
-        
+
         const FILLS_TO_SAVE = 1000;
         if (prevFills.length > FILLS_TO_SAVE) {
           prevFills.splice(0, prevFills.length - FILLS_TO_SAVE);
