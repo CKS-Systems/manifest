@@ -101,6 +101,8 @@ export class ManifestStatsServer {
   // registry for old stuff like wsol.
   private tickers: Map<string, [string, string]> = new Map();
 
+  private lastFillSlot: number = 0;
+
   // Recent fill log results
   private fillLogResults: Map<string, FillLogResult[]> = new Map();
 
@@ -1017,7 +1019,8 @@ export class ManifestStatsServer {
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS state_checkpoints (
           id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          last_fill_slot BIGINT NOT NULL
         )
       `);
 
@@ -1100,6 +1103,7 @@ export class ManifestStatsServer {
       console.log('Inserting checkpoint');
       const checkpointResult = await client.query(
         'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id',
+        [this.lastFillSlot],
       );
 
       const checkpointId = checkpointResult.rows[0].id;
@@ -1344,6 +1348,7 @@ export class ManifestStatsServer {
       }
 
       const checkpointId = checkpointResultRecent.rows[0].id;
+      this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
 
       // Load market volumes
       const volumeResult = await this.pool.query(
