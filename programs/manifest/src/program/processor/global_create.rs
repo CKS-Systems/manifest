@@ -56,7 +56,6 @@ pub(crate) fn process_global_create(
                     ],
                 )?;
             }
-
             create_account(
                 payer.as_ref(),
                 global.as_ref(),
