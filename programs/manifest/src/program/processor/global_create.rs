@@ -38,17 +38,20 @@ pub(crate) fn process_global_create(
 
         // Make the global account.
         {
-            let (expected_global_key, global_bump) = get_global_address(global_mint.info.key);
+            let (_expected_global_key, global_bump) = get_global_address(global_mint.info.key);
             let global_seeds: Vec<Vec<u8>> = vec![
                 b"global".to_vec(),
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_bump],
             ];
-            assert_eq!(expected_global_key, *global.info.key);
 
             if global.info.lamports() > 0 {
                 invoke(
-                    &system_instruction::transfer(global.info.key, payer.info.key, global.info.lamports()),
+                    &system_instruction::transfer(
+                        global.info.key,
+                        payer.info.key,
+                        global.info.lamports(),
+                    ),
                     &[
                         payer.info.clone(),
                         global.info.clone(),
