@@ -12,7 +12,9 @@ use crate::{
     program::ManifestError,
     require,
     state::{GlobalFixed, MarketFixed},
-    validation::{EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo, get_global_address},
+    validation::{
+        get_global_address, EmptyAccount, MintAccountInfo, Program, Signer, TokenAccountInfo,
+    },
 };
 
 use super::{get_vault_address, ManifestAccountInfo, TokenProgram};
@@ -302,14 +304,10 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         let base_mint_key: Pubkey = *market_fixed.get_base_mint();
         let quote_mint_key: Pubkey = *market_fixed.get_quote_mint();
 
-        let trader_base: TokenAccountInfo = TokenAccountInfo::new(
-            next_account_info(account_iter)?,
-            &base_mint_key,
-        )?;
-        let trader_quote: TokenAccountInfo = TokenAccountInfo::new(
-            next_account_info(account_iter)?,
-            &quote_mint_key,
-        )?;
+        let trader_base: TokenAccountInfo =
+            TokenAccountInfo::new(next_account_info(account_iter)?, &base_mint_key)?;
+        let trader_quote: TokenAccountInfo =
+            TokenAccountInfo::new(next_account_info(account_iter)?, &quote_mint_key)?;
         let base_vault_address: &Pubkey = market_fixed.get_base_vault();
         let quote_vault_address: &Pubkey = market_fixed.get_quote_vault();
 
@@ -556,7 +554,7 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     let global_data: Ref<&mut [u8]> = global.data.borrow();
                     let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                     let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
-                    
+
                     let global_mint_key: &Pubkey = global_fixed.get_mint();
                     let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
                     require!(

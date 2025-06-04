@@ -48,7 +48,11 @@ pub(crate) fn process_global_create(
 
             if global.info.lamports() > 0 {
                 invoke(
-                    &system_instruction::transfer(global.info.key, payer.info.key, global.info.lamports()),
+                    &system_instruction::transfer(
+                        global.info.key,
+                        payer.info.key,
+                        global.info.lamports(),
+                    ),
                     &[
                         payer.info.clone(),
                         global.info.clone(),
