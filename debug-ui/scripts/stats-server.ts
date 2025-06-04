@@ -201,6 +201,162 @@ export class ManifestStatsServer {
     }
   }
 
+  private async processFillAsync(fill: FillLogResult): Promise<void> {
+    try {
+      const {
+        market,
+        baseAtoms,
+        quoteAtoms,
+        priceAtoms,
+        taker,
+        maker,
+        originalSigner,
+      } = fill;
+
+      const actualTaker = this.resolveActualTrader(taker, originalSigner);
+
+      // Update trader counts
+      this.traderNumTakerTrades.set(
+        actualTaker,
+        (this.traderNumTakerTrades.get(actualTaker) || 0) + 1
+      );
+      this.traderNumMakerTrades.set(
+        maker,
+        (this.traderNumMakerTrades.get(maker) || 0) + 1
+      );
+
+      // Initialize notional volumes if needed
+      if (!this.traderTakerNotionalVolume.has(actualTaker)) {
+        this.traderTakerNotionalVolume.set(actualTaker, 0);
+      }
+      if (!this.traderMakerNotionalVolume.has(maker)) {
+        this.traderMakerNotionalVolume.set(maker, 0);
+      }
+
+      // Load market if needed (this is the slow part)
+      let marketObject = this.markets.get(market);
+      if (!marketObject) {
+        marketObject = await this.loadNewMarket(market);
+        if (!marketObject) {
+          console.error('Failed to load market:', market);
+          return;
+        }
+      }
+
+      // Update price and volume
+      lastPrice.set(
+        { market },
+        priceAtoms * 10 ** (marketObject.baseDecimals() - marketObject.quoteDecimals())
+      );
+
+      this.lastPriceByMarket.set(market, priceAtoms);
+      this.baseVolumeAtomsSinceLastCheckpoint.set(
+        market,
+        (this.baseVolumeAtomsSinceLastCheckpoint.get(market) || 0) + Number(baseAtoms)
+      );
+      this.quoteVolumeAtomsSinceLastCheckpoint.set(
+        market,
+        (this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0) + Number(quoteAtoms)
+      );
+
+      // Process notional volumes and positions
+      await this.updateTradingMetrics(fill, marketObject, actualTaker);
+
+    } catch (error) {
+      console.error('Error in background fill processing:', error, 'Fill:', fill);
+      // Don't throw - this is fire-and-forget
+    }
+  }
+
+  // Helper method for market loading
+  private async loadNewMarket(market: string): Promise<Market | undefined> {
+    try {
+      this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+      this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+      this.baseVolumeAtomsCheckpoints.set(
+        market,
+        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0)
+      );
+      this.quoteVolumeAtomsCheckpoints.set(
+        market,
+        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0)
+      );
+
+      const marketPk = new PublicKey(market);
+      const marketObject = await Market.loadFromAddress({
+        connection: this.connection,
+        address: marketPk,
+      });
+      
+      this.markets.set(market, marketObject);
+      return marketObject;
+    } catch (error) {
+      console.error('Error loading market:', market, error);
+      return undefined; // Changed from null to undefined
+    }
+  }
+
+  // Helper method for trading metrics
+  private async updateTradingMetrics(
+    fill: FillLogResult, 
+    marketObject: Market, 
+    actualTaker: string
+  ): Promise<void> {
+    const { baseAtoms, quoteAtoms, takerIsBuy, maker } = fill;
+    const quoteMint = marketObject.quoteMint().toBase58();
+
+    if (quoteMint === this.USDC_MINT) {
+      const notionalVolume = Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
+
+      this.traderTakerNotionalVolume.set(
+        actualTaker,
+        this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume
+      );
+      this.traderMakerNotionalVolume.set(
+        maker,
+        this.traderMakerNotionalVolume.get(maker)! + notionalVolume
+      );
+
+      const baseMint = marketObject.baseMint().toBase58();
+      this.initTraderPositionTracking(actualTaker);
+      this.initTraderPositionTracking(maker);
+
+      this.updateTraderPosition(
+        actualTaker,
+        baseMint,
+        takerIsBuy ? Number(baseAtoms) : -Number(baseAtoms),
+        Number(quoteAtoms),
+        marketObject
+      );
+
+      this.updateTraderPosition(
+        maker,
+        baseMint,
+        takerIsBuy ? -Number(baseAtoms) : Number(baseAtoms),
+        Number(quoteAtoms),
+        marketObject
+      );
+    } else if (quoteMint === this.SOL_MINT) {
+      const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
+      if (solPriceAtoms) {
+        const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+        if (solUsdcMarket) {
+          const solPrice = solPriceAtoms * 10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+          const notionalVolume = (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) * solPrice;
+
+          this.traderTakerNotionalVolume.set(
+            actualTaker,
+            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume
+          );
+          this.traderMakerNotionalVolume.set(
+            maker,
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume
+          );
+        }
+      }
+    }
+  }
+
   private isKnownAggregator(address: string): boolean {
     return this.KNOWN_AGGREGATORS.has(address);
   }
@@ -359,168 +515,38 @@ export class ManifestStatsServer {
 
     this.ws.onmessage = (message) => {
       this.fillMutex.runExclusive(async () => {
-        const fill: FillLogResult = JSON.parse(message.data.toString());
-        const {
-          market,
-          baseAtoms,
-          quoteAtoms,
-          priceAtoms,
-          takerIsBuy,
-          taker,
-          maker,
-          originalSigner,
-        } = fill;
+        let fill: FillLogResult;
+        
+        try {
+          fill = JSON.parse(message.data.toString());
+        } catch (error) {
+          console.error('Failed to parse fill message:', error);
+          return;
+        }
+
+        // Track slot for database persistence
+        this.lastFillSlot = Math.max(this.lastFillSlot, fill.slot);
+
+        // Immediately save to recent fill
+        const { market } = fill;
+        if (!this.fillLogResults.has(market)) {
+          this.fillLogResults.set(market, []);
+        }
+        
+        const prevFills = this.fillLogResults.get(market)!;
+        prevFills.push(fill);
+        
+        const FILLS_TO_SAVE = 1000;
+        if (prevFills.length > FILLS_TO_SAVE) {
+          prevFills.splice(0, prevFills.length - FILLS_TO_SAVE);
+        }
+        this.fillLogResults.set(market, prevFills);
 
         fills.inc({ market });
         console.log('Got fill', fill);
 
-        const actualTaker = this.resolveActualTrader(taker, originalSigner);
-        // Assumes maker cannot be from an aggregator
-
-        if (this.traderNumTakerTrades.get(actualTaker) == undefined) {
-          this.traderNumTakerTrades.set(actualTaker, 0);
-        }
-        this.traderNumTakerTrades.set(
-          actualTaker,
-          this.traderNumTakerTrades.get(actualTaker)! + 1,
-        );
-
-        if (this.traderNumMakerTrades.get(maker) == undefined) {
-          this.traderNumMakerTrades.set(maker, 0);
-        }
-        this.traderNumMakerTrades.set(
-          maker,
-          this.traderNumMakerTrades.get(maker)! + 1,
-        );
-
-        if (this.traderTakerNotionalVolume.get(actualTaker) == undefined) {
-          this.traderTakerNotionalVolume.set(actualTaker, 0);
-        }
-        if (this.traderMakerNotionalVolume.get(maker) == undefined) {
-          this.traderMakerNotionalVolume.set(maker, 0);
-        }
-
-        if (this.markets.get(market) == undefined) {
-          this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
-          this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-          this.baseVolumeAtomsCheckpoints.set(
-            market,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-          );
-          this.quoteVolumeAtomsCheckpoints.set(
-            market,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
-          );
-          const marketPk: PublicKey = new PublicKey(market);
-          this.markets.set(
-            market,
-            await Market.loadFromAddress({
-              connection: this.connection,
-              address: marketPk,
-            }),
-          );
-          this.fillLogResults.set(market, []);
-        }
-        if (this.fillLogResults.get(market) == undefined) {
-          this.fillLogResults.set(market, []);
-        }
-        lastPrice.set(
-          { market },
-          priceAtoms *
-            10 **
-              (this.markets.get(market)!.baseDecimals() -
-                this.markets.get(market)!.quoteDecimals()),
-        );
-
-        this.lastPriceByMarket.set(market, priceAtoms);
-        this.baseVolumeAtomsSinceLastCheckpoint.set(
-          market,
-          this.baseVolumeAtomsSinceLastCheckpoint.get(market)! +
-            Number(baseAtoms),
-        );
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(
-          market,
-          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)! +
-            Number(quoteAtoms),
-        );
-
-        const marketObject = this.markets.get(market)!;
-        const quoteMint = marketObject.quoteMint().toBase58();
-
-        if (quoteMint === this.USDC_MINT) {
-          const notionalVolume =
-            Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
-
-          this.traderTakerNotionalVolume.set(
-            actualTaker,
-            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
-          );
-
-          this.traderMakerNotionalVolume.set(
-            maker,
-            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
-          );
-          const baseMint = marketObject.baseMint().toBase58();
-
-          // Initialize position tracking maps if needed
-          this.initTraderPositionTracking(actualTaker);
-          this.initTraderPositionTracking(maker);
-
-          this.updateTraderPosition(
-            actualTaker,
-            baseMint,
-            takerIsBuy ? Number(baseAtoms) : -Number(baseAtoms),
-            Number(quoteAtoms), // Set to opposite sign of base atoms in updateTraderPosition
-            marketObject,
-          );
-
-          // Update maker position - opposite of taker
-          this.updateTraderPosition(
-            maker,
-            baseMint,
-            takerIsBuy ? -Number(baseAtoms) : Number(baseAtoms),
-            Number(quoteAtoms), // Set to opposite sign of base atoms in updateTraderPosition
-            marketObject,
-          );
-        } else if (quoteMint === this.SOL_MINT) {
-          const solPriceAtoms = this.lastPriceByMarket.get(
-            this.SOL_USDC_MARKET,
-          );
-          if (solPriceAtoms) {
-            const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
-            if (solUsdcMarket) {
-              const solPrice =
-                solPriceAtoms *
-                10 **
-                  (solUsdcMarket.baseDecimals() -
-                    solUsdcMarket.quoteDecimals());
-
-              const notionalVolume =
-                (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
-                solPrice;
-
-              this.traderTakerNotionalVolume.set(
-                actualTaker,
-                this.traderTakerNotionalVolume.get(actualTaker)! +
-                  notionalVolume,
-              );
-
-              this.traderMakerNotionalVolume.set(
-                maker,
-                this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
-              );
-            }
-            // TODO: Handle notionals for other quote mints
-          }
-        }
-
-        let prevFills: FillLogResult[] = this.fillLogResults.get(market)!;
-        prevFills.push(fill);
-        const FILLS_TO_SAVE = 1000;
-        if (prevFills.length > FILLS_TO_SAVE) {
-          prevFills = prevFills.slice(1, FILLS_TO_SAVE);
-        }
-        this.fillLogResults.set(market, prevFills);
+        // Queue for background processing
+        setImmediate(() => this.processFillAsync(fill));
       });
     };
   }
