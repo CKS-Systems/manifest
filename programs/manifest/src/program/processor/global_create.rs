@@ -10,7 +10,7 @@ use crate::{
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent, sysvar::Sysvar,
+    rent::Rent, system_instruction, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{BaseStateWithExtensions, ExtensionType, PodStateWithExtensions},
@@ -45,12 +45,18 @@ pub(crate) fn process_global_create(
                 vec![global_bump],
             ];
             assert_eq!(expected_global_key, *global.info.key);
-            // Known griefing attack vector where somebody can send rent to this
-            // address which will make this fail. If that becomes an issue, we
-            // will evaluate addressing here and below for the vault. The reason
-            // it would be a problem is that globals are at a fixed permanent
-            // address for a mint. Since the most likely to be used globals are
-            // already initialized (SOL, USDC), prefer not to change the code.
+
+            if global.info.lamports() > 0 {
+                invoke(
+                    &system_instruction::transfer(global.info.key, payer.info.key, global.info.lamports()),
+                    &[
+                        payer.info.clone(),
+                        global.info.clone(),
+                        system_program.info.clone(),
+                    ],
+                )?;
+            }
+
             create_account(
                 payer.as_ref(),
                 global.as_ref(),
