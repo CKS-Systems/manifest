@@ -654,6 +654,18 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+
+        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+        let global_mint_key: &Pubkey = global_fixed.get_mint();
+        let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+        require!(
+            expected_global_key == *global.info.key,
+            ManifestError::MissingGlobal,
+            "Unexpected global accounts",
+        )?;
+        drop(global_data);
+
         let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
@@ -686,6 +698,15 @@ impl<'a, 'info> GlobalDepositContext<'a, 'info> {
 
         let global_data: Ref<&mut [u8]> = global.data.borrow();
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+
+        let global_mint_key: &Pubkey = global_fixed.get_mint();
+        let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+        require!(
+            expected_global_key == *global.info.key,
+            ManifestError::MissingGlobal,
+            "Unexpected global accounts",
+        )?;
+
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
@@ -733,6 +754,15 @@ impl<'a, 'info> GlobalWithdrawContext<'a, 'info> {
 
         let global_data: Ref<&mut [u8]> = global.data.borrow();
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+
+        let global_mint_key: &Pubkey = global_fixed.get_mint();
+        let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+        require!(
+            expected_global_key == *global.info.key,
+            ManifestError::MissingGlobal,
+            "Unexpected global accounts",
+        )?;
+
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
@@ -781,6 +811,15 @@ impl<'a, 'info> GlobalEvictContext<'a, 'info> {
 
         let global_data: Ref<&mut [u8]> = global.data.borrow();
         let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+
+        let global_mint_key: &Pubkey = global_fixed.get_mint();
+        let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+        require!(
+            expected_global_key == *global.info.key,
+            ManifestError::MissingGlobal,
+            "Unexpected global accounts",
+        )?;
+
         let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
 
         let global_vault: TokenAccountInfo = TokenAccountInfo::new_with_owner_and_key(
@@ -829,6 +868,17 @@ impl<'a, 'info> GlobalCleanContext<'a, 'info> {
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let global: ManifestAccountInfo<GlobalFixed> =
             ManifestAccountInfo::<GlobalFixed>::new(next_account_info(account_iter)?)?;
+
+        let global_data: Ref<&mut [u8]> = global.data.borrow();
+        let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
+        let global_mint_key: &Pubkey = global_fixed.get_mint();
+        let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+        require!(
+            expected_global_key == *global.info.key,
+            ManifestError::MissingGlobal,
+            "Unexpected global accounts",
+        )?;
+        drop(global_data);
 
         Ok(Self {
             payer,
