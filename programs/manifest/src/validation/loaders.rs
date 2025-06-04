@@ -625,9 +625,11 @@ impl<'a, 'info> GlobalCreateContext<'a, 'info> {
         let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let global_mint: MintAccountInfo = MintAccountInfo::new(next_account_info(account_iter)?)?;
-        // Address of the global vault is verified in the handler because the
-        // create will only work if the signer seeds match.
         let global_vault: EmptyAccount = EmptyAccount::new(next_account_info(account_iter)?)?;
+
+        let (expected_global_key, _global_bump) = get_global_address(global_mint.info.key);
+        assert_eq!(expected_global_key, *global.info.key);
+
         let token_program: TokenProgram = TokenProgram::new(next_account_info(account_iter)?)?;
         Ok(Self {
             payer,
