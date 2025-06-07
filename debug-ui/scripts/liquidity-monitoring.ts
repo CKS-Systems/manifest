@@ -198,7 +198,7 @@ export class LiquidityMonitor {
   }
 
   /**
-   * Load eligible markets (>$10k 24hr volume and USDC quote)
+   * Load eligible markets (>$1k 24hr volume and USDC quote)
    */
   async loadEligibleMarkets(): Promise<void> {
     console.log('Loading eligible markets...');
@@ -295,7 +295,6 @@ export class LiquidityMonitor {
     );
 
     const stats: MarketMakerStats[] = [];
-    let filteredCount = 0;
 
     for (const trader of traders) {
       const traderBids = bids.filter(
@@ -325,25 +324,16 @@ export class LiquidityMonitor {
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
       }
 
-      // Calculate total notional in USD (using 100bps depth as representative)
+      // Calculate total notional in USD
       const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
       const totalNotionalUsd = totalBaseTokens * midPrice;
 
-      console.log(
-        `Trader ${trader}: ${traderBids.length} bids, ${traderAsks.length} asks, totalBaseTokens=${totalBaseTokens}, midPrice=${midPrice}, totalNotionalUsd=${totalNotionalUsd}`,
-      );
-
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
-        filteredCount++;
         continue;
       }
 
       const isActive = traderBids.length > 0 || traderAsks.length > 0;
-
-      console.log(
-        `Trader ${trader}: QUALIFIED with ${totalNotionalUsd} USD notional, active=${isActive}`,
-      );
 
       stats.push({
         trader,
@@ -356,9 +346,6 @@ export class LiquidityMonitor {
       });
     }
 
-    console.log(
-      `Market ${market.address.toBase58()}: ${stats.length} qualified market makers, ${filteredCount} filtered out`,
-    );
     return stats;
   }
 
@@ -389,6 +376,7 @@ export class LiquidityMonitor {
             market,
             cycleTimestamp,
           );
+
           allStats.push(...marketStats);
 
           // Update last price in market info
@@ -399,11 +387,14 @@ export class LiquidityMonitor {
             const bestAsk = asks[asks.length - 1].tokenPrice;
             const lastPrice = (bestBid + bestAsk) / 2;
 
-            const marketInfo = this.marketInfo.get(marketPk)!;
-            marketInfo.lastPrice = lastPrice;
-
-            // Update Prometheus metrics
-            marketVolume24h.set({ market: marketPk }, marketInfo.volume24hUsd);
+            const marketInfo = this.marketInfo.get(marketPk);
+            if (marketInfo) {
+              marketInfo.lastPrice = lastPrice;
+              marketVolume24h.set(
+                { market: marketPk },
+                marketInfo.volume24hUsd,
+              );
+            }
           }
 
           // Update Prometheus metrics for market makers
@@ -438,14 +429,27 @@ export class LiquidityMonitor {
         }
       }
 
-      // Save stats to database
-      await this.saveStatsToDatabase(allStats, cycleTimestamp);
+      // Remove duplicates before saving
+      const uniqueStats = allStats.filter((stat, index, array) => {
+        return (
+          index ===
+          array.findIndex(
+            (s) =>
+              s.market === stat.market &&
+              s.trader === stat.trader &&
+              s.timestamp.getTime() === stat.timestamp.getTime(),
+          )
+        );
+      });
 
-      // Update summary statistics (using 24h for Prometheus)
+      // Save stats to database
+      await this.saveStatsToDatabase(uniqueStats, cycleTimestamp);
+
+      // Update summary statistics
       await this.updatePrometheusMetrics();
 
       console.log(
-        `Monitoring cycle complete. Processed ${allStats.length} total market maker entries.`,
+        `Monitoring cycle complete. Processed ${uniqueStats.length} market maker entries.`,
       );
     } finally {
       this.isMonitoring = false;
@@ -547,7 +551,7 @@ export class LiquidityMonitor {
   }
 
   /**
-   * Update Prometheus metrics (still using 24h for consistency)
+   * Update Prometheus metrics
    */
   async updatePrometheusMetrics(): Promise<void> {
     try {
@@ -624,15 +628,7 @@ export class LiquidityMonitor {
       }
 
       let query = `
-        WITH time_bounds AS (
-          -- Get the actual time range we're analyzing
-          SELECT 
-            MIN(timestamp) as start_time,
-            MAX(timestamp) as end_time
-          FROM market_maker_stats
-          WHERE ${timeFilter}
-        ),
-        total_cycles_per_market AS (
+        WITH total_cycles_per_market AS (
           SELECT 
             market,
             COUNT(DISTINCT timestamp) as total_possible_cycles
