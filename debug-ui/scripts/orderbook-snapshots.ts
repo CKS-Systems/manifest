@@ -174,7 +174,9 @@ export class MarketMakerLeaderboard {
           this.markets.set(marketPk, market);
           this.marketVolumes.set(marketPk, volume24h);
 
-          console.log(`✅ ${marketPk.slice(-8)} - $${volume24h.toLocaleString()}`);
+          console.log(
+            `✅ ${marketPk.slice(-8)} - $${volume24h.toLocaleString()}`,
+          );
         } catch (error) {
           console.error(`❌ Error loading market ${marketPk}:`, error);
         }
@@ -187,7 +189,11 @@ export class MarketMakerLeaderboard {
   /**
    * Take orderbook snapshot for a single market
    */
-  async snapshotMarket(marketPk: string, market: Market, timestamp: Date): Promise<OrderbookSnapshot | null> {
+  async snapshotMarket(
+    marketPk: string,
+    market: Market,
+    timestamp: Date,
+  ): Promise<OrderbookSnapshot | null> {
     try {
       await market.reload(this.connection);
 
@@ -284,46 +290,67 @@ export class MarketMakerLeaderboard {
    */
   async saveSnapshot(snapshot: OrderbookSnapshot): Promise<void> {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
       // Insert snapshot record
-      const snapshotResult = await client.query(`
+      const snapshotResult = await client.query(
+        `
         INSERT INTO orderbook_snapshots (market, timestamp, mid_price, best_bid, best_ask, volume_24h_usd)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
-      `, [
-        snapshot.market, 
-        snapshot.timestamp, 
-        snapshot.midPrice, 
-        snapshot.bestBid, 
-        snapshot.bestAsk, 
-        snapshot.volume24hUsd
-      ]);
+      `,
+        [
+          snapshot.market,
+          snapshot.timestamp,
+          snapshot.midPrice,
+          snapshot.bestBid,
+          snapshot.bestAsk,
+          snapshot.volume24hUsd,
+        ],
+      );
 
       const snapshotId = snapshotResult.rows[0].id;
 
       // Batch insert orders
       const allOrders = [
-        ...snapshot.bids.map(order => ['bid', order.price, order.quantity, order.trader]),
-        ...snapshot.asks.map(order => ['ask', order.price, order.quantity, order.trader])
+        ...snapshot.bids.map((order) => [
+          'bid',
+          order.price,
+          order.quantity,
+          order.trader,
+        ]),
+        ...snapshot.asks.map((order) => [
+          'ask',
+          order.price,
+          order.quantity,
+          order.trader,
+        ]),
       ];
 
       if (allOrders.length > 0) {
         // Create proper parameterized query for batch insert
-        const orderValues = allOrders.map((_, index) => {
-          const offset = index * 5; // 5 parameters per order (snapshot_id + 4 order fields)
-          return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
-        }).join(', ');
+        const orderValues = allOrders
+          .map((_, index) => {
+            const offset = index * 5; // 5 parameters per order (snapshot_id + 4 order fields)
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+          })
+          .join(', ');
 
         // Include snapshotId for each order in the parameters array
-        const orderParams = allOrders.flatMap(order => [snapshotId, ...order]);
+        const orderParams = allOrders.flatMap((order) => [
+          snapshotId,
+          ...order,
+        ]);
 
-        await client.query(`
+        await client.query(
+          `
           INSERT INTO orders (snapshot_id, side, price, quantity, trader)
           VALUES ${orderValues}
-        `, orderParams);
+        `,
+          orderParams,
+        );
       }
 
       await client.query('COMMIT');
@@ -351,7 +378,7 @@ export class MarketMakerLeaderboard {
       console.log(`📸 Taking snapshots at ${timestamp.toISOString()}`);
 
       const snapshots: OrderbookSnapshot[] = [];
-      
+
       for (const [marketPk, market] of this.markets) {
         const snapshot = await this.snapshotMarket(marketPk, market, timestamp);
         if (snapshot) {
@@ -366,7 +393,9 @@ export class MarketMakerLeaderboard {
         await this.saveSnapshot(snapshot);
       }
 
-      console.log(`✅ Snapshot cycle complete - ${snapshots.length} markets processed`);
+      console.log(
+        `✅ Snapshot cycle complete - ${snapshots.length} markets processed`,
+      );
     } finally {
       this.isSnapshotting = false;
     }
@@ -380,7 +409,7 @@ export class MarketMakerLeaderboard {
 
     // Load markets initially
     await this.loadEligibleMarkets();
-    
+
     // Take initial snapshot
     await this.takeSnapshots();
 
@@ -394,13 +423,16 @@ export class MarketMakerLeaderboard {
     }, SNAPSHOT_INTERVAL_MS);
 
     // Reload markets every hour
-    setInterval(async () => {
-      try {
-        await this.loadEligibleMarkets();
-      } catch (error) {
-        console.error('Error reloading markets:', error);
-      }
-    }, 60 * 60 * 1000);
+    setInterval(
+      async () => {
+        try {
+          await this.loadEligibleMarkets();
+        } catch (error) {
+          console.error('Error reloading markets:', error);
+        }
+      },
+      60 * 60 * 1000,
+    );
 
     console.log('✅ Orderbook Snapshots started');
   }
@@ -426,11 +458,17 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
   app.get('/snapshots', async (req, res) => {
     try {
       const hours = req.query.hours ? parseInt(req.query.hours as string) : 24;
-      const snapshotLimit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const snapshotLimit = req.query.limit
+        ? parseInt(req.query.limit as string)
+        : 100;
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const offset = (page - 1) * snapshotLimit;
-      const startTime = req.query.start ? new Date(parseInt(req.query.start as string) * 1000) : undefined;
-      const endTime = req.query.end ? new Date(parseInt(req.query.end as string) * 1000) : undefined;
+      const startTime = req.query.start
+        ? new Date(parseInt(req.query.start as string) * 1000)
+        : undefined;
+      const endTime = req.query.end
+        ? new Date(parseInt(req.query.end as string) * 1000)
+        : undefined;
       const market = req.query.market as string;
       const trader = req.query.trader as string;
 
@@ -460,7 +498,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
       }
 
       // First, get the snapshot IDs we want (limited by number of snapshots)
-        const snapshotQuery = `
+      const snapshotQuery = `
             SELECT DISTINCT os.id, os.timestamp
             FROM orderbook_snapshots os
             ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
@@ -468,10 +506,13 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
             ORDER BY os.timestamp DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
             `;
-        params.push(snapshotLimit, offset);
+      params.push(snapshotLimit, offset);
 
-        const snapshotResult = await monitor.pool.query(snapshotQuery, params.slice(0, paramIndex + 1));
-        const snapshotIds = snapshotResult.rows.map(row => row.id);
+      const snapshotResult = await monitor.pool.query(
+        snapshotQuery,
+        params.slice(0, paramIndex + 1),
+      );
+      const snapshotIds = snapshotResult.rows.map((row) => row.id);
 
       if (snapshotIds.length === 0) {
         return res.json({
@@ -482,7 +523,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
             pagination: {
               page,
               limit: snapshotLimit,
-              total_snapshots: 0
+              total_snapshots: 0,
             },
             total_orders: 0,
             query_timestamp: new Date().toISOString(),
@@ -491,39 +532,39 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
       }
 
       // Get total count for pagination
-    let countQuery = `
+      let countQuery = `
     SELECT COUNT(DISTINCT os.id) as total
     FROM orderbook_snapshots os
     ${trader ? 'JOIN orders o ON os.id = o.snapshot_id' : ''}
     WHERE ${timeFilter}
     `;
 
-    // Build count query parameters (exclude limit and offset)
-    const countParams = [];
-    let countParamIndex = 1;
+      // Build count query parameters (exclude limit and offset)
+      const countParams = [];
+      let countParamIndex = 1;
 
-    // Add time parameters
-    if (startTime && endTime) {
-    countParams.push(startTime, endTime);
-    countParamIndex += 2;
-    }
+      // Add time parameters
+      if (startTime && endTime) {
+        countParams.push(startTime, endTime);
+        countParamIndex += 2;
+      }
 
-    // Add market filter if present
-    if (market) {
-    countQuery += ` AND os.market = $${countParamIndex}`;
-    countParams.push(market);
-    countParamIndex++;
-    }
+      // Add market filter if present
+      if (market) {
+        countQuery += ` AND os.market = $${countParamIndex}`;
+        countParams.push(market);
+        countParamIndex++;
+      }
 
-    // Add trader filter if present
-    if (trader) {
-    countQuery += ` AND o.trader = $${countParamIndex}`;
-    countParams.push(trader);
-    countParamIndex++;
-    }
+      // Add trader filter if present
+      if (trader) {
+        countQuery += ` AND o.trader = $${countParamIndex}`;
+        countParams.push(trader);
+        countParamIndex++;
+      }
 
-    const countResult = await monitor.pool.query(countQuery, countParams);
-    const totalSnapshots = parseInt(countResult.rows[0].total);
+      const countResult = await monitor.pool.query(countQuery, countParams);
+      const totalSnapshots = parseInt(countResult.rows[0].total);
 
       // Then get all orders for those snapshots
       const orderQuery = `
@@ -553,7 +594,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
 
       for (const row of result.rows) {
         const snapshotKey = `${row.snapshot_id}-${row.market}`;
-        
+
         if (!snapshotsMap.has(snapshotKey)) {
           snapshotsMap.set(snapshotKey, {
             snapshot_id: row.snapshot_id,
@@ -564,7 +605,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
             best_ask: row.best_ask ? parseFloat(row.best_ask) : null,
             volume_24h_usd: parseFloat(row.volume_24h_usd),
             bids: [],
-            asks: []
+            asks: [],
           });
         }
 
@@ -573,7 +614,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
           price: parseFloat(row.price),
           quantity: parseFloat(row.quantity),
           trader: row.trader,
-          value_usd: parseFloat(row.value_usd)
+          value_usd: parseFloat(row.value_usd),
         };
 
         if (row.side === 'bid') {
@@ -596,7 +637,7 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
             total_snapshots: totalSnapshots,
             total_pages: Math.ceil(totalSnapshots / snapshotLimit),
             has_next: page * snapshotLimit < totalSnapshots,
-            has_prev: page > 1
+            has_prev: page > 1,
           },
           total_orders: result.rows.length,
           query_timestamp: new Date().toISOString(),
@@ -613,10 +654,14 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
    */
   app.get('/health', async (req, res) => {
     try {
-      const dbResult = await monitor.pool.query('SELECT COUNT(*) FROM orderbook_snapshots WHERE timestamp > NOW() - INTERVAL \'1 hour\'');
+      const dbResult = await monitor.pool.query(
+        "SELECT COUNT(*) FROM orderbook_snapshots WHERE timestamp > NOW() - INTERVAL '1 hour'",
+      );
       const recentSnapshots = parseInt(dbResult.rows[0].count);
-      
-      const marketsResult = await monitor.pool.query('SELECT COUNT(DISTINCT market) FROM orderbook_snapshots WHERE timestamp > NOW() - INTERVAL \'1 hour\'');
+
+      const marketsResult = await monitor.pool.query(
+        "SELECT COUNT(DISTINCT market) FROM orderbook_snapshots WHERE timestamp > NOW() - INTERVAL '1 hour'",
+      );
       const activeMarkets = parseInt(marketsResult.rows[0].count);
 
       res.json({
@@ -626,7 +671,9 @@ const setupAPI = (monitor: MarketMakerLeaderboard) => {
           recent_snapshots_1h: recentSnapshots,
           active_markets_1h: activeMarkets,
           total_markets_monitored: monitor.markets.size,
-          expected_snapshots_per_hour: Math.ceil(60 / (SNAPSHOT_INTERVAL_MS / 60000)) * monitor.markets.size,
+          expected_snapshots_per_hour:
+            Math.ceil(60 / (SNAPSHOT_INTERVAL_MS / 60000)) *
+            monitor.markets.size,
         },
       });
     } catch (error) {
