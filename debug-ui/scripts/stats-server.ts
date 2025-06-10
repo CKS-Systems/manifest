@@ -201,6 +201,40 @@ export class ManifestStatsServer {
     }
   }
 
+  /**
+   * Save complete fill to database immediately (async, non-blocking)
+   */
+  private async saveCompleteFillToDatabase(fill: FillLogResult): Promise<void> {
+    try {
+      await this.withRetry(async () => {
+        await this.pool.query(
+          `
+        INSERT INTO fills_complete (
+          slot, market, signature, taker, maker, 
+          taker_sequence_number, maker_sequence_number, fill_data
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (signature, taker_sequence_number, maker_sequence_number) 
+        DO NOTHING
+      `,
+          [
+            fill.slot,
+            fill.market,
+            fill.signature,
+            fill.taker,
+            fill.maker,
+            fill.takerSequenceNumber,
+            fill.makerSequenceNumber,
+            JSON.stringify(fill),
+          ],
+        );
+      });
+    } catch (error) {
+      console.error('Error saving complete fill to database:', error);
+      // Don't throw - fire and forget
+    }
+  }
+
   private async processFillAsync(fill: FillLogResult): Promise<void> {
     try {
       const {
@@ -560,6 +594,7 @@ export class ManifestStatsServer {
 
         // Queue for background processing
         setImmediate(() => this.processFillAsync(fill));
+        setImmediate(() => this.saveCompleteFillToDatabase(fill));
       });
     };
   }
@@ -1049,6 +1084,104 @@ export class ManifestStatsServer {
     return { [market]: this.fillLogResults.get(market) };
   }
 
+  async getCompleteFillsFromDatabase(
+    options: {
+      market?: string;
+      taker?: string;
+      maker?: string;
+      signature?: string;
+      limit?: number;
+      offset?: number;
+      fromSlot?: number;
+      toSlot?: number;
+    } = {},
+  ): Promise<{
+    fills: FillLogResult[];
+    total: number;
+    hasMore: boolean;
+  }> {
+    const {
+      market,
+      taker,
+      maker,
+      signature,
+      limit = 100,
+      offset = 0,
+      fromSlot,
+      toSlot,
+    } = options;
+
+    try {
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (market) {
+        conditions.push(`market = $${paramIndex++}`);
+        params.push(market);
+      }
+
+      if (taker) {
+        conditions.push(`taker = $${paramIndex++}`);
+        params.push(taker);
+      }
+
+      if (maker) {
+        conditions.push(`maker = $${paramIndex++}`);
+        params.push(maker);
+      }
+
+      if (signature) {
+        conditions.push(`signature = $${paramIndex++}`);
+        params.push(signature);
+      }
+
+      if (fromSlot) {
+        conditions.push(`slot >= $${paramIndex++}`);
+        params.push(fromSlot);
+      }
+
+      if (toSlot) {
+        conditions.push(`slot <= $${paramIndex++}`);
+        params.push(toSlot);
+      }
+
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      // Get count
+      const countResult = await this.pool.query(
+        `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
+        params,
+      );
+      const total = parseInt(countResult.rows[0].total);
+
+      // Get data
+      const dataQuery = `
+      SELECT fill_data FROM fills_complete 
+      ${whereClause}
+      ORDER BY slot DESC, timestamp DESC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `;
+
+      params.push(limit, offset);
+      const dataResult = await this.pool.query(dataQuery, params);
+
+      const fills: FillLogResult[] = dataResult.rows.map(
+        (row) => row.fill_data,
+      );
+
+      return {
+        fills,
+        total,
+        hasMore: offset + limit < total,
+      };
+    } catch (error) {
+      console.error('Error querying complete fills:', error);
+      throw error;
+    }
+  }
+
   /**
    * Set up database schema if needed
    */
@@ -1115,6 +1248,41 @@ export class ManifestStatsServer {
           PRIMARY KEY (checkpoint_id, trader, mint)
         )
       `);
+
+      await this.pool.query(`
+          CREATE TABLE IF NOT EXISTS fills_complete (
+            id BIGSERIAL PRIMARY KEY,
+            slot BIGINT NOT NULL,
+            market TEXT NOT NULL,
+            signature TEXT NOT NULL,
+            taker TEXT NOT NULL,
+            maker TEXT NOT NULL,
+            taker_sequence_number BIGINT NOT NULL,
+            maker_sequence_number BIGINT NOT NULL,
+            fill_data JSONB NOT NULL,
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            
+            -- Optimal deduplication using signature + sequence numbers
+            CONSTRAINT unique_complete_fill UNIQUE (signature, taker_sequence_number, maker_sequence_number)
+          )
+        `);
+
+      // Create index for efficient querying
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_fills_complete_market_timestamp ON fills_complete (market, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_fills_complete_slot ON fills_complete (slot);
+        CREATE INDEX IF NOT EXISTS idx_fills_complete_signature ON fills_complete (signature);
+        CREATE INDEX IF NOT EXISTS idx_fills_complete_taker ON fills_complete (taker);
+        CREATE INDEX IF NOT EXISTS idx_fills_complete_maker ON fills_complete (maker);
+      `);
+
+      await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS alt_markets (
+        alt TEXT NOT NULL,
+        market TEXT NOT NULL,
+        PRIMARY KEY (alt, market)
+      )
+    `);
 
       console.log('Database schema initialized');
     } catch (error) {
@@ -1338,6 +1506,12 @@ export class ManifestStatsServer {
       }
 
       console.log('Cleaning up old checkpoints');
+      // Clean up old complete fills (keep last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      await client.query('DELETE FROM fills_complete WHERE timestamp < $1', [
+        thirtyDaysAgo,
+      ]);
       // Clean up old checkpoints - keep only the most recent one
       await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
         checkpointId,
@@ -1565,6 +1739,30 @@ const run = async () => {
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
+  const completeFillsHandler: RequestHandler = async (req, res) => {
+    try {
+      const options = {
+        market: req.query.market as string,
+        taker: req.query.taker as string,
+        maker: req.query.maker as string,
+        signature: req.query.signature as string,
+        limit: parseInt(req.query.limit as string) || 100,
+        offset: parseInt(req.query.offset as string) || 0,
+        fromSlot: req.query.fromSlot
+          ? parseInt(req.query.fromSlot as string)
+          : undefined,
+        toSlot: req.query.toSlot
+          ? parseInt(req.query.toSlot as string)
+          : undefined,
+      };
+
+      const result = await statsServer.getCompleteFillsFromDatabase(options);
+      res.send(result);
+    } catch (error) {
+      console.error('Error in completeFills handler:', error);
+      res.status(500).send({ error: 'Internal server error' });
+    }
+  };
   const altsHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getAlts());
   };
@@ -1580,6 +1778,7 @@ const run = async () => {
     res.send(statsServer.getTraders(true));
   });
   app.get('/recentFills', recentFillsHandler);
+  app.get('/completeFills', completeFillsHandler);
   app.get('/alts', altsHandler);
 
   // Add health check endpoint for Fly.io
