@@ -1506,12 +1506,6 @@ export class ManifestStatsServer {
       }
 
       console.log('Cleaning up old checkpoints');
-      // Clean up old complete fills (keep last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      await client.query('DELETE FROM fills_complete WHERE timestamp < $1', [
-        thirtyDaysAgo,
-      ]);
       // Clean up old checkpoints - keep only the most recent one
       await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
         checkpointId,
