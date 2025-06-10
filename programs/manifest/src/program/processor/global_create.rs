@@ -10,7 +10,7 @@ use crate::{
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent, sysvar::Sysvar,
+    rent::Rent, system_instruction, sysvar::Sysvar,
 };
 use spl_token_2022::{
     extension::{BaseStateWithExtensions, ExtensionType, PodStateWithExtensions},
@@ -38,12 +38,27 @@ pub(crate) fn process_global_create(
 
         // Make the global account.
         {
-            let (_global_key, global_bump) = get_global_address(global_mint.info.key);
+            let (_expected_global_key, global_bump) = get_global_address(global_mint.info.key);
             let global_seeds: Vec<Vec<u8>> = vec![
                 b"global".to_vec(),
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_bump],
             ];
+
+            if global.info.lamports() > 0 {
+                invoke(
+                    &system_instruction::transfer(
+                        global.info.key,
+                        payer.info.key,
+                        global.info.lamports(),
+                    ),
+                    &[
+                        payer.info.clone(),
+                        global.info.clone(),
+                        system_program.info.clone(),
+                    ],
+                )?;
+            }
             create_account(
                 payer.as_ref(),
                 global.as_ref(),
@@ -74,13 +89,14 @@ pub(crate) fn process_global_create(
                 spl_token::id()
             };
 
-            let (_global_vault_key, global_vault_bump) =
+            let (expected_global_vault_key, global_vault_bump) =
                 get_global_vault_address(global_mint.info.key);
             let global_vault_seeds: Vec<Vec<u8>> = vec![
                 b"global-vault".to_vec(),
                 global_mint.info.key.as_ref().to_vec(),
                 vec![global_vault_bump],
             ];
+            assert_eq!(expected_global_vault_key, *global_vault.info.key);
             let rent: Rent = Rent::get()?;
 
             if is_mint_22 {
