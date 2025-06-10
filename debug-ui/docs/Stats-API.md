@@ -189,10 +189,10 @@ Shorthand for `/traders?debug=true`.
 
 ---
 
-## 📈 Real-time Data Endpoints
+## 📈 Fill Data Endpoints
 
 ### `GET /recentFills`
-Returns recent fill data for market analysis and charting.
+Returns the most recent 1000 fills for a market (in-memory data).
 
 #### Query Parameters
 | Parameter | Type | Required | Description |
@@ -216,20 +216,199 @@ curl "https://mfx-stats-mainnet.fly.dev/recentFills?market=ENhU8LsaR7vDD2G1CsWcs
       "slot": 287459372,
       "taker": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
       "maker": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-      "originalSigner": "D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM"
+      "originalSigner": "D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM",
+      "signature": "5shjRgGrup3tsbeVh5eqcwPLnDZEtytU95jJ9xmJz34bSmqrEe2WQPb69PFuenZWuL5QjdhEEGfEGFF8SuJ3vvJv",
+      "takerSequenceNumber": "6347210",
+      "makerSequenceNumber": "6347203"
     }
   ]
 }
 ```
 
-#### Usage for Charts
+### `GET /completeFills` 🆕
+**NEW:** Returns complete historical fill data with powerful filtering and pagination.
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `market` | string | No | Filter by market address |
+| `taker` | string | No | Filter by taker address |
+| `maker` | string | No | Filter by maker address |
+| `signature` | string | No | Find fills by transaction signature |
+| `fromSlot` | number | No | Filter fills from this slot onwards |
+| `toSlot` | number | No | Filter fills up to this slot |
+| `limit` | number | No | Number of fills to return (default: 100, max: 1000) |
+| `offset` | number | No | Number of fills to skip (default: 0) |
+
+#### Examples
+
+**Basic Market Query**
+```bash
+# Get latest 100 fills for SOL/USDC market
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?market=ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ&limit=100"
+```
+
+**Trader Analysis**
+```bash
+# Get all fills for a specific trader
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?taker=goLdsNm7gNrnHJ6dMu73ALm3y7ZK1Z2NFrqcsD2BR7y&limit=50"
+
+# Get fills where trader was the maker
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?maker=CDY3cxDRUrcJp8DNhPS8X6CR3FGDjrErYv1PcgsEeNMV&limit=50"
+```
+
+**Transaction Lookup**
+```bash
+# Find fills by transaction signature
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?signature=2LHjKQ8DZpMCnUA1zMVvFoWHHdZ73Kg8rBQCj2kF74qhtCDyPpc64zygBuuvhfR6TndVM2JkhECMoagbCbJhXEwb"
+```
+
+**Time Range Analysis**
+```bash
+# Get fills in a specific slot range
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?market=ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ&fromSlot=345940000&toSlot=345942000"
+```
+
+**Pagination**
+```bash
+# Get fills with pagination
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?market=ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ&limit=25&offset=100"
+```
+
+**Complex Filtering**
+```bash
+# Combine multiple filters
+curl "https://mfx-stats-mainnet.fly.dev/completeFills?market=ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ&taker=goLdsNm7gNrnHJ6dMu73ALm3y7ZK1Z2NFrqcsD2BR7y&fromSlot=345940000&limit=20"
+```
+
+#### Response Format
+```json
+{
+  "fills": [
+    {
+      "slot": 345941709,
+      "market": "ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ",
+      "signature": "2LHjKQ8DZpMCnUA1zMVvFoWHHdZ73Kg8rBQCj2kF74qhtCDyPpc64zygBuuvhfR6TndVM2JkhECMoagbCbJhXEwb",
+      "maker": "CDY3cxDRUrcJp8DNhPS8X6CR3FGDjrErYv1PcgsEeNMV",
+      "taker": "goLdsNm7gNrnHJ6dMu73ALm3y7ZK1Z2NFrqcsD2BR7y",
+      "baseAtoms": "153219783",
+      "quoteAtoms": "24999999",
+      "priceAtoms": 0.163164302,
+      "takerIsBuy": true,
+      "isMakerGlobal": false,
+      "originalSigner": "goLdsNm7gNrnHJ6dMu73ALm3y7ZK1Z2NFrqcsD2BR7y",
+      "makerSequenceNumber": "6347324",
+      "takerSequenceNumber": "6347327"
+    }
+  ],
+  "total": 7,
+  "hasMore": false
+}
+```
+
+#### JavaScript Integration Examples
+
+**Trading History Component**
 ```javascript
-const fills = await fetch(`/recentFills?market=${marketId}`).then(r => r.json());
-const chartData = fills[marketId]?.map(fill => ({
-  timestamp: fill.slot, // Convert to actual timestamp if needed
-  price: fill.priceAtoms * (10 ** (baseDecimals - quoteDecimals)),
-  volume: Number(fill.baseAtoms) / (10 ** baseDecimals)
-}));
+async function getTradingHistory(trader, marketId, page = 0) {
+  const limit = 50;
+  const offset = page * limit;
+  
+  const response = await fetch(
+    `/completeFills?taker=${trader}&market=${marketId}&limit=${limit}&offset=${offset}`
+  );
+  const data = await response.json();
+  
+  return {
+    trades: data.fills.map(fill => ({
+      txId: fill.signature,
+      timestamp: fill.slot, // Convert to actual timestamp
+      side: fill.takerIsBuy ? 'BUY' : 'SELL',
+      amount: Number(fill.baseAtoms) / 1e9, // Adjust for decimals
+      price: fill.priceAtoms,
+      total: Number(fill.quoteAtoms) / 1e6  // USDC has 6 decimals
+    })),
+    pagination: {
+      page,
+      hasMore: data.hasMore,
+      total: data.total
+    }
+  };
+}
+```
+
+**Market Maker Analytics**
+```javascript
+async function getMarketMakerStats(makerAddress, days = 7) {
+  // Calculate slot range for last N days (approximately)
+  const currentSlot = 345942000; // Get from current block
+  const slotsPerDay = 216000; // ~400ms per slot
+  const fromSlot = currentSlot - (days * slotsPerDay);
+  
+  const response = await fetch(
+    `/completeFills?maker=${makerAddress}&fromSlot=${fromSlot}&limit=1000`
+  );
+  const data = await response.json();
+  
+  const stats = data.fills.reduce((acc, fill) => {
+    acc.totalTrades++;
+    acc.totalVolume += Number(fill.quoteAtoms);
+    if (fill.takerIsBuy) acc.buyTrades++;
+    else acc.sellTrades++;
+    return acc;
+  }, { totalTrades: 0, totalVolume: 0, buyTrades: 0, sellTrades: 0 });
+  
+  return {
+    ...stats,
+    avgTradeSize: stats.totalVolume / stats.totalTrades,
+    buyRatio: stats.buyTrades / stats.totalTrades
+  };
+}
+```
+
+**Transaction Verification**
+```javascript
+async function verifyTransaction(signature) {
+  const response = await fetch(`/completeFills?signature=${signature}`);
+  const data = await response.json();
+  
+  if (data.fills.length === 0) {
+    return { found: false };
+  }
+  
+  return {
+    found: true,
+    fill: data.fills[0],
+    relatedFills: data.fills.length > 1 ? data.fills.slice(1) : []
+  };
+}
+```
+
+**Enhanced Chart Data**
+```javascript
+async function getChartData(marketId, timeRange = '24h') {
+  const slotRanges = {
+    '1h': 9000,   // ~1 hour in slots
+    '24h': 216000, // ~24 hours in slots
+    '7d': 1512000  // ~7 days in slots
+  };
+  
+  const currentSlot = 345942000; // Get from current block
+  const fromSlot = currentSlot - slotRanges[timeRange];
+  
+  const response = await fetch(
+    `/completeFills?market=${marketId}&fromSlot=${fromSlot}&limit=1000`
+  );
+  const data = await response.json();
+  
+  return data.fills.map(fill => ({
+    timestamp: fill.slot, // Convert to actual timestamp if needed
+    price: fill.priceAtoms,
+    volume: Number(fill.baseAtoms) / 1e9,
+    side: fill.takerIsBuy ? 'buy' : 'sell',
+    txId: fill.signature
+  }));
+}
 ```
 
 ---
@@ -282,7 +461,7 @@ const markets = tickers.map(ticker => ({
 }));
 ```
 
-### Leaderboard
+### Trader Leaderboard
 ```javascript
 // Get trader leaderboard by volume
 const traders = await fetch('/traders').then(r => r.json());
@@ -297,6 +476,50 @@ const leaderboard = Object.entries(traders)
   .slice(0, 10);
 ```
 
+### Enhanced Historical Analysis
+```javascript
+// Get complete trader history across all markets
+const traders = await fetch('/traders').then(r => r.json());
+const topTrader = Object.keys(traders)[0];
+
+const completeHistory = await fetch(
+  `/completeFills?taker=${topTrader}&limit=500`
+).then(r => r.json());
+
+const portfolioAnalysis = completeHistory.fills.reduce((acc, fill) => {
+  const market = fill.market;
+  if (!acc[market]) acc[market] = { trades: 0, volume: 0 };
+  acc[market].trades++;
+  acc[market].volume += Number(fill.quoteAtoms);
+  return acc;
+}, {});
+```
+
+### Market Maker Dashboard
+```javascript
+// Comprehensive market maker analytics
+async function getMarketMakerDashboard(makerAddress) {
+  const [recentActivity, allTimeStats] = await Promise.all([
+    // Recent activity (last 1000 fills)
+    fetch(`/completeFills?maker=${makerAddress}&limit=1000`).then(r => r.json()),
+    // All-time stats from trader endpoint
+    fetch('/traders').then(r => r.json())
+  ]);
+  
+  const makerStats = allTimeStats[makerAddress] || {};
+  const recentFills = recentActivity.fills;
+  
+  return {
+    allTime: makerStats,
+    recent: {
+      trades: recentFills.length,
+      markets: [...new Set(recentFills.map(f => f.market))],
+      totalVolume: recentFills.reduce((sum, f) => sum + Number(f.quoteAtoms), 0)
+    }
+  };
+}
+```
+
 ### Real-time Price Feed
 ```javascript
 // Combine with WebSocket for real-time updates
@@ -308,7 +531,7 @@ ws.onmessage = (event) => {
   updatePriceChart(fill.market, fill.priceAtoms);
 };
 
-// Fallback to polling for fills
+// Fallback to polling for recent fills
 setInterval(async () => {
   const fills = await fetch(`/recentFills?market=${marketId}`).then(r => r.json());
   // Process recent fills
@@ -324,11 +547,19 @@ setInterval(async () => {
 - `/orderbook`: ~100ms (real-time)
 - `/traders`: ~500ms (heavy computation)
 - `/recentFills`: ~50ms (in-memory)
+- `/completeFills`: ~100-500ms (database query, varies by filters)
 
 ### Caching Strategy
 - Market data cached for 5 minutes
 - Orderbook data refreshed on demand
-- Fill data stored in memory (last 1000 per market)
+- Recent fill data stored in memory (last 1000 per market)
+- Complete fills stored permanently in database with efficient indexing
+
+### Database Performance
+- **Signature index**: Fast transaction lookups
+- **Market + timestamp index**: Efficient time-range queries
+- **Trader indexes**: Quick trader analysis
+- **Pagination**: Optimized with COUNT queries and LIMIT/OFFSET
 
 ### Rate Limits
 - No formal rate limits currently
@@ -346,6 +577,7 @@ setInterval(async () => {
 
 ### Historical Data
 - PostgreSQL database with 5-minute checkpoints
+- Complete fill history stored permanently
 - 24-hour rolling windows for volume calculations
 - Position tracking for PnL calculations
 
@@ -353,6 +585,7 @@ setInterval(async () => {
 - Automatic reconnection on feed failures
 - Data validation and error handling
 - Graceful degradation on RPC failures
+- Deduplication using signature + sequence numbers
 
 ---
 
@@ -406,4 +639,7 @@ curl -f https://mfx-stats-mainnet.fly.dev/health || echo "Service down"
 
 # Detailed monitoring
 curl -s https://mfx-stats-mainnet.fly.dev/tickers | jq 'length' # Market count
+
+# Database health
+curl -s "https://mfx-stats-mainnet.fly.dev/completeFills?limit=1" | jq '.total' # Total fills
 ```
