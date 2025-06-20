@@ -330,7 +330,13 @@ export class ManifestStatsServer {
       });
 
       this.markets.set(market, marketObject);
-      return marketObject;
+      const metaplex: Metaplex = Metaplex.make(this.connection);
+      const baseSymbol = await this.lookupMintTicker(metaplex, marketObject.baseMint());
+      const quoteSymbol = await this.lookupMintTicker(metaplex, marketObject.quoteMint());
+      
+      this.tickers.set(market, [baseSymbol, quoteSymbol]);
+    
+    return marketObject;
     } catch (error) {
       console.error('Error loading market:', market, error);
       return undefined; // Changed from null to undefined
