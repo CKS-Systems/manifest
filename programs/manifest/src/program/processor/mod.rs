@@ -12,6 +12,7 @@ pub mod global_withdraw;
 pub mod shared;
 pub mod swap;
 pub mod withdraw;
+pub mod delegate_market;
 
 pub use shared::*;
 pub use swap::*;

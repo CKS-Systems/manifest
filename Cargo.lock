@@ -1585,6 +1585,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "ephemeral-rollups-sdk"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1567ae90eac4338ad3d87228bd357b540142af5edbc333c73f06c74cd2bf336f"
+dependencies = [
+ "borsh 0.10.4",
+ "ephemeral-rollups-sdk-attribute-commit",
+ "ephemeral-rollups-sdk-attribute-delegate",
+ "ephemeral-rollups-sdk-attribute-ephemeral",
+ "solana-program",
+]
+
+[[package]]
+name = "ephemeral-rollups-sdk-attribute-commit"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75518f8c7369c8d704c24b79c9b6338a100531e448966ded8adc33010fb23276"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "ephemeral-rollups-sdk-attribute-delegate"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b881281f72fe6fa8fb13b1a5402f809c09358a1032eca1a78d9987bfc99040ec"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "ephemeral-rollups-sdk-attribute-ephemeral"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a121fb704f5a9ca695a6ef1869ccd65a2f5e1df9756ee0047a7583322517a71d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2589,6 +2634,7 @@ dependencies = [
  "cvt 0.2.0 (git+https://github.com/Certora/solana-cvt.git)",
  "cvt-macros",
  "early-panic",
+ "ephemeral-rollups-sdk",
  "hook_macro",
  "hypertree 1.0.0",
  "nondet 0.4.0 (git+https://github.com/Certora/solana-cvt.git)",

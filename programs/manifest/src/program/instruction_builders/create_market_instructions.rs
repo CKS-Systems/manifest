@@ -1,30 +1,31 @@
 use crate::{
-    program::ManifestInstruction, state::MarketFixed, validation::get_vault_address, ProgramError,
+    program::ManifestInstruction, validation::{get_vault_address, get_market_address}, ProgramError,
 };
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    system_instruction, system_program,
-    sysvar::rent::Rent,
+    system_program,
 };
 
-/// Creates the account and populates it with rent.
+/// Helper function for clients to get the market PDA address
+pub fn get_market_pubkey(
+    base_mint: &Pubkey,
+    quote_mint: &Pubkey,
+) -> Pubkey {
+    let (market, _bump) = get_market_address(base_mint, quote_mint);
+    market
+}
+
+/// Creates the market PDA and populates it with data.
 pub fn create_market_instructions(
-    market: &Pubkey,
     base_mint: &Pubkey,
     quote_mint: &Pubkey,
     market_creator: &Pubkey,
 ) -> Result<Vec<Instruction>, ProgramError> {
-    let space: usize = std::mem::size_of::<MarketFixed>();
+    let (market, _market_bump) = get_market_address(base_mint, quote_mint);
+    
     Ok(vec![
-        system_instruction::create_account(
-            market_creator,
-            market,
-            Rent::default().minimum_balance(space),
-            space as u64,
-            &crate::id(),
-        ),
-        create_market_instruction(market, base_mint, quote_mint, market_creator),
+        create_market_instruction(&market, base_mint, quote_mint, market_creator),
     ])
 }
 

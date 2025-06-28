@@ -1,6 +1,6 @@
 use std::cell::RefMut;
 
-use manifest::program::create_market_instructions;
+use manifest::program::{create_market_instructions, get_market_pubkey};
 use solana_program_test::{tokio, ProgramTestContext};
 use solana_sdk::{
     instruction::Instruction,
@@ -37,10 +37,15 @@ async fn create_market_fail_already_initialized() -> anyhow::Result<()> {
     let test_fixture: TestFixture = TestFixture::new().await;
 
     let mut context_cell: RefMut<ProgramTestContext> = test_fixture.context.borrow_mut();
-    let market_keypair: Keypair = Keypair::new();
     let payer: &Pubkey = &context_cell.payer.pubkey();
+    
+    // Get the market PDA address
+    let market_address = get_market_pubkey(
+        &test_fixture.sol_mint_fixture.key,
+        &test_fixture.usdc_mint_fixture.key,
+    );
+    
     let create_market_ixs: Vec<Instruction> = create_market_instructions(
-        &market_keypair.pubkey(),
         &test_fixture.sol_mint_fixture.key,
         &test_fixture.usdc_mint_fixture.key,
         payer,
@@ -51,7 +56,7 @@ async fn create_market_fail_already_initialized() -> anyhow::Result<()> {
         Transaction::new_signed_with_payer(
             &create_market_ixs[..],
             Some(payer),
-            &[&context_cell.payer, &market_keypair],
+            &[&context_cell.payer], // No market keypair needed anymore
             context_cell.last_blockhash,
         )
     };
@@ -64,7 +69,7 @@ async fn create_market_fail_already_initialized() -> anyhow::Result<()> {
     // failing in the program, so dont init market outside the program again.
     let create_market_tx: Transaction = {
         Transaction::new_signed_with_payer(
-            &create_market_ixs[1..],
+            &create_market_ixs[..],
             Some(payer),
             &[&context_cell.payer],
             context_cell.last_blockhash,

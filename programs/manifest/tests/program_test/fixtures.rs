@@ -11,7 +11,7 @@ use manifest::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
         batch_update_instruction,
         claim_seat_instruction::claim_seat_instruction,
-        create_market_instructions, deposit_instruction, get_dynamic_value,
+        create_market_instructions, get_market_pubkey, deposit_instruction, get_dynamic_value,
         global_add_trader_instruction,
         global_create_instruction::create_global_instruction,
         global_deposit_instruction, global_withdraw_instruction, swap_instruction,
@@ -258,22 +258,24 @@ impl TestFixture {
         base_mint: &Pubkey,
         quote_mint: &Pubkey,
     ) -> anyhow::Result<Pubkey, BanksClientError> {
-        let market_keypair: Keypair = Keypair::new();
         let payer: Pubkey = self.context.borrow().payer.pubkey();
         let payer_keypair: Keypair = self.context.borrow().payer.insecure_clone();
 
+        // Get the market PDA address
+        let market_address = get_market_pubkey(base_mint, quote_mint);
+
         let create_market_ixs: Vec<Instruction> =
-            create_market_instructions(&market_keypair.pubkey(), base_mint, quote_mint, &payer)
+            create_market_instructions(base_mint, quote_mint, &payer)
                 .unwrap();
 
         send_tx_with_retry(
             Rc::clone(&self.context),
             &create_market_ixs[..],
             Some(&payer),
-            &[&payer_keypair, &market_keypair],
+            &[&payer_keypair], // No market keypair needed anymore
         )
         .await?;
-        Ok(market_keypair.pubkey())
+        Ok(market_address)
     }
 
     pub async fn claim_seat(&self) -> anyhow::Result<(), BanksClientError> {
@@ -803,18 +805,21 @@ impl MarketFixture {
         base_mint: &Pubkey,
         quote_mint: &Pubkey,
     ) -> Self {
-        let market_keypair: Keypair = Keypair::new();
         let payer: Pubkey = context.borrow().payer.pubkey();
         let payer_keypair: Keypair = context.borrow().payer.insecure_clone();
+        
+        // Get the market PDA address
+        let market_address = get_market_pubkey(base_mint, quote_mint);
+        
         let create_market_ixs: Vec<Instruction> =
-            create_market_instructions(&market_keypair.pubkey(), base_mint, quote_mint, &payer)
+            create_market_instructions(base_mint, quote_mint, &payer)
                 .unwrap();
 
         send_tx_with_retry(
             Rc::clone(&context),
             &create_market_ixs[..],
             Some(&payer),
-            &[&payer_keypair, &market_keypair],
+            &[&payer_keypair], // No market keypair needed anymore
         )
         .await
         .unwrap();
@@ -865,9 +870,9 @@ impl MarketFixture {
         // Dummy default value. Not valid until reload.
         MarketFixture {
             context: context_ref,
-            key: market_keypair.pubkey(),
+            key: market_address,
             market: MarketValue {
-                fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_keypair.pubkey()),
+                fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &market_address),
                 dynamic: Vec::new(),
             },
         }

@@ -162,6 +162,16 @@ pub enum ManifestInstruction {
     #[account(12, writable, optional, name = "global", desc = "Global account")]
     #[account(13, writable, optional, name = "global_vault", desc = "Global vault")]
     SwapV2 = 13,
+
+    #[account(0, writable, signer, name = "initializer", desc = "Initializer and payer for delegation")]
+    #[account(1, name = "system_program", desc = "System program")]
+    #[account(2, writable, name = "market_to_delegate", desc = "Market account to delegate")]
+    #[account(3, name = "owner_program", desc = "Owner program (manifest program)")]
+    #[account(4, writable, name = "delegation_buffer", desc = "Delegation buffer")]
+    #[account(5, writable, name = "delegation_record", desc = "Delegation record")]
+    #[account(6, writable, name = "delegation_metadata", desc = "Delegation metadata")]
+    #[account(7, name = "delegation_program", desc = "Delegation program")]
+    DelegateMarket = 14,
 }
 
 impl ManifestInstruction {
@@ -172,7 +182,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 13;
+    let num_instructions: u8 = 14;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {

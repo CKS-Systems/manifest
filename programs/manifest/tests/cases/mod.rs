@@ -2,6 +2,7 @@ pub mod batch_update;
 pub mod cancel_order;
 pub mod claim_seat;
 pub mod create_market;
+pub mod delegate_market;
 pub mod deposit;
 pub mod global;
 pub mod loaders;
