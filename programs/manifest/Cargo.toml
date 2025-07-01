@@ -1,6 +1,6 @@
 [package]
 name = "manifest-dex"
-version = "2.0.1"
+version = "3.0.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -71,4 +71,4 @@ solana-logger = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
 serde_json = "1.0.86"
-spl-associated-token-account = { version = "1.1.2", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "7", features = ["no-entrypoint"] }

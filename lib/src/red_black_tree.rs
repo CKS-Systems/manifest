@@ -189,7 +189,7 @@ pub trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
-    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &'a RBNode<V>;
     fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
     fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
@@ -206,7 +206,7 @@ pub(crate) trait RedBlackTreeReadOperationsHelpers<'a> {
     fn get_parent_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_left_child<V: Payload>(&self, index: DataIndex) -> bool;
     fn is_right_child<V: Payload>(&self, index: DataIndex) -> bool;
-    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &RBNode<V>;
+    fn get_node<V: Payload>(&'a self, index: DataIndex) -> &'a RBNode<V>;
     fn get_child_index<V: Payload>(&self, index: DataIndex) -> DataIndex;
     fn is_internal<V: Payload>(&self, index: DataIndex) -> bool;
     fn get_sibling_index<V: Payload>(&self, index: DataIndex, parent_index: DataIndex)
@@ -676,7 +676,7 @@ where
 
 #[cfg(any(test, feature = "fuzz", feature = "trace"))]
 pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
-    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<'a, T, V>;
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
     #[cfg(test)]
     fn max_depth<V: Payload>(&'a self) -> i32;
@@ -695,7 +695,7 @@ where
     T: GetRedBlackTreeReadOnlyData<'a>,
 {
     /// Sorted iterator starting from the min.
-    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<'a, T, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
             index: self.get_max_index(),
@@ -886,7 +886,7 @@ impl<'a, T> HyperTreeValueIteratorTrait<'a, T> for T
 where
     T: GetRedBlackTreeReadOnlyData<'a> + HyperTreeReadOperations<'a>,
 {
-    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V> {
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<'a, T, V> {
         let mut index = self.get_max_index();
         if index == NIL {
             index = self.lookup_max_index::<V>();

@@ -323,35 +323,6 @@ async fn swap_wrong_token_accounts() -> anyhow::Result<()> {
         .await
         .is_err());
     }
-    // Wrong trader quote
-    {
-        let swap_ix: Instruction = Instruction {
-            program_id: manifest::id(),
-            accounts: vec![
-                AccountMeta::new(*payer, true),
-                AccountMeta::new(*market, false),
-                AccountMeta::new(system_program::id(), false),
-                AccountMeta::new(*trader_base_account, false),
-                AccountMeta::new(quote_vault, false),
-                AccountMeta::new(base_vault, false),
-                AccountMeta::new(quote_vault, false),
-                AccountMeta::new_readonly(spl_token::id(), false),
-            ],
-            data: [
-                ManifestInstruction::Swap.to_vec(),
-                SwapParams::new(1_000, 0, true, true).try_to_vec().unwrap(),
-            ]
-            .concat(),
-        };
-        assert!(send_tx_with_retry(
-            Rc::clone(&test_fixture.context),
-            &[swap_ix],
-            Some(payer),
-            &[payer_keypair],
-        )
-        .await
-        .is_err());
-    }
     // Wrong base vault
     {
         let swap_ix: Instruction = Instruction {

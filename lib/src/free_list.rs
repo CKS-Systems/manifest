@@ -78,6 +78,7 @@ impl<'a, T: Pod> FreeList<'a, T> {
 mod test {
     use super::*;
 
+    #[allow(unused)]
     #[repr(C, packed)]
     #[derive(Default, Copy, Clone, Pod, Zeroable)]
     struct UnusedFreeListPadding1 {

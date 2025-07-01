@@ -9,7 +9,7 @@ env:
   MANIFEST_NAME: manifest
   WRAPPER_NAME: wrapper
   UI_WRAPPER_NAME: ui_wrapper
-  RUST_TOOLCHAIN: '1.84.0'
+  RUST_TOOLCHAIN: '1.86.0'
 
 
 jobs:

@@ -6,10 +6,10 @@
 pip install certora-cli
 ```
 
-2. Solana CLI: 1.18.16
+2. Solana CLI: 2.2.12
 
 ```
-sh -c "$(curl -sSfL https://release.solana.com/v1.18.16/install)"
+sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.12/install)"
 ```
 
 3. Install Certora version of platform-tools 1.41

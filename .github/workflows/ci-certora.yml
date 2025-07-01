@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  SOLANA_VERSION: '1.18.16'
+  SOLANA_VERSION: '2.2.12'
 
 jobs:
   verification:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Install solana
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
           echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
