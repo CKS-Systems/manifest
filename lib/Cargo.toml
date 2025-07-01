@@ -19,7 +19,7 @@ test = []
 certora = ["dep:nondet", "dep:calltrace", "dep:cvt"]
 
 [dependencies]
-bytemuck = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"] }
 solana-program = { workspace = true }
 static_assertions = { workspace = true }
 nondet = { workspace = true, optional = true}

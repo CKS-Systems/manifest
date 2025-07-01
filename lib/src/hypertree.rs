@@ -76,7 +76,7 @@ pub struct HyperTreeValueReadOnlyIterator<'a, T: HyperTreeReadOperations<'a>, V:
 }
 
 pub trait HyperTreeValueIteratorTrait<'a, T: HyperTreeReadOperations<'a>> {
-    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<T, V>;
+    fn iter<V: Payload>(&'a self) -> HyperTreeValueReadOnlyIterator<'a, T, V>;
 }
 
 pub trait HyperTreeWriteOperations<'a, V: Payload> {

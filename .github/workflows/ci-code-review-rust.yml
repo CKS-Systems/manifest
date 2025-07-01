@@ -50,7 +50,7 @@ jobs:
           rustup component add clippy
 
       - name: Run clippy
-        run: cargo clippy --workspace --exclude fixed --exclude checked_math -- --no-deps --deny=warnings --allow=clippy::style --allow=clippy::complexity --allow=clippy::manual-retain --allow=clippy::crate-in-macro-def --allow=clippy::result-large-err --allow=clippy::derive_partial_eq_without_eq --allow=clippy::multiple-bound-locations
+        run: cargo clippy --workspace --exclude fixed --exclude checked_math -- --no-deps --deny=warnings --allow=clippy::style --allow=clippy::complexity --allow=clippy::manual-retain --allow=clippy::crate-in-macro-def --allow=clippy::result-large-err --allow=clippy::derive_partial_eq_without_eq --allow=clippy::multiple-bound-locations --allow=unexpected-cfgs
 
   test:
     name: Test
