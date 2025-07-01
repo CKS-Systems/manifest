@@ -197,10 +197,6 @@ impl Amm for ManifestLocalMarket {
         false
     }
 
-    fn get_user_setup(&self) -> Option<jupiter_amm_interface::AmmUserSetup> {
-        None
-    }
-
     fn unidirectional(&self) -> bool {
         false
     }
@@ -470,10 +466,6 @@ impl Amm for ManifestMarket {
 
     fn has_dynamic_accounts(&self) -> bool {
         false
-    }
-
-    fn get_user_setup(&self) -> Option<jupiter_amm_interface::AmmUserSetup> {
-        None
     }
 
     fn unidirectional(&self) -> bool {
