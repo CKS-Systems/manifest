@@ -510,7 +510,7 @@ mod test {
     };
     use solana_sdk::{account::Account, account_info::AccountInfo, pubkey};
     use spl_token_2022::state::Mint;
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::{cell::RefCell, rc::Rc};
 
     const BASE_MINT_KEY: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
     const QUOTE_MINT_KEY: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -696,7 +696,7 @@ mod test {
         let mut manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([
+        let accounts_map = AccountMap::from_iter([
             (MARKET_KEY, market_account),
             (quote_global_key, quote_global_account),
             (
@@ -861,7 +861,7 @@ mod test {
         let mut manifest_market: ManifestLocalMarket =
             ManifestLocalMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([
+        let accounts_map = AccountMap::from_iter([
             (MARKET_KEY, market_account),
             (
                 BASE_MINT_KEY,
@@ -988,7 +988,7 @@ mod test {
         let mut manifest_market: ManifestLocalMarket =
             ManifestLocalMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([(MARKET_KEY, market_account)]);
+        let accounts_map = AccountMap::from_iter([(MARKET_KEY, market_account)]);
         manifest_market.update(&accounts_map).unwrap();
 
         let (base_mint, quote_mint) = {
@@ -1118,10 +1118,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_forward: SwapAndAccountMetas = manifest_market
@@ -1136,10 +1136,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_backward: SwapAndAccountMetas = manifest_market
@@ -1148,7 +1148,6 @@ mod test {
 
         manifest_market.clone_amm();
         assert!(!manifest_market.has_dynamic_accounts());
-        assert!(manifest_market.get_user_setup().is_none());
         assert!(!manifest_market.unidirectional());
         assert_eq!(manifest_market.program_dependencies().len(), 0);
 
@@ -1162,7 +1161,6 @@ mod test {
         assert_eq!(manifest_local_market.get_reserve_mints()[0], BASE_MINT_KEY);
         manifest_local_market.clone_amm();
         assert!(!manifest_local_market.has_dynamic_accounts());
-        assert!(manifest_local_market.get_user_setup().is_none());
         assert!(!manifest_local_market.unidirectional());
         assert_eq!(manifest_local_market.program_dependencies().len(), 0);
 
@@ -1174,10 +1172,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_forward: SwapAndAccountMetas = manifest_local_market
@@ -1192,10 +1190,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_backward: SwapAndAccountMetas = manifest_local_market
