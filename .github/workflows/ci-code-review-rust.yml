@@ -27,7 +27,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set Rust version
-        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component rustfmt
+        run: |
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component rustfmt
+          rustup default ${{ env.RUST_TOOLCHAIN }}
 
       - name: Run fmt
         run: cargo fmt -- --check
@@ -43,7 +45,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Set Rust version
-        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component clippy
+        run: |
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component clippy
+          rustup default ${{ env.RUST_TOOLCHAIN }}
 
       - name: Run clippy
         run: cargo clippy --workspace --exclude fixed --exclude checked_math -- --no-deps --deny=warnings --allow=clippy::style --allow=clippy::complexity --allow=clippy::manual-retain --allow=clippy::crate-in-macro-def --allow=clippy::result-large-err --allow=clippy::derive_partial_eq_without_eq --allow=clippy::multiple-bound-locations
@@ -59,7 +63,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Set Rust version
-        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+        run: |
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+          rustup default ${{ env.RUST_TOOLCHAIN }}
 
       - name: Install Solana
         run: |
@@ -88,7 +94,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Set Rust version
-        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+        run: |
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+          rustup default ${{ env.RUST_TOOLCHAIN }}
 
       - name: Install Solana
         run: |
