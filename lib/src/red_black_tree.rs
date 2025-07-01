@@ -676,7 +676,7 @@ where
 
 #[cfg(any(test, feature = "fuzz", feature = "trace"))]
 pub trait RedBlackTreeTestHelpers<'a, T: GetRedBlackTreeReadOnlyData<'a>> {
-    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V>;
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<'a, T, V>;
     fn depth<V: Payload>(&'a self, index: DataIndex) -> i32;
     #[cfg(test)]
     fn max_depth<V: Payload>(&'a self) -> i32;
@@ -695,7 +695,7 @@ where
     T: GetRedBlackTreeReadOnlyData<'a>,
 {
     /// Sorted iterator starting from the min.
-    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<T, V> {
+    fn node_iter<V: Payload>(&'a self) -> RedBlackTreeReadOnlyIterator<'a, T, V> {
         RedBlackTreeReadOnlyIterator {
             tree: self,
             index: self.get_max_index(),
