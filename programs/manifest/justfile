@@ -51,11 +51,11 @@ test-certora *TESTS:
 build-sbf extra_features="":
        echo "env RUSTFLAGS=$RUSTFLAGS"
        echo "env CARGO_FEATURES=$CARGO_FEATURES"
-       cargo +solana build-sbf --features certora {{ extra_features }} ${CARGO_FEATURES}
+       cargo certora-sbf --tools-version=v1.43 --features certora {{ extra_features }} ${CARGO_FEATURES}
 
 build-sbf-llvm:
 		env RUSTFLAGS="${RUSTFLAGS} --emit=llvm-ir -C no-vectorize-slp -C opt-level=2" \
-		cargo +solana build-sbf --features certora
+		cargo certora-sbf --tools-version=v1.43 --features certora
 
 build:
 	cargo build
