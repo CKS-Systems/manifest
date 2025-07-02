@@ -1,5 +1,5 @@
 use crate::*;
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::*;
 

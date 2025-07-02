@@ -28,14 +28,14 @@ solana-logger = "2.2"
 solana-sdk = "2.2"
 tokio = "1.28.0"
 
-nondet = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-cvt = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-early-panic = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-cvt-macros = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-calltrace = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-solana_cvt = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-hook_macro = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
-vectors = { git = "https://github.com/mschneider/solana-cvt", branch = "max/solana-2.2" }
+nondet = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+cvt = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+early-panic = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+cvt-macros = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+calltrace = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+solana_cvt = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+hook_macro = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
+vectors = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
 arrayref = "0.3.7"
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html

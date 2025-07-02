@@ -1,5 +1,5 @@
 use crate::{get_trader_balance, get_trader_index};
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::{acc_infos_with_mem_layout, nondet};
 

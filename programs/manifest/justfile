@@ -1,25 +1,34 @@
 # user settings should be placed into .env file in some ancestor directory
 set dotenv-load
 
+project_root := canonicalize("../")
+crate_root := canonicalize(".")
+
 # used by OSX, ignore otherwise
 export CPATH := env_var_or_default("CPATH", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include")
-# magic llvm flags
-export RUSTFLAGS := "-C llvm-args=--sbf-expand-memcpy-in-order -C llvm-args=--combiner-store-merging=false" 
+
 # features used when compiling target Rust code
-export CARGO_FEATURES := env_var_or_default("CARGO_FEATURES", "")
+export CARGO_FEATURES := env("CARGO_FEATURES", "")
+
+
 # java executable
 export JAVA := env_var_or_default("JAVA", "java")
 # certora cli: certoraRun or certoraRun.py
-export CERTORA_CLI := env_var_or_default("CERTORA_CLI", "certoraRun")
+export CERTORA_CLI := env_var_or_default("CERTORA_CLI", "certoraSolanaRun")
+
 # run split or single solver mode
 export CERTORA_SPLIT := env_var_or_default("CERTORA_SPLIT", "false")
+
 # produce unsat cores
 export CERTORA_UNSAT_CORES := env_var_or_default("CERTORA_UNSAT_CORES", "false")
+
+export TAC_OPT_LEVEL := env_var_or_default("TAC_OPT_LEVEL", "0")
+
 
 # type of cloud to use
 certora_cloud := "prover"
 # cloud version of the prover (if remote is used)
-prover_version := "jorge/solana-jsm"
+prover_version := "master"
 
 # location of prover jar
 emv_jar := "$CERTORA/emv.jar"
@@ -49,16 +58,15 @@ test-certora *TESTS:
 	cargo test --features certora-test {{TESTS}} -- --nocapture
 
 build-sbf extra_features="":
-       echo "env RUSTFLAGS=$RUSTFLAGS"
-       echo "env CARGO_FEATURES=$CARGO_FEATURES"
-       cargo +solana build-sbf --features certora {{ extra_features }} ${CARGO_FEATURES}
+	cargo certora-sbf --tools-version v1.43 --features certora {{ extra_features }} ${CARGO_FEATURES}
 
 build-sbf-llvm:
-		env RUSTFLAGS="${RUSTFLAGS} --emit=llvm-ir -C no-vectorize-slp -C opt-level=2" \
-		cargo +solana build-sbf --features certora
+	env RUSTFLAGS="--emit=llvm-ir -C no-vectorize-slp -C opt-level=2" \
+	cargo certora-sbf --tools-version v1.43 --features certora ${CARGO_FEATURES}
 
 build:
 	cargo build
+
 
 cvt-update:
 	cargo update -p nondet
@@ -68,13 +76,17 @@ cvt-update:
 verify RULE *OPTS: build-sbf
 		mkdir -p certora_out
 		cd certora_out && ${JAVA} -ea -Xmx8g \
-		-Dtopic.spec -Dlevel.ebpf=${CERTORA_VERBOSE:-info} \
+		-Dtopic.spec -Dlevel.sbf=${CERTORA_VERBOSE:-info} \
 		-Dverbose.times -Dcvt.simple.parallel -Djava.awt.headless=true \
 		-jar {{ emv_jar }} \
 		-deleteSMTFile false -graphDrawLimit 2000 \
 		{{ file }} \
 		-split ${CERTORA_SPLIT} \
 		-unsatCoresForAllAsserts ${CERTORA_UNSAT_CORES} \
+		-solanaTACOptimize ${TAC_OPT_LEVEL} \
+		-solanaAggressiveGlobalDetection true \
+		-solanaPrintDevMsg true \
+		-solanaSlicerIter 6 \
 		-solanaInlining {{ inliner_cfg }} \
 		-solanaSummaries {{ summaries_cfg }} \
 		-solanaOptimisticJoin true \
@@ -82,6 +94,7 @@ verify RULE *OPTS: build-sbf
 		-solanaOptimisticMemcpyPromotion true \
 		-solanaOptimisticMemcmp true \
 		-solanaOptimisticNoMemmove true \
+		-solanaOptimisticJoinWithStackPtr true \
 		-solanaPrintAnalyzedToDot \
 		-solanaEntrypoint {{ RULE }} \
 		{{ OPTS }} 
@@ -90,7 +103,7 @@ verify RULE *OPTS: build-sbf
 vacuity RULE *OPTS: (build-sbf "certora_vacuity")
 		mkdir -p certora_out
 		cd certora_out && ${JAVA} -ea -Xmx8g \
-		-Dtopic.spec -Dlevel.ebpf=${CERTORA_VERBOSE:-info} \
+		-Dtopic.spec -Dlevel.sbf=${CERTORA_VERBOSE:-info} \
 		-Dverbose.times -Dcvt.simple.parallel -Djava.awt.headless=true \
 		-jar {{ emv_jar }} \
 		-deleteSMTFile false -graphDrawLimit 2000 \
@@ -122,6 +135,7 @@ verify-remote RULE *OPTS: build-sbf
 		 --prover_version {{ prover_version }} \
 		 --server {{ certora_cloud }}
 
+import "src/certora/just/certoraSolanaProver.just"
 
 clean:
 	rm -f *.dot *.png *.svg

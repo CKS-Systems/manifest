@@ -146,12 +146,10 @@
 #[inline] ^solana_program::instruction::get_stack_height$
 #[inline] ^solana_program::program::set_return_data$
 
-#[inline(never)] ^<solana_program::program_error::ProgramError as core::convert::From<u64>>::from$
+#[inline] ^<solana_program::program_error::ProgramError as core::convert::From<u64>>::from$
 
-#[inline] ^core::result::unwrap_failed$
 #[inline] ^core::cell::RefCell<T>::borrow(_\d+)?$
 #[inline] ^core::cell::RefCell<T>::borrow_mut(_\d+)?$
-
 
 ;; Borsh and common functions used by Borsh
 #[inline(never)] ^std::io::error::Error::new(_\d+)?$

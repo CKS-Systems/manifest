@@ -4,9 +4,9 @@ use crate::{
         cvt_assert_funds_invariants, cvt_assume_basic_market_preconditions,
         cvt_assume_funds_invariants, record_all_balances_without_order, AllBalances,
     },
-    create_empty_market, cvt_static_initializer,
+    create_empty_market, cvt_static_initializer, cvt_vacuity_check,
 };
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::*;
 use solana_cvt::token::spl_token_account_get_amount;

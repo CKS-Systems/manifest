@@ -16,8 +16,9 @@ impl QuoteAtomsPerBaseAtom {
 
     #[inline(always)]
     pub fn from_mantissa_and_exponent_(_mantissa: u32, _exponent: i8) -> Self {
-        cvt::cvt_assert!(false);
-        unreachable!()
+        return Self {
+            inner: [::nondet::nondet::<u64>(), ::nondet::nondet::<u64>()],
+        };
     }
 
     pub fn try_from_mantissa_and_exponent(
@@ -104,11 +105,11 @@ impl QuoteAtomsPerBaseAtom {
         Self { inner: [x, 0] }
     }
 
-    pub fn multiply_spread(self, _spread_e_5: u16) -> Self {
+    pub fn multiply_spread(self, _spread_e_5: u32) -> Self {
         todo!()
     }
 
-    pub fn divide_spread(self, _spread_e_5: u16) -> Self {
+    pub fn divide_spread(self, _spread_e_5: u32) -> Self {
         todo!()
     }
 }

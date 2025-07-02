@@ -36,7 +36,10 @@ macro_rules! get_trader_balance {
             &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let (base_atoms, quote_atoms) = dynamic_account.get_trader_balance($trader_key);
-        (u64::from(base_atoms), u64::from(quote_atoms))
+        let res = (u64::from(base_atoms), u64::from(quote_atoms));
+        cvt_assume!(res.0 <= nondet::<u64>());
+        cvt_assume!(res.1 <= nondet::<u64>());
+        res
     }};
 }
 
@@ -110,7 +113,9 @@ macro_rules! get_withdrawable_base_atoms {
             &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let DynamicAccount { fixed, .. } = dynamic_account;
-        fixed.get_withdrawable_base_atoms().as_u64()
+        let res = fixed.get_withdrawable_base_atoms().as_u64();
+        cvt_assume!(res <= nondet::<u64>());
+        res
     }};
 }
 #[macro_export]
@@ -121,7 +126,9 @@ macro_rules! get_withdrawable_quote_atoms {
             &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let DynamicAccount { fixed, .. } = dynamic_account;
-        fixed.get_withdrawable_quote_atoms().as_u64()
+        let res = fixed.get_withdrawable_quote_atoms().as_u64();
+        cvt_assume!(res <= nondet::<u64>());
+        res
     }};
 }
 #[macro_export]
@@ -132,7 +139,9 @@ macro_rules! get_orderbook_base_atoms {
             &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let DynamicAccount { fixed, .. } = dynamic_account;
-        fixed.get_orderbook_base_atoms().as_u64()
+        let res = fixed.get_orderbook_base_atoms().as_u64();
+        cvt_assume!(res <= nondet::<u64>());
+        res
     }};
 }
 #[macro_export]
@@ -143,7 +152,9 @@ macro_rules! get_orderbook_quote_atoms {
             &mut $market_acc_info.try_borrow_mut_data().unwrap();
         let dynamic_account: MarketRefMut = get_mut_dynamic_account(market_data);
         let DynamicAccount { fixed, .. } = dynamic_account;
-        fixed.get_orderbook_quote_atoms().as_u64()
+        let res = fixed.get_orderbook_quote_atoms().as_u64();
+        cvt_assume!(res <= nondet::<u64>());
+        res
     }};
 }
 

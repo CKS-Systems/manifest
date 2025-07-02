@@ -1,10 +1,10 @@
 use super::verification_utils::init_static;
 use crate::{
-    claim_seat, create_empty_market, cvt_assert_is_nil, deposit, get_trader_balance,
-    get_trader_index,
+    claim_seat, create_empty_market, cvt_assert_is_nil, cvt_vacuity_check, deposit,
+    get_trader_balance, get_trader_index,
 };
 use calltrace::cvt_cex_print_u64;
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::nondet;
 

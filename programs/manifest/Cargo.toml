@@ -20,7 +20,7 @@ fuzz = []
 trace = ["hypertree/trace"]
 no-clock = []
 certora = ["no-entrypoint", "dep:cvt", "dep:nondet", "dep:cvt-macros", "dep:early-panic", "dep:calltrace", "dep:solana_cvt", "dep:vectors", "dep:hook_macro",
-           "hypertree/certora"]
+           "hypertree/certora", "dep:cvlr"]
 certora_vacuity = ["cvt/vacuity"]
 
 
@@ -63,6 +63,7 @@ vectors = { workspace = true, optional = true}
 hook_macro = { workspace = true, optional = true}
 arrayref = { workspace = true}
 solana-invoke = { workspace = true }
+cvlr = { version = "0.4", optional = true } 
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -72,3 +73,8 @@ solana-sdk = { workspace = true }
 tokio = { workspace = true }
 serde_json = "1.0.86"
 spl-associated-token-account = { version = "7", features = ["no-entrypoint"] }
+
+[package.metadata.certora]
+sources = ["src/**/*.rs"]
+solana_inlining = ["../../certora/cvt_inlining.txt"]
+solana_summaries = ["../../certora/cvt_summaries.txt"]

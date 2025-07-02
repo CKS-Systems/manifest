@@ -1,4 +1,4 @@
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::*;
 
@@ -59,7 +59,14 @@ pub fn rule_withdraw_withdraws() {
     let trader_amount: u64 = spl_token_account_get_amount(trader_token);
     let vault_amount: u64 = spl_token_account_get_amount(vault_token);
 
-    // These are violated for buggy transfer with token 2022
+    cvlr::clog!(
+        trader_amount_old,
+        vault_amount_old,
+        amount,
+        trader_amount,
+        vault_amount
+    );
+
     cvt_assert!(trader_amount >= trader_amount_old);
     cvt_assert!(vault_amount_old >= vault_amount);
     let trader_diff: u64 = trader_amount - trader_amount_old;
