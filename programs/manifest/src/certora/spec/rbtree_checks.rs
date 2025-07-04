@@ -1,6 +1,8 @@
+use crate::cvt_vacuity_check;
+
 use super::verification_utils::init_static;
 use bytemuck::{Pod, Zeroable};
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 pub use hypertree::red_black_tree::*;
 use hypertree::{
@@ -59,17 +61,17 @@ const TEST_BLOCK_WIDTH: DataIndex = 40;
 
 macro_rules! mk_rb_node {
     ($left: expr, $right: expr, $parent: expr, $color: expr, $value: expr) => {{
-        let left_nd = nondet::<DataIndex>();
-        let right_nd = nondet::<DataIndex>();
-        let parent_nd = nondet::<DataIndex>();
+        let left_nd: DataIndex = nondet();
+        let right_nd: DataIndex = nondet();
+        let parent_nd: DataIndex = nondet();
         let color_nd = if (nondet::<bool>()) {
             Color::Black
         } else {
             Color::Red
         };
-        cvt_assume!(left_nd == $left);
-        cvt_assume!(right_nd == $right);
-        cvt_assume!(parent_nd == $parent);
+        cvt_assume!(left_nd == $left as DataIndex);
+        cvt_assume!(right_nd == $right as DataIndex);
+        cvt_assume!(parent_nd == $parent as DataIndex);
         cvt_assume!(color_nd == $color);
         RBNode {
             left: left_nd,
@@ -407,7 +409,7 @@ pub fn rule_insert_preserves_parent_of_left_child() {
         }
     }
 
-    cvt_vacuity_check!()
+    cvt_vacuity_check!();
 }
 
 /// For each node, check that the parent of the right child is the node itself.
@@ -504,7 +506,7 @@ pub fn rule_insert_preserves_parent_of_right_child() {
         }
     }
 
-    cvt_vacuity_check!()
+    cvt_vacuity_check!();
 }
 
 // The rules for checking that the parent of the root is NIL hardcode the following facts:
@@ -819,9 +821,9 @@ pub fn rule_tree_is_ordered_after_insert_smallest_element() {
 ///
 macro_rules! build_tree_0 {
     ($data: expr, $val_0: expr, $val_1: expr, $val_2: expr) => {{
-        let index_0 = 0 * TEST_BLOCK_WIDTH;
-        let index_1 = 1 * TEST_BLOCK_WIDTH;
-        let index_2 = 2 * TEST_BLOCK_WIDTH;
+        let index_0: DataIndex = 0 * TEST_BLOCK_WIDTH;
+        let index_1: DataIndex = 1 * TEST_BLOCK_WIDTH;
+        let index_2: DataIndex = 2 * TEST_BLOCK_WIDTH;
 
         // Nodes with defined values.
 
@@ -831,19 +833,19 @@ macro_rules! build_tree_0 {
 
         // 1
         *get_mut_helper(&mut $data, index_1) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_0,
-            nondet(),
+            nondet::<Color>(),
             TestOrder::new($val_1)
         );
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_0,
-            nondet(),
+            nondet::<Color>(),
             TestOrder::new($val_2)
         );
 
@@ -906,18 +908,18 @@ pub fn rule_insert_fix_matches_reference_no_parent() {
 ///
 macro_rules! build_tree_1 {
     ($data: expr, $val_0: expr, $val_1: expr, $val_2: expr, $val_3: expr, $val_4: expr) => {{
-        let index_0 = 0 * TEST_BLOCK_WIDTH;
-        let index_1 = 1 * TEST_BLOCK_WIDTH;
-        let index_2 = 2 * TEST_BLOCK_WIDTH;
-        let index_3 = 3 * TEST_BLOCK_WIDTH;
-        let index_4 = 4 * TEST_BLOCK_WIDTH;
-        let index_5 = 5 * TEST_BLOCK_WIDTH;
-        let index_6 = 6 * TEST_BLOCK_WIDTH;
-        let index_7 = 7 * TEST_BLOCK_WIDTH;
-        let index_8 = 8 * TEST_BLOCK_WIDTH;
-        let index_9 = 9 * TEST_BLOCK_WIDTH;
-        let index_10 = 10 * TEST_BLOCK_WIDTH;
-        let index_11 = 11 * TEST_BLOCK_WIDTH;
+        let index_0: DataIndex = 0 * TEST_BLOCK_WIDTH;
+        let index_1: DataIndex = 1 * TEST_BLOCK_WIDTH;
+        let index_2: DataIndex = 2 * TEST_BLOCK_WIDTH;
+        let index_3: DataIndex = 3 * TEST_BLOCK_WIDTH;
+        let index_4: DataIndex = 4 * TEST_BLOCK_WIDTH;
+        let index_5: DataIndex = 5 * TEST_BLOCK_WIDTH;
+        let index_6: DataIndex = 6 * TEST_BLOCK_WIDTH;
+        let index_7: DataIndex = 7 * TEST_BLOCK_WIDTH;
+        let index_8: DataIndex = 8 * TEST_BLOCK_WIDTH;
+        let index_9: DataIndex = 9 * TEST_BLOCK_WIDTH;
+        let index_10: DataIndex = 10 * TEST_BLOCK_WIDTH;
+        let index_11: DataIndex = 11 * TEST_BLOCK_WIDTH;
 
         // Nodes with defined values.
 
@@ -966,16 +968,16 @@ macro_rules! build_tree_1 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -983,8 +985,8 @@ macro_rules! build_tree_1 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -992,8 +994,8 @@ macro_rules! build_tree_1 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1001,8 +1003,8 @@ macro_rules! build_tree_1 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1010,8 +1012,8 @@ macro_rules! build_tree_1 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1019,8 +1021,8 @@ macro_rules! build_tree_1 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1186,16 +1188,16 @@ macro_rules! build_tree_2 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -1203,8 +1205,8 @@ macro_rules! build_tree_2 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -1212,8 +1214,8 @@ macro_rules! build_tree_2 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1221,8 +1223,8 @@ macro_rules! build_tree_2 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1230,8 +1232,8 @@ macro_rules! build_tree_2 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1239,8 +1241,8 @@ macro_rules! build_tree_2 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1406,16 +1408,16 @@ macro_rules! build_tree_3 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -1423,8 +1425,8 @@ macro_rules! build_tree_3 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_2,
             nondet(),
             TestOrder::new(nondet())
@@ -1432,8 +1434,8 @@ macro_rules! build_tree_3 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1441,8 +1443,8 @@ macro_rules! build_tree_3 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1450,8 +1452,8 @@ macro_rules! build_tree_3 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1459,8 +1461,8 @@ macro_rules! build_tree_3 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1626,16 +1628,16 @@ macro_rules! build_tree_4 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -1643,8 +1645,8 @@ macro_rules! build_tree_4 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -1652,8 +1654,8 @@ macro_rules! build_tree_4 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1661,8 +1663,8 @@ macro_rules! build_tree_4 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1670,8 +1672,8 @@ macro_rules! build_tree_4 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1679,8 +1681,8 @@ macro_rules! build_tree_4 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1846,16 +1848,16 @@ macro_rules! build_tree_5 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -1863,8 +1865,8 @@ macro_rules! build_tree_5 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -1872,8 +1874,8 @@ macro_rules! build_tree_5 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1881,8 +1883,8 @@ macro_rules! build_tree_5 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -1890,8 +1892,8 @@ macro_rules! build_tree_5 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -1899,8 +1901,8 @@ macro_rules! build_tree_5 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -2066,16 +2068,16 @@ macro_rules! build_tree_6 {
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
             index_0,
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -2083,8 +2085,8 @@ macro_rules! build_tree_6 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -2092,8 +2094,8 @@ macro_rules! build_tree_6 {
 
         // 8
         *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -2101,8 +2103,8 @@ macro_rules! build_tree_6 {
 
         // 9
         *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -2110,8 +2112,8 @@ macro_rules! build_tree_6 {
 
         // 10
         *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -2119,8 +2121,8 @@ macro_rules! build_tree_6 {
 
         // 11
         *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_4,
             nondet(),
             TestOrder::new(nondet())
@@ -2277,32 +2279,67 @@ macro_rules! build_tree_shape_1 {
         // Padding nodes.
 
         // 5
-        *get_mut_helper(&mut $data, index_5) =
-            mk_rb_node!(index_0, nondet(), nondet(), $c5, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
+            index_0,
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            $c5,
+            TestOrder::new(nondet())
+        );
 
         // 6
-        *get_mut_helper(&mut $data, index_6) =
-            mk_rb_node!(nondet(), nondet(), index_1, $c6, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_1,
+            $c6,
+            TestOrder::new(nondet())
+        );
 
         // 7
-        *get_mut_helper(&mut $data, index_7) =
-            mk_rb_node!(nondet(), nondet(), index_1, $c7, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_1,
+            $c7,
+            TestOrder::new(nondet())
+        );
 
         // 8
-        *get_mut_helper(&mut $data, index_8) =
-            mk_rb_node!(nondet(), nondet(), index_3, $c8, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_8) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_3,
+            $c8,
+            TestOrder::new(nondet())
+        );
 
         // 9
-        *get_mut_helper(&mut $data, index_9) =
-            mk_rb_node!(nondet(), nondet(), index_3, $c9, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_9) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_3,
+            $c9,
+            TestOrder::new(nondet())
+        );
 
         // 10
-        *get_mut_helper(&mut $data, index_10) =
-            mk_rb_node!(nondet(), nondet(), index_4, $c10, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_10) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_4,
+            $c10,
+            TestOrder::new(nondet())
+        );
 
         // 11
-        *get_mut_helper(&mut $data, index_11) =
-            mk_rb_node!(nondet(), nondet(), index_4, $c11, TestOrder::new(nondet()));
+        *get_mut_helper(&mut $data, index_11) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
+            index_4,
+            $c11,
+            TestOrder::new(nondet())
+        );
 
         RedBlackTree::new(&mut $data, index_5, index_11)
     }};
@@ -3287,12 +3324,22 @@ macro_rules! build_tree_7 {
         let index_1 = 1 * TEST_BLOCK_WIDTH;
 
         // 0
-        *get_mut_helper(&mut $data, index_0) =
-            mk_rb_node!(nondet(), index_1, NIL, Color::Black, TestOrder::new($val_0));
+        *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            index_1,
+            NIL,
+            Color::Black,
+            TestOrder::new($val_0)
+        );
 
         // 1
-        *get_mut_helper(&mut $data, index_1) =
-            mk_rb_node!(nondet(), NIL, index_0, Color::Black, TestOrder::new($val_1));
+        *get_mut_helper(&mut $data, index_1) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            NIL,
+            index_0,
+            Color::Black,
+            TestOrder::new($val_1)
+        );
 
         RedBlackTree::new(&mut $data, index_0, index_1)
     }};
@@ -3340,8 +3387,13 @@ macro_rules! build_tree_8 {
         let index_1 = 1 * TEST_BLOCK_WIDTH;
 
         // 0
-        *get_mut_helper(&mut $data, index_0) =
-            mk_rb_node!(nondet(), index_1, NIL, Color::Black, TestOrder::new($val_0));
+        *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
+            nondet::<DataIndex>(),
+            index_1,
+            NIL,
+            Color::Black,
+            TestOrder::new($val_0)
+        );
 
         // 1
         *get_mut_helper(&mut $data, index_1) =
@@ -3558,7 +3610,7 @@ macro_rules! build_tree_10 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             index_1,
             nondet_with(|i: &DataIndex| *i != index_1),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3569,8 +3621,8 @@ macro_rules! build_tree_10 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3578,8 +3630,8 @@ macro_rules! build_tree_10 {
 
         // 3
         *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3589,7 +3641,7 @@ macro_rules! build_tree_10 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             index_5,
             nondet_with(|i: &DataIndex| *i != index_5),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3600,8 +3652,8 @@ macro_rules! build_tree_10 {
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3609,8 +3661,8 @@ macro_rules! build_tree_10 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3683,7 +3735,7 @@ macro_rules! build_tree_11 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_1),
             index_1,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3694,8 +3746,8 @@ macro_rules! build_tree_11 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3703,8 +3755,8 @@ macro_rules! build_tree_11 {
 
         // 3
         *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3714,7 +3766,7 @@ macro_rules! build_tree_11 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_5),
             index_5,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3725,8 +3777,8 @@ macro_rules! build_tree_11 {
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3734,8 +3786,8 @@ macro_rules! build_tree_11 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3809,8 +3861,8 @@ macro_rules! build_tree_12 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3818,8 +3870,8 @@ macro_rules! build_tree_12 {
 
         // 3
         *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3829,7 +3881,7 @@ macro_rules! build_tree_12 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_5),
             index_5,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3840,8 +3892,8 @@ macro_rules! build_tree_12 {
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3849,8 +3901,8 @@ macro_rules! build_tree_12 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3922,7 +3974,7 @@ macro_rules! build_tree_13 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_1),
             index_1,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -3933,8 +3985,8 @@ macro_rules! build_tree_13 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3942,8 +3994,8 @@ macro_rules! build_tree_13 {
 
         // 3
         *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -3955,8 +4007,8 @@ macro_rules! build_tree_13 {
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -3964,8 +4016,8 @@ macro_rules! build_tree_13 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -4026,20 +4078,20 @@ pub fn rule_swap_internal_nodes_second_is_root() {
 
 macro_rules! build_tree_14 {
     ($data: expr, $c1: expr, $c5: expr) => {{
-        let index_0 = 0 * TEST_BLOCK_WIDTH;
-        let index_1 = 1 * TEST_BLOCK_WIDTH;
+        let index_0: DataIndex = 0 * TEST_BLOCK_WIDTH;
+        let index_1: DataIndex = 1 * TEST_BLOCK_WIDTH;
         let _index_2 = 2 * TEST_BLOCK_WIDTH;
-        let index_3 = 3 * TEST_BLOCK_WIDTH;
-        let index_4 = 4 * TEST_BLOCK_WIDTH;
-        let index_5 = 5 * TEST_BLOCK_WIDTH;
-        let index_6 = 6 * TEST_BLOCK_WIDTH;
-        let index_7 = 7 * TEST_BLOCK_WIDTH;
+        let index_3: DataIndex = 3 * TEST_BLOCK_WIDTH;
+        let index_4: DataIndex = 4 * TEST_BLOCK_WIDTH;
+        let index_5: DataIndex = 5 * TEST_BLOCK_WIDTH;
+        let index_6: DataIndex = 6 * TEST_BLOCK_WIDTH;
+        let index_7: DataIndex = 7 * TEST_BLOCK_WIDTH;
 
         // 0
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_1),
             index_1,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4050,8 +4102,8 @@ macro_rules! build_tree_14 {
 
         // 3
         *get_mut_helper(&mut $data, index_3) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4061,7 +4113,7 @@ macro_rules! build_tree_14 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_5),
             index_5,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4072,8 +4124,8 @@ macro_rules! build_tree_14 {
 
         // 6
         *get_mut_helper(&mut $data, index_6) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -4093,14 +4145,14 @@ pub fn rule_swap_nodes_with_one_child_left_right() {
     let acc_info = &acc_infos[0];
     let mut data = acc_info.data.borrow_mut();
 
-    let index_0 = 0 * TEST_BLOCK_WIDTH;
-    let index_1 = 1 * TEST_BLOCK_WIDTH;
+    let index_0: DataIndex = 0 * TEST_BLOCK_WIDTH;
+    let index_1: DataIndex = 1 * TEST_BLOCK_WIDTH;
     let _index_2 = 2 * TEST_BLOCK_WIDTH;
-    let index_3 = 3 * TEST_BLOCK_WIDTH;
-    let index_4 = 4 * TEST_BLOCK_WIDTH;
-    let index_5 = 5 * TEST_BLOCK_WIDTH;
-    let index_6 = 6 * TEST_BLOCK_WIDTH;
-    let _index_7 = 7 * TEST_BLOCK_WIDTH;
+    let index_3: DataIndex = 3 * TEST_BLOCK_WIDTH;
+    let index_4: DataIndex = 4 * TEST_BLOCK_WIDTH;
+    let index_5: DataIndex = 5 * TEST_BLOCK_WIDTH;
+    let index_6: DataIndex = 6 * TEST_BLOCK_WIDTH;
+    let _index_7: DataIndex = 7 * TEST_BLOCK_WIDTH;
 
     let initial_color_1: Color = nondet();
     let initial_color_5: Color = nondet();
@@ -4143,7 +4195,7 @@ macro_rules! build_tree_15 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             index_1,
             nondet_with(|i: &DataIndex| *i != index_1),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4154,8 +4206,8 @@ macro_rules! build_tree_15 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4165,7 +4217,7 @@ macro_rules! build_tree_15 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             index_5,
             nondet_with(|i: &DataIndex| *i != index_5),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4176,8 +4228,8 @@ macro_rules! build_tree_15 {
 
         // 7
         *get_mut_helper(&mut $data, index_7) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_5,
             nondet(),
             TestOrder::new(nondet())
@@ -4247,7 +4299,7 @@ macro_rules! build_tree_16 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             index_1,
             nondet_with(|i: &DataIndex| *i != index_1),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4260,7 +4312,7 @@ macro_rules! build_tree_16 {
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
             index_5,
             nondet_with(|i: &DataIndex| *i != index_5),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4329,7 +4381,7 @@ macro_rules! build_tree_17 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             index_1,
             nondet_with(|i: &DataIndex| *i != index_1 && *i != index_3),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4340,8 +4392,8 @@ macro_rules! build_tree_17 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4353,8 +4405,8 @@ macro_rules! build_tree_17 {
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4362,8 +4414,8 @@ macro_rules! build_tree_17 {
 
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4430,7 +4482,7 @@ macro_rules! build_tree_18 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_1 && *i != index_3),
             index_1,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4441,8 +4493,8 @@ macro_rules! build_tree_18 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4454,8 +4506,8 @@ macro_rules! build_tree_18 {
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4463,8 +4515,8 @@ macro_rules! build_tree_18 {
 
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4532,7 +4584,7 @@ macro_rules! build_tree_19 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             index_3,
             nondet_with(|i: &DataIndex| *i != index_1 && *i != index_3),
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4543,8 +4595,8 @@ macro_rules! build_tree_19 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4556,8 +4608,8 @@ macro_rules! build_tree_19 {
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4565,8 +4617,8 @@ macro_rules! build_tree_19 {
 
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4634,7 +4686,7 @@ macro_rules! build_tree_20 {
         *get_mut_helper(&mut $data, index_0) = mk_rb_node!(
             nondet_with(|i: &DataIndex| *i != index_1 && *i != index_3),
             index_3,
-            nondet(),
+            nondet::<DataIndex>(),
             nondet(),
             TestOrder::new(nondet())
         );
@@ -4645,8 +4697,8 @@ macro_rules! build_tree_20 {
 
         // 2
         *get_mut_helper(&mut $data, index_2) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_3,
             nondet(),
             TestOrder::new(nondet())
@@ -4658,8 +4710,8 @@ macro_rules! build_tree_20 {
 
         // 4
         *get_mut_helper(&mut $data, index_4) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())
@@ -4667,8 +4719,8 @@ macro_rules! build_tree_20 {
 
         // 5
         *get_mut_helper(&mut $data, index_5) = mk_rb_node!(
-            nondet(),
-            nondet(),
+            nondet::<DataIndex>(),
+            nondet::<DataIndex>(),
             index_1,
             nondet(),
             TestOrder::new(nondet())

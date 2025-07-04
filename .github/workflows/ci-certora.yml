@@ -1,61 +1,33 @@
 name: Certora Formal Verification
 on:
-  schedule:
-    - cron: "0 0 * * *"
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
-
-env:
-  SOLANA_VERSION: '2.2.12'
-
 jobs:
-  verification:
-    name: Formal Verification
+ submit_verification_jobs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup python
-        uses: actions/setup-python@v5
-
-      - name: Install certora CLI
-        run: pip install certora-cli
-
-      - name: Install solana
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
-          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
-          echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Install certora platform tools
-        run: |
-          mkdir $HOME/platform-tools-certora
-          cd $HOME
-          wget https://github.com/Certora/certora-solana-platform-tools/releases/download/linux-x86_64-ubuntu-20.04-10-22-2024/platform-tools-linux-x86_64.tar.bz2
-          tar -xvjf platform-tools-linux-x86_64.tar.bz2 -C $HOME/platform-tools-certora
-          export PLATFORM_TOOLS_DIR=$HOME/.cache/solana/v1.41
-          echo "Moving to active releases"
-          ls
-          cd $HOME/.local/share/solana/install/active_release/bin/sdk/sbf
-          echo "Inside active releases"
-          ls
-          source env.sh
-          echo "Moving to cache"
-          cd $HOME/.cache/solana/v1.41
-          ls
-          mv $PLATFORM_TOOLS_DIR/platform-tools $PLATFORM_TOOLS_DIR/platform-tools.backup
-          ln -sf $HOME/platform-tools-certora $PLATFORM_TOOLS_DIR/platform-tools
-
-      - name: Install just
-        uses: extractions/setup-just@v2
-
-      - name: Run formal verification
-        run: |
-          cd programs/manifest
-          just build-sbf
-          python3 verify-manifest.py -r rules.json
-          python3 verify-manifest.py -r rules-rb-tree.json
+      - name: Submit verification jobs to Certora Prover
+        uses: Certora/certora-run-action@v1
+        with:
+          configurations: |-
+            rules.conf --commit_sha1 7a4ffb7d0a9fb99d9367ea77975885c1dea85d0f
+            hypertree.conf --commit_sha1 7a4ffb7d0a9fb99d9367ea77975885c1dea85d0f
+          job-name:  "manifest rules"
+          ecosystem: solana
+          working-directory: programs/manifest/src/certora/confs
+          certora-key: ${{ secrets.CERTORAKEY }}
+          certora-sbf-options: "-vvv --tools-version=v1.43"
         env:
-          CERTORA: ""
-          CERTORA_CLI: certoraRun
-          CERTORAKEY: ${{ secrets.CERTORAKEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

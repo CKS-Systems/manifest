@@ -561,7 +561,12 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         limit_quote_atoms: QuoteAtoms,
         global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
     ) -> Result<BaseAtoms, ProgramError> {
-        impact_base_atoms_with_slot(self, is_bid, limit_quote_atoms, global_trade_accounts_opts)
+        crate::certora::summaries::impact_base_atoms::impact_base_atoms(
+            self,
+            is_bid,
+            limit_quote_atoms,
+            global_trade_accounts_opts,
+        )
     }
 
     #[cfg(not(feature = "certora"))]

@@ -17,6 +17,10 @@ pub struct ManifestAccountInfo<'a, 'info, T: ManifestAccount + Pod + Clone> {
 }
 
 impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info, T> {
+    #[cfg_attr(
+        all(feature = "certora", not(feature = "certora-test")),
+        early_panic::early_panic
+    )]
     pub fn new(
         info: &'a AccountInfo<'info>,
     ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {

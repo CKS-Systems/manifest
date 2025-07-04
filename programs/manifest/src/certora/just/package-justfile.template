@@ -1,0 +1,5 @@
+project_root := canonicalize("${relative_workspace_path}")
+crate_root := canonicalize(".")
+sbf_file := project_root / "target/sbf-solana-solana/release/${package_name}.so"
+
+import "src/certora/just/main.just"

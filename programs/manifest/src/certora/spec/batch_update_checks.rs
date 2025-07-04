@@ -1,5 +1,5 @@
 use certora::hooks::*;
-use cvt::{cvt_assert, cvt_assume, cvt_vacuity_check};
+use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use nondet::{acc_infos_with_mem_layout, nondet};
 use state::{main_ask_order_index, main_bid_order_index, main_trader_index};

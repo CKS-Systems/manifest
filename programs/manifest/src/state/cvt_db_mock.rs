@@ -24,7 +24,7 @@ static mut IS_SECOND_SEAT_TAKEN: u64 = 0;
 
 static mut SEAT_DATA: *mut [u8; GLOBAL_DATA_LEN] = std::ptr::null_mut();
 
-const MAIN_BID_ORDER_INDEX: u64 = 0;
+const MAIN_BID_ORDER_INDEX: u64 = 3 * MARKET_BLOCK_SIZE as u64;
 static mut MAIN_BID_ORDER_TAKEN: u64 = 0;
 static mut BID_ORDER_DATA: *mut [u8; GLOBAL_DATA_LEN] = std::ptr::null_mut();
 
@@ -437,7 +437,9 @@ impl<'a> CvtBooksideReadOnly<'a> {
     }
 
     pub fn iter<V>(&self) -> CvtBooksideReadOnlyIterator {
-        CvtBooksideReadOnlyIterator { calls: 0 }
+        // -- non-deterministically, return an empty iterator
+        let calls = if nondet::nondet::<bool>() { 0 } else { 1 };
+        CvtBooksideReadOnlyIterator { calls }
     }
 }
 
