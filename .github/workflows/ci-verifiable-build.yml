@@ -17,6 +17,10 @@ jobs:
     name: Build Verifiable Artifact
     runs-on: ubuntu-latest
     steps:
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev pkg-config
       - name: Checkout
         uses: actions/checkout@v4
 
