@@ -48,6 +48,12 @@ pub enum ManifestError {
     InvalidEvict = 20,
     #[error("Tried to clean order that was not eligible to be cleaned")]
     InvalidClean = 21,
+    #[error("Invalid magicblock program id")]
+    InvalidMagicProgramId = 22,
+    #[error("Invalid magicblock context id")]
+    InvaliMagicContextId = 23,
+    #[error("Invalid market pubkey")]
+    InvalidMarketPubkey = 24,
 }
 
 impl From<ManifestError> for ProgramError {

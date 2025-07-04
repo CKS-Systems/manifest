@@ -19,6 +19,8 @@ use program::{
     global_clean::process_global_clean, global_create::process_global_create,
     global_deposit::process_global_deposit, global_evict::process_global_evict,
     global_withdraw::process_global_withdraw, process_swap, withdraw::process_withdraw,
+    delegate_market::process_delegate_market, commit_market::process_commit_market,
+    commit_and_undelegate::process_commit_and_undelegate_market,
     ManifestInstruction,
 };
 use solana_program::{
@@ -148,6 +150,15 @@ pub fn process_instruction(
         }
         ManifestInstruction::GlobalClean => {
             process_global_clean(program_id, accounts, data)?;
+        }
+        ManifestInstruction::DelegateMarket => {
+            process_delegate_market(program_id,accounts,data)?;
+        }
+        ManifestInstruction::CommitMarket => {
+            process_commit_market(program_id,accounts,data)?;
+        }
+        ManifestInstruction::CommitAndUndelgate => {
+            process_commit_and_undelegate_market(program_id, accounts, data)?;
         }
     }
 
