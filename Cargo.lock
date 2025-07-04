@@ -946,7 +946,7 @@ dependencies = [
 [[package]]
 name = "calltrace"
 version = "0.0.1"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "cvt",
 ]
@@ -1260,9 +1260,91 @@ dependencies = [
 ]
 
 [[package]]
+name = "cvlr"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dc78e75b6df3ed956733b265d72d94186b4d373c26b703408c5c08f8eabe2"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-early-panic",
+ "cvlr-hook",
+ "cvlr-log",
+ "cvlr-macros",
+ "cvlr-mathint",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-asserts"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5986ab535703c6fff042bd257c0f3d591f6fcd4c611ec117c93807fc4444804"
+
+[[package]]
+name = "cvlr-early-panic"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c12f059e98caf58c289f08da48eeef11f2549afdf0fd7d3f3c9a08039040500"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "cvlr-hook"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc2d32c7536052a4b72c27d2dce9a83b6ada5dd98756b850e6a1540fe80eabd7"
+dependencies = [
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "cvlr-log"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39b0ca4fea3f19baddd20ac6209fd064211d61c9c95715f1a11c17c5c7e17cf2"
+dependencies = [
+ "cvlr-mathint",
+]
+
+[[package]]
+name = "cvlr-macros"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ddb1aab9e865d13f5b97d5eb3b8417457543b725e9d95febb8bcd9e124a4414"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "cvlr-mathint"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fc5daeea0bf7dae12a53753380b78de43be6394382b9eda9e735d9d52449e47"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-nondet"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d2937f0430a15d737494a573de77786c1407e40488f13939b56daccab9e6949"
+dependencies = [
+ "cvlr-asserts",
+]
+
+[[package]]
 name = "cvt"
 version = "0.2.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "stubs",
 ]
@@ -1270,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "cvt-macros"
 version = "0.0.1"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1462,7 +1544,7 @@ checksum = "abe71d579d1812060163dff96056261deb5bf6729b100fa2e36a68b9649ba3d3"
 [[package]]
 name = "early-panic"
 version = "0.0.1"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2039,7 +2121,7 @@ dependencies = [
 [[package]]
 name = "hook_macro"
 version = "0.1.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "macrotest",
  "quote",
@@ -2695,6 +2777,7 @@ dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "calltrace",
+ "cvlr",
  "cvt",
  "cvt-macros",
  "early-panic",
@@ -2905,7 +2988,7 @@ dependencies = [
 [[package]]
 name = "nondet"
 version = "0.5.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "cvt",
  "solana-program",
@@ -4416,7 +4499,7 @@ dependencies = [
  "solana-epoch-schedule",
  "solana-fee-calculator",
  "solana-instruction",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-nonce",
  "solana-program-option",
  "solana-program-pack",
@@ -4718,7 +4801,7 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-keccak-hasher",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-loader-v4-interface",
  "solana-log-collector",
  "solana-measure",
@@ -5408,6 +5491,21 @@ dependencies = [
 
 [[package]]
 name = "solana-loader-v3-interface"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa4be76cfa9afd84ca2f35ebc09f0da0f0092935ccdac0595d98447f259538c2"
+dependencies = [
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "solana-instruction",
+ "solana-pubkey",
+ "solana-sdk-ids",
+ "solana-system-interface",
+]
+
+[[package]]
+name = "solana-loader-v3-interface"
 version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f7162a05b8b0773156b443bccd674ea78bb9aa406325b467ea78c06c99a63a2"
@@ -5448,7 +5546,7 @@ dependencies = [
  "solana-bincode",
  "solana-bpf-loader-program",
  "solana-instruction",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-loader-v4-interface",
  "solana-log-collector",
  "solana-measure",
@@ -5720,9 +5818,9 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "2.3.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98eca145bd3545e2fbb07166e895370576e47a00a7d824e325390d33bf467210"
+checksum = "586469467e93ceb79048f8d8e3a619bf61d05396ee7de95cb40280301a589d05"
 dependencies = [
  "bincode",
  "blake3",
@@ -5765,7 +5863,7 @@ dependencies = [
  "solana-keccak-hasher",
  "solana-last-restart-slot",
  "solana-loader-v2-interface",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 3.0.0",
  "solana-loader-v4-interface",
  "solana-message",
  "solana-msg",
@@ -5924,7 +6022,7 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-keypair",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-log-collector",
  "solana-logger",
  "solana-message",
@@ -6300,7 +6398,7 @@ dependencies = [
  "solana-instruction",
  "solana-keypair",
  "solana-lattice-hash",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-loader-v4-interface",
  "solana-measure",
  "solana-message",
@@ -6834,7 +6932,7 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-instructions-sysvar",
- "solana-loader-v3-interface",
+ "solana-loader-v3-interface 5.0.0",
  "solana-loader-v4-interface",
  "solana-loader-v4-program",
  "solana-log-collector",
@@ -7485,7 +7583,7 @@ dependencies = [
 [[package]]
 name = "solana_cvt"
 version = "0.3.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "arrayref",
  "cvt",
@@ -8009,7 +8107,7 @@ dependencies = [
 [[package]]
 name = "stubs"
 version = "0.2.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "solana-program",
 ]
@@ -8744,7 +8842,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vectors"
 version = "0.2.0"
-source = "git+https://github.com/mschneider/solana-cvt?branch=max%2Fsolana-2.2#27eb7c086e14b13a401587190f4e928abb274294"
+source = "git+https://github.com/Certora/solana-cvt?branch=solana-v2.2#ea9e7b23aa217baaba5d150db8c448bfa8ddfb33"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
