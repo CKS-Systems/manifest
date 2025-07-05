@@ -51,8 +51,7 @@ async fn token22_base() -> anyhow::Result<()> {
 
     // Create the market with SPL as base which is 2022, USDC as quote which is normal.
     let create_market_ixs: Vec<Instruction> = create_market_instructions(
-        &market_keypair.pubkey(),
-        &spl_mint_f.key,
+        &spl_mint_key,
         &usdc_mint_f.key,
         payer,
     )
@@ -333,8 +332,7 @@ async fn token22_quote() -> anyhow::Result<()> {
 
     // Create the market with SPL as base which is normal, USDC as quote which is 2022.
     let create_market_ixs: Vec<Instruction> = create_market_instructions(
-        &market_keypair.pubkey(),
-        &spl_mint_f.key,
+        &spl_mint_key,
         &usdc_mint_f.key,
         payer,
     )
@@ -638,7 +636,6 @@ async fn token22_deposit_transfer_fee() -> anyhow::Result<()> {
 
     // Create the market with SPL as base which is 2022, USDC as quote which is normal.
     let create_market_ixs: Vec<Instruction> = create_market_instructions(
-        &market_keypair.pubkey(),
         &spl_mint_key,
         &usdc_mint_f.key,
         payer,

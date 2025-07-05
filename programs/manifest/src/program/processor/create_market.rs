@@ -2,11 +2,11 @@ use std::{cell::Ref, mem::size_of};
 
 use crate::{
     logs::{emit_stack, CreateMarketLog},
-    program::{expand_market_if_needed, invoke},
+    program::expand_market_if_needed,
     require,
     state::MarketFixed,
     utils::create_account,
-    validation::{get_vault_address, loaders::CreateMarketContext},
+    validation::{get_vault_address, get_market_address, loaders::CreateMarketContext, ManifestAccountInfo},
 };
 use hypertree::{get_mut_helper, trace};
 use solana_program::{
@@ -38,7 +38,7 @@ pub(crate) fn process_create_market(
         base_vault,
         quote_vault,
         system_program,
-        token_program,
+        token_program: _token_program,
         token_program_22,
     } = create_market_context;
 
@@ -47,6 +47,34 @@ pub(crate) fn process_create_market(
         crate::program::ManifestError::InvalidMarketParameters,
         "Base and quote must be different",
     )?;
+
+    // Verify the market account is at the expected PDA address
+    let (expected_market_key, market_bump) = get_market_address(base_mint.info.key, quote_mint.info.key);
+    require!(
+        expected_market_key == *market.info.key,
+        crate::program::ManifestError::IncorrectAccount,
+        "Market account is not at expected PDA address",
+    )?;
+
+    // Create the market PDA account
+    {
+        let market_seeds: Vec<Vec<u8>> = vec![
+            b"market".to_vec(),
+            base_mint.info.key.as_ref().to_vec(),
+            quote_mint.info.key.as_ref().to_vec(),
+            vec![market_bump],
+        ];
+
+        create_account(
+            payer.as_ref(),
+            market.as_ref(),
+            system_program.as_ref(),
+            &crate::id(),
+            &Rent::get()?,
+            size_of::<MarketFixed>() as u64,
+            market_seeds,
+        )?;
+    }
 
     for mint in [base_mint.as_ref(), quote_mint.as_ref()] {
         if *mint.owner == spl_token_2022::id() {
@@ -79,6 +107,15 @@ pub(crate) fn process_create_market(
     {
         // Create the base and quote vaults of this market
         let rent: Rent = Rent::get()?;
+        
+        // Prepare market seeds for signing
+        let market_seeds: &[&[u8]] = &[
+            b"market",
+            base_mint.info.key.as_ref(),
+            quote_mint.info.key.as_ref(),
+            &[market_bump],
+        ];
+        
         for (token_account, mint) in [
             (base_vault.as_ref(), base_mint.as_ref()),
             (quote_vault.as_ref(), quote_mint.as_ref()),
@@ -91,10 +128,10 @@ pub(crate) fn process_create_market(
                 spl_token::id()
             };
 
-            let (_vault_key, bump) = get_vault_address(market.key, mint.key);
+            let (_vault_key, bump) = get_vault_address(market.info.key, mint.key);
             let seeds: Vec<Vec<u8>> = vec![
                 b"vault".to_vec(),
-                market.key.as_ref().to_vec(),
+                market.info.key.as_ref().to_vec(),
                 mint.key.as_ref().to_vec(),
                 vec![bump],
             ];
@@ -118,7 +155,7 @@ pub(crate) fn process_create_market(
                     space as u64,
                     seeds,
                 )?;
-                invoke(
+                solana_program::program::invoke_signed(
                     &spl_token_2022::instruction::initialize_account3(
                         &token_program_for_mint,
                         token_account.key,
@@ -126,11 +163,12 @@ pub(crate) fn process_create_market(
                         token_account.key,
                     )?,
                     &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
+                        market.info.clone(),
+                        token_account.as_ref().clone(),
+                        mint.as_ref().clone(),
                         token_program_22.as_ref().clone(),
                     ],
+                    &[market_seeds],
                 )?;
             } else {
                 let space: usize = spl_token::state::Account::LEN;
@@ -143,7 +181,7 @@ pub(crate) fn process_create_market(
                     space as u64,
                     seeds,
                 )?;
-                invoke(
+                solana_program::program::invoke_signed(
                     &spl_token::instruction::initialize_account3(
                         &token_program_for_mint,
                         token_account.key,
@@ -151,41 +189,38 @@ pub(crate) fn process_create_market(
                         token_account.key,
                     )?,
                     &[
-                        payer.as_ref().clone(),
-                        token_account.clone(),
-                        mint.clone(),
-                        token_program.as_ref().clone(),
+                        market.info.clone(),
+                        token_account.as_ref().clone(),
+                        mint.as_ref().clone(),
+                        token_program_22.as_ref().clone(),
                     ],
+                    &[market_seeds],
                 )?;
             }
         }
 
-        // Do not need to initialize with the system program because it is
-        // assumed that it is done already and loaded with rent. That is not at
-        // a PDA because we do not want to be restricted to a single market for
-        // a pair. If there is lock contention and hotspotting for one market,
-        // it could be useful to have a second where it is easier to land
-        // transactions. That protection is worth the possibility that users
-        // would use an inactive market when multiple exist.
-
         // Setup the empty market
         let empty_market_fixed: MarketFixed =
-            MarketFixed::new_empty(&base_mint, &quote_mint, market.key);
-        assert_eq!(market.data_len(), size_of::<MarketFixed>());
+            MarketFixed::new_empty(&base_mint, &quote_mint, market.info.key);
+        assert_eq!(market.info.data_len(), size_of::<MarketFixed>());
 
-        let market_bytes: &mut [u8] = &mut market.try_borrow_mut_data()?[..];
+        let market_bytes: &mut [u8] = &mut market.info.try_borrow_mut_data()?[..];
         *get_mut_helper::<MarketFixed>(market_bytes, 0_u32) = empty_market_fixed;
 
         emit_stack(CreateMarketLog {
-            market: *market.key,
+            market: *market.info.key,
             creator: *payer.key,
             base_mint: *base_mint.info.key,
             quote_mint: *quote_mint.info.key,
         })?;
     }
 
+    // Convert the market to a ManifestAccountInfo now that it's been created and initialized
+    let market_account_info: ManifestAccountInfo<MarketFixed> =
+        ManifestAccountInfo::<MarketFixed>::new(market.info)?;
+
     // Leave a free block on the market so takers can use and leave it.
-    expand_market_if_needed(&payer, &market)?;
+    expand_market_if_needed(&payer, &market_account_info)?;
 
     Ok(())
 }

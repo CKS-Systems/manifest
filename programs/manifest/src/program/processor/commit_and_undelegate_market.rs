@@ -8,7 +8,7 @@ use std::cell::Ref;
 use crate::{
     require,
     state::MarketFixed,
-    validation::{ManifestAccountInfo},
+    validation::{get_market_address, ManifestAccountInfo},
 };
 
 pub fn process_commit_and_undelegate_market(_program_id: &Pubkey, accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
@@ -32,6 +32,16 @@ pub fn process_commit_and_undelegate_market(_program_id: &Pubkey, accounts: &[Ac
     let market_account: ManifestAccountInfo<MarketFixed> = 
         ManifestAccountInfo::<MarketFixed>::new(market_to_commit)?;
     let market_fixed: Ref<MarketFixed> = market_account.get_fixed()?;
+    let base_mint: Pubkey = *market_fixed.get_base_mint();
+    let quote_mint: Pubkey = *market_fixed.get_quote_mint();
+
+    let (expected_market_key, _market_bump) = get_market_address(&base_mint, &quote_mint);
+
+    require!(
+        &expected_market_key == market_account.key, 
+        crate::program::ManifestError::InvalidMarketPubkey,
+        "Invalid Market pubkey"
+    )?;
     
     drop(market_fixed);
 

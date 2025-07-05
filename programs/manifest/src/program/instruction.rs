@@ -184,6 +184,12 @@ pub enum ManifestInstruction {
     #[account(2, name = "magic_program", desc = "Magicblock Program")]
     #[account(3, writable, name = "magic_context_id", desc = "Magicblock Context ID")]
     CommitAndUndelgate = 16,
+
+    // #[account(0, writable, signer, name = "initializer", desc = "Initializer and payer for delegation")]
+    // #[account(1, name = "system_program", desc = "System program")]
+    // #[account(2, writable, name = "delegated_market", desc = "Delegated Market account")]
+    // #[account(3, writable, name = "delegation_buffer", desc = "Delegation buffer")]
+    // UnDelegateMarket = 17,
 }
 
 impl ManifestInstruction {
@@ -194,7 +200,7 @@ impl ManifestInstruction {
 
 #[test]
 fn test_instruction_serialization() {
-    let num_instructions: u8 = 16;
+    let num_instructions: u8 = 14;
     for i in 0..=255 {
         let instruction: ManifestInstruction = match ManifestInstruction::try_from(i) {
             Ok(j) => {

@@ -140,10 +140,28 @@ macro_rules! global_vault_seeds_with_bump {
     };
 }
 
+#[macro_export]
+macro_rules! market_seeds {
+    ( $base_mint:expr, $quote_mint:expr ) => {
+        &[b"market", $base_mint.as_ref(), $quote_mint.as_ref()]
+    };
+}
+
+#[macro_export]
+macro_rules! market_seeds_with_bump {
+    ( $base_mint:expr, $quote_mint:expr, $bump:expr ) => {
+        &[&[b"market", $base_mint.as_ref(), $quote_mint.as_ref(), &[$bump]]]
+    };
+}
+
 pub fn get_vault_address(market: &Pubkey, mint: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(market_vault_seeds!(market, mint), &crate::ID)
 }
 
 pub fn get_global_vault_address(mint: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(global_vault_seeds!(mint), &crate::ID)
+}
+
+pub fn get_market_address(base_mint: &Pubkey, quote_mint: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(market_seeds!(base_mint, quote_mint), &crate::ID)
 }

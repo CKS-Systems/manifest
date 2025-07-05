@@ -14,7 +14,8 @@ pub mod swap;
 pub mod withdraw;
 pub mod delegate_market;
 pub mod commit_market;
-pub mod commit_and_undelegate;
+pub mod undelegate_market;
+pub mod commit_and_undelegate_market;
 
 pub use shared::*;
 pub use swap::*;

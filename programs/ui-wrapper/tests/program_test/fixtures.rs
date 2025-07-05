@@ -100,7 +100,7 @@ impl TestFixture {
         let payer_pubkey: Pubkey = context.borrow().payer.pubkey();
         let payer: Keypair = context.borrow().payer.insecure_clone();
         let create_market_ixs: Vec<Instruction> = create_market_instructions(
-            &market_keypair.pubkey(),
+
             &sol_mint_f.key,
             &usdc_mint_f.key,
             &payer_pubkey,
@@ -199,7 +199,6 @@ impl TestFixture {
         let payer_pubkey: Pubkey = context.borrow().payer.pubkey();
         let payer: Keypair = context.borrow().payer.insecure_clone();
         let create_market_ixs: Vec<Instruction> = create_market_instructions(
-            &market_keypair.pubkey(),
             &sol_mint_f.key,
             &usdc_mint_f.key,
             &payer_pubkey,

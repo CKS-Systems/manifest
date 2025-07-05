@@ -1,0 +1,23 @@
+{
+  "name": "manifest-direct-test",
+  "version": "1.0.0",
+  "description": "Direct Solana RPC test for Manifest DEX",
+  "main": "manifest-test.ts",
+  "scripts": {
+    "start": "ts-node manifest-test.ts",
+    "dev": "ts-node --watch manifest-test.ts",
+    "test": "ts-node manifest-test.ts"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "@solana/spl-token": "^0.3.9",
+    "@magicblock-labs/ephemeral-rollups-sdk": "^0.2.5",
+    "@coral-xyz/borsh": "^0.29.0",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+} 

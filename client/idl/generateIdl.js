@@ -71,6 +71,50 @@ function modifyIdlCore(programName) {
   idl.events = [];
 
   if (programName == 'manifest') {
+    // Manually add missing instructions that shank can't parse due to external SDK dependencies
+    const missingInstructions = [
+      {
+        "name": "DelegateMarket",
+        "accounts": [
+          { "name": "initializer", "isMut": true, "isSigner": true, "docs": ["Initializer and payer for delegation"] },
+          { "name": "systemProgram", "isMut": false, "isSigner": false, "docs": ["System program"] },
+          { "name": "marketToDelegate", "isMut": true, "isSigner": false, "docs": ["Market account to delegate"] },
+          { "name": "ownerProgram", "isMut": false, "isSigner": false, "docs": ["Owner program (manifest program)"] },
+          { "name": "delegationBuffer", "isMut": true, "isSigner": false, "docs": ["Delegation buffer"] },
+          { "name": "delegationRecord", "isMut": true, "isSigner": false, "docs": ["Delegation record"] },
+          { "name": "delegationMetadata", "isMut": true, "isSigner": false, "docs": ["Delegation metadata"] },
+          { "name": "delegationProgram", "isMut": false, "isSigner": false, "docs": ["Delegation program"] }
+        ],
+        "args": [],
+        "discriminant": { "type": "u8", "value": 14 }
+      },
+      {
+        "name": "CommitMarket",
+        "accounts": [
+          { "name": "initializer", "isMut": true, "isSigner": true, "docs": ["Initializer and payer for delegation"] },
+          { "name": "marketToDelegate", "isMut": true, "isSigner": false, "docs": ["Market account to delegate"] },
+          { "name": "magicProgram", "isMut": false, "isSigner": false, "docs": ["Magicblock Program"] },
+          { "name": "magicContextId", "isMut": true, "isSigner": false, "docs": ["Magicblock Context ID"] }
+        ],
+        "args": [],
+        "discriminant": { "type": "u8", "value": 15 }
+      },
+      {
+        "name": "CommitAndUndelegate",
+        "accounts": [
+          { "name": "initializer", "isMut": true, "isSigner": true, "docs": ["Initializer and payer for delegation"] },
+          { "name": "marketToDelegate", "isMut": true, "isSigner": false, "docs": ["Market account to delegate"] },
+          { "name": "magicProgram", "isMut": false, "isSigner": false, "docs": ["Magicblock Program"] },
+          { "name": "magicContextId", "isMut": true, "isSigner": false, "docs": ["Magicblock Context ID"] }
+        ],
+        "args": [],
+        "discriminant": { "type": "u8", "value": 16 }
+      }
+    ];
+    
+    // Add the missing instructions to the IDL
+    idl.instructions.push(...missingInstructions);
+
     // generateClient does not handle events
     // https://github.com/metaplex-foundation/shank/blob/34d3081208adca8b6b2be2b77db9b1ab4a70f577/shank-idl/src/file.rs#L185
     // so dont remove from accounts
@@ -157,6 +201,15 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'SwapV2': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'SwapParams',
+            },
+          });
+          break;
+        }
         case 'BatchUpdate': {
           instruction.args.push({
             name: 'params',
@@ -216,6 +269,18 @@ function modifyIdlCore(programName) {
             },
           });
           break;
+        case 'DelegateMarket': {
+          // Delegate market does not have params
+          break;
+        }
+        case 'CommitMarket': {
+          // Commit market does not have params
+          break;
+        }
+        case 'CommitAndUndelegate': {
+          // Commit and undelegate does not have params
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');

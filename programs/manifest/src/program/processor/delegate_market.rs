@@ -9,7 +9,7 @@ use solana_program::{
 use std::cell::Ref;
 use crate::{
     state::MarketFixed,
-    validation::{ManifestAccountInfo},
+    validation::ManifestAccountInfo,
 };
 
 pub fn process_delegate_market(_program_id: &Pubkey, accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
@@ -29,8 +29,16 @@ pub fn process_delegate_market(_program_id: &Pubkey, accounts: &[AccountInfo], _
     let market_fixed: Ref<MarketFixed> = market_account.get_fixed()?;
     let base_mint: Pubkey = *market_fixed.get_base_mint();
     let quote_mint: Pubkey = *market_fixed.get_quote_mint();
+
     
     drop(market_fixed);
+
+    //prepare market seeds
+    let seed_1 = b"market";
+    let seed_2 = base_mint.as_ref();
+    let seed_3 = quote_mint.as_ref();
+    let pda_seeds: &[&[u8]] = &[seed_1, seed_2, seed_3];
+
 
     let delegate_accounts = DelegateAccounts {
         payer: initializer,

@@ -4,9 +4,9 @@ use std::{
 };
 
 use manifest::{
-    program::{create_market_instructions, get_dynamic_value},
+    program::{create_market_instructions, get_market_pubkey, get_dynamic_value},
     quantities::WrapperU64,
-    state::{MarketFixed, MarketValue},
+    state::{MarketFixed, MarketValue, MARKET_FIXED_SIZE},
     validation::MintAccountInfo,
 };
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent};
@@ -58,35 +58,23 @@ pub struct TestFixture {
 
 impl TestFixture {
     pub async fn new() -> TestFixture {
-        let mut program: ProgramTest = ProgramTest::new(
-            "wrapper",
-            wrapper::ID,
-            processor!(wrapper::process_instruction),
-        );
-        program.add_program(
+        let mut program_test = ProgramTest::new(
             "manifest",
             manifest::ID,
             processor!(manifest::process_instruction),
         );
+        program_test.add_program("wrapper", wrapper::ID, processor!(wrapper::process_instruction));
+        
+        let mut context: ProgramTestContext = program_test.start_with_context().await;
 
+        let wrapper_keypair: Keypair = Keypair::new();
         let second_keypair: Keypair = Keypair::new();
-        program.add_account(
-            second_keypair.pubkey(),
-            solana_sdk::account::Account::new(
-                u32::MAX as u64,
-                0,
-                &solana_sdk::system_program::id(),
-            ),
-        );
 
+        // Create mints
         let usdc_keypair: Keypair = Keypair::new();
         let sol_keypair: Keypair = Keypair::new();
-        let market_keypair: Keypair = Keypair::new();
-        let wrapper_keypair: Keypair = Keypair::new();
 
-        let context: Rc<RefCell<ProgramTestContext>> =
-            Rc::new(RefCell::new(program.start_with_context().await));
-        solana_logger::setup_with_default(RUST_LOG_DEFAULT);
+        let context: Rc<RefCell<ProgramTestContext>> = Rc::new(RefCell::new(context));
 
         let usdc_mint_f: MintFixture =
             MintFixture::new(Rc::clone(&context), Some(usdc_keypair), Some(6)).await;
@@ -95,8 +83,11 @@ impl TestFixture {
 
         let payer_pubkey: Pubkey = context.borrow().payer.pubkey();
         let payer: Keypair = context.borrow().payer.insecure_clone();
+        
+        // Get the market PDA
+        let market_address = get_market_pubkey(&sol_mint_f.key, &usdc_mint_f.key);
+        
         let create_market_ixs: Vec<Instruction> = create_market_instructions(
-            &market_keypair.pubkey(),
             &sol_mint_f.key,
             &usdc_mint_f.key,
             &payer_pubkey,
@@ -107,14 +98,14 @@ impl TestFixture {
             Rc::clone(&context),
             &create_market_ixs[..],
             Some(&payer_pubkey),
-            &[&payer.insecure_clone(), &market_keypair],
+            &[&payer.insecure_clone()], // No market keypair needed
         )
         .await
         .unwrap();
 
         // Now that market is created, we can make a market fixture.
         let market_fixture: MarketFixture =
-            MarketFixture::new(Rc::clone(&context), market_keypair.pubkey()).await;
+            MarketFixture::new(Rc::clone(&context), market_address).await;
 
         let create_wrapper_ixs: Vec<Instruction> =
             create_wrapper_instructions(&payer_pubkey, &wrapper_keypair.pubkey()).unwrap();
