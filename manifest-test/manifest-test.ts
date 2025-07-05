@@ -28,13 +28,13 @@ const manifestIdl = JSON.parse(
 );
 
 // Configure the client to use the local cluster
-const connection = new Connection("http://localhost:8899", "confirmed");
+const connection = new Connection("https://api.devnet.solana.com", "confirmed");
 
 // Program IDs
-const manifestProgramId = new PublicKey("3ET7HC69GtNivoeNwdoD9dxpxU3Y2QFCpxHtT2WrvPp3");
+const manifestProgramId = new PublicKey("FASTz9tarYt7xR67mA2zDtr15iQqjsDoU4FxyUrZG8vb");
 
 // Test keypairs
-const admin = Keypair.fromSecretKey(bs58.decode("5vLv2StvBtZP6DGKfrTLUDBVTuQg3jdRipWVqaYKcKvNt5f35je7KFTeLypRMdQW2vBmShwEAStVBax972u3jqz3"));
+const admin = Keypair.fromSecretKey(bs58.decode("ENTER PRIVATE KEY HERE"));
 
 // Create CreateMarket instruction
 function createCreateMarketInstruction(accounts: {

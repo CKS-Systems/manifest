@@ -13,3 +13,4 @@ idl/yarn.lock
 client/nyc_output
 **nyc_output
 **coverage
+manifest-keypair.json
