@@ -28,8 +28,8 @@ pub enum ManifestInstruction {
     /// Deposit
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "market", desc = "Account holding all market state")]
-    #[account(2, writable, name = "trader_token", desc = "Trader token account")]
-    #[account(3, writable, name = "vault", desc = "Vault PDA, seeds are [b'vault', market, mint]")]
+    #[account(2, name = "trader_token", desc = "Trader token account")]
+    #[account(3, name = "vault", desc = "Vault PDA, seeds are [b'vault', market, mint] (read-only)")]
     #[account(4, name = "token_program", desc = "Token program(22), should be the version that aligns with the token being used")]
     #[account(5, name = "mint", desc = "Required for token22 transfer_checked")]
     Deposit = 2,
@@ -185,11 +185,11 @@ pub enum ManifestInstruction {
     #[account(3, writable, name = "magic_context_id", desc = "Magicblock Context ID")]
     CommitAndUndelgate = 16,
 
-    // #[account(0, writable, signer, name = "initializer", desc = "Initializer and payer for delegation")]
-    // #[account(1, name = "system_program", desc = "System program")]
-    // #[account(2, writable, name = "delegated_market", desc = "Delegated Market account")]
-    // #[account(3, writable, name = "delegation_buffer", desc = "Delegation buffer")]
-    // UnDelegateMarket = 17,
+    #[account(0, writable, name = "delegated_market", desc = "Delegated Market account")]
+    #[account(1, name = "delegation_buffer", desc = "Delegation buffer")]
+    #[account(2, writable, signer, name = "initializer", desc = "Initializer and payer for delegation")]
+    #[account(3, name = "system_program", desc = "System program")]
+    UnDelegateMarket = 17,
 }
 
 impl ManifestInstruction {

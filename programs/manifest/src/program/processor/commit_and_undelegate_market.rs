@@ -27,10 +27,11 @@ pub fn process_commit_and_undelegate_market(_program_id: &Pubkey, accounts: &[Ac
     require!(
         magic_context.key == &MAGIC_CONTEXT_ID,
         crate::program::ManifestError::InvaliMagicContextId,
-        "Invalid Magicblock program ID",
+        "Invalid Magicblock context ID",
     )?;
+    
     let market_account: ManifestAccountInfo<MarketFixed> = 
-        ManifestAccountInfo::<MarketFixed>::new(market_to_commit)?;
+        ManifestAccountInfo::<MarketFixed>::new_delegated(market_to_commit)?;
     let market_fixed: Ref<MarketFixed> = market_account.get_fixed()?;
     let base_mint: Pubkey = *market_fixed.get_base_mint();
     let quote_mint: Pubkey = *market_fixed.get_quote_mint();

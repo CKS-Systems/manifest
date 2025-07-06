@@ -6,7 +6,7 @@ use crate::{
     validation::{loaders::ClaimSeatContext, ManifestAccountInfo, Signer},
 };
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
-
+use ephemeral_rollups_sdk::{consts::{MAGIC_CONTEXT_ID, MAGIC_PROGRAM_ID}, ephem::commit_accounts};
 use super::shared::{expand_market_if_needed, get_mut_dynamic_account};
 
 #[cfg(feature = "certora")]
@@ -25,6 +25,7 @@ pub(crate) fn process_claim_seat(
 
     // Leave a free block on the market
     expand_market_if_needed(&payer, &market)?;
+
 
     Ok(())
 }

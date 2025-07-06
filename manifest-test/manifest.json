@@ -230,6 +230,18 @@
           "type": {
             "option": "u32"
           }
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "DepositParams"
+          }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
+          }
         }
       ],
       "discriminant": {
@@ -290,6 +302,18 @@
         }
       ],
       "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "WithdrawParams"
+          }
+        },
+        {
+          "name": "traderIndexHint",
+          "type": {
+            "option": "u32"
+          }
+        },
         {
           "name": "params",
           "type": {
@@ -470,6 +494,12 @@
         }
       ],
       "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SwapParams"
+          }
+        },
         {
           "name": "params",
           "type": {
@@ -688,6 +718,12 @@
           "type": {
             "defined": "BatchUpdateParams"
           }
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "BatchUpdateParams"
+          }
         }
       ],
       "discriminant": {
@@ -869,6 +905,12 @@
           "type": {
             "defined": "GlobalDepositParams"
           }
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalDepositParams"
+          }
         }
       ],
       "discriminant": {
@@ -929,6 +971,12 @@
         }
       ],
       "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalWithdrawParams"
+          }
+        },
         {
           "name": "params",
           "type": {
@@ -1055,6 +1103,12 @@
           "type": {
             "defined": "GlobalEvictParams"
           }
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalEvictParams"
+          }
         }
       ],
       "discriminant": {
@@ -1099,6 +1153,12 @@
         }
       ],
       "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "GlobalCleanParams"
+          }
+        },
         {
           "name": "params",
           "type": {
@@ -1257,6 +1317,12 @@
         }
       ],
       "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SwapParams"
+          }
+        },
         {
           "name": "params",
           "type": {
@@ -1449,6 +1515,206 @@
       "discriminant": {
         "type": "u8",
         "value": 16
+      }
+    },
+    {
+      "name": "DelegateMarket",
+      "accounts": [
+        {
+          "name": "initializer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Initializer and payer for delegation"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "marketToDelegate",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Market account to delegate"
+          ]
+        },
+        {
+          "name": "ownerProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Owner program (manifest program)"
+          ]
+        },
+        {
+          "name": "delegationBuffer",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Delegation buffer"
+          ]
+        },
+        {
+          "name": "delegationRecord",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Delegation record"
+          ]
+        },
+        {
+          "name": "delegationMetadata",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Delegation metadata"
+          ]
+        },
+        {
+          "name": "delegationProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Delegation program"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
+      }
+    },
+    {
+      "name": "CommitMarket",
+      "accounts": [
+        {
+          "name": "initializer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Initializer and payer for delegation"
+          ]
+        },
+        {
+          "name": "marketToDelegate",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Market account to delegate"
+          ]
+        },
+        {
+          "name": "magicProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Magicblock Program"
+          ]
+        },
+        {
+          "name": "magicContextId",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Magicblock Context ID"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 15
+      }
+    },
+    {
+      "name": "CommitAndUndelegate",
+      "accounts": [
+        {
+          "name": "initializer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Initializer and payer for delegation"
+          ]
+        },
+        {
+          "name": "marketToDelegate",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Market account to delegate"
+          ]
+        },
+        {
+          "name": "magicProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Magicblock Program"
+          ]
+        },
+        {
+          "name": "magicContextId",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Magicblock Context ID"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 16
+      }
+    },
+    {
+      "name": "UnDelegateMarket",
+      "accounts": [
+        {
+          "name": "delegatedMarket",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Delegated Market account"
+          ]
+        },
+        {
+          "name": "delegationBuffer",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Delegation buffer"
+          ]
+        },
+        {
+          "name": "initializer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Initializer and payer for delegation"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 17
       }
     }
   ],
@@ -2508,20 +2774,20 @@
   ],
   "metadata": {
     "origin": "shank",
-    "address": "FASTz9tarYt7xR67mA2zDtr15iQqjsDoU4FxyUrZG8vb"
+    "address": "upHcToXzZ4Aw48a6WwA9UP3LEAMbKMEXMNFDuMNrufL"
   },
   "events": [
     {
       "name": "CreateMarketLog",
       "discriminator": [
-        33,
-        31,
-        11,
-        6,
-        133,
-        143,
-        39,
-        71
+        2,
+        41,
+        19,
+        135,
+        45,
+        99,
+        221,
+        21
       ],
       "fields": [
         {
@@ -2549,14 +2815,14 @@
     {
       "name": "ClaimSeatLog",
       "discriminator": [
-        129,
-        77,
-        152,
-        210,
-        218,
-        144,
-        163,
-        56
+        232,
+        191,
+        115,
+        159,
+        114,
+        50,
+        54,
+        15
       ],
       "fields": [
         {
@@ -2574,14 +2840,14 @@
     {
       "name": "DepositLog",
       "discriminator": [
-        23,
-        214,
-        24,
-        34,
-        52,
-        104,
-        109,
-        188
+        105,
+        176,
+        57,
+        15,
+        120,
+        146,
+        225,
+        58
       ],
       "fields": [
         {
@@ -2609,14 +2875,14 @@
     {
       "name": "WithdrawLog",
       "discriminator": [
-        112,
+        123,
+        9,
+        195,
+        220,
         218,
-        111,
-        63,
-        18,
-        95,
-        136,
-        35
+        27,
+        71,
+        218
       ],
       "fields": [
         {
@@ -2644,14 +2910,14 @@
     {
       "name": "FillLog",
       "discriminator": [
-        58,
-        230,
-        242,
-        3,
-        75,
-        113,
-        4,
-        169
+        60,
+        170,
+        93,
+        253,
+        169,
+        226,
+        23,
+        174
       ],
       "fields": [
         {
@@ -2735,14 +3001,14 @@
     {
       "name": "PlaceOrderLog",
       "discriminator": [
-        157,
-        118,
-        247,
-        213,
-        47,
-        19,
-        164,
-        120
+        108,
+        46,
+        116,
+        230,
+        114,
+        106,
+        130,
+        39
       ],
       "fields": [
         {
@@ -2811,14 +3077,14 @@
     {
       "name": "CancelOrderLog",
       "discriminator": [
-        22,
-        65,
-        71,
-        33,
-        244,
-        235,
-        255,
-        215
+        16,
+        180,
+        165,
+        250,
+        194,
+        132,
+        86,
+        164
       ],
       "fields": [
         {
@@ -2841,14 +3107,14 @@
     {
       "name": "GlobalCreateLog",
       "discriminator": [
-        188,
-        25,
-        199,
-        77,
-        26,
-        15,
-        142,
-        193
+        198,
+        133,
+        178,
+        165,
+        214,
+        222,
+        4,
+        19
       ],
       "fields": [
         {
@@ -2866,14 +3132,14 @@
     {
       "name": "GlobalAddTraderLog",
       "discriminator": [
-        129,
         246,
-        90,
-        94,
-        87,
-        186,
-        242,
-        7
+        19,
+        179,
+        196,
+        192,
+        8,
+        77,
+        29
       ],
       "fields": [
         {
@@ -2891,14 +3157,14 @@
     {
       "name": "GlobalClaimSeatLog",
       "discriminator": [
-        164,
-        46,
-        227,
-        175,
-        3,
-        143,
-        73,
-        86
+        110,
+        199,
+        25,
+        93,
+        214,
+        36,
+        211,
+        248
       ],
       "fields": [
         {
@@ -2921,14 +3187,14 @@
     {
       "name": "GlobalDepositLog",
       "discriminator": [
-        16,
-        26,
-        72,
-        1,
-        145,
-        232,
-        182,
-        71
+        104,
+        235,
+        133,
+        172,
+        142,
+        51,
+        61,
+        43
       ],
       "fields": [
         {
@@ -2953,14 +3219,14 @@
     {
       "name": "GlobalWithdrawLog",
       "discriminator": [
-        206,
-        118,
-        67,
-        64,
-        124,
-        109,
-        157,
-        201
+        78,
+        73,
+        100,
+        197,
+        244,
+        130,
+        231,
+        131
       ],
       "fields": [
         {
@@ -2985,14 +3251,14 @@
     {
       "name": "GlobalEvictLog",
       "discriminator": [
-        250,
-        180,
-        155,
-        38,
-        98,
-        223,
-        82,
-        223
+        162,
+        21,
+        224,
+        104,
+        188,
+        107,
+        203,
+        124
       ],
       "fields": [
         {
@@ -3024,14 +3290,14 @@
     {
       "name": "GlobalCleanupLog",
       "discriminator": [
-        193,
-        249,
-        115,
-        186,
-        42,
-        126,
-        196,
-        82
+        141,
+        252,
+        39,
+        184,
+        172,
+        94,
+        131,
+        112
       ],
       "fields": [
         {

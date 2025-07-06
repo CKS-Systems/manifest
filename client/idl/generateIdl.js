@@ -109,6 +109,17 @@ function modifyIdlCore(programName) {
         ],
         "args": [],
         "discriminant": { "type": "u8", "value": 16 }
+      },
+      {
+        "name": "UnDelegateMarket",
+        "accounts": [
+          { "name": "delegatedMarket", "isMut": true, "isSigner": false, "docs": ["Delegated Market account"] },
+          { "name": "delegationBuffer", "isMut": false, "isSigner": false, "docs": ["Delegation buffer"] },
+          { "name": "initializer", "isMut": true, "isSigner": true, "docs": ["Initializer and payer for delegation"] },
+          { "name": "systemProgram", "isMut": false, "isSigner": false, "docs": ["System program"] }
+        ],
+        "args": [],
+        "discriminant": { "type": "u8", "value": 17 }
       }
     ];
     
@@ -279,6 +290,10 @@ function modifyIdlCore(programName) {
         }
         case 'CommitAndUndelegate': {
           // Commit and undelegate does not have params
+          break;
+        }
+        case 'UnDelegateMarket': {
+          // Undelegate market does not have params
           break;
         }
         default: {

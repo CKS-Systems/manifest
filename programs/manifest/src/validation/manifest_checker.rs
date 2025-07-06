@@ -33,6 +33,21 @@ impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info,
         })
     }
 
+    pub fn new_delegated(
+        info: &'a AccountInfo<'info>,
+    ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {
+        // Skip ownership verification for delegated accounts
+        let bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
+        let (header_bytes, _) = bytes.split_at(size_of::<T>());
+        let header: &T = get_helper::<T>(header_bytes, 0_u32);
+        header.verify_discriminant()?;
+
+        Ok(Self {
+            info,
+            phantom: std::marker::PhantomData,
+        })
+    }
+
     pub fn new_init(
         info: &'a AccountInfo<'info>,
     ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {

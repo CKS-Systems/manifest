@@ -101,8 +101,13 @@ impl<'a, 'info> ClaimSeatContext<'a, 'info> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
+        
         let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
@@ -125,8 +130,13 @@ impl<'a, 'info> ExpandMarketContext<'a, 'info> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
+        
         let _system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
@@ -153,8 +163,12 @@ impl<'a, 'info> DepositContext<'a, 'info> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
 
         let market_fixed: Ref<MarketFixed> = market.get_fixed()?;
         let base_mint: &Pubkey = market_fixed.get_base_mint();
@@ -217,8 +231,12 @@ impl<'a, 'info> WithdrawContext<'a, 'info> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
 
         let market_fixed: Ref<MarketFixed> = market.get_fixed()?;
         let base_mint: &Pubkey = market_fixed.get_base_mint();
@@ -293,13 +311,18 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                 // bytes.
                 (
                     payer.clone(),
-                    ManifestAccountInfo::<MarketFixed>::new(owner_or_market)?,
+                    // Try delegated first, then fall back to regular ownership check
+                    ManifestAccountInfo::<MarketFixed>::new_delegated(owner_or_market)
+                        .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(owner_or_market))?,
                 )
             } else {
                 // Separate token account owner from rent payer. This is SwapV2.
+                let market_account_info = next_account_info(account_iter)?;
                 (
                     Signer::new(owner_or_market)?,
-                    ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?,
+                    // Try delegated first, then fall back to regular ownership check
+                    ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                        .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?,
                 )
             };
 
@@ -503,8 +526,12 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
         // Does not have to be writable, but this ix will fail if removing a
         // global or requiring expanding.
         let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
         let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         // Certora version is not mutable.
@@ -871,8 +898,12 @@ impl<'a, 'info> GlobalCleanContext<'a, 'info> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
 
         let payer: Signer = Signer::new_payer(next_account_info(account_iter)?)?;
-        let market: ManifestAccountInfo<MarketFixed> =
-            ManifestAccountInfo::<MarketFixed>::new(next_account_info(account_iter)?)?;
+        let market_account_info = next_account_info(account_iter)?;
+        
+        // Try delegated first, then fall back to regular ownership check
+        let market: ManifestAccountInfo<MarketFixed> = 
+            ManifestAccountInfo::<MarketFixed>::new_delegated(market_account_info)
+                .or_else(|_| ManifestAccountInfo::<MarketFixed>::new(market_account_info))?;
         let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         let global: ManifestAccountInfo<GlobalFixed> =

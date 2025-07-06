@@ -53,16 +53,14 @@ pub(crate) fn process_deposit_core(
         amount_atoms,
         trader_index_hint,
     } = params;
-    // Due to transfer fees, this might not be what you expect.
-    let mut deposited_amount_atoms: u64 = amount_atoms;
 
     let DepositContext {
         market,
         payer,
         trader_token,
-        vault,
-        token_program,
-        mint,
+        vault: _vault, // Vault is now read-only, no longer used for transfers
+        token_program: _token_program, // Token program no longer needed
+        mint: _mint, // Mint no longer needed for transfers
     } = deposit_context;
 
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;
@@ -72,43 +70,14 @@ pub(crate) fn process_deposit_core(
     let is_base: bool =
         &trader_token.try_borrow_data()?[0..32] == dynamic_account.get_base_mint().as_ref();
 
-    if *vault.owner == spl_token_2022::id() {
-        let before_vault_balance_atoms: u64 = vault.get_balance_atoms();
-        spl_token_2022_transfer_from_trader_to_vault(
-            &token_program,
-            &trader_token,
-            Some(mint),
-            if is_base {
-                dynamic_account.fixed.get_base_mint()
-            } else {
-                dynamic_account.get_quote_mint()
-            },
-            &vault,
-            &payer,
-            amount_atoms,
-            if is_base {
-                dynamic_account.fixed.get_base_mint_decimals()
-            } else {
-                dynamic_account.fixed.get_quote_mint_decimals()
-            },
-        )?;
-
-        let after_vault_balance_atoms: u64 = vault.get_balance_atoms();
-        deposited_amount_atoms = after_vault_balance_atoms
-            .checked_sub(before_vault_balance_atoms)
-            .unwrap();
-    } else {
-        spl_token_transfer_from_trader_to_vault(
-            &token_program,
-            &trader_token,
-            &vault,
-            &payer,
-            amount_atoms,
-        )?;
-    }
+    // No token transfers - external transfers should happen before calling this instruction
+    // We use the full amount_atoms as deposited since no transfer fees are involved
+    let deposited_amount_atoms: u64 = amount_atoms;
 
     let trader_index: DataIndex =
         get_trader_index_with_hint(trader_index_hint, &dynamic_account, &payer)?;
+    
+    // Update the market's internal accounting - this is the core functionality we keep
     dynamic_account.deposit(trader_index, deposited_amount_atoms, is_base)?;
 
     emit_stack(DepositLog {

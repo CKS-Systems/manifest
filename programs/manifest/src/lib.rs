@@ -21,6 +21,7 @@ use program::{
     global_withdraw::process_global_withdraw, process_swap, withdraw::process_withdraw,
     delegate_market::process_delegate_market,
     commit_market::process_commit_market,
+    undelegate_market::process_undelegate_market,
     ManifestInstruction,
 };
 use solana_program::{
@@ -161,6 +162,28 @@ pub fn process_instruction(
         }
         ManifestInstruction::CommitAndUndelgate => {
             process_commit_and_undelegate_market(program_id, accounts, data)?;
+        }
+        ManifestInstruction::UnDelegateMarket => {
+            // Extract PDA seeds from market account for undelegation
+            let market_account = &accounts[0]; // delegated_market is first account
+            let market_data = market_account.try_borrow_data()?;
+            
+            // Read base mint (32 bytes starting at offset 16)
+            let base_mint_bytes = &market_data[16..48];
+            let base_mint = Pubkey::new_from_array(base_mint_bytes.try_into().unwrap());
+            
+            // Read quote mint (32 bytes starting at offset 48)
+            let quote_mint_bytes = &market_data[48..80];
+            let quote_mint = Pubkey::new_from_array(quote_mint_bytes.try_into().unwrap());
+            
+            // Prepare PDA seeds
+            let pda_seeds: Vec<Vec<u8>> = vec![
+                b"market".to_vec(),
+                base_mint.to_bytes().to_vec(),
+                quote_mint.to_bytes().to_vec(),
+            ];
+            
+            process_undelegate_market(program_id, accounts, pda_seeds)?;
         }
     }
 

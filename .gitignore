@@ -14,3 +14,6 @@ client/nyc_output
 **nyc_output
 **coverage
 manifest-keypair.json
+package-lock.json
+manifest-test/package-lock.json
+yarn.lock
