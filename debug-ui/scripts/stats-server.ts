@@ -19,6 +19,12 @@ import {
   PublicKey,
 } from '@solana/web3.js';
 import {
+  TOKEN_2022_PROGRAM_ID,
+  getMetadataPointerState,
+  getTokenMetadata,
+  unpackMint,
+} from '@solana/spl-token';
+import {
   FillLogResult,
   ManifestClient,
   Market,
@@ -681,28 +687,65 @@ export class ManifestStatsServer {
   }
 
   async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
+    // First try Metaplex metadata for SPL tokens
     const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
     const metadataAccountInfo =
       await this.connection.getAccountInfo(metadataAccount);
     if (metadataAccountInfo) {
       const token = await metaplex.nfts().findByMint({ mintAddress: mint });
       return token.symbol;
-    } else {
-      const provider: TokenListContainer =
-        await new TokenListProvider().resolve();
-      const tokenList: TokenInfo[] = provider
-        .filterByChainId(ENV.MainnetBeta)
-        .getList();
-      const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
-        map.set(item.address, item);
-        return map;
-      }, new Map<string, TokenInfo>());
-
-      const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
-      if (token) {
-        return token.symbol;
-      }
     }
+
+    // Then try SPL token registry
+    const provider: TokenListContainer =
+      await new TokenListProvider().resolve();
+    const tokenList: TokenInfo[] = provider
+      .filterByChainId(ENV.MainnetBeta)
+      .getList();
+    const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
+      map.set(item.address, item);
+      return map;
+    }, new Map<string, TokenInfo>());
+
+    const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
+    if (token) {
+      return token.symbol;
+    }
+
+    // Finally try Token2022 metadata extension as fallback
+    try {
+      const mintAccountInfo = await this.connection.getAccountInfo(mint);
+      if (
+        mintAccountInfo &&
+        mintAccountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ) {
+        const mintData = unpackMint(
+          mint,
+          mintAccountInfo,
+          TOKEN_2022_PROGRAM_ID,
+        );
+        const metadataPointer = getMetadataPointerState(mintData);
+
+        if (metadataPointer && metadataPointer.metadataAddress) {
+          const metadata = await getTokenMetadata(
+            this.connection,
+            mint,
+            'confirmed',
+            TOKEN_2022_PROGRAM_ID,
+          );
+          if (metadata && metadata.symbol) {
+            return metadata.symbol;
+          }
+        }
+      }
+    } catch (error) {
+      console.log(
+        'Token2022 metadata lookup failed for',
+        mint.toBase58(),
+        error,
+      );
+    }
+
     return '';
   }
 
