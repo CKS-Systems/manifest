@@ -19,6 +19,12 @@ import {
   PublicKey,
 } from '@solana/web3.js';
 import {
+  TOKEN_2022_PROGRAM_ID,
+  getMetadataPointerState,
+  getTokenMetadata,
+  unpackMint,
+} from '@solana/spl-token';
+import {
   FillLogResult,
   ManifestClient,
   Market,
@@ -681,6 +687,30 @@ export class ManifestStatsServer {
   }
 
   async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
+    // First try Token2022 metadata extension
+    try {
+      const mintAccountInfo = await this.connection.getAccountInfo(mint);
+      if (mintAccountInfo && mintAccountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+        const mintData = unpackMint(mint, mintAccountInfo, TOKEN_2022_PROGRAM_ID);
+        const metadataPointer = getMetadataPointerState(mintData);
+        
+        if (metadataPointer && metadataPointer.metadataAddress) {
+          const metadata = await getTokenMetadata(
+            this.connection,
+            mint,
+            'confirmed',
+            TOKEN_2022_PROGRAM_ID
+          );
+          if (metadata && metadata.symbol) {
+            return metadata.symbol;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Token2022 metadata lookup failed for', mint.toBase58(), error);
+    }
+
+    // Fallback to Metaplex metadata for SPL tokens
     const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
     const metadataAccountInfo =
       await this.connection.getAccountInfo(metadataAccount);
