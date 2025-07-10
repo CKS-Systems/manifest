@@ -554,6 +554,14 @@ impl<'a, 'info> BatchUpdateContext<'a, 'info> {
                     let global_data: Ref<&mut [u8]> = global.data.borrow();
                     let global_fixed: &GlobalFixed = get_helper::<GlobalFixed>(&global_data, 0_u32);
                     let expected_global_vault_address: &Pubkey = global_fixed.get_vault();
+                    
+                    let global_mint_key: &Pubkey = global_fixed.get_mint();
+                    let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
+                    require!(
+                        expected_global_key == *global.info.key,
+                        ManifestError::MissingGlobal,
+                        "Unexpected global accounts",
+                    )?;
 
                     let global_mint_key: &Pubkey = global_fixed.get_mint();
                     let (expected_global_key, _global_bump) = get_global_address(global_mint_key);
