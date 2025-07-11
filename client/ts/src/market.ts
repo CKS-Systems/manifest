@@ -389,10 +389,14 @@ export class Market {
     const asks: RestingOrder[] = this.asks();
     const bids: RestingOrder[] = this.bids();
     const baseOpenOrdersBalanceTokens: number = asks
-      .filter((ask) => ask.trader.equals(trader) && ask.orderType != OrderType.Global)
+      .filter(
+        (ask) => ask.trader.equals(trader) && ask.orderType != OrderType.Global,
+      )
       .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
     const quoteOpenOrdersBalanceTokens: number = bids
-      .filter((bid) => bid.trader.equals(trader) && bid.orderType != OrderType.Global)
+      .filter(
+        (bid) => bid.trader.equals(trader) && bid.orderType != OrderType.Global,
+      )
       .reduce(
         (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
         0,
