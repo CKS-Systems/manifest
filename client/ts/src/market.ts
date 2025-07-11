@@ -232,7 +232,7 @@ export class Market {
   }
 
   /**
-   * Get the amount in tokens of balance that is deposited on this market, split
+   * Get the total amount in atoms of balance that is deposited on this market, split
    * by base, quote, and whether in orders or not for the whole market.
    *
    * @returns {
@@ -296,7 +296,7 @@ export class Market {
   }
 
   /**
-   * Get the amount in tokens of balance that is deposited on this market, split
+   * Get the amount in tokens of balance that is deposited on this market for a trader, split
    * by base, quote, and whether in orders or not.
    *
    * @param trader PublicKey of the trader to check balance of
@@ -335,6 +335,64 @@ export class Market {
       .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
     const quoteOpenOrdersBalanceTokens: number = bids
       .filter((bid) => bid.trader.equals(trader))
+      .reduce(
+        (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
+        0,
+      );
+
+    const quoteWithdrawableBalanceTokens: number =
+      toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    const baseWithdrawableBalanceTokens: number =
+      toNum(seat.baseBalance) / 10 ** this.baseDecimals();
+    return {
+      baseWithdrawableBalanceTokens,
+      quoteWithdrawableBalanceTokens,
+      baseOpenOrdersBalanceTokens,
+      quoteOpenOrdersBalanceTokens,
+    };
+  }
+
+  /**
+   * Get the amount in tokens of balance that is deposited on this market for a trader, split
+   * by base, quote, and whether in orders or not but ignoring orders that use
+   * global balances.
+   *
+   * @param trader PublicKey of the trader to check balance of
+   *
+   * @returns {
+   *    baseWithdrawableBalanceTokens: number,
+   *    quoteWithdrawableBalanceTokens: number,
+   *    baseOpenOrdersBalanceTokens: number,
+   *    quoteOpenOrdersBalanceTokens: number
+   * }
+   */
+  public getBalancesIgnoreGlobal(trader: PublicKey): {
+    baseWithdrawableBalanceTokens: number;
+    quoteWithdrawableBalanceTokens: number;
+    baseOpenOrdersBalanceTokens: number;
+    quoteOpenOrdersBalanceTokens: number;
+  } {
+    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
+      return claimedSeat.publicKey.equals(trader);
+    });
+    // No seat claimed.
+    if (filteredSeats.length == 0) {
+      return {
+        baseWithdrawableBalanceTokens: 0,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 0,
+        quoteOpenOrdersBalanceTokens: 0,
+      };
+    }
+    const seat: ClaimedSeat = filteredSeats[0];
+
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
+    const baseOpenOrdersBalanceTokens: number = asks
+      .filter((ask) => ask.trader.equals(trader) && ask.orderType != OrderType.Global)
+      .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
+    const quoteOpenOrdersBalanceTokens: number = bids
+      .filter((bid) => bid.trader.equals(trader) && bid.orderType != OrderType.Global)
       .reduce(
         (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
         0,
