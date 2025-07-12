@@ -366,7 +366,7 @@ export class Market {
    *    quoteOpenOrdersBalanceTokens: number
    * }
    */
-  public getBalancesIgnoreGlobal(trader: PublicKey): {
+  public getMarketBalancesForTrader(trader: PublicKey): {
     baseWithdrawableBalanceTokens: number;
     quoteWithdrawableBalanceTokens: number;
     baseOpenOrdersBalanceTokens: number;
