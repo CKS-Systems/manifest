@@ -136,9 +136,9 @@ export class ManifestStatsServer {
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }, // May be needed depending on Fly Postgres configuration
-      max: 10, // Maximum number of clients in the pool
+      max: 20, // Increased from 10 to handle more concurrent requests
       idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-      connectionTimeoutMillis: 2000, // How long to wait for a connection from the pool
+      connectionTimeoutMillis: 10000, // Increased from 2s to 10s
     });
 
     this.pool.on('error', (err) => {
@@ -1170,8 +1170,6 @@ export class ManifestStatsServer {
     } = options;
 
     try {
-      console.log(`[getCompleteFillsFromDatabase] Starting query with options:`, options);
-      console.log(`[getCompleteFillsFromDatabase] Pool stats - total: ${this.pool.totalCount}, idle: ${this.pool.idleCount}, waiting: ${this.pool.waitingCount}`);
       const conditions: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
@@ -1209,16 +1207,12 @@ export class ManifestStatsServer {
       const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-      console.log(`[getCompleteFillsFromDatabase] Built WHERE clause: "${whereClause}", params:`, params);
-
       // Get count
-      console.log(`[getCompleteFillsFromDatabase] Executing count query...`);
       const countResult = await this.pool.query(
         `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
         params,
       );
       const total = parseInt(countResult.rows[0].total);
-      console.log(`[getCompleteFillsFromDatabase] Count query returned: ${total} total fills`);
 
       // Get data
       const dataQuery = `
@@ -1229,9 +1223,7 @@ export class ManifestStatsServer {
     `;
 
       params.push(limit, offset);
-      console.log(`[getCompleteFillsFromDatabase] Executing data query with limit=${limit}, offset=${offset}...`);
       const dataResult = await this.pool.query(dataQuery, params);
-      console.log(`[getCompleteFillsFromDatabase] Data query returned ${dataResult.rows.length} rows`);
 
       const fills: FillLogResult[] = dataResult.rows.map(
         (row) => row.fill_data,
@@ -1801,7 +1793,6 @@ const run = async () => {
   };
   const completeFillsHandler: RequestHandler = async (req, res) => {
     const startTime = Date.now();
-    console.log('[completeFills] Request received:', req.query);
     
     try {
       const options = {
@@ -1819,23 +1810,54 @@ const run = async () => {
           : undefined,
       };
 
-      console.log('[completeFills] Parsed options:', options);
-      console.log('[completeFills] Starting database query...');
-      
       const result = await statsServer.getCompleteFillsFromDatabase(options);
       
       const duration = Date.now() - startTime;
-      console.log(`[completeFills] Query completed in ${duration}ms, returning ${result.fills.length} fills, total: ${result.total}`);
+      // Only log slow queries or errors
+      if (duration > 1000) {
+        console.log(`[completeFills] SLOW query ${duration}ms - market: ${options.market}, offset: ${options.offset}, limit: ${options.limit}`);
+      }
       
       res.send(result);
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error(`[completeFills] Error after ${duration}ms:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[completeFills] Error after ${duration}ms - market: ${req.query.market}, offset: ${req.query.offset}:`, errorMessage);
       res.status(500).send({ error: 'Internal server error' });
     }
   };
   const altsHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getAlts());
+  };
+
+  // Simple rate limiter for completeFills endpoint
+  const rateLimiter = new Map<string, number>();
+  const RATE_LIMIT_WINDOW = 1000; // 1 second
+  const MAX_REQUESTS_PER_WINDOW = 5; // Max 5 requests per second per IP
+
+  const rateLimitMiddleware = (req: any, res: any, next: any) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT_WINDOW;
+    
+    // Clean old entries
+    for (const [key, timestamp] of rateLimiter.entries()) {
+      if (timestamp < windowStart) {
+        rateLimiter.delete(key);
+      }
+    }
+    
+    // Count requests from this IP in current window
+    const requestsInWindow = Array.from(rateLimiter.entries())
+      .filter(([key, timestamp]) => key.startsWith(ip) && timestamp >= windowStart)
+      .length;
+    
+    if (requestsInWindow >= MAX_REQUESTS_PER_WINDOW) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+    
+    rateLimiter.set(`${ip}_${now}`, now);
+    next();
   };
 
   const app = express();
@@ -1849,7 +1871,7 @@ const run = async () => {
     res.send(statsServer.getTraders(true));
   });
   app.get('/recentFills', recentFillsHandler);
-  app.get('/completeFills', completeFillsHandler);
+  app.get('/completeFills', rateLimitMiddleware, completeFillsHandler);
   app.get('/alts', altsHandler);
 
   // Add health check endpoint for Fly.io
