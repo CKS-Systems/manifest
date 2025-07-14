@@ -933,7 +933,7 @@ export class ManifestStatsServer {
    *
    */
   getMetadata() {
-    console.log('getting metadata', this.tickers);
+    console.log('getting metadata', this.tickers.size);
     return this.tickers;
   }
 
