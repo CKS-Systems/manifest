@@ -136,6 +136,9 @@ export class ManifestStatsServer {
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }, // May be needed depending on Fly Postgres configuration
+      max: 10, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
+      connectionTimeoutMillis: 2000, // How long to wait for a connection from the pool
     });
 
     this.pool.on('error', (err) => {
@@ -1167,6 +1170,8 @@ export class ManifestStatsServer {
     } = options;
 
     try {
+      console.log(`[getCompleteFillsFromDatabase] Starting query with options:`, options);
+      console.log(`[getCompleteFillsFromDatabase] Pool stats - total: ${this.pool.totalCount}, idle: ${this.pool.idleCount}, waiting: ${this.pool.waitingCount}`);
       const conditions: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
@@ -1204,12 +1209,16 @@ export class ManifestStatsServer {
       const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+      console.log(`[getCompleteFillsFromDatabase] Built WHERE clause: "${whereClause}", params:`, params);
+
       // Get count
+      console.log(`[getCompleteFillsFromDatabase] Executing count query...`);
       const countResult = await this.pool.query(
         `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
         params,
       );
       const total = parseInt(countResult.rows[0].total);
+      console.log(`[getCompleteFillsFromDatabase] Count query returned: ${total} total fills`);
 
       // Get data
       const dataQuery = `
@@ -1220,7 +1229,9 @@ export class ManifestStatsServer {
     `;
 
       params.push(limit, offset);
+      console.log(`[getCompleteFillsFromDatabase] Executing data query with limit=${limit}, offset=${offset}...`);
       const dataResult = await this.pool.query(dataQuery, params);
+      console.log(`[getCompleteFillsFromDatabase] Data query returned ${dataResult.rows.length} rows`);
 
       const fills: FillLogResult[] = dataResult.rows.map(
         (row) => row.fill_data,
@@ -1789,6 +1800,9 @@ const run = async () => {
     res.send(statsServer.getRecentFills(req.query.market as string));
   };
   const completeFillsHandler: RequestHandler = async (req, res) => {
+    const startTime = Date.now();
+    console.log('[completeFills] Request received:', req.query);
+    
     try {
       const options = {
         market: req.query.market as string,
@@ -1805,10 +1819,18 @@ const run = async () => {
           : undefined,
       };
 
+      console.log('[completeFills] Parsed options:', options);
+      console.log('[completeFills] Starting database query...');
+      
       const result = await statsServer.getCompleteFillsFromDatabase(options);
+      
+      const duration = Date.now() - startTime;
+      console.log(`[completeFills] Query completed in ${duration}ms, returning ${result.fills.length} fills, total: ${result.total}`);
+      
       res.send(result);
     } catch (error) {
-      console.error('Error in completeFills handler:', error);
+      const duration = Date.now() - startTime;
+      console.error(`[completeFills] Error after ${duration}ms:`, error);
       res.status(500).send({ error: 'Internal server error' });
     }
   };
