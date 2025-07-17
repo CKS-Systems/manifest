@@ -588,6 +588,40 @@
         "type": "u8",
         "value": 6
       }
+    },
+    {
+      "name": "Collect",
+      "accounts": [
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "collector",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Fee collector"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
     }
   ],
   "types": [
@@ -829,9 +863,6 @@
           },
           {
             "name": "Global"
-          },
-          {
-            "name": "Reverse"
           }
         ]
       }
