@@ -387,6 +387,140 @@
       }
     },
     {
+      "name": "SwapV2",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "traderBase",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader base token account"
+          ]
+        },
+        {
+          "name": "traderQuote",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader quote token account"
+          ]
+        },
+        {
+          "name": "baseVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base vault PDA, seeds are [b'vault', market_address, base_mint]"
+          ]
+        },
+        {
+          "name": "quoteVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]"
+          ]
+        },
+        {
+          "name": "tokenProgramBase",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22) base"
+          ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "tokenProgramQuote",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token program(22) quote. Optional. Only include if different from base"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SwapParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
       "name": "Expand",
       "accounts": [
         {
