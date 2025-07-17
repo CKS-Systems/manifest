@@ -182,18 +182,6 @@
           "type": {
             "option": "u32"
           }
-        },
-        {
-          "name": "params",
-          "type": {
-            "defined": "DepositParams"
-          }
-        },
-        {
-          "name": "traderIndexHint",
-          "type": {
-            "option": "u32"
-          }
         }
       ],
       "discriminant": {
@@ -254,18 +242,6 @@
         }
       ],
       "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "WithdrawParams"
-          }
-        },
-        {
-          "name": "traderIndexHint",
-          "type": {
-            "option": "u32"
-          }
-        },
         {
           "name": "params",
           "type": {
@@ -398,12 +374,6 @@
         }
       ],
       "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "SwapParams"
-          }
-        },
         {
           "name": "params",
           "type": {
@@ -574,12 +544,6 @@
           "type": {
             "defined": "BatchUpdateParams"
           }
-        },
-        {
-          "name": "params",
-          "type": {
-            "defined": "BatchUpdateParams"
-          }
         }
       ],
       "discriminant": {
@@ -737,12 +701,6 @@
           "type": {
             "defined": "GlobalDepositParams"
           }
-        },
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalDepositParams"
-          }
         }
       ],
       "discriminant": {
@@ -803,12 +761,6 @@
         }
       ],
       "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalWithdrawParams"
-          }
-        },
         {
           "name": "params",
           "type": {
@@ -887,12 +839,6 @@
           "type": {
             "defined": "GlobalEvictParams"
           }
-        },
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalEvictParams"
-          }
         }
       ],
       "discriminant": {
@@ -937,12 +883,6 @@
         }
       ],
       "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "GlobalCleanParams"
-          }
-        },
         {
           "name": "params",
           "type": {
@@ -1077,12 +1017,6 @@
         }
       ],
       "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": "SwapParams"
-          }
-        },
         {
           "name": "params",
           "type": {
