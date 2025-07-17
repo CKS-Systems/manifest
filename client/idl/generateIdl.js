@@ -157,6 +157,15 @@ function modifyIdlCore(programName) {
           });
           break;
         }
+        case 'SwapV2': {
+          instruction.args.push({
+            name: 'params',
+            type: {
+              defined: 'SwapParams',
+            },
+          });
+          break;
+        }
         case 'BatchUpdate': {
           instruction.args.push({
             name: 'params',
