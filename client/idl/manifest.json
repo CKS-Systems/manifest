@@ -2521,6 +2521,87 @@
       ]
     },
     {
+      "name": "PlaceOrderLogV2",
+      "discriminator": [
+        189,
+        97,
+        159,
+        235,
+        136,
+        5,
+        1,
+        141
+      ],
+      "fields": [
+        {
+          "name": "market",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "trader",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "payer",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "price",
+          "type": {
+            "defined": "QuoteAtomsPerBaseAtom"
+          },
+          "index": false
+        },
+        {
+          "name": "baseAtoms",
+          "type": {
+            "defined": "BaseAtoms"
+          },
+          "index": false
+        },
+        {
+          "name": "orderSequenceNumber",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "orderIndex",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "lastValidSlot",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "orderType",
+          "type": {
+            "defined": "OrderType"
+          },
+          "index": false
+        },
+        {
+          "name": "isBid",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "padding",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "CancelOrderLog",
       "discriminator": [
         22,
