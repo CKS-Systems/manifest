@@ -609,7 +609,6 @@ export class ManifestStatsServer {
 
         fills.inc({ market });
         console.log('Got fill', fill);
-        console.log('Aggregator', fill.aggregator)
 
         // Queue for background processing
         setImmediate(() => this.processFillAsync(fill));
