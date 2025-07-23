@@ -260,6 +260,11 @@ function detectAggregator(
         ) {
           return 'Jupiter';
         }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
+        }
       }
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
@@ -283,6 +288,11 @@ function detectAggregator(
           account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
         ) {
           return 'Jupiter';
+        }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
         }
       }
     }
