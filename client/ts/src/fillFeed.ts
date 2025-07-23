@@ -1,5 +1,9 @@
 import WebSocket from 'ws';
-import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
+import {
+  Connection,
+  ConfirmedSignatureInfo,
+  VersionedTransactionResponse,
+} from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
@@ -179,6 +183,8 @@ export class FillFeed {
       console.error('Error extracting original signer:', error);
     }
 
+    const aggregator: string | undefined = detectAggregator(tx);
+
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
       return message.includes('Program data:');
@@ -206,6 +212,7 @@ export class FillFeed {
         signature.slot,
         signature.signature,
         originalSigner,
+        aggregator,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -221,6 +228,28 @@ export class FillFeed {
   }
 }
 
+function detectAggregator(
+  tx: VersionedTransactionResponse,
+): string | undefined {
+  // Look for the aggregator program id from a list of known ids.
+  for (const account of tx.transaction.message.getAccountKeys()
+    .staticAccountKeys) {
+    if (account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg') {
+      return 'Swissborg';
+    }
+    if (account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT') {
+      return 'Titan';
+    }
+    if (account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma') {
+      return 'OKX';
+    }
+    if (account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4') {
+      return 'JUP';
+    }
+  }
+  return undefined;
+}
+
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
 function toFillLogResult(
@@ -228,6 +257,7 @@ function toFillLogResult(
   slot: number,
   signature: string,
   originalSigner?: string,
+  aggregator?: string,
 ): FillLogResult {
   const result: FillLogResult = {
     market: fillLog.market.toBase58(),
@@ -246,6 +276,9 @@ function toFillLogResult(
 
   if (originalSigner) {
     result.originalSigner = originalSigner;
+  }
+  if (aggregator) {
+    result.aggregator = aggregator;
   }
 
   return result;
