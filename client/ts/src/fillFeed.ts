@@ -235,37 +235,53 @@ function detectAggregator(
   try {
     // For versioned transactions, we need to handle both static and resolved account keys
     const message = tx.transaction.message;
-    
+
     // Handle both legacy and versioned transactions
     if ('accountKeys' in message) {
       // Legacy transaction
       for (const account of message.accountKeys) {
-        if (account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg') {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
           return 'Swissborg';
         }
-        if (account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT') {
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
           return 'Titan';
         }
-        if (account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma') {
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
           return 'OKX';
         }
-        if (account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4') {
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
           return 'Jupiter';
         }
       }
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
       for (const account of message.staticAccountKeys) {
-        if (account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg') {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
           return 'Swissborg';
         }
-        if (account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT') {
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
           return 'Titan';
         }
-        if (account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma') {
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
           return 'OKX';
         }
-        if (account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4') {
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
           return 'Jupiter';
         }
       }
