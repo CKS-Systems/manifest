@@ -32,4 +32,9 @@ export type FillLogResult = {
    * Optional for backwards compatibility.
    */
   originalSigner?: string;
+  /**
+   * Name of aggregator that sent the tx if detected.
+   * Optional for backwards compatibility.
+   */
+  aggregator?: string;
 };
