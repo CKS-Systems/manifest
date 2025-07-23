@@ -179,7 +179,7 @@ export class FillFeed {
       console.error('Error extracting original signer:', error);
     }
 
-    let aggregator: string | undefined = detectAggregator(tx);
+    const aggregator: string | undefined = detectAggregator(tx);
 
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
@@ -208,6 +208,7 @@ export class FillFeed {
         signature.slot,
         signature.signature,
         originalSigner,
+        aggregator,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -224,7 +225,8 @@ export class FillFeed {
 }
 
 function detectAggregator(tx: VersionedTransactionResponse): string | undefined {
-  for (let account of tx.transaction.message.getAccountKeys().staticAccountKeys) {
+  // Look for the aggregator program id from a list of known ids.
+  for (const account of tx.transaction.message.getAccountKeys().staticAccountKeys) {
     if (account.toBase58() == "MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg") {
       return "Swissborg";
     }
@@ -238,7 +240,7 @@ function detectAggregator(tx: VersionedTransactionResponse): string | undefined 
       return "JUP";
     }
   }
-  return "";
+  return undefined;
 }
 
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
