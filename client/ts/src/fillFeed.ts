@@ -1,5 +1,9 @@
 import WebSocket from 'ws';
-import { Connection, ConfirmedSignatureInfo, VersionedTransactionResponse } from '@solana/web3.js';
+import {
+  Connection,
+  ConfirmedSignatureInfo,
+  VersionedTransactionResponse,
+} from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
@@ -224,20 +228,23 @@ export class FillFeed {
   }
 }
 
-function detectAggregator(tx: VersionedTransactionResponse): string | undefined {
+function detectAggregator(
+  tx: VersionedTransactionResponse,
+): string | undefined {
   // Look for the aggregator program id from a list of known ids.
-  for (const account of tx.transaction.message.getAccountKeys().staticAccountKeys) {
-    if (account.toBase58() == "MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg") {
-      return "Swissborg";
+  for (const account of tx.transaction.message.getAccountKeys()
+    .staticAccountKeys) {
+    if (account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg') {
+      return 'Swissborg';
     }
-    if (account.toBase58() == "T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT") {
-      return "Titan";
+    if (account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT') {
+      return 'Titan';
     }
-    if (account.toBase58() == "6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma") {
-      return "OKX";
+    if (account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma') {
+      return 'OKX';
     }
-    if (account.toBase58() == "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4") {
-      return "JUP";
+    if (account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4') {
+      return 'JUP';
     }
   }
   return undefined;
