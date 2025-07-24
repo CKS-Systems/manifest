@@ -1013,13 +1013,15 @@ export class ManifestStatsServer {
   async getVolume() {
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
-    
+
     // Get SOL price for converting SOL-quoted volumes to USDC equivalent
     const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
     const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
     let solPrice = 0;
     if (solPriceAtoms && solUsdcMarket) {
-      solPrice = solPriceAtoms * 10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+      solPrice =
+        solPriceAtoms *
+        10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
     }
 
     const lifetimeVolume: number = marketProgramAccounts
@@ -1033,18 +1035,19 @@ export class ManifestStatsServer {
             address: new PublicKey(marketPk),
           });
           const quoteMint = market.quoteMint().toBase58();
-          
+
           // Track USDC quote volume directly
           if (quoteMint == this.USDC_MINT) {
             return Number(market.quoteVolume()) / 10 ** 6;
           }
-          
+
           // Convert SOL quote volume to USDC equivalent
           if (quoteMint == this.SOL_MINT && solPrice > 0) {
-            const solVolumeNormalized = Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
+            const solVolumeNormalized =
+              Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
             return solVolumeNormalized * solPrice;
           }
-          
+
           return 0;
         },
       )
@@ -1078,7 +1081,7 @@ export class ManifestStatsServer {
         baseMint,
         dailyVolumesByToken.get(baseMint)! + baseVolume,
       );
-      
+
       // Handle quote volumes differently for USDC vs other tokens
       if (market.quoteMint().toBase58() != this.USDC_MINT) {
         if (!dailyVolumesByToken.has(quoteMint)) {
@@ -1102,7 +1105,10 @@ export class ManifestStatsServer {
     // Report direct USDC volume separately and combined volume under USDC key
     const usdcKey = 'solana:' + this.USDC_MINT;
     if (dailyDirectUsdcVolume > 0) {
-      dailyVolumesByToken.set('manifest:direct_usdc_volume', dailyDirectUsdcVolume);
+      dailyVolumesByToken.set(
+        'manifest:direct_usdc_volume',
+        dailyDirectUsdcVolume,
+      );
     }
     if (dailyUsdcEquivalentVolume > 0) {
       dailyVolumesByToken.set(usdcKey, dailyUsdcEquivalentVolume);
