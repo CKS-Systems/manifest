@@ -1013,6 +1013,15 @@ export class ManifestStatsServer {
   async getVolume() {
     const marketProgramAccounts: GetProgramAccountsResponse =
       await ManifestClient.getMarketProgramAccounts(this.connection);
+    
+    // Get SOL price for converting SOL-quoted volumes to USDC equivalent
+    const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
+    const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+    let solPrice = 0;
+    if (solPriceAtoms && solUsdcMarket) {
+      solPrice = solPriceAtoms * 10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+    }
+
     const lifetimeVolume: number = marketProgramAccounts
       .map(
         (
@@ -1023,21 +1032,27 @@ export class ManifestStatsServer {
             buffer: value.account.data,
             address: new PublicKey(marketPk),
           });
-          // Only track lifetime volume of USDC. We only track quote volume on a
-          // market and this is the only token that is always quote. Other stables
-          // could also be base when in stable pairs.
-          if (
-            market.quoteMint().toBase58() !=
-            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-          ) {
-            return 0;
+          const quoteMint = market.quoteMint().toBase58();
+          
+          // Track USDC quote volume directly
+          if (quoteMint == this.USDC_MINT) {
+            return Number(market.quoteVolume()) / 10 ** 6;
           }
-          return Number(market.quoteVolume()) / 10 ** 6;
+          
+          // Convert SOL quote volume to USDC equivalent
+          if (quoteMint == this.SOL_MINT && solPrice > 0) {
+            const solVolumeNormalized = Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
+            return solVolumeNormalized * solPrice;
+          }
+          
+          return 0;
         },
       )
       .reduce((sum, num) => sum + num, 0);
 
     const dailyVolumesByToken: Map<string, number> = new Map();
+    let dailyUsdcEquivalentVolume = 0;
+
     this.markets.forEach((market: Market, marketPk: string) => {
       const baseVolume: number =
         this.baseVolumeAtomsCheckpoints
@@ -1068,11 +1083,24 @@ export class ManifestStatsServer {
         quoteMint,
         dailyVolumesByToken.get(quoteMint)! + quoteVolume,
       );
+
+      // Add SOL-quoted volume to USDC total
+      if (market.quoteMint().toBase58() == this.SOL_MINT && solPrice > 0) {
+        dailyUsdcEquivalentVolume += quoteVolume * solPrice;
+      } else if (market.quoteMint().toBase58() == this.USDC_MINT) {
+        dailyUsdcEquivalentVolume += quoteVolume;
+      }
     });
+
+    // USDC volume reported as direct USDC + converted SOL)
+    const usdcKey = 'solana:' + this.USDC_MINT;
+    if (dailyUsdcEquivalentVolume > 0) {
+      dailyVolumesByToken.set(usdcKey, dailyUsdcEquivalentVolume);
+    }
 
     return {
       totalVolume: {
-        'solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': lifetimeVolume,
+        [usdcKey]: lifetimeVolume,
       },
       dailyVolume: Object.fromEntries(dailyVolumesByToken),
     };
