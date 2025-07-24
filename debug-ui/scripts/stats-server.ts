@@ -1052,6 +1052,7 @@ export class ManifestStatsServer {
 
     const dailyVolumesByToken: Map<string, number> = new Map();
     let dailyUsdcEquivalentVolume = 0;
+    let dailyDirectUsdcVolume = 0;
 
     this.markets.forEach((market: Market, marketPk: string) => {
       const baseVolume: number =
@@ -1069,31 +1070,40 @@ export class ManifestStatsServer {
       if (baseVolume == 0 || quoteVolume == 0) {
         return;
       }
+      // Track individual token volumes (excluding USDC which we'll handle separately)
       if (!dailyVolumesByToken.has(baseMint)) {
         dailyVolumesByToken.set(baseMint, 0);
-      }
-      if (!dailyVolumesByToken.has(quoteMint)) {
-        dailyVolumesByToken.set(quoteMint, 0);
       }
       dailyVolumesByToken.set(
         baseMint,
         dailyVolumesByToken.get(baseMint)! + baseVolume,
       );
-      dailyVolumesByToken.set(
-        quoteMint,
-        dailyVolumesByToken.get(quoteMint)! + quoteVolume,
-      );
+      
+      // Handle quote volumes differently for USDC vs other tokens
+      if (market.quoteMint().toBase58() != this.USDC_MINT) {
+        if (!dailyVolumesByToken.has(quoteMint)) {
+          dailyVolumesByToken.set(quoteMint, 0);
+        }
+        dailyVolumesByToken.set(
+          quoteMint,
+          dailyVolumesByToken.get(quoteMint)! + quoteVolume,
+        );
+      }
 
-      // Add SOL-quoted volume to USDC total
+      // Calculate total USDC equivalent volume
       if (market.quoteMint().toBase58() == this.SOL_MINT && solPrice > 0) {
         dailyUsdcEquivalentVolume += quoteVolume * solPrice;
       } else if (market.quoteMint().toBase58() == this.USDC_MINT) {
+        dailyDirectUsdcVolume += quoteVolume;
         dailyUsdcEquivalentVolume += quoteVolume;
       }
     });
 
-    // USDC volume reported as direct USDC + converted SOL)
+    // Report direct USDC volume separately and combined volume under USDC key
     const usdcKey = 'solana:' + this.USDC_MINT;
+    if (dailyDirectUsdcVolume > 0) {
+      dailyVolumesByToken.set('manifest:direct_usdc_volume', dailyDirectUsdcVolume);
+    }
     if (dailyUsdcEquivalentVolume > 0) {
       dailyVolumesByToken.set(usdcKey, dailyUsdcEquivalentVolume);
     }
