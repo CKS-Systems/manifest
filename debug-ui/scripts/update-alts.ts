@@ -170,7 +170,7 @@ async function addMarketToAlts(
   const altAddress = altPk.toString();
   console.log('add market', market, 'to new alt', altAddress);
 
-  const signature = await connection.sendTransaction(tx);
+  const signature = await connection.sendTransaction(tx, { preflightCommitment: 'processed' });
   await connection.confirmTransaction({
     signature,
     blockhash,
