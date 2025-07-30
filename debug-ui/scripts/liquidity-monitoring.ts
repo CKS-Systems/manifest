@@ -14,6 +14,7 @@ const MIN_VOLUME_THRESHOLD_USD = 1_000; // $1k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
 const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const PORT = 3001;
 
 // Environment variables
@@ -182,10 +183,10 @@ export class LiquidityMonitor {
 
       for (const ticker of tickers) {
         const quoteMint = ticker.target_currency;
-        if (quoteMint !== USDC_MINT) {
+        if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
           continue;
         }
-        // Convert to USD using quote volume (assuming USDC quote)
+        // Convert to USD using quote volume
         const volumeUsd = ticker.target_volume || 0;
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
@@ -226,9 +227,9 @@ export class LiquidityMonitor {
             continue;
           }
 
-          // Only include USDC quote markets
+          // Only include USDC and SOL quote markets
           const quoteMint = market.quoteMint().toBase58();
-          if (quoteMint !== USDC_MINT) {
+          if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
             continue;
           }
 
