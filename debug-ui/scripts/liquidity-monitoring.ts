@@ -181,16 +181,28 @@ export class LiquidityMonitor {
 
       const volumeMap = new Map<string, number>();
 
+      // Get SOL price from SOL/USDC market
+      const solUsdcTicker = tickers.find((t: any) => t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ');
+      const solPrice = solUsdcTicker?.last_price || 0;
+
       for (const ticker of tickers) {
         const quoteMint = ticker.target_currency;
         if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
           continue;
         }
-        // Convert to USD using quote volume
-        const volumeUsd = ticker.target_volume || 0;
+        
+        let volumeUsd = 0;
+        if (quoteMint === USDC_MINT) {
+          volumeUsd = ticker.target_volume || 0;
+        } else if (quoteMint === SOL_MINT && solPrice > 0) {
+          // Convert SOL volume to USD
+          volumeUsd = (ticker.target_volume || 0) * solPrice;
+        }
+        
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
 
+      console.log(`Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}`);
       return volumeMap;
     } catch (error) {
       console.error('Error fetching market volumes:', error);
@@ -245,8 +257,9 @@ export class LiquidityMonitor {
             quoteDecimals: market.quoteDecimals(),
           });
 
+          const marketType = quoteMint === USDC_MINT ? 'USDC' : 'SOL';
           console.log(
-            `Added USDC market ${marketPk} with ${volume24h.toLocaleString()} 24h volume`,
+            `Added ${marketType} market ${marketPk} with $${volume24h.toLocaleString()} 24h volume`,
           );
         } catch (error) {
           console.error(`Error loading market ${marketPk}:`, error);
@@ -254,7 +267,7 @@ export class LiquidityMonitor {
       }
     }
 
-    console.log(`Loaded ${this.markets.size} eligible USDC markets`);
+    console.log(`Loaded ${this.markets.size} eligible markets (USDC + SOL)`);
   }
 
   /**

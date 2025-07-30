@@ -398,10 +398,8 @@ export class ManifestStatsServer {
       );
     } else if (quoteMint === this.SOL_MINT) {
       const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
-      console.log('SOL PRICE ATOMS', solPriceAtoms);
       if (solPriceAtoms) {
         const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
-        console.log('SOL USDC MARKET', solUsdcMarket);
         if (solUsdcMarket) {
           const solPrice =
             solPriceAtoms *
@@ -410,7 +408,6 @@ export class ManifestStatsServer {
           const notionalVolume =
             (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
             solPrice;
-            console.log('SOL PRICE/NOTIONAL', solPrice, notionalVolume);
 
           this.traderTakerNotionalVolume.set(
             actualTaker,
