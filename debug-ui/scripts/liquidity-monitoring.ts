@@ -182,7 +182,10 @@ export class LiquidityMonitor {
       const volumeMap = new Map<string, number>();
 
       // Get SOL price from SOL/USDC market
-      const solUsdcTicker = tickers.find((t: any) => t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ');
+      const solUsdcTicker = tickers.find(
+        (t: any) =>
+          t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ',
+      );
       const solPrice = solUsdcTicker?.last_price || 0;
 
       for (const ticker of tickers) {
@@ -190,7 +193,7 @@ export class LiquidityMonitor {
         if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
           continue;
         }
-        
+
         let volumeUsd = 0;
         if (quoteMint === USDC_MINT) {
           volumeUsd = ticker.target_volume || 0;
@@ -198,11 +201,13 @@ export class LiquidityMonitor {
           // Convert SOL volume to USD
           volumeUsd = (ticker.target_volume || 0) * solPrice;
         }
-        
+
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
 
-      console.log(`Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}`);
+      console.log(
+        `Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}`,
+      );
       return volumeMap;
     } catch (error) {
       console.error('Error fetching market volumes:', error);
@@ -343,7 +348,7 @@ export class LiquidityMonitor {
       const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
       const quoteMint = market.quoteMint().toBase58();
       let totalNotionalUsd = totalBaseTokens * midPrice;
-      
+
       // Convert to USD if this is a SOL market
       if (quoteMint === SOL_MINT && solPriceUsd > 0) {
         totalNotionalUsd = totalNotionalUsd * solPriceUsd;
@@ -388,9 +393,12 @@ export class LiquidityMonitor {
       // Get current SOL price for USD conversion
       const response = await fetch('https://mfx-stats-mainnet.fly.dev/tickers');
       const tickers = await response.json();
-      const solUsdcTicker = tickers.find((t: any) => t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ');
+      const solUsdcTicker = tickers.find(
+        (t: any) =>
+          t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ',
+      );
       const solPriceUsd = solUsdcTicker?.last_price || 0;
-      
+
       console.log(`Using SOL price: $${solPriceUsd} for depth calculations`);
 
       const allStats: MarketMakerStats[] = [];
