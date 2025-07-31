@@ -276,6 +276,7 @@ export class LiquidityMonitor {
   calculateMarketMakerDepths(
     market: Market,
     timestamp: Date,
+    solPriceUsd: number = 0,
   ): MarketMakerStats[] {
     const bids = market.bids();
     const asks = market.asks();
@@ -328,19 +329,28 @@ export class LiquidityMonitor {
         const askThreshold = midPrice * (1 + spreadMultiplier);
 
         // Calculate bid depth (orders above threshold)
-        bidDepth[spreadBps] = traderBids
+        const bidTokens = traderBids
           .filter((order) => order.tokenPrice >= bidThreshold)
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
 
-        // Calculate ask depth (orders below threshold)
-        askDepth[spreadBps] = traderAsks
+        // Calculate ask depth (orders below threshold)  
+        const askTokens = traderAsks
           .filter((order) => order.tokenPrice <= askThreshold)
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
+
+        // Convert to USD notional for SOL markets
+        const quoteMint = market.quoteMint().toBase58();
+        if (quoteMint === SOL_MINT && solPriceUsd > 0) {
+          bidDepth[spreadBps] = bidTokens * midPrice * solPriceUsd;
+          askDepth[spreadBps] = askTokens * midPrice * solPriceUsd; 
+        } else {
+          bidDepth[spreadBps] = bidTokens * midPrice;
+          askDepth[spreadBps] = askTokens * midPrice;
+        }
       }
 
-      // Calculate total notional in USD
-      const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
-      const totalNotionalUsd = totalBaseTokens * midPrice;
+      // Calculate total notional in USD (already converted above)
+      const totalNotionalUsd = (bidDepth[100] || 0) + (askDepth[100] || 0);
 
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
@@ -378,6 +388,14 @@ export class LiquidityMonitor {
       const cycleTimestamp = new Date();
       console.log('Starting market monitoring cycle...', cycleTimestamp);
 
+      // Get current SOL price for USD conversion
+      const response = await fetch('https://mfx-stats-mainnet.fly.dev/tickers');
+      const tickers = await response.json();
+      const solUsdcTicker = tickers.find((t: any) => t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ');
+      const solPriceUsd = solUsdcTicker?.last_price || 0;
+      
+      console.log(`Using SOL price: $${solPriceUsd} for depth calculations`);
+
       const allStats: MarketMakerStats[] = [];
 
       for (const [marketPk, market] of this.markets) {
@@ -389,6 +407,7 @@ export class LiquidityMonitor {
           const marketStats = this.calculateMarketMakerDepths(
             market,
             cycleTimestamp,
+            solPriceUsd,
           );
 
           allStats.push(...marketStats);
