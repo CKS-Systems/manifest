@@ -329,28 +329,25 @@ export class LiquidityMonitor {
         const askThreshold = midPrice * (1 + spreadMultiplier);
 
         // Calculate bid depth (orders above threshold)
-        const bidTokens = traderBids
+        bidDepth[spreadBps] = traderBids
           .filter((order) => order.tokenPrice >= bidThreshold)
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
 
-        // Calculate ask depth (orders below threshold)  
-        const askTokens = traderAsks
+        // Calculate ask depth (orders below threshold)
+        askDepth[spreadBps] = traderAsks
           .filter((order) => order.tokenPrice <= askThreshold)
           .reduce((sum, order) => sum + Number(order.numBaseTokens), 0);
-
-        // Convert to USD notional for SOL markets
-        const quoteMint = market.quoteMint().toBase58();
-        if (quoteMint === SOL_MINT && solPriceUsd > 0) {
-          bidDepth[spreadBps] = bidTokens * midPrice * solPriceUsd;
-          askDepth[spreadBps] = askTokens * midPrice * solPriceUsd; 
-        } else {
-          bidDepth[spreadBps] = bidTokens * midPrice;
-          askDepth[spreadBps] = askTokens * midPrice;
-        }
       }
 
-      // Calculate total notional in USD (already converted above)
-      const totalNotionalUsd = (bidDepth[100] || 0) + (askDepth[100] || 0);
+      // Calculate total notional in USD
+      const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
+      const quoteMint = market.quoteMint().toBase58();
+      let totalNotionalUsd = totalBaseTokens * midPrice;
+      
+      // Convert to USD if this is a SOL market
+      if (quoteMint === SOL_MINT && solPriceUsd > 0) {
+        totalNotionalUsd = totalNotionalUsd * solPriceUsd;
+      }
 
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
