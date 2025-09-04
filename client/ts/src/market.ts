@@ -671,7 +671,11 @@ export class Market {
 
               if (restingOrderInternal.orderType === OrderType.Reverse) {
                 const paddingBytes = restingOrderInternal.padding;
-                const spreadBps = paddingBytes[0] | (paddingBytes[1] << 8) | (paddingBytes[2] << 16) | (paddingBytes[3] << 24);
+                const spreadBps =
+                  paddingBytes[0] |
+                  (paddingBytes[1] << 8) |
+                  (paddingBytes[2] << 16) |
+                  (paddingBytes[3] << 24);
                 return {
                   ...baseOrder,
                   spreadBps: spreadBps / 10,
@@ -718,7 +722,11 @@ export class Market {
 
               if (restingOrderInternal.orderType === OrderType.Reverse) {
                 const paddingBytes = restingOrderInternal.padding;
-                const spreadBps = paddingBytes[0] | (paddingBytes[1] << 8) | (paddingBytes[2] << 16) | (paddingBytes[3] << 24);
+                const spreadBps =
+                  paddingBytes[0] |
+                  (paddingBytes[1] << 8) |
+                  (paddingBytes[2] << 16) |
+                  (paddingBytes[3] << 24);
                 return {
                   ...baseOrder,
                   spreadBps: spreadBps / 10,
