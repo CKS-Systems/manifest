@@ -78,12 +78,12 @@ async function testReverse(): Promise<void> {
 
   // Test spreadBps extraction
   assert(
-    market.asks()[0].spreadBps === 200,
-    `ask spreadBps should be 200, got ${market.asks()[0].spreadBps}`,
+    market.asks()[0].spreadBps === 2000,
+    `ask spreadBps should be 2000, got ${market.asks()[0].spreadBps}`,
   );
   assert(
-    market.bids()[0].spreadBps === 200,
-    `bid spreadBps should be 200, got ${market.bids()[0].spreadBps}`,
+    market.bids()[0].spreadBps === 2000,
+    `bid spreadBps should be 2000, got ${market.bids()[0].spreadBps}`,
   );
 }
 
