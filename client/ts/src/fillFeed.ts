@@ -184,6 +184,7 @@ export class FillFeed {
     }
 
     const aggregator: string | undefined = detectAggregator(tx);
+    const originatingProtocol: string | undefined = detectOriginatingProtocol(tx);
 
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
@@ -213,6 +214,7 @@ export class FillFeed {
         signature.signature,
         originalSigner,
         aggregator,
+        originatingProtocol,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -303,6 +305,47 @@ function detectAggregator(
   return undefined;
 }
 
+function detectOriginatingProtocol(
+  tx: VersionedTransactionResponse,
+): string | undefined {
+  // Look for known originating protocol program IDs in the transaction accounts
+  const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
+  const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
+  
+  try {
+    const message = tx.transaction.message;
+
+    // Handle both legacy and versioned transactions
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      for (const account of message.accountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
+    } else {
+      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
+      for (const account of message.staticAccountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Error detecting originating protocol:', error);
+    // Fall back to undefined if we can't detect the originating protocol
+  }
+  return undefined;
+}
+
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
 function toFillLogResult(
@@ -311,6 +354,7 @@ function toFillLogResult(
   signature: string,
   originalSigner?: string,
   aggregator?: string,
+  originatingProtocol?: string,
 ): FillLogResult {
   const result: FillLogResult = {
     market: fillLog.market.toBase58(),
@@ -332,6 +376,9 @@ function toFillLogResult(
   }
   if (aggregator) {
     result.aggregator = aggregator;
+  }
+  if (originatingProtocol) {
+    result.originatingProtocol = originatingProtocol;
   }
 
   return result;
