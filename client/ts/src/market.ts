@@ -47,7 +47,7 @@ export type RestingOrder = {
   tokenPrice: number;
   /** OrderType: 🌎 or Limit or PostOnly */
   orderType: OrderType;
-  /** Spread in basis points for reversible orders (only set for orderType === OrderType.Reverse). */
+  /** Spread in basis points for reversible orders, stored in 0.1 bps increments (only set for orderType === OrderType.Reverse). */
   spreadBps?: number;
 };
 
@@ -671,14 +671,14 @@ export class Market {
 
               if (restingOrderInternal.orderType === OrderType.Reverse) {
                 const paddingBytes = restingOrderInternal.padding;
-                const spreadBps =
+                const spreadRaw =
                   paddingBytes[0] |
                   (paddingBytes[1] << 8) |
                   (paddingBytes[2] << 16) |
                   (paddingBytes[3] << 24);
                 return {
                   ...baseOrder,
-                  spreadBps: spreadBps / 10,
+                  spreadBps: spreadRaw / 10,
                 };
               }
 
@@ -722,14 +722,14 @@ export class Market {
 
               if (restingOrderInternal.orderType === OrderType.Reverse) {
                 const paddingBytes = restingOrderInternal.padding;
-                const spreadBps =
+                const spreadRaw =
                   paddingBytes[0] |
                   (paddingBytes[1] << 8) |
                   (paddingBytes[2] << 16) |
                   (paddingBytes[3] << 24);
                 return {
                   ...baseOrder,
-                  spreadBps: spreadBps / 10,
+                  spreadBps: spreadRaw / 10,
                 };
               }
 
