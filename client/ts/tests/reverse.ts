@@ -75,10 +75,16 @@ async function testReverse(): Promise<void> {
     Number(market.bids()[0].numBaseTokens) == 1.25,
     `bids top of book wrong size expected ${1.25} actual ${Number(market.bids()[0].numBaseTokens)}`,
   );
-  
+
   // Test spreadBps extraction
-  assert(market.asks()[0].spreadBps === 200, `ask spreadBps should be 200, got ${market.asks()[0].spreadBps}`);
-  assert(market.bids()[0].spreadBps === 200, `bid spreadBps should be 200, got ${market.bids()[0].spreadBps}`);
+  assert(
+    market.asks()[0].spreadBps === 200,
+    `ask spreadBps should be 200, got ${market.asks()[0].spreadBps}`,
+  );
+  assert(
+    market.bids()[0].spreadBps === 200,
+    `bid spreadBps should be 200, got ${market.bids()[0].spreadBps}`,
+  );
 }
 
 describe('Reverse test', () => {
