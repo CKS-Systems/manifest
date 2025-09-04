@@ -47,6 +47,8 @@ export type RestingOrder = {
   tokenPrice: number;
   /** OrderType: 🌎 or Limit or PostOnly */
   orderType: OrderType;
+  /** Spread in basis points for reversible orders (only set for orderType === OrderType.Reverse). */
+  spreadBps?: number;
 };
 
 /**
@@ -647,7 +649,7 @@ export class Market {
             restingOrderBeet,
           )
             .map((restingOrderInternal: RestingOrderRaw) => {
-              return {
+              const baseOrder = {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
                     Number(restingOrderInternal.traderIndex) +
@@ -666,6 +668,17 @@ export class Market {
                   10 ** (baseMintDecimals - quoteMintDecimals),
                 ...restingOrderInternal,
               };
+
+              if (restingOrderInternal.orderType === OrderType.Reverse) {
+                const paddingBytes = restingOrderInternal.padding;
+                const spreadBps = paddingBytes[0] | (paddingBytes[1] << 8) | (paddingBytes[2] << 16) | (paddingBytes[3] << 24);
+                return {
+                  ...baseOrder,
+                  spreadBps: spreadBps / 10,
+                };
+              }
+
+              return baseOrder;
             })
             .filter((bid: RestingOrder) => {
               return (
@@ -683,7 +696,7 @@ export class Market {
             restingOrderBeet,
           )
             .map((restingOrderInternal: RestingOrderRaw) => {
-              return {
+              const baseOrder = {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
                     Number(restingOrderInternal.traderIndex) +
@@ -702,6 +715,17 @@ export class Market {
                   10 ** (baseMintDecimals - quoteMintDecimals),
                 ...restingOrderInternal,
               };
+
+              if (restingOrderInternal.orderType === OrderType.Reverse) {
+                const paddingBytes = restingOrderInternal.padding;
+                const spreadBps = paddingBytes[0] | (paddingBytes[1] << 8) | (paddingBytes[2] << 16) | (paddingBytes[3] << 24);
+                return {
+                  ...baseOrder,
+                  spreadBps: spreadBps / 10,
+                };
+              }
+
+              return baseOrder;
             })
             .filter((ask: RestingOrder) => {
               return (
