@@ -184,7 +184,8 @@ export class FillFeed {
     }
 
     const aggregator: string | undefined = detectAggregator(tx);
-    const originatingProtocol: string | undefined = detectOriginatingProtocol(tx);
+    const originatingProtocol: string | undefined =
+      detectOriginatingProtocol(tx);
 
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
@@ -311,7 +312,7 @@ function detectOriginatingProtocol(
   // Look for known originating protocol program IDs in the transaction accounts
   const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
   const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
-  
+
   try {
     const message = tx.transaction.message;
 
