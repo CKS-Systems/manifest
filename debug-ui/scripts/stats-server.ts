@@ -688,28 +688,44 @@ export class ManifestStatsServer {
 
   async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
     // First try Metaplex metadata for SPL tokens
-    const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
-    const metadataAccountInfo =
-      await this.connection.getAccountInfo(metadataAccount);
-    if (metadataAccountInfo) {
-      const token = await metaplex.nfts().findByMint({ mintAddress: mint });
-      return token.symbol;
+    try {
+      const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
+      const metadataAccountInfo =
+        await this.connection.getAccountInfo(metadataAccount);
+      if (metadataAccountInfo) {
+        const token = await metaplex.nfts().findByMint({ mintAddress: mint });
+        return token.symbol;
+      }
+    } catch (error) {
+      console.log(
+        'Metaplex metadata lookup failed for',
+        mint.toBase58(),
+        error,
+      );
     }
 
     // Then try SPL token registry
-    const provider: TokenListContainer =
-      await new TokenListProvider().resolve();
-    const tokenList: TokenInfo[] = provider
-      .filterByChainId(ENV.MainnetBeta)
-      .getList();
-    const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
-      map.set(item.address, item);
-      return map;
-    }, new Map<string, TokenInfo>());
+    try {
+      const provider: TokenListContainer =
+        await new TokenListProvider().resolve();
+      const tokenList: TokenInfo[] = provider
+        .filterByChainId(ENV.MainnetBeta)
+        .getList();
+      const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
+        map.set(item.address, item);
+        return map;
+      }, new Map<string, TokenInfo>());
 
-    const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
-    if (token) {
-      return token.symbol;
+      const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
+      if (token) {
+        return token.symbol;
+      }
+    } catch (error) {
+      console.log(
+        'SPL token registry lookup failed for',
+        mint.toBase58(),
+        error,
+      );
     }
 
     // Finally try Token2022 metadata extension as fallback
@@ -746,7 +762,8 @@ export class ManifestStatsServer {
       );
     }
 
-    return '';
+    // Return a fallback identifier if all lookups fail
+    return mint.toBase58().substring(0, 8) + '...';
   }
 
   /**
