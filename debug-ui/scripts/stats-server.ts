@@ -624,15 +624,89 @@ export class ManifestStatsServer {
     await this.loadState();
     let marketProgramAccounts: GetProgramAccountsResponse;
     try {
-      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
-        this.connection,
+      marketProgramAccounts = await this.withRetry(
+        () => ManifestClient.getMarketProgramAccounts(this.connection),
+        5, // 5 retries
+        2000, // 2s delay, exponential backoff
+      );
+      console.log(
+        `Successfully loaded ${marketProgramAccounts.length} markets`,
       );
     } catch (error) {
-      console.error('Failed to load market program accounts:', error);
-      console.log(
-        'Server will continue with empty markets - they can be loaded later',
+      console.error(
+        'Failed to load market program accounts after retries:',
+        error,
       );
-      marketProgramAccounts = [];
+      console.log('Attempting to recover markets from database...');
+
+      // Try to recover market addresses from database
+      try {
+        // Find the most recent checkpoint that actually has market data
+        const checkpointResult = await this.pool.query(`
+          SELECT sc.id, sc.created_at, COUNT(mc.market) as market_count
+          FROM state_checkpoints sc
+          LEFT JOIN market_checkpoints mc ON sc.id = mc.checkpoint_id
+          GROUP BY sc.id, sc.created_at
+          HAVING COUNT(mc.market) > 0
+          ORDER BY sc.created_at DESC
+          LIMIT 1
+        `);
+
+        if (checkpointResult.rowCount === 0) {
+          console.log('No checkpoints with market data found in database');
+          marketProgramAccounts = [];
+          return;
+        }
+
+        const checkpointId = checkpointResult.rows[0].id;
+        const marketCount = checkpointResult.rows[0].market_count;
+        const checkpointDate = checkpointResult.rows[0].created_at;
+        console.log(
+          `Using checkpoint ${checkpointId} (${checkpointDate}) with ${marketCount} markets for recovery`,
+        );
+
+        const dbMarkets = await this.pool.query(
+          'SELECT DISTINCT market FROM market_checkpoints WHERE checkpoint_id = $1 ORDER BY market',
+          [checkpointId],
+        );
+        console.log(
+          `Confirmed ${dbMarkets.rows.length} markets in checkpoint ${checkpointId}`,
+        );
+
+        if (dbMarkets.rows.length > 0) {
+          // Load markets from database addresses
+          const marketAddresses = dbMarkets.rows.map((row) => row.market);
+          const recoveredMarkets = [];
+
+          for (const marketAddress of marketAddresses) {
+            try {
+              const marketPk = new PublicKey(marketAddress);
+              const accountInfo =
+                await this.connection.getAccountInfo(marketPk);
+              if (accountInfo) {
+                recoveredMarkets.push({
+                  account: accountInfo,
+                  pubkey: marketPk,
+                });
+              }
+            } catch (err) {
+              console.warn(`Failed to load market ${marketAddress}:`, err);
+            }
+          }
+          marketProgramAccounts = recoveredMarkets;
+          console.log(
+            `Recovered ${marketProgramAccounts.length} markets from database`,
+          );
+        } else {
+          console.log(
+            'No markets found in database, starting with empty state',
+          );
+          marketProgramAccounts = [];
+        }
+      } catch (dbError) {
+        console.error('Database recovery failed:', dbError);
+        marketProgramAccounts = [];
+      }
     }
     marketProgramAccounts.forEach(
       (
@@ -1689,18 +1763,30 @@ export class ManifestStatsServer {
     console.log('Loading state from database...');
 
     try {
-      // Get the most recent checkpoint
-      const checkpointResultRecent = await this.pool.query(
-        'SELECT id, last_fill_slot FROM state_checkpoints ORDER BY created_at DESC LIMIT 1',
-      );
+      // Get the most recent checkpoint that has market data
+      const checkpointResultRecent = await this.pool.query(`
+        SELECT sc.id, sc.last_fill_slot, sc.created_at, COUNT(mc.market) as market_count
+        FROM state_checkpoints sc
+        LEFT JOIN market_checkpoints mc ON sc.id = mc.checkpoint_id
+        GROUP BY sc.id, sc.last_fill_slot, sc.created_at
+        HAVING COUNT(mc.market) > 0
+        ORDER BY sc.created_at DESC
+        LIMIT 1
+      `);
 
       if (checkpointResultRecent.rowCount === 0) {
-        console.log('No saved state found in database');
+        console.log('No saved state with market data found in database');
         return false;
       }
 
       const checkpointId = checkpointResultRecent.rows[0].id;
+      const marketCount = checkpointResultRecent.rows[0].market_count;
+      const checkpointDate = checkpointResultRecent.rows[0].created_at;
       this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
+
+      console.log(
+        `Loading state from checkpoint ${checkpointId} (${checkpointDate}) with ${marketCount} markets`,
+      );
 
       // Load market volumes
       const volumeResult = await this.pool.query(
