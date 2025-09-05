@@ -622,8 +622,18 @@ export class ManifestStatsServer {
    */
   async initialize(): Promise<void> {
     await this.loadState();
-    const marketProgramAccounts: GetProgramAccountsResponse =
-      await ManifestClient.getMarketProgramAccounts(this.connection);
+    let marketProgramAccounts: GetProgramAccountsResponse;
+    try {
+      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
+        this.connection,
+      );
+    } catch (error) {
+      console.error('Failed to load market program accounts:', error);
+      console.log(
+        'Server will continue with empty markets - they can be loaded later',
+      );
+      marketProgramAccounts = [];
+    }
     marketProgramAccounts.forEach(
       (
         value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
@@ -657,33 +667,52 @@ export class ManifestStatsServer {
 
     const mintToSymbols: Map<string, string> = new Map();
     const metaplex: Metaplex = Metaplex.make(this.connection);
-    this.markets.forEach(async (market: Market) => {
-      const baseMint: PublicKey = market.baseMint();
-      const quoteMint: PublicKey = market.quoteMint();
 
-      let baseSymbol = '';
-      let quoteSymbol = '';
-      if (mintToSymbols.has(baseMint.toBase58())) {
-        baseSymbol = mintToSymbols.get(baseMint.toBase58())!;
-      } else {
-        // Sleep to backoff on RPC load.
-        await new Promise((f) => setTimeout(f, 500));
-        baseSymbol = await this.lookupMintTicker(metaplex, baseMint);
+    // Process metadata loading with error handling
+    try {
+      const marketEntries = Array.from(this.markets.entries());
+      for (const [marketAddress, market] of marketEntries) {
+        try {
+          const baseMint: PublicKey = market.baseMint();
+          const quoteMint: PublicKey = market.quoteMint();
+
+          let baseSymbol = '';
+          let quoteSymbol = '';
+          if (mintToSymbols.has(baseMint.toBase58())) {
+            baseSymbol = mintToSymbols.get(baseMint.toBase58())!;
+          } else {
+            // Sleep to backoff on RPC load.
+            await new Promise((f) => setTimeout(f, 500));
+            baseSymbol = await this.lookupMintTicker(metaplex, baseMint);
+          }
+          mintToSymbols.set(baseMint.toBase58(), baseSymbol);
+
+          if (mintToSymbols.has(quoteMint.toBase58())) {
+            quoteSymbol = mintToSymbols.get(quoteMint.toBase58())!;
+          } else {
+            quoteSymbol = await this.lookupMintTicker(metaplex, quoteMint);
+          }
+          mintToSymbols.set(quoteMint.toBase58(), quoteSymbol);
+
+          this.tickers.set(marketAddress, [baseSymbol, quoteSymbol]);
+        } catch (error) {
+          console.warn(
+            `Failed to load metadata for market ${marketAddress}:`,
+            error,
+          );
+          // Set fallback ticker data
+          const baseMint = market.baseMint().toBase58();
+          const quoteMint = market.quoteMint().toBase58();
+          this.tickers.set(marketAddress, [
+            baseMint.substring(0, 8) + '...',
+            quoteMint.substring(0, 8) + '...',
+          ]);
+        }
       }
-      mintToSymbols.set(baseMint.toBase58(), baseSymbol);
-
-      if (mintToSymbols.has(quoteMint.toBase58())) {
-        quoteSymbol = mintToSymbols.get(quoteMint.toBase58())!;
-      } else {
-        quoteSymbol = await this.lookupMintTicker(metaplex, quoteMint);
-      }
-      mintToSymbols.set(quoteMint.toBase58(), quoteSymbol);
-
-      this.tickers.set(market.address.toBase58(), [
-        mintToSymbols.get(market.baseMint()!.toBase58())!,
-        mintToSymbols.get(market.quoteMint()!.toBase58())!,
-      ]);
-    });
+    } catch (error) {
+      console.error('Error in metadata loading loop:', error);
+      console.log('Server will continue with limited ticker data');
+    }
   }
 
   async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
