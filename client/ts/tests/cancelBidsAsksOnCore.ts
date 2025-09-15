@@ -124,17 +124,22 @@ async function testCancelBidsAsksOnCore(): Promise<void> {
   console.log('Market state before cancellation:');
   market.prettyPrint();
 
-  const bidsBeforeCancel = market.bidsL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
-  const asksBeforeCancel = market.asksL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
+  const bidsBeforeCancel = market
+    .bidsL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
+  const asksBeforeCancel = market
+    .asksL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
 
   console.log(`Found ${bidsBeforeCancel.length} bid orders from our trader`);
   console.log(`Found ${asksBeforeCancel.length} ask orders from our trader`);
 
-  const totalOrdersBeforeCancel = bidsBeforeCancel.length + asksBeforeCancel.length;
+  const totalOrdersBeforeCancel =
+    bidsBeforeCancel.length + asksBeforeCancel.length;
   console.log(`Total orders before cancellation: ${totalOrdersBeforeCancel}`);
 
   // Should have remaining orders after partial fills
@@ -150,17 +155,26 @@ async function testCancelBidsAsksOnCore(): Promise<void> {
   console.log('Market state after canceling bids:');
   market.prettyPrint();
 
-  const bidsAfterBidCancel = market.bidsL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
-  const asksAfterBidCancel = market.asksL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
+  const bidsAfterBidCancel = market
+    .bidsL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
+  const asksAfterBidCancel = market
+    .asksL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
 
   assert(bidsAfterBidCancel.length === 0, 'All bid orders should be canceled');
-  assert(asksAfterBidCancel.length === asksBeforeCancel.length, 'Ask orders should remain unchanged');
+  assert(
+    asksAfterBidCancel.length === asksBeforeCancel.length,
+    'Ask orders should remain unchanged',
+  );
 
-  console.log(`Bids canceled: ${bidsBeforeCancel.length}, Asks remaining: ${asksAfterBidCancel.length}`);
+  console.log(
+    `Bids canceled: ${bidsBeforeCancel.length}, Asks remaining: ${asksAfterBidCancel.length}`,
+  );
 
   // Test 2: Cancel all asks only
   console.log('Testing cancelAsksOnCore...');
@@ -171,17 +185,23 @@ async function testCancelBidsAsksOnCore(): Promise<void> {
   console.log('Market state after canceling asks:');
   market.prettyPrint();
 
-  const bidsAfterAskCancel = market.bidsL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
-  const asksAfterAskCancel = market.asksL2().filter(
-    (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
-  );
+  const bidsAfterAskCancel = market
+    .bidsL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
+  const asksAfterAskCancel = market
+    .asksL2()
+    .filter(
+      (order) => order.trader.toBase58() === payerKeypair.publicKey.toBase58(),
+    );
 
   assert(bidsAfterAskCancel.length === 0, 'Bid orders should remain canceled');
   assert(asksAfterAskCancel.length === 0, 'All ask orders should be canceled');
 
-  console.log('Test passed: Both cancelBidsOnCore and cancelAsksOnCore work correctly with reverse orders and fills');
+  console.log(
+    'Test passed: Both cancelBidsOnCore and cancelAsksOnCore work correctly with reverse orders and fills',
+  );
 }
 
 export async function cancelBidsOnCore(
