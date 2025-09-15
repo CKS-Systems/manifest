@@ -1571,6 +1571,122 @@ export class ManifestClient {
   }
 
   /**
+   * CancelBidsOnCore instruction. Cancels all bid orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelBidsOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const bidOrders: RestingOrder[] = this.market.bidsL2();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const bidOrder of bidOrders) {
+      if (bidOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = bidOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    if (ordersToCancel.length === 0) {
+      return [];
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
+  }
+
+  /**
+   * CancelAsksOnCore instruction. Cancels all ask orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelAsksOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const askOrders: RestingOrder[] = this.market.asksL2();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const askOrder of askOrders) {
+      if (askOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = askOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    if (ordersToCancel.length === 0) {
+      return [];
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
+  }
+
+  /**
    * killSwitchMarket transactions. Pulls all orders
    * and withdraws all balances from the market in two transactions
    *
