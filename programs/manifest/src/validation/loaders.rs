@@ -275,7 +275,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
     #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
-        
+
         // Do not check the signer here and let it fail later. This allows the
         // case where the payer is not actually required to be a signer and the
         // user just puts another account.

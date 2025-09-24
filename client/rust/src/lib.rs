@@ -333,7 +333,7 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
-        
+
         // The reason for checking can_expand is that jup does not want the
         // payer to be responsible for gas for the market expansion on a partial
         // fill against a reversible order. This solution is more restrictive
