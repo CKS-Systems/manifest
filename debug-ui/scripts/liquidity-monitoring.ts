@@ -14,6 +14,7 @@ const MIN_VOLUME_THRESHOLD_USD = 1_000; // $1k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
 const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const PORT = 3001;
 
 // Environment variables
@@ -180,16 +181,33 @@ export class LiquidityMonitor {
 
       const volumeMap = new Map<string, number>();
 
+      // Get SOL price from SOL/USDC market
+      const solUsdcTicker = tickers.find(
+        (t: any) =>
+          t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ',
+      );
+      const solPrice = solUsdcTicker?.last_price || 0;
+
       for (const ticker of tickers) {
         const quoteMint = ticker.target_currency;
-        if (quoteMint !== USDC_MINT) {
+        if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
           continue;
         }
-        // Convert to USD using quote volume (assuming USDC quote)
-        const volumeUsd = ticker.target_volume || 0;
+
+        let volumeUsd = 0;
+        if (quoteMint === USDC_MINT) {
+          volumeUsd = ticker.target_volume || 0;
+        } else if (quoteMint === SOL_MINT && solPrice > 0) {
+          // Convert SOL volume to USD
+          volumeUsd = (ticker.target_volume || 0) * solPrice;
+        }
+
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
 
+      console.log(
+        `Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}`,
+      );
       return volumeMap;
     } catch (error) {
       console.error('Error fetching market volumes:', error);
@@ -226,9 +244,9 @@ export class LiquidityMonitor {
             continue;
           }
 
-          // Only include USDC quote markets
+          // Only include USDC and SOL quote markets
           const quoteMint = market.quoteMint().toBase58();
-          if (quoteMint !== USDC_MINT) {
+          if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
             continue;
           }
 
@@ -244,8 +262,9 @@ export class LiquidityMonitor {
             quoteDecimals: market.quoteDecimals(),
           });
 
+          const marketType = quoteMint === USDC_MINT ? 'USDC' : 'SOL';
           console.log(
-            `Added USDC market ${marketPk} with ${volume24h.toLocaleString()} 24h volume`,
+            `Added ${marketType} market ${marketPk} with $${volume24h.toLocaleString()} 24h volume`,
           );
         } catch (error) {
           console.error(`Error loading market ${marketPk}:`, error);
@@ -253,7 +272,7 @@ export class LiquidityMonitor {
       }
     }
 
-    console.log(`Loaded ${this.markets.size} eligible USDC markets`);
+    console.log(`Loaded ${this.markets.size} eligible markets (USDC + SOL)`);
   }
 
   /**
@@ -262,6 +281,7 @@ export class LiquidityMonitor {
   calculateMarketMakerDepths(
     market: Market,
     timestamp: Date,
+    solPriceUsd: number = 0,
   ): MarketMakerStats[] {
     const bids = market.bids();
     const asks = market.asks();
@@ -326,7 +346,13 @@ export class LiquidityMonitor {
 
       // Calculate total notional in USD
       const totalBaseTokens = (bidDepth[100] || 0) + (askDepth[100] || 0);
-      const totalNotionalUsd = totalBaseTokens * midPrice;
+      const quoteMint = market.quoteMint().toBase58();
+      let totalNotionalUsd = totalBaseTokens * midPrice;
+
+      // Convert to USD if this is a SOL market
+      if (quoteMint === SOL_MINT && solPriceUsd > 0) {
+        totalNotionalUsd = totalNotionalUsd * solPriceUsd;
+      }
 
       // Only include if they meet minimum notional threshold
       if (totalNotionalUsd < MIN_NOTIONAL_USD) {
@@ -364,6 +390,17 @@ export class LiquidityMonitor {
       const cycleTimestamp = new Date();
       console.log('Starting market monitoring cycle...', cycleTimestamp);
 
+      // Get current SOL price for USD conversion
+      const response = await fetch('https://mfx-stats-mainnet.fly.dev/tickers');
+      const tickers = await response.json();
+      const solUsdcTicker = tickers.find(
+        (t: any) =>
+          t.ticker_id === 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ',
+      );
+      const solPriceUsd = solUsdcTicker?.last_price || 0;
+
+      console.log(`Using SOL price: $${solPriceUsd} for depth calculations`);
+
       const allStats: MarketMakerStats[] = [];
 
       for (const [marketPk, market] of this.markets) {
@@ -375,6 +412,7 @@ export class LiquidityMonitor {
           const marketStats = this.calculateMarketMakerDepths(
             market,
             cycleTimestamp,
+            solPriceUsd,
           );
 
           allStats.push(...marketStats);

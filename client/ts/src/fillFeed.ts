@@ -184,6 +184,8 @@ export class FillFeed {
     }
 
     const aggregator: string | undefined = detectAggregator(tx);
+    const originatingProtocol: string | undefined =
+      detectOriginatingProtocol(tx);
 
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
@@ -213,6 +215,7 @@ export class FillFeed {
         signature.signature,
         originalSigner,
         aggregator,
+        originatingProtocol,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -232,20 +235,114 @@ function detectAggregator(
   tx: VersionedTransactionResponse,
 ): string | undefined {
   // Look for the aggregator program id from a list of known ids.
-  for (const account of tx.transaction.message.getAccountKeys()
-    .staticAccountKeys) {
-    if (account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg') {
-      return 'Swissborg';
+  try {
+    // For versioned transactions, we need to handle both static and resolved account keys
+    const message = tx.transaction.message;
+
+    // Handle both legacy and versioned transactions
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      for (const account of message.accountKeys) {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
+          return 'Swissborg';
+        }
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
+          return 'Titan';
+        }
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
+          return 'OKX';
+        }
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
+          return 'Jupiter';
+        }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
+        }
+      }
+    } else {
+      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
+      for (const account of message.staticAccountKeys) {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
+          return 'Swissborg';
+        }
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
+          return 'Titan';
+        }
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
+          return 'OKX';
+        }
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
+          return 'Jupiter';
+        }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
+        }
+      }
     }
-    if (account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT') {
-      return 'Titan';
+  } catch (error) {
+    console.warn('Error detecting aggregator:', error);
+    // Fall back to undefined if we can't detect the aggregator
+  }
+  return undefined;
+}
+
+function detectOriginatingProtocol(
+  tx: VersionedTransactionResponse,
+): string | undefined {
+  // Look for known originating protocol program IDs in the transaction accounts
+  const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
+  const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
+
+  try {
+    const message = tx.transaction.message;
+
+    // Handle both legacy and versioned transactions
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      for (const account of message.accountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
+    } else {
+      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
+      for (const account of message.staticAccountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
     }
-    if (account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma') {
-      return 'OKX';
-    }
-    if (account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4') {
-      return 'JUP';
-    }
+  } catch (error) {
+    console.warn('Error detecting originating protocol:', error);
+    // Fall back to undefined if we can't detect the originating protocol
   }
   return undefined;
 }
@@ -258,6 +355,7 @@ function toFillLogResult(
   signature: string,
   originalSigner?: string,
   aggregator?: string,
+  originatingProtocol?: string,
 ): FillLogResult {
   const result: FillLogResult = {
     market: fillLog.market.toBase58(),
@@ -279,6 +377,9 @@ function toFillLogResult(
   }
   if (aggregator) {
     result.aggregator = aggregator;
+  }
+  if (originatingProtocol) {
+    result.originatingProtocol = originatingProtocol;
   }
 
   return result;
