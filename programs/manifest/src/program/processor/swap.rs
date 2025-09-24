@@ -109,7 +109,9 @@ pub(crate) fn process_swap_core(
     };
 
     // Might need a free list spot for both the temporary claimed seat as well
-    // as for a partially filled reverse order.
+    // as for a partially filled reverse order. The temporary claimed seat has
+    // already been taken, so this is just checking if there is an additional
+    // free block for the reverse order.
     expand_market_if_needed(&payer, &market)?;
 
     let market_data: &mut RefMut<&mut [u8]> = &mut market.try_borrow_mut_data()?;

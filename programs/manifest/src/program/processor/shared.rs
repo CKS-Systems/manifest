@@ -23,7 +23,7 @@ use solana_program::{
 use super::batch_update::MarketDataTreeNodeType;
 
 pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clone>(
-    payer: &Signer<'a, 'info>,
+    payer: &AccountInfo<'info>,
     market_account_info: &ManifestAccountInfo<'a, 'info, T>,
 ) -> ProgramResult {
     let need_expand: bool = {
@@ -35,7 +35,10 @@ pub(crate) fn expand_market_if_needed<'a, 'info, T: ManifestAccount + Pod + Clon
     if !need_expand {
         return Ok(());
     }
-    expand_market(payer, market_account_info)
+    // Convert the AccountInfo into a signer. The checks for writable and signer
+    // are done this late so that in the case where it is not required, it can
+    // work.
+    expand_market(&Signer::new_payer(payer)?, market_account_info)
 }
 
 pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
