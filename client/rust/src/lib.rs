@@ -333,6 +333,21 @@ impl Amm for ManifestMarket {
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
+        
+        // The reason for checking can_expand is that jup does not want the
+        // payer to be responsible for gas for the market expansion on a partial
+        // fill against a reversible order. This solution is more restrictive
+        // than it really needs to be because there are many cases where trading
+        // against a reversible will work without the ability to expand, like
+        // filling an order completely, or reversing into a coalescing order. Or
+        // there just might not be reversible orders on the book.
+        let can_expand = market.has_two_free_blocks();
+        if !can_expand {
+            Ok(Quote {
+                out_amount: 0,
+                ..Quote::default()
+            })
+        }
 
         dynamic_value_opt_to_account_info!(
             quote_global_account_info,
@@ -439,6 +454,11 @@ impl Amm for ManifestMarket {
 
         let account_metas: Vec<AccountMeta> = vec![
             AccountMeta::new_readonly(manifest::id(), false),
+            // This account is intended to be the payer of rent for the tx in
+            // the case of a swap that partially fills a global order and needs
+            // to expand the market. It is not checked to be a signer until it
+            // is required to expand the market.
+            AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
             AccountMeta::new(system_program::id(), false),
@@ -478,20 +498,21 @@ impl Amm for ManifestMarket {
 
     fn get_accounts_len(&self) -> usize {
         // 1   Program
-        // 2   Market
-        // 3   Signer
-        // 4   System Program
-        // 5   User Base
-        // 6   User Quote
-        // 7   Vault Base
-        // 8   Vault Quote
-        // 9   Base Token Program
-        // 10  Base Mint
-        // 11  Quote Token Program
-        // 12  Quote Mint
-        // 13  Global
-        // 14  Global Vault
-        14
+        // 2   Payer
+        // 3   Owner
+        // 4   Market
+        // 5   System Program
+        // 6   User Base
+        // 7   User Quote
+        // 8   Vault Base
+        // 9   Vault Quote
+        // 10  Base Token Program
+        // 11  Base Mint
+        // 12  Quote Token Program
+        // 13  Quote Mint
+        // 14  Global
+        // 15  Global Vault
+        15
     }
 }
 

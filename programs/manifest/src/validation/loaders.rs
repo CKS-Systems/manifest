@@ -255,7 +255,7 @@ impl<'a, 'info> WithdrawContext<'a, 'info> {
 
 /// Swap account infos
 pub(crate) struct SwapContext<'a, 'info> {
-    pub payer: Signer<'a, 'info>,
+    pub payer: AccountInfo<'info>,
     pub owner: Signer<'a, 'info>,
     pub market: ManifestAccountInfo<'a, 'info, MarketFixed>,
     pub trader_base: TokenAccountInfo<'a, 'info>,
@@ -275,8 +275,11 @@ impl<'a, 'info> SwapContext<'a, 'info> {
     #[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
     pub fn load(accounts: &'a [AccountInfo<'info>]) -> Result<Self, ProgramError> {
         let account_iter: &mut Iter<AccountInfo<'info>> = &mut accounts.iter();
-
-        let payer: Signer = Signer::new(next_account_info(account_iter)?)?;
+        
+        // Do not check the signer here and let it fail later. This allows the
+        // case where the payer is not actually required to be a signer and the
+        // user just puts another account.
+        let payer: &AccountInfo = next_account_info(account_iter)?;
 
         let owner_or_market: &'a AccountInfo<'info> = next_account_info(account_iter)?;
         let (owner, market): (Signer, ManifestAccountInfo<MarketFixed>) =
@@ -285,7 +288,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                 // owners and the caller has only included one to save ix call data
                 // bytes.
                 (
-                    payer.clone(),
+                    Signer::new(payer)?,
                     ManifestAccountInfo::<MarketFixed>::new(owner_or_market)?,
                 )
             } else {
@@ -433,7 +436,11 @@ impl<'a, 'info> SwapContext<'a, 'info> {
                         Some(token_program_quote.clone())
                     },
                     gas_payer_opt: None,
-                    gas_receiver_opt: Some(payer.clone()),
+                    gas_receiver_opt: if payer.is_signer {
+                        Some(Signer::new(payer)?)
+                    } else {
+                        None
+                    },
                     market: *market.info.key,
                     system_program: None,
                 });
@@ -441,7 +448,7 @@ impl<'a, 'info> SwapContext<'a, 'info> {
         }
 
         Ok(Self {
-            payer,
+            payer: payer.clone(),
             owner,
             market,
             trader_base,
