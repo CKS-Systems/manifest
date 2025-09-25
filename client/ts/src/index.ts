@@ -2,6 +2,7 @@ export * from './client';
 export * from './market';
 export * from './global';
 export * from './types';
+export * from './utils';
 
 // Do not export all of manifest because names collide with wrapper. Force users
 // to use the client.
