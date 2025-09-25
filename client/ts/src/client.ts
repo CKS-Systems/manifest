@@ -1554,8 +1554,26 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
+            baseMint: this.baseMint.address,
             baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
             quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
           },
           {
             params: {
@@ -1614,8 +1632,26 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
+            baseMint: this.baseMint.address,
             baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
             quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
           },
           {
             params: {
@@ -1674,8 +1710,26 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
+            baseMint: this.baseMint.address,
             baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
             quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
           },
           {
             params: {
