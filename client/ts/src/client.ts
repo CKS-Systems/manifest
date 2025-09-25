@@ -1554,8 +1554,8 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
-            baseGlobal: this.baseGlobal?.address,
-            quoteGlobal: this.quoteGlobal?.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
           },
           {
             params: {
@@ -1614,8 +1614,8 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
-            baseGlobal: this.baseGlobal?.address,
-            quoteGlobal: this.quoteGlobal?.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
           },
           {
             params: {
@@ -1674,8 +1674,8 @@ export class ManifestClient {
           {
             payer: this.payer,
             market: this.market.address,
-            baseGlobal: this.baseGlobal?.address,
-            quoteGlobal: this.quoteGlobal?.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
           },
           {
             params: {
