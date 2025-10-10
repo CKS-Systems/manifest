@@ -93,7 +93,9 @@ const run = async () => {
       );
       // Skip this market because the numbers are so large that they run into js
       // rounding issues. Verified that it is solvent manually.
-      if (marketPk.toBase58() == "GQHqLzX8swBiTyREF57PGs4vq59obuRPdtGrY4gChHfB") {
+      if (
+        marketPk.toBase58() == 'GQHqLzX8swBiTyREF57PGs4vq59obuRPdtGrY4gChHfB'
+      ) {
         continue;
       }
       // Only crash on a loss of funds. There has been unsolicited deposits into
@@ -108,22 +110,31 @@ const run = async () => {
   }
 
   // Get all global accounts
-  const MANIFEST_PROGRAM_ID = new PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms');
-  const GLOBAL_DISCRIMINANT = Buffer.from([1, 170, 151, 47, 187, 160, 180, 149]); // 10787423733276977665 as little-endian bytes
+  const MANIFEST_PROGRAM_ID = new PublicKey(
+    'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
+  );
+  const GLOBAL_DISCRIMINANT = Buffer.from([
+    1, 170, 151, 47, 187, 160, 180, 149,
+  ]); // 10787423733276977665 as little-endian bytes
   const GLOBAL_DISCRIMINANT_BASE58 = bs58.encode(GLOBAL_DISCRIMINANT);
 
-  const globalAccounts = await connection.getProgramAccounts(MANIFEST_PROGRAM_ID, {
-    filters: [
-      {
-        memcmp: {
-          offset: 0,
-          bytes: GLOBAL_DISCRIMINANT_BASE58,
+  const globalAccounts = await connection.getProgramAccounts(
+    MANIFEST_PROGRAM_ID,
+    {
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: GLOBAL_DISCRIMINANT_BASE58,
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+  );
 
-  const globalPublicKeys: PublicKey[] = globalAccounts.map(account => account.pubkey);
+  const globalPublicKeys: PublicKey[] = globalAccounts.map(
+    (account) => account.pubkey,
+  );
   console.log(`Found ${globalPublicKeys.length} global accounts`);
 
   // Check global account balances
@@ -146,21 +157,28 @@ const run = async () => {
 
       // Get actual vault balance
       const vaultAccount = await connection.getParsedAccountInfo(vault);
-      const actualVaultAtoms = vaultAccount.value?.data ? 
-        Number((vaultAccount.value.data as ParsedAccountData).parsed.info.tokenAmount.amount) : 0;
+      const actualVaultAtoms = vaultAccount.value?.data
+        ? Number(
+            (vaultAccount.value.data as ParsedAccountData).parsed.info
+              .tokenAmount.amount,
+          )
+        : 0;
 
       const difference = actualVaultAtoms - totalExpectedAtoms;
-      
+
       console.log(`Global ${mint.toBase58()}`);
-      console.log(`Vault actual ${actualVaultAtoms} expected ${totalExpectedAtoms} difference ${difference} seats ${deposits.length}`);
-      
+      console.log(
+        `Vault actual ${actualVaultAtoms} expected ${totalExpectedAtoms} difference ${difference} seats ${deposits.length}`,
+      );
+
       // Only crash on a loss of funds
       if (totalExpectedAtoms > actualVaultAtoms) {
         foundMismatch = true;
       }
-      
     } catch (error) {
-      console.log(`Error checking global ${globalAccount.pubkey.toBase58()}: ${error}`);
+      console.log(
+        `Error checking global ${globalAccount.pubkey.toBase58()}: ${error}`,
+      );
     }
   }
 
