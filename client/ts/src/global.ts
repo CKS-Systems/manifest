@@ -129,6 +129,18 @@ export class Global {
     return this.data.globalDeposits.some((seat) => seat.trader.equals(trader));
   }
 
+  vaultAddress(): PublicKey {
+    return this.data.vault;
+  }
+
+  getAllDeposits(): GlobalDeposit[] {
+    return this.data.globalDeposits;
+  }
+
+  getNumSeatsClaimed(): number {
+    return this.data.numSeatsClaimed;
+  }
+
   prettyPrint(): void {
     console.log('');
     console.log(`Global: ${this.address}`);
