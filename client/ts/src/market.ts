@@ -784,6 +784,9 @@ export class Market {
 
     const filters = [
       {
+        dataSize: FIXED_MANIFEST_HEADER_SIZE,
+      },
+      {
         memcmp: {
           offset: baseMintOffset,
           bytes: baseMint.toBase58(),
