@@ -101,10 +101,6 @@ export class ManifestClient {
       WRAPPER_PROGRAM_ID,
       {
         filters: [
-          // Minimum account size to satisfy strict RPC providers
-          {
-            dataSize: FIXED_WRAPPER_HEADER_SIZE,
-          },
           // Dont check discriminant since there is only one type of account.
           {
             memcmp: {
