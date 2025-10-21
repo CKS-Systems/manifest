@@ -30,6 +30,7 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
+import { genAccDiscriminator } from '@cks-systems/manifest-sdk/utils';
 import { Pool } from 'pg';
 
 // Stores checkpoints every 5 minutes
@@ -37,6 +38,16 @@ const CHECKPOINT_DURATION_SEC: number = 5 * 60;
 const ONE_DAY_SEC: number = 24 * 60 * 60;
 const PORT: number = 3000;
 const DEPTHS_BPS: number[] = [50, 100, 200];
+
+// Manifest Program ID
+const MANIFEST_PROGRAM_ID = new PublicKey(
+  'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
+);
+
+// Market discriminator for filtering accounts
+const marketDiscriminator: Buffer = genAccDiscriminator(
+  'manifest::state::market::MarketFixed',
+);
 
 const { RPC_URL } = process.env;
 
@@ -622,23 +633,89 @@ export class ManifestStatsServer {
    */
   async initialize(): Promise<void> {
     await this.loadState();
-    const marketProgramAccounts: GetProgramAccountsResponse =
-      await ManifestClient.getMarketProgramAccounts(this.connection);
+
+    let marketProgramAccounts: GetProgramAccountsResponse;
+    try {
+      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
+        this.connection,
+      );
+    } catch (error) {
+      console.error(
+        'Failed to get market program accounts with data, retrying with pubkeys only:',
+        error,
+      );
+
+      // Fallback: Get pubkeys only without data
+      try {
+        const marketPubkeys = await this.connection.getProgramAccounts(
+          MANIFEST_PROGRAM_ID,
+          {
+            dataSlice: { offset: 0, length: 0 }, // Request no data, just pubkeys
+            filters: [
+              {
+                memcmp: {
+                  offset: 0,
+                  bytes: marketDiscriminator.toString('base64'),
+                  encoding: 'base64',
+                },
+              },
+            ],
+          },
+        );
+
+        // Create dummy accounts with empty data for initialization
+        marketProgramAccounts = marketPubkeys.map(({ pubkey }) => ({
+          pubkey,
+          account: {
+            data: Buffer.alloc(0), // Empty buffer
+            executable: false,
+            lamports: 0,
+            owner: MANIFEST_PROGRAM_ID,
+          } as AccountInfo<Buffer>,
+        }));
+
+        console.log(
+          `Initialized with ${marketProgramAccounts.length} market pubkeys (no data)`,
+        );
+      } catch (fallbackError) {
+        console.error(
+          'Fallback pubkey-only request also failed:',
+          fallbackError,
+        );
+        console.log('Initializing with empty markets');
+        marketProgramAccounts = [];
+      }
+    }
+
     marketProgramAccounts.forEach(
       (
         value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
       ) => {
         const marketPk: string = value.pubkey.toBase58();
-        const market: Market = Market.loadFromBuffer({
-          buffer: value.account.data,
-          address: new PublicKey(marketPk),
-        });
-        // Skip markets that have never traded to keep the amount of data
-        // retention smaller.
-        if (Number(market.quoteVolume()) == 0) {
-          return;
+
+        // If we have account data, load the market and check volume
+        if (value.account.data.length > 0) {
+          try {
+            const market: Market = Market.loadFromBuffer({
+              buffer: value.account.data,
+              address: new PublicKey(marketPk),
+            });
+
+            // Skip markets that have never traded to keep the amount of data
+            // retention smaller.
+            if (Number(market.quoteVolume()) == 0) {
+              return;
+            }
+
+            this.markets.set(marketPk, market);
+          } catch (err) {
+            console.error(`Failed to load market ${marketPk}:`, err);
+            // Continue with other markets
+            return;
+          }
         }
 
+        // Initialize checkpoints regardless of whether we have market data
         if (!this.baseVolumeAtomsCheckpoints.has(marketPk)) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
           this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
@@ -651,7 +728,6 @@ export class ManifestStatsServer {
             new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
           );
         }
-        this.markets.set(marketPk, market);
       },
     );
 
@@ -1011,8 +1087,8 @@ export class ManifestStatsServer {
    * https://docs.llama.fi/list-your-project/other-dashboards/dimensions
    */
   async getVolume() {
-    const marketProgramAccounts: GetProgramAccountsResponse =
-      await ManifestClient.getMarketProgramAccounts(this.connection);
+    let marketProgramAccounts: GetProgramAccountsResponse;
+    let lifetimeVolume = 0;
 
     // Get SOL price for converting SOL-quoted volumes to USDC equivalent
     const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
@@ -1024,34 +1100,55 @@ export class ManifestStatsServer {
         10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
     }
 
-    const lifetimeVolume: number = marketProgramAccounts
-      .map(
-        (
-          value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
-        ) => {
-          const marketPk: string = value.pubkey.toBase58();
-          const market: Market = Market.loadFromBuffer({
-            buffer: value.account.data,
-            address: new PublicKey(marketPk),
-          });
-          const quoteMint = market.quoteMint().toBase58();
+    try {
+      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
+        this.connection,
+      );
 
-          // Track USDC quote volume directly
-          if (quoteMint == this.USDC_MINT) {
-            return Number(market.quoteVolume()) / 10 ** 6;
-          }
+      lifetimeVolume = marketProgramAccounts
+        .map(
+          (
+            value: Readonly<{
+              account: AccountInfo<Buffer>;
+              pubkey: PublicKey;
+            }>,
+          ) => {
+            try {
+              const marketPk: string = value.pubkey.toBase58();
+              const market: Market = Market.loadFromBuffer({
+                buffer: value.account.data,
+                address: new PublicKey(marketPk),
+              });
+              const quoteMint = market.quoteMint().toBase58();
 
-          // Convert SOL quote volume to USDC equivalent
-          if (quoteMint == this.SOL_MINT && solPrice > 0) {
-            const solVolumeNormalized =
-              Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
-            return solVolumeNormalized * solPrice;
-          }
+              // Track USDC quote volume directly
+              if (quoteMint == this.USDC_MINT) {
+                return Number(market.quoteVolume()) / 10 ** 6;
+              }
 
-          return 0;
-        },
-      )
-      .reduce((sum, num) => sum + num, 0);
+              // Convert SOL quote volume to USDC equivalent
+              if (quoteMint == this.SOL_MINT && solPrice > 0) {
+                const solVolumeNormalized =
+                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
+                return solVolumeNormalized * solPrice;
+              }
+
+              return 0;
+            } catch (err) {
+              console.error('Error processing market account:', err);
+              return 0;
+            }
+          },
+        )
+        .reduce((sum, num) => sum + num, 0);
+    } catch (error) {
+      console.error(
+        'Failed to get market program accounts for volume calculation:',
+        error,
+      );
+      // Return zero lifetime volume on error.
+      lifetimeVolume = 0;
+    }
 
     const dailyVolumesByToken: Map<string, number> = new Map();
     let dailyUsdcEquivalentVolume = 0;
