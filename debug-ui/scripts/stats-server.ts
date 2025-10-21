@@ -29,6 +29,7 @@ import {
   ManifestClient,
   Market,
   RestingOrder,
+  PROGRAM_ID,
 } from '@cks-systems/manifest-sdk';
 import { Pool } from 'pg';
 
@@ -632,7 +633,7 @@ export class ManifestStatsServer {
       // Fallback: Get pubkeys only without data
       try {
         const marketPubkeys = await this.connection.getProgramAccounts(
-          ManifestClient.PROGRAM_ID,
+          PROGRAM_ID,
           {
             dataSlice: { offset: 0, length: 0 }, // Request no data, just pubkeys
             filters: [
@@ -650,7 +651,7 @@ export class ManifestStatsServer {
             data: Buffer.alloc(0), // Empty buffer
             executable: false,
             lamports: 0,
-            owner: ManifestClient.PROGRAM_ID,
+            owner: PROGRAM_ID,
           } as AccountInfo<Buffer>,
         }));
         
