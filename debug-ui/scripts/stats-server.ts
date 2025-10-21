@@ -610,8 +610,10 @@ export class ManifestStatsServer {
         fills.inc({ market });
         console.log('Got fill', fill);
 
-        // Queue for background processing
-        setImmediate(() => this.processFillAsync(fill));
+        // Process fill synchronously within mutex to prevent race conditions
+        await this.processFillAsync(fill);
+
+        // Queue database save for background (can be async, has ON CONFLICT protection)
         setImmediate(() => this.saveCompleteFillToDatabase(fill));
       });
     };
