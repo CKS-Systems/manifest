@@ -29,7 +29,6 @@ import {
   ManifestClient,
   Market,
   RestingOrder,
-  PROGRAM_ID,
 } from '@cks-systems/manifest-sdk';
 import { Pool } from 'pg';
 
@@ -38,6 +37,9 @@ const CHECKPOINT_DURATION_SEC: number = 5 * 60;
 const ONE_DAY_SEC: number = 24 * 60 * 60;
 const PORT: number = 3000;
 const DEPTHS_BPS: number[] = [50, 100, 200];
+
+// Manifest Program ID
+const MANIFEST_PROGRAM_ID = new PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms');
 
 const { RPC_URL } = process.env;
 
@@ -633,7 +635,7 @@ export class ManifestStatsServer {
       // Fallback: Get pubkeys only without data
       try {
         const marketPubkeys = await this.connection.getProgramAccounts(
-          PROGRAM_ID,
+          MANIFEST_PROGRAM_ID,
           {
             dataSlice: { offset: 0, length: 0 }, // Request no data, just pubkeys
             filters: [
@@ -651,7 +653,7 @@ export class ManifestStatsServer {
             data: Buffer.alloc(0), // Empty buffer
             executable: false,
             lamports: 0,
-            owner: PROGRAM_ID,
+            owner: MANIFEST_PROGRAM_ID,
           } as AccountInfo<Buffer>,
         }));
         
