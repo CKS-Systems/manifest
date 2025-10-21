@@ -40,7 +40,9 @@ const PORT: number = 3000;
 const DEPTHS_BPS: number[] = [50, 100, 200];
 
 // Manifest Program ID
-const MANIFEST_PROGRAM_ID = new PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms');
+const MANIFEST_PROGRAM_ID = new PublicKey(
+  'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
+);
 
 // Market discriminator for filtering accounts
 const marketDiscriminator: Buffer = genAccDiscriminator(
@@ -631,13 +633,18 @@ export class ManifestStatsServer {
    */
   async initialize(): Promise<void> {
     await this.loadState();
-    
+
     let marketProgramAccounts: GetProgramAccountsResponse;
     try {
-      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(this.connection);
+      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
+        this.connection,
+      );
     } catch (error) {
-      console.error('Failed to get market program accounts with data, retrying with pubkeys only:', error);
-      
+      console.error(
+        'Failed to get market program accounts with data, retrying with pubkeys only:',
+        error,
+      );
+
       // Fallback: Get pubkeys only without data
       try {
         const marketPubkeys = await this.connection.getProgramAccounts(
@@ -653,9 +660,9 @@ export class ManifestStatsServer {
                 },
               },
             ],
-          }
+          },
         );
-        
+
         // Create dummy accounts with empty data for initialization
         marketProgramAccounts = marketPubkeys.map(({ pubkey }) => ({
           pubkey,
@@ -666,21 +673,26 @@ export class ManifestStatsServer {
             owner: MANIFEST_PROGRAM_ID,
           } as AccountInfo<Buffer>,
         }));
-        
-        console.log(`Initialized with ${marketProgramAccounts.length} market pubkeys (no data)`);
+
+        console.log(
+          `Initialized with ${marketProgramAccounts.length} market pubkeys (no data)`,
+        );
       } catch (fallbackError) {
-        console.error('Fallback pubkey-only request also failed:', fallbackError);
+        console.error(
+          'Fallback pubkey-only request also failed:',
+          fallbackError,
+        );
         console.log('Initializing with empty markets');
         marketProgramAccounts = [];
       }
     }
-    
+
     marketProgramAccounts.forEach(
       (
         value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
       ) => {
         const marketPk: string = value.pubkey.toBase58();
-        
+
         // If we have account data, load the market and check volume
         if (value.account.data.length > 0) {
           try {
@@ -688,13 +700,13 @@ export class ManifestStatsServer {
               buffer: value.account.data,
               address: new PublicKey(marketPk),
             });
-            
+
             // Skip markets that have never traded to keep the amount of data
             // retention smaller.
             if (Number(market.quoteVolume()) == 0) {
               return;
             }
-            
+
             this.markets.set(marketPk, market);
           } catch (err) {
             console.error(`Failed to load market ${marketPk}:`, err);
@@ -1077,7 +1089,7 @@ export class ManifestStatsServer {
   async getVolume() {
     let marketProgramAccounts: GetProgramAccountsResponse;
     let lifetimeVolume = 0;
-    
+
     // Get SOL price for converting SOL-quoted volumes to USDC equivalent
     const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
     const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
@@ -1087,14 +1099,19 @@ export class ManifestStatsServer {
         solPriceAtoms *
         10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
     }
-    
+
     try {
-      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(this.connection);
+      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
+        this.connection,
+      );
 
       lifetimeVolume = marketProgramAccounts
         .map(
           (
-            value: Readonly<{ account: AccountInfo<Buffer>; pubkey: PublicKey }>,
+            value: Readonly<{
+              account: AccountInfo<Buffer>;
+              pubkey: PublicKey;
+            }>,
           ) => {
             try {
               const marketPk: string = value.pubkey.toBase58();
@@ -1125,7 +1142,10 @@ export class ManifestStatsServer {
         )
         .reduce((sum, num) => sum + num, 0);
     } catch (error) {
-      console.error('Failed to get market program accounts for volume calculation:', error);
+      console.error(
+        'Failed to get market program accounts for volume calculation:',
+        error,
+      );
       // Return zero lifetime volume on error.
       lifetimeVolume = 0;
     }
