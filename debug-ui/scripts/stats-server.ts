@@ -30,6 +30,7 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
+import { genAccDiscriminator } from '@cks-systems/manifest-sdk/utils';
 import { Pool } from 'pg';
 
 // Stores checkpoints every 5 minutes
@@ -40,6 +41,11 @@ const DEPTHS_BPS: number[] = [50, 100, 200];
 
 // Manifest Program ID
 const MANIFEST_PROGRAM_ID = new PublicKey('MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms');
+
+// Market discriminator for filtering accounts
+const marketDiscriminator: Buffer = genAccDiscriminator(
+  'manifest::state::market::MarketFixed',
+);
 
 const { RPC_URL } = process.env;
 
@@ -640,7 +646,11 @@ export class ManifestStatsServer {
             dataSlice: { offset: 0, length: 0 }, // Request no data, just pubkeys
             filters: [
               {
-                dataSize: Market.FIXED_WRAPPER_HEADER_SIZE + Market.MARKET_FIXED_SIZE,
+                memcmp: {
+                  offset: 0,
+                  bytes: marketDiscriminator.toString('base64'),
+                  encoding: 'base64',
+                },
               },
             ],
           }
