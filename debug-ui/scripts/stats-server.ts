@@ -1078,18 +1078,18 @@ export class ManifestStatsServer {
     let marketProgramAccounts: GetProgramAccountsResponse;
     let lifetimeVolume = 0;
     
+    // Get SOL price for converting SOL-quoted volumes to USDC equivalent
+    const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
+    const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+    let solPrice = 0;
+    if (solPriceAtoms && solUsdcMarket) {
+      solPrice =
+        solPriceAtoms *
+        10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+    }
+    
     try {
       marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(this.connection);
-      
-      // Get SOL price for converting SOL-quoted volumes to USDC equivalent
-      const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
-      const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
-      let solPrice = 0;
-      if (solPriceAtoms && solUsdcMarket) {
-        solPrice =
-          solPriceAtoms *
-          10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
-      }
 
       lifetimeVolume = marketProgramAccounts
         .map(
