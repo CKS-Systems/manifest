@@ -704,6 +704,7 @@ mod test {
 
         // Expand for the second extra for the case of reverse orders.
         market_value.market_expand().unwrap();
+        market_value.market_expand().unwrap();
 
         dynamic_value_to_account!(market_account, market_value, MARKET_FIXED_SIZE, MarketFixed);
 
