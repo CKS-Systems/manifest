@@ -656,8 +656,8 @@ mod test {
 
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &MARKET_KEY),
-            // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
+            // 5 because 2 extra, 1 seat, 2 orders.
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 5],
         };
         // Claim a seat and deposit plenty on both sides.
         market_value.market_expand().unwrap();
@@ -701,6 +701,9 @@ mod test {
                 current_slot: None,
             })
             .unwrap();
+
+        // Expand for the second extra for the case of reverse orders.
+        market_value.market_expand().unwrap();
 
         dynamic_value_to_account!(market_account, market_value, MARKET_FIXED_SIZE, MarketFixed);
 
@@ -1124,7 +1127,7 @@ mod test {
         let manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_account, &amm_context).unwrap();
 
-        assert_eq!(manifest_market.get_accounts_len(), 14);
+        assert_eq!(manifest_market.get_accounts_len(), 15);
         assert_eq!(manifest_market.label(), "Manifest");
         assert_eq!(manifest_market.key(), MARKET_KEY);
         assert_eq!(manifest_market.program_id(), manifest::id());
