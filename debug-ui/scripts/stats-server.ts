@@ -1498,6 +1498,11 @@ export class ManifestStatsServer {
       console.log('Getting db client');
       client = await this.pool.connect();
 
+      // Add error handler to prevent unhandled errors from crashing the server
+      client.on('error', (err) => {
+        console.error('Database client error:', err);
+      });
+
       // Start a transaction
       console.log('Querying begin');
       await client.query('BEGIN');
