@@ -150,6 +150,17 @@ pub fn get_mut_dynamic_account<'a, T: Get>(
     dynamic_account
 }
 
+pub fn get_dynamic_ref<T: Get>(data: &[u8]) -> DynamicAccount<&'_ T, &'_ [u8]> {
+    let (fixed_data, dynamic_data) = data.split_at(size_of::<T>());
+    let market_fixed: &T = get_helper::<T>(fixed_data, 0_u32);
+
+    let dynamic_account: DynamicAccount<&T, &[u8]> = DynamicAccount {
+        fixed: market_fixed,
+        dynamic: dynamic_data,
+    };
+    dynamic_account
+}
+
 /// Generic get owned dynamic account from the data bytes of the account.
 pub fn get_dynamic_value<T: Get>(data: &[u8]) -> DynamicAccount<T, Vec<u8>> {
     let (fixed_data, dynamic_data) = data.split_at(size_of::<T>());
