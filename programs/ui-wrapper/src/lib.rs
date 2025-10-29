@@ -28,7 +28,7 @@ use solana_security_txt::security_txt;
 security_txt! {
     name: "manifest-ui-wrapper",
     project_url: "",
-    contacts: "email:max@mango.markets",
+    contacts: "email:dev@manifest.trade",
     policy: "",
     preferred_languages: "en",
     source_code: "https://github.com/CKS-Systems/manifest",

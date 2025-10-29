@@ -33,11 +33,12 @@ use solana_security_txt::security_txt;
 security_txt! {
     name: "manifest",
     project_url: "https://manifest.trade",
-    contacts: "email:britt@cks.systems",
+    contacts: "email:dev@manifest.trade",
     policy: "",
     preferred_languages: "en",
     source_code: "https://github.com/CKS-Systems/manifest",
-    auditors: ""
+    auditors: "Certora"
+    formal_verification: "https://manifest.trade/audit.pdf"
 }
 
 // Overview of some economic disincentive security assumptions. There are
