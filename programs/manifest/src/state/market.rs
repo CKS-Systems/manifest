@@ -1883,7 +1883,7 @@ pub fn create_empty_market(
 ) -> MarketFixed {
     // Values on the mints are not important.
     use std::{cell::RefCell, rc::Rc, str::FromStr};
-    use solana_sdk::account_info::AccountInfo;
+    use solana_program::account_info::AccountInfo;
     use spl_token_2022::state::Mint;
     let mut lamports: u64 = 0;
     let base_mint: MintAccountInfo = MintAccountInfo {
