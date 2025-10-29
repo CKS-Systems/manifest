@@ -1871,3 +1871,61 @@ fn remove_and_update_balances(
     )?;
     Ok(())
 }
+
+#[cfg(any(test, feature = "no-clock"))]
+pub fn create_empty_market(
+    base_mint: &str,
+    quote_mint: &str,
+    base_decimals: u8,
+    quote_decimals: u8,
+    mint_authority: &Pubkey,
+    market_key: &Pubkey,
+) -> MarketFixed {
+    // Values on the mints are not important.
+    use std::{cell::RefCell, rc::Rc, str::FromStr};
+    use solana_sdk::account_info::AccountInfo;
+    use spl_token_2022::state::Mint;
+    let mut lamports: u64 = 0;
+    let base_mint: MintAccountInfo = MintAccountInfo {
+        mint: Mint {
+            mint_authority: Some(*mint_authority).into(),
+            supply: 0,
+            decimals: base_decimals,
+            is_initialized: true,
+            freeze_authority: None.into(),
+        },
+        info: &AccountInfo {
+            key: &Pubkey::from_str(base_mint).expect("Valid base mint"),
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut [])),
+            owner: &Pubkey::new_unique(),
+            rent_epoch: 0,
+            is_signer: false,
+            is_writable: false,
+            executable: false,
+        },
+    };
+
+    let mut lamports: u64 = 0;
+    let quote_mint: MintAccountInfo = MintAccountInfo {
+        mint: Mint {
+            mint_authority: Some(*mint_authority).into(),
+            supply: 0,
+            decimals: quote_decimals,
+            is_initialized: true,
+            freeze_authority: None.into(),
+        },
+        info: &AccountInfo {
+            key: &Pubkey::from_str(quote_mint).expect("Valid quote mint"),
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut [])),
+            owner: &Pubkey::new_unique(),
+            rent_epoch: 0,
+            is_signer: false,
+            is_writable: false,
+            executable: false,
+        },
+    };
+    let market_fixed: MarketFixed = MarketFixed::new_empty(&base_mint, &quote_mint, market_key);
+    market_fixed
+}
