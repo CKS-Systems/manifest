@@ -41,6 +41,7 @@ pub enum OrderType {
 
     // Reverse orders behave like an AMM. When filled, they place an order on
     // the other side of the book with a small fee (spread).
+    // Note: reverse orders can take but don't reverse when taking.
     Reverse = 4,
 }
 unsafe impl bytemuck::Zeroable for OrderType {}
