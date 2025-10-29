@@ -43,30 +43,52 @@ pub(crate) fn process_claim_seat(
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
+    
+    // Lookup if the trader already has a seat. This will prevent failing when
+    // they already had a seat on a different wrapper.
+    let trader_index: DataIndex = {
+        let trader_index: DataIndex = {
+            let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
+            let dynamic_account: MarketRef = get_dynamic_account(market_data);
+            dynamic_account.get_trader_index(owner.key)
+        };
 
-    // Call the Expand CPI.
-    invoke(
-        &expand_market_instruction(market.key, owner.key),
-        &[
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
-    )?;
+        if trader_index != NIL {
+            // if core seat was already initialized, nothing to do here
+            trader_index
+        } else {
+            // Call the Expand CPI.
+            invoke(
+                &expand_market_instruction(market.key, owner.key),
+                &[
+                    manifest_program.info.clone(),
+                    owner.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
 
-    // Call the ClaimSeat CPI.
-    invoke(
-        &claim_seat_instruction(market.key, owner.key),
-        &[
-            manifest_program.info.clone(),
-            owner.info.clone(),
-            market.info.clone(),
-            system_program.info.clone(),
-        ],
-    )?;
+            // Call the ClaimSeat CPI.
+            invoke(
+                &claim_seat_instruction(market.key, owner.key),
+                &[
+                    manifest_program.info.clone(),
+                    owner.info.clone(),
+                    market.info.clone(),
+                    system_program.info.clone(),
+                ],
+            )?;
+
+            // fetch newly assigned trader index after claiming core seat
+            let market_data: &Ref<&mut [u8]> = &mut market.try_borrow_data()?;
+            let dynamic_account: MarketRef = get_dynamic_account(market_data);
+            dynamic_account.get_trader_index(owner.key)
+        }
+    };
 
     // Insert the seat into the wrapper state.
+
+    // Make sure the wrapper is big enough.
     expand_wrapper_if_needed(&wrapper_state, &owner, &system_program)?;
 
     // Load the market_infos tree and insert a new one.
@@ -77,9 +99,6 @@ pub(crate) fn process_claim_seat(
     let wrapper_fixed: &mut ManifestWrapperStateFixed = get_mut_helper(fixed_data, 0);
 
     // Get the free block and setup the new MarketInfo there.
-    let market_data: &Ref<&mut [u8]> = &market.try_borrow_data()?;
-    let dynamic_account: MarketRef = get_dynamic_account(market_data);
-    let trader_index: DataIndex = dynamic_account.get_trader_index(owner.key);
     let market_info: MarketInfo = MarketInfo::new_empty(*market.key, trader_index);
 
     // Put that market_info at the free list head.
