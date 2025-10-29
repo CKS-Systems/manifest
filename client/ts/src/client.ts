@@ -651,6 +651,7 @@ export class ManifestClient {
           },
         ],
         withContext: true,
+        // Note: withContext may satisfy strict RPC requirements on its own
       },
     );
 
