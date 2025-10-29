@@ -96,6 +96,7 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         }
         #[cfg(not(feature = "fuzz"))]
         {
+            #[allow(deprecated)]
             wrapper_state.realloc(new_size, false)?;
         }
     }
