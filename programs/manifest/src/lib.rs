@@ -8,6 +8,9 @@ pub mod state;
 pub mod utils;
 pub mod validation;
 
+#[cfg(feature = "certora")]
+pub mod certora;
+
 use hypertree::trace;
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
@@ -117,6 +120,9 @@ pub fn process_instruction(
             process_withdraw(program_id, accounts, data)?;
         }
         ManifestInstruction::Swap => {
+            process_swap(program_id, accounts, data)?;
+        }
+        ManifestInstruction::SwapV2 => {
             process_swap(program_id, accounts, data)?;
         }
         ManifestInstruction::Expand => {

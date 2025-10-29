@@ -17,6 +17,10 @@ pub struct ManifestAccountInfo<'a, 'info, T: ManifestAccount + Pod + Clone> {
 }
 
 impl<'a, 'info, T: ManifestAccount + Get + Clone> ManifestAccountInfo<'a, 'info, T> {
+    #[cfg_attr(
+        all(feature = "certora", not(feature = "certora-test")),
+        early_panic::early_panic
+    )]
     pub fn new(
         info: &'a AccountInfo<'info>,
     ) -> Result<ManifestAccountInfo<'a, 'info, T>, ProgramError> {
@@ -84,6 +88,12 @@ fn verify_uninitialized<T: Pod + ManifestAccount>(info: &AccountInfo) -> Program
         size_of::<T>(),
         bytes.len()
     )?;
+
+    // This can't happen because for Market, we increase the size of the account
+    // with a free block when it gets init, so the first check fails. For
+    // global, we dont use new_init because the account is a PDA, so it is not
+    // at an existing account. Keep the check for thoroughness in case a new
+    // type is ever added.
     require!(
         bytes.iter().all(|&byte| byte == 0),
         ProgramError::InvalidAccountData,

@@ -27,7 +27,7 @@ export const killswitch = async (
   userPub: PublicKey | null,
   sendTransaction: SendTransaction,
   network: WalletAdapterNetwork | null,
-) => {
+): Promise<void> => {
   if (!userPub) {
     throw new Error('must be connected before setting up client');
   }
@@ -50,7 +50,7 @@ export const killswitch = async (
     const oos = wrapper.openOrdersForMarket(marketPub);
     if (!oos || oos.length === 0) {
       console.log(`no oos exist for ${marketAddr} skipping...`);
-      return;
+      continue;
     }
 
     console.log(

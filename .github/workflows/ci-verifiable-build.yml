@@ -9,14 +9,26 @@ env:
   MANIFEST_NAME: manifest
   WRAPPER_NAME: wrapper
   UI_WRAPPER_NAME: ui_wrapper
+  RUST_TOOLCHAIN: '1.86.0'
+
 
 jobs:
   build:
     name: Build Verifiable Artifact
     runs-on: ubuntu-latest
     steps:
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev pkg-config
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set Rust version
+        run: rustup toolchain install ${{ env.RUST_TOOLCHAIN }} --component rustfmt
+
+      - name: Remove rust-toolchain.toml
+        run: rm rust-toolchain.toml
 
       - name: Setup solana-verify
         run: |
@@ -51,7 +63,7 @@ jobs:
 
       - name: Generate Checksum wrapper
         run: |
-          echo "CHECKSUM_WRAPPER=$(sha256sum ./target/deploy/${{ env.WRAPPER_NAME }}.so | head -c 64)" >> $GITHUB_ENV
+          echo "WRAPPER_CHECKSUM=$(sha256sum ./target/deploy/${{ env.WRAPPER_NAME }}.so | head -c 64)" >> $GITHUB_ENV
 
       - name: Generate SBOM wrapper
         uses: aquasecurity/trivy-action@master
@@ -70,14 +82,14 @@ jobs:
 
       - name: Generate Checksum ui wrapper
         run: |
-          echo "CHECKSUM_WRAPPER=$(sha256sum ./target/deploy/${{ env.UI_WRAPPER_NAME }}.so | head -c 64)" >> $GITHUB_ENV
+          echo "UI_WRAPPER_CHECKSUM=$(sha256sum ./target/deploy/${{ env.UI_WRAPPER_NAME }}.so | head -c 64)" >> $GITHUB_ENV
 
       - name: Generate SBOM ui wrapper
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           format: 'cyclonedx'
-          output: '${{ env.WRAPPER_NAME }}-${{ github.ref_name }}-sbom.json'
+          output: '${{ env.UI_WRAPPER_NAME }}-${{ github.ref_name }}-sbom.json'
 
       - name: Create Release
         id: create_release

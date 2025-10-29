@@ -14,7 +14,6 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { toast } from 'react-toastify';
 import { useAppState } from './AppWalletProvider';
-import { addrToLabel } from '@/lib/address-labels';
 
 const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -22,10 +21,9 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const marketRef = useRef<Market | null>(null); // To track the latest market value
 
-  const { labelsByAddr } = useAppState();
+  const { labelsByAddr, hasToken22ByAddr } = useAppState();
 
   const [chartEntries, setChartEntries] = useState<CandlestickData[]>([]);
-  const [marketName, setMarketName] = useState<string>(marketAddress);
 
   const { connection: conn } = useConnection();
 
@@ -38,8 +36,6 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       console.log('got market', m);
       marketRef.current = m;
     });
-
-    setMarketName(addrToLabel(marketAddress, labelsByAddr));
   }, [conn, marketAddress, labelsByAddr]);
 
   useEffect(() => {
@@ -53,6 +49,9 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
 
     ws.onmessage = async (message): Promise<void> => {
       const fill: FillLogResult = JSON.parse(message.data);
+      if (fill.market !== marketAddress) {
+        return;
+      }
 
       const aggregateFillData = async (
         fill: FillLogResult,
@@ -123,7 +122,7 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
     return (): void => {
       ws.close();
     };
-  }, [chartEntries, conn]);
+  }, [chartEntries, conn, marketAddress]);
 
   useEffect(() => {
     if (chartContainerRef.current) {
@@ -187,7 +186,12 @@ const Chart = ({ marketAddress }: { marketAddress: string }): ReactElement => {
   return (
     <div className="bg-gray-800 p-4 rounded-lg w-full">
       <h2 className="text-xl font-semibold text-gray-200 mb-4 text-center">
-        {marketName}
+        {labelsByAddr[marketAddress]}
+        {hasToken22ByAddr[marketAddress] && (
+          <span className="ml-3 inline-block bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">
+            TOKEN_2022
+          </span>
+        )}
       </h2>
 
       <div ref={chartContainerRef} className="w-full h-96" />

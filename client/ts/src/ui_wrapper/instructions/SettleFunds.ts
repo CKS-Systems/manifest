@@ -52,7 +52,7 @@ export const SettleFundsStruct = new beet.BeetArgsStruct<
  * @property [] tokenProgramQuote
  * @property [] manifestProgram
  * @property [_writable_] platformTokenAccount
- * @property [_writable_] referrerTokenAccount
+ * @property [_writable_] referrerTokenAccount (optional)
  * @category Instructions
  * @category SettleFunds
  * @category generated
@@ -71,13 +71,18 @@ export type SettleFundsInstructionAccounts = {
   tokenProgramQuote: web3.PublicKey;
   manifestProgram: web3.PublicKey;
   platformTokenAccount: web3.PublicKey;
-  referrerTokenAccount: web3.PublicKey;
+  referrerTokenAccount?: web3.PublicKey;
 };
 
 export const settleFundsInstructionDiscriminator = 5;
 
 /**
  * Creates a _SettleFunds_ instruction.
+ *
+ * Optional accounts that are not provided will be omitted from the accounts
+ * array passed with the instruction.
+ * An optional account that is set cannot follow an optional account that is unset.
+ * Otherwise an Error is raised.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
@@ -161,12 +166,15 @@ export function createSettleFundsInstruction(
       isWritable: true,
       isSigner: false,
     },
-    {
+  ];
+
+  if (accounts.referrerTokenAccount != null) {
+    keys.push({
       pubkey: accounts.referrerTokenAccount,
       isWritable: true,
       isSigner: false,
-    },
-  ];
+    });
+  }
 
   const ix = new web3.TransactionInstruction({
     programId,

@@ -107,12 +107,38 @@ export class Global {
     return toNum(deposit.balanceAtoms) / 10 ** decimals;
   }
 
+  getGlobalBalanceTokensWithDecimals(
+    trader: PublicKey,
+    decimals: number,
+  ): number {
+    const deposit: GlobalDeposit | undefined = this.data.globalDeposits.find(
+      (seat) => seat.trader.equals(trader),
+    );
+    if (!deposit) {
+      return 0;
+    } else {
+      return toNum(deposit.balanceAtoms) / 10 ** decimals;
+    }
+  }
+
   tokenMint(): PublicKey {
     return this.data.mint;
   }
 
   hasSeat(trader: PublicKey): boolean {
     return this.data.globalDeposits.some((seat) => seat.trader.equals(trader));
+  }
+
+  vaultAddress(): PublicKey {
+    return this.data.vault;
+  }
+
+  getAllDeposits(): GlobalDeposit[] {
+    return this.data.globalDeposits;
+  }
+
+  getNumSeatsClaimed(): number {
+    return this.data.numSeatsClaimed;
   }
 
   prettyPrint(): void {

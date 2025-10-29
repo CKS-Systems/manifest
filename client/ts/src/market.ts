@@ -22,12 +22,14 @@ import {
   claimedSeatBeet,
   ClaimedSeat as ClaimedSeatRaw,
   createCreateMarketInstruction,
+  OrderType,
   PROGRAM_ID,
   restingOrderBeet,
   RestingOrder as RestingOrderRaw,
 } from './manifest';
 import { getVaultAddress } from './utils/market';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
+import BN from 'bn.js';
 
 /**
  * RestingOrder on the market.
@@ -43,6 +45,10 @@ export type RestingOrder = {
   sequenceNumber: bignum;
   /** Price as float in tokens of quote per tokens of base. */
   tokenPrice: number;
+  /** OrderType: 🌎 or Limit or PostOnly */
+  orderType: OrderType;
+  /** Spread in basis points for reversible orders, stored in 0.1 bps increments (only set for orderType === OrderType.Reverse). */
+  spreadBps?: number;
 };
 
 /**
@@ -81,6 +87,8 @@ export interface MarketData {
   asks: RestingOrder[];
   /** Array of all claimed seats. */
   claimedSeats: ClaimedSeat[];
+  /** Quote volume in atoms. */
+  quoteVolumeAtoms: bigint;
 }
 
 /**
@@ -226,7 +234,71 @@ export class Market {
   }
 
   /**
-   * Get the amount in tokens of balance that is deposited on this market, split
+   * Get the total amount in atoms of balance that is deposited on this market, split
+   * by base, quote, and whether in orders or not for the whole market.
+   *
+   * @returns {
+   *    baseWithdrawableBalanceAtoms: number,
+   *    quoteWithdrawableBalanceAtoms: number,
+   *    baseOpenOrdersBalanceAtoms: number,
+   *    quoteOpenOrdersBalanceAtoms: number
+   * }
+   */
+  public getMarketBalances(): {
+    baseWithdrawableBalanceAtoms: number;
+    quoteWithdrawableBalanceAtoms: number;
+    baseOpenOrdersBalanceAtoms: number;
+    quoteOpenOrdersBalanceAtoms: number;
+  } {
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
+
+    const quoteOpenOrdersBalanceAtoms: number = bids
+      .filter((restingOrder: RestingOrder) => {
+        return restingOrder.orderType != OrderType.Global;
+      })
+      .map((restingOrder: RestingOrder) => {
+        return Math.ceil(
+          Number(restingOrder.numBaseTokens) *
+            restingOrder.tokenPrice *
+            10 ** this.data.quoteMintDecimals -
+            // Force float precision to not round up on an integer.
+            0.00001,
+        );
+      })
+      .reduce((sum, current) => sum + current, 0);
+    const baseOpenOrdersBalanceAtoms: number = asks
+      .filter((restingOrder: RestingOrder) => {
+        return restingOrder.orderType != OrderType.Global;
+      })
+      .map((restingOrder: RestingOrder) => {
+        return (
+          Number(restingOrder.numBaseTokens) * 10 ** this.data.baseMintDecimals
+        );
+      })
+      .reduce((sum, current) => sum + current, 0);
+
+    const quoteWithdrawableBalanceAtoms: number = this.data.claimedSeats
+      .map((claimedSeat: ClaimedSeat) => {
+        return Number(claimedSeat.quoteBalance);
+      })
+      .reduce((sum, current) => sum + current, 0);
+    const baseWithdrawableBalanceAtoms: number = this.data.claimedSeats
+      .map((claimedSeat: ClaimedSeat) => {
+        return Number(claimedSeat.baseBalance);
+      })
+      .reduce((sum, current) => sum + current, 0);
+
+    return {
+      baseWithdrawableBalanceAtoms,
+      quoteWithdrawableBalanceAtoms,
+      baseOpenOrdersBalanceAtoms,
+      quoteOpenOrdersBalanceAtoms,
+    };
+  }
+
+  /**
+   * Get the amount in tokens of balance that is deposited on this market for a trader, split
    * by base, quote, and whether in orders or not.
    *
    * @param trader PublicKey of the trader to check balance of
@@ -259,12 +331,74 @@ export class Market {
     const seat: ClaimedSeat = filteredSeats[0];
 
     const asks: RestingOrder[] = this.asks();
-    const bids: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
     const baseOpenOrdersBalanceTokens: number = asks
       .filter((ask) => ask.trader.equals(trader))
       .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
     const quoteOpenOrdersBalanceTokens: number = bids
       .filter((bid) => bid.trader.equals(trader))
+      .reduce(
+        (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
+        0,
+      );
+
+    const quoteWithdrawableBalanceTokens: number =
+      toNum(seat.quoteBalance) / 10 ** this.quoteDecimals();
+    const baseWithdrawableBalanceTokens: number =
+      toNum(seat.baseBalance) / 10 ** this.baseDecimals();
+    return {
+      baseWithdrawableBalanceTokens,
+      quoteWithdrawableBalanceTokens,
+      baseOpenOrdersBalanceTokens,
+      quoteOpenOrdersBalanceTokens,
+    };
+  }
+
+  /**
+   * Get the amount in tokens of balance that is deposited on this market for a trader, split
+   * by base, quote, and whether in orders or not but ignoring orders that use
+   * global balances.
+   *
+   * @param trader PublicKey of the trader to check balance of
+   *
+   * @returns {
+   *    baseWithdrawableBalanceTokens: number,
+   *    quoteWithdrawableBalanceTokens: number,
+   *    baseOpenOrdersBalanceTokens: number,
+   *    quoteOpenOrdersBalanceTokens: number
+   * }
+   */
+  public getMarketBalancesForTrader(trader: PublicKey): {
+    baseWithdrawableBalanceTokens: number;
+    quoteWithdrawableBalanceTokens: number;
+    baseOpenOrdersBalanceTokens: number;
+    quoteOpenOrdersBalanceTokens: number;
+  } {
+    const filteredSeats = this.data.claimedSeats.filter((claimedSeat) => {
+      return claimedSeat.publicKey.equals(trader);
+    });
+    // No seat claimed.
+    if (filteredSeats.length == 0) {
+      return {
+        baseWithdrawableBalanceTokens: 0,
+        quoteWithdrawableBalanceTokens: 0,
+        baseOpenOrdersBalanceTokens: 0,
+        quoteOpenOrdersBalanceTokens: 0,
+      };
+    }
+    const seat: ClaimedSeat = filteredSeats[0];
+
+    const asks: RestingOrder[] = this.asks();
+    const bids: RestingOrder[] = this.bids();
+    const baseOpenOrdersBalanceTokens: number = asks
+      .filter(
+        (ask) => ask.trader.equals(trader) && ask.orderType != OrderType.Global,
+      )
+      .reduce((sum, ask) => sum + Number(ask.numBaseTokens), 0);
+    const quoteOpenOrdersBalanceTokens: number = bids
+      .filter(
+        (bid) => bid.trader.equals(trader) && bid.orderType != OrderType.Global,
+      )
       .reduce(
         (sum, bid) => sum + Number(bid.numBaseTokens) * Number(bid.tokenPrice),
         0,
@@ -396,6 +530,15 @@ export class Market {
   }
 
   /**
+   * Gets the quote volume traded over the lifetime of the market.
+   *
+   * @returns bigint
+   */
+  public quoteVolume(): bigint {
+    return this.data.quoteVolumeAtoms;
+  }
+
+  /**
    * Print all information loaded about the market in a human readable format.
    */
   public prettyPrint(): void {
@@ -490,7 +633,12 @@ export class Market {
     const _freeListHeadIndex = data.readUInt32LE(offset);
     offset += 4;
 
-    // _padding2: [u32; 3],
+    const _padding2 = data.readUInt32LE(offset);
+    offset += 4;
+
+    const quoteVolumeAtoms: bigint = data.readBigUInt64LE(offset);
+    offset += 8;
+
     // _padding3: [u64; 8],
 
     const bids: RestingOrder[] =
@@ -501,7 +649,7 @@ export class Market {
             restingOrderBeet,
           )
             .map((restingOrderInternal: RestingOrderRaw) => {
-              return {
+              const baseOrder = {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
                     Number(restingOrderInternal.traderIndex) +
@@ -520,6 +668,21 @@ export class Market {
                   10 ** (baseMintDecimals - quoteMintDecimals),
                 ...restingOrderInternal,
               };
+
+              if (restingOrderInternal.orderType === OrderType.Reverse) {
+                const paddingBytes = restingOrderInternal.padding;
+                const spreadRaw =
+                  paddingBytes[0] |
+                  (paddingBytes[1] << 8) |
+                  (paddingBytes[2] << 16) |
+                  (paddingBytes[3] << 24);
+                return {
+                  ...baseOrder,
+                  spreadBps: spreadRaw / 10,
+                };
+              }
+
+              return baseOrder;
             })
             .filter((bid: RestingOrder) => {
               return (
@@ -537,7 +700,7 @@ export class Market {
             restingOrderBeet,
           )
             .map((restingOrderInternal: RestingOrderRaw) => {
-              return {
+              const baseOrder = {
                 trader: publicKeyBeet.deserialize(
                   data.subarray(
                     Number(restingOrderInternal.traderIndex) +
@@ -556,6 +719,21 @@ export class Market {
                   10 ** (baseMintDecimals - quoteMintDecimals),
                 ...restingOrderInternal,
               };
+
+              if (restingOrderInternal.orderType === OrderType.Reverse) {
+                const paddingBytes = restingOrderInternal.padding;
+                const spreadRaw =
+                  paddingBytes[0] |
+                  (paddingBytes[1] << 8) |
+                  (paddingBytes[2] << 16) |
+                  (paddingBytes[3] << 24);
+                return {
+                  ...baseOrder,
+                  spreadBps: spreadRaw / 10,
+                };
+              }
+
+              return baseOrder;
             })
             .filter((ask: RestingOrder) => {
               return (
@@ -591,6 +769,7 @@ export class Market {
       bids,
       asks,
       claimedSeats,
+      quoteVolumeAtoms,
     };
   }
 
@@ -622,9 +801,15 @@ export class Market {
       filters,
     });
 
-    return accounts.map(({ account, pubkey }) =>
-      Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
-    );
+    return accounts
+      .map(({ account, pubkey }) =>
+        Market.loadFromBuffer({ address: pubkey, buffer: account.data }),
+      )
+      .sort((a, b) =>
+        new BN(b.quoteVolume().toString())
+          .sub(new BN(a.quoteVolume().toString()))
+          .toNumber(),
+      );
   }
 
   static async setupIxs(

@@ -3,7 +3,7 @@ use std::cell::RefMut;
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, invoke, ManifestError},
+    program::{get_mut_dynamic_account, invoke},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
@@ -14,13 +14,20 @@ use solana_program::sysvar::Sysvar;
 use solana_program::{
     entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
 };
+use spl_token_2022::{
+    extension::{
+        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        StateWithExtensions,
+    },
+    state::Mint,
+};
 
 use super::{
     order_type_can_take, GlobalRefMut, OrderType, RestingOrder, GAS_DEPOSIT_LAMPORTS,
     NO_EXPIRATION_LAST_VALID_SLOT,
 };
 
-pub(crate) fn get_now_slot() -> u32 {
+pub fn get_now_slot() -> u32 {
     // If we cannot get the clock (happens in tests, then only match with
     // orders without expiration). We assume that the clock cannot be
     // maliciously manipulated to clear all orders with expirations on the
@@ -40,6 +47,23 @@ pub(crate) fn get_now_slot() -> u32 {
     now_slot as u32
 }
 
+pub(crate) fn get_now_epoch() -> u64 {
+    #[cfg(feature = "no-clock")]
+    let now_epoch: u64 = 0;
+    #[cfg(not(feature = "no-clock"))]
+    let now_epoch: u64 = solana_program::clock::Clock::get()
+        .unwrap_or(solana_program::clock::Clock {
+            slot: u64::MAX,
+            epoch_start_timestamp: i64::MAX,
+            epoch: u64::MAX,
+            leader_schedule_epoch: u64::MAX,
+            unix_timestamp: i64::MAX,
+        })
+        .slot;
+    now_epoch
+}
+
+#[inline(always)]
 pub(crate) fn remove_from_global(
     global_trade_accounts_opt: &Option<GlobalTradeAccounts>,
 ) -> ProgramResult {
@@ -136,7 +160,7 @@ pub(crate) fn try_to_add_to_global(
 pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
     require!(
         order_type_can_take(order_type),
-        ManifestError::PostOnlyCrosses,
+        crate::program::ManifestError::PostOnlyCrosses,
         "Post only order would cross",
     )?;
     Ok(())
@@ -145,7 +169,7 @@ pub(crate) fn assert_can_take(order_type: OrderType) -> ProgramResult {
 pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) -> ProgramResult {
     require!(
         last_valid_slot == NO_EXPIRATION_LAST_VALID_SLOT || last_valid_slot > now_slot,
-        ManifestError::AlreadyExpired,
+        crate::program::ManifestError::AlreadyExpired,
         "Placing an already expired order. now: {} last_valid: {}",
         now_slot,
         last_valid_slot
@@ -156,7 +180,7 @@ pub(crate) fn assert_not_already_expired(last_valid_slot: u32, now_slot: u32) ->
 pub(crate) fn assert_already_has_seat(trader_index: DataIndex) -> ProgramResult {
     require!(
         trader_index != NIL,
-        ManifestError::AlreadyClaimedSeat,
+        crate::program::ManifestError::AlreadyClaimedSeat,
         "Need to claim a seat first",
     )?;
     Ok(())
@@ -188,7 +212,7 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 ) -> Result<bool, ProgramError> {
     require!(
         global_trade_accounts_opt.is_some(),
-        ManifestError::MissingGlobal,
+        crate::program::ManifestError::MissingGlobal,
         "Missing global accounts when adding a global",
     )?;
     let global_trade_accounts: &GlobalTradeAccounts = &global_trade_accounts_opt.as_ref().unwrap();
@@ -207,6 +231,11 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
 
     let num_deposited_atoms: GlobalAtoms =
         global_dynamic_account.get_balance_atoms(resting_order_trader);
+    // Intentionally does not allow partial fills against a global order. The
+    // reason for this is to punish global orders that are not backed. There is
+    // no technical blocker for supporting partial fills against a global. It is
+    // just because of the mechanism design where we want global to only be used
+    // when needed, not just for all orders.
     if desired_global_atoms > num_deposited_atoms {
         emit_stack(GlobalCleanupLog {
             cleaner: *gas_receiver_opt.as_ref().unwrap().key,
@@ -216,7 +245,6 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
         })?;
         return Ok(false);
     }
-    // TODO: Allow matching against a global that can only partially fill the order.
 
     // Update the GlobalTrader
     global_dynamic_account.reduce(resting_order_trader, desired_global_atoms)?;
@@ -232,10 +260,29 @@ pub(crate) fn try_to_move_global_tokens<'a, 'info>(
     if *token_program.key == spl_token_2022::id() {
         require!(
             mint_opt.is_some(),
-            ManifestError::MissingGlobal,
+            crate::program::ManifestError::MissingGlobal,
             "Missing global mint",
         )?;
+
+        // Prevent transfer from global to market vault if a token has a non-zero fee.
         let mint_account_info: &MintAccountInfo = &mint_opt.as_ref().unwrap();
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+            .get_extension::<TransferFeeConfig>()
+            .is_ok_and(|f| f.get_epoch_fee(get_now_epoch()).transfer_fee_basis_points != 0.into())
+        {
+            solana_program::msg!("Treating global order as unbacked because it has a transfer fee");
+            return Ok(false);
+        }
+        if StateWithExtensions::<Mint>::unpack(&mint_account_info.info.data.borrow())?
+            .get_extension::<TransferHook>()
+            .is_ok_and(|f| f.program_id.0 != Pubkey::default())
+        {
+            solana_program::msg!(
+                "Treating global order as unbacked because it has a transfer hook"
+            );
+            return Ok(false);
+        }
+
         invoke_signed(
             &spl_token_2022::instruction::transfer_checked(
                 token_program.key,

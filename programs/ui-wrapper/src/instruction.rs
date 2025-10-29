@@ -10,7 +10,7 @@ pub enum ManifestWrapperInstruction {
 
     /// Create and initialize a wrapper for owner. Note that owner and payer
     /// are separate to enable PDA owners.
-    #[account(0, writable, signer, name = "owner", desc = "Owner of the Manifest account")]
+    #[account(0, name = "owner", desc = "Owner of the Manifest account")]
     #[account(1, name = "system_program", desc = "System program")]
     #[account(2, writable, signer, name = "payer", desc = "Payer of rent and gas")]
     #[account(3, writable, name = "wrapper_state", desc = "Wrapper state")]
@@ -111,8 +111,7 @@ pub enum ManifestWrapperInstruction {
     #[account(10, name = "token_program_quote", desc = "Token program for quote token")]
     #[account(11, name = "manifest_program", desc = "Manifest program")]
     #[account(12, writable, name = "platform_token_account", desc = "Platform fee token account")]
-    // optional
-    #[account(13, writable, name = "referrer_token_account", desc = "Referrer fee token account")]
+    #[account(13, writable, name = "referrer_token_account", desc = "Referrer fee token account", optional)]
     SettleFunds = 5,
 }
 

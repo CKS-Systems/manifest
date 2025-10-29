@@ -1,9 +1,15 @@
 export * from './client';
 export * from './market';
+export * from './global';
 export * from './types';
-export * as manifest from './manifest';
-export * as utils from './utils';
-export * as wrapper from './wrapper';
+export * from './utils';
+
+// Do not export all of manifest because names collide with wrapper. Force users
+// to use the client.
+export * from './manifest/errors';
+export * from './manifest/accounts';
+export * from './manifest/instructions';
+export * from './manifest/types/OrderType';
+
 export * from './wrapperObj';
-export * as uiWrapper from './ui_wrapper';
 export * from './uiWrapperObj';

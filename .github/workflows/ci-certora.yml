@@ -1,0 +1,33 @@
+name: Certora Formal Verification
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+ submit_verification_jobs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Submit verification jobs to Certora Prover
+        uses: Certora/certora-run-action@v1
+        with:
+          configurations: |-
+            rules.conf --commit_sha1 7a4ffb7d0a9fb99d9367ea77975885c1dea85d0f
+            hypertree.conf --commit_sha1 7a4ffb7d0a9fb99d9367ea77975885c1dea85d0f
+          job-name:  "manifest rules"
+          ecosystem: solana
+          working-directory: programs/manifest/src/certora/confs
+          certora-key: ${{ secrets.CERTORAKEY }}
+          certora-sbf-options: "-vvv --tools-version=v1.43"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -12,8 +12,8 @@ export type FillLogResult = {
   baseAtoms: string;
   /** Number of quote atoms traded. */
   quoteAtoms: string;
-  /** Price as float. Quote atoms per base atom. */
-  price: number;
+  /** Price as float. Quote atoms per base atom. Client is responsible for translating to tokens. */
+  priceAtoms: number;
   /** Boolean to indicate which side the trade was. */
   takerIsBuy: boolean;
   /** Boolean to indicate whether the maker side is global. */
@@ -24,4 +24,23 @@ export type FillLogResult = {
   takerSequenceNumber: string;
   /** Slot number of the fill. */
   slot: number;
+  /** Signature of the tx where the fill happened. */
+  signature: string;
+  /**
+   * Public key of the original transaction signer as base58.
+   * This represents the actual user when trades go through aggregators.
+   * Optional for backwards compatibility.
+   */
+  originalSigner?: string;
+  /**
+   * Name of aggregator that sent the tx if detected.
+   * Optional for backwards compatibility.
+   */
+  aggregator?: string;
+  /**
+   * Name of originating protocol that initiated the tx if detected.
+   * For dual attribution (e.g., Kamino using Spur aggregator).
+   * Optional for backwards compatibility.
+   */
+  originatingProtocol?: string;
 };

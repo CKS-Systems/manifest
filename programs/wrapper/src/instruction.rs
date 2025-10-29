@@ -88,6 +88,12 @@ pub enum ManifestWrapperInstruction {
     #[account(8, name = "quote_market_vault", desc = "Quote market vault")]
     #[account(9, name = "quote_token_program", desc = "Token program(22)")]
     BatchUpdateQuoteGlobal = 6,
+
+    /// Collect.
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, name = "system_program", desc = "System program")]
+    #[account(2, writable, signer, name = "collector", desc = "Fee collector")]
+    Collect = 7,
 }
 
 impl ManifestWrapperInstruction {

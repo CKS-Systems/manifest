@@ -9,26 +9,27 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubke
 
 use super::shared::{expand_market_if_needed, get_mut_dynamic_account};
 
+#[cfg(feature = "certora")]
+use early_panic::early_panic;
+
+#[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_claim_seat(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
     _data: &[u8],
 ) -> ProgramResult {
     let claim_seat_context: ClaimSeatContext = ClaimSeatContext::load(accounts)?;
-    let ClaimSeatContext {
-        market,
-        payer,
-        system_program,
-    } = claim_seat_context;
+    let ClaimSeatContext { market, payer, .. } = claim_seat_context;
 
     process_claim_seat_internal(&market, &payer)?;
 
     // Leave a free block on the market
-    expand_market_if_needed(&payer, &market, &system_program)?;
+    expand_market_if_needed(&payer, &market)?;
 
     Ok(())
 }
 
+#[cfg_attr(all(feature = "certora", not(feature = "certora-test")), early_panic)]
 pub(crate) fn process_claim_seat_internal<'a, 'info>(
     market: &ManifestAccountInfo<'a, 'info, MarketFixed>,
     payer: &Signer<'a, 'info>,

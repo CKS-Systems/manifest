@@ -15,7 +15,10 @@ use manifest::{
         get_dynamic_account, get_mut_dynamic_account, invoke, ManifestInstruction,
     },
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{DynamicAccount, MarketFixed, OrderType},
+    state::{
+        utils::get_now_slot, DynamicAccount, MarketFixed, OrderType, RestingOrder,
+        MARKET_FIXED_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
+    },
     validation::{ManifestAccountInfo, Program, Signer},
 };
 use solana_program::{
@@ -72,6 +75,8 @@ impl WrapperPlaceOrderParams {
     }
 }
 
+// TODO: Note that this does not cancel reverse orders which have been created
+// at a new sequence number and address (partial fill).
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct WrapperCancelOrderParams {
     client_order_id: u64,
@@ -155,7 +160,68 @@ fn prepare_orders(
     orders: &Vec<WrapperPlaceOrderParams>,
     remaining_base_atoms: &mut BaseAtoms,
     remaining_quote_atoms: &mut QuoteAtoms,
+    market: &ManifestAccountInfo<MarketFixed>,
 ) -> Vec<PlaceOrderParams> {
+    let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data().unwrap();
+    let market_ref: DynamicAccount<&MarketFixed, &[u8]> =
+        get_dynamic_account::<MarketFixed>(&market_data);
+    let mut best_ask_index: DataIndex = market_ref.get_asks().get_max_index();
+    let mut best_bid_index: DataIndex = market_ref.get_bids().get_max_index();
+
+    // Walk the tree until you find a non-expired order since those can be
+    // trivially ignored. Does not prevent unbacked global orders, but that
+    // would require global accounts and be too complicated to do here because
+    // this is only best-effort.
+    // Also, changes orders with last_valid_slot < 1_000_000 to now +
+    // last_valid_slot.
+    let now_slot: u32 = get_now_slot();
+
+    while best_ask_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_ask_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .is_expired(now_slot)
+    {
+        best_ask_index = market_ref
+            .get_asks()
+            .get_next_lower_index::<RestingOrder>(best_ask_index);
+    }
+    while best_bid_index != NIL
+        && get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_bid_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .is_expired(now_slot)
+    {
+        best_bid_index = market_ref
+            .get_bids()
+            .get_next_lower_index::<RestingOrder>(best_bid_index);
+    }
+
+    let best_ask_price: QuoteAtomsPerBaseAtom = if best_ask_index != NIL {
+        get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_ask_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MAX
+    };
+    let best_bid_price: QuoteAtomsPerBaseAtom = if best_bid_index != NIL {
+        get_helper::<RBNode<RestingOrder>>(
+            &market_data,
+            best_bid_index + (MARKET_FIXED_SIZE as DataIndex),
+        )
+        .get_value()
+        .get_price()
+    } else {
+        QuoteAtomsPerBaseAtom::MIN
+    };
+
     let mut result: Vec<PlaceOrderParams> = Vec::with_capacity(orders.len());
     result.extend(
         orders
@@ -166,37 +232,60 @@ fn prepare_orders(
                 // if they do not have the funds on the exchange that the orders
                 // require.
                 let mut num_base_atoms: u64 = order.base_atoms;
+                let price: QuoteAtomsPerBaseAtom =
+                    QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
+                        order.price_mantissa,
+                        order.price_exponent,
+                    )
+                    .unwrap();
                 if order.order_type != OrderType::Global {
                     if order.is_bid {
-                        let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
-                            order.price_mantissa,
-                            order.price_exponent,
-                        )
-                        .unwrap();
-                        let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
-                            .checked_mul(price, true)
-                            .unwrap();
-                        if desired > *remaining_quote_atoms {
+                        // If a post only would cross, then reduce to no size and clear it in the filter later.
+                        if price > best_ask_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only bid that would cross");
                             num_base_atoms = 0;
                         } else {
-                            *remaining_quote_atoms -= desired;
+                            let desired: QuoteAtoms = BaseAtoms::new(order.base_atoms)
+                                .checked_mul(price, true)
+                                .unwrap();
+                            if desired > *remaining_quote_atoms {
+                                solana_program::msg!("Removing bid for insufficient funds");
+                                num_base_atoms = 0;
+                            } else {
+                                *remaining_quote_atoms -= desired;
+                            }
                         }
                     } else {
                         let desired: BaseAtoms = BaseAtoms::new(order.base_atoms);
-                        if desired > *remaining_base_atoms {
+                        // If a post only would cross, then reduce to no size and clear it in the filter later.
+                        if price < best_bid_price && order.order_type == OrderType::PostOnly {
+                            solana_program::msg!("Removing post only ask that would cross");
                             num_base_atoms = 0;
                         } else {
-                            *remaining_base_atoms -= desired;
+                            if desired > *remaining_base_atoms {
+                                solana_program::msg!("Removing ask for insufficient funds");
+                                num_base_atoms = 0;
+                            } else {
+                                *remaining_base_atoms -= desired;
+                            }
                         }
                     }
                 }
+                let expiration = if order.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
+                    && order.last_valid_slot < 10_000_000
+                    && order.order_type != OrderType::Reverse
+                {
+                    now_slot + order.last_valid_slot
+                } else {
+                    order.last_valid_slot
+                };
                 let core_place: PlaceOrderParams = PlaceOrderParams::new(
                     num_base_atoms,
                     order.price_mantissa,
                     order.price_exponent,
                     order.is_bid,
                     order.order_type,
-                    order.last_valid_slot,
+                    expiration,
                 );
                 core_place
             })
@@ -350,6 +439,26 @@ fn process_orders<'a, 'info>(
     Ok(())
 }
 
+// Fee here is 5_000 lamports stored on the wrapper state. This is stored on the
+// wrapper state because it prevents the need for a contentious extra write
+// lock. Users who do not wish to pay this fee should use their own wrapper or
+// interact directly with the manifest program.
+fn collect_fee<'a, 'info>(
+    payer: &Signer<'a, 'info>,
+    wrapper_state: &WrapperStateAccountInfo<'a, 'info>,
+) -> ProgramResult {
+    invoke(
+        &solana_program::system_instruction::transfer(
+            &payer.as_ref().key,
+            &wrapper_state.key,
+            manifest::state::GAS_DEPOSIT_LAMPORTS,
+        ),
+        &[payer.as_ref().clone(), wrapper_state.info.clone()],
+    )?;
+
+    Ok(())
+}
+
 pub(crate) fn process_batch_update(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -406,6 +515,7 @@ pub(crate) fn process_batch_update(
         &orders,
         &mut remaining_base_atoms,
         &mut remaining_quote_atoms,
+        &market,
     );
 
     execute_cpi(accounts, trader_index_hint, core_cancels, core_orders)?;
@@ -421,6 +531,9 @@ pub(crate) fn process_batch_update(
 
     // Sync to get the balance correct and remove any expired orders.
     sync_fast(&wrapper_state, &market, market_info_index)?;
+
+    // Collect fee.
+    collect_fee(&payer, &wrapper_state)?;
 
     Ok(())
 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.4",
   "name": "ui_wrapper",
   "instructions": [
     {
@@ -7,8 +7,8 @@
       "accounts": [
         {
           "name": "owner",
-          "isMut": true,
-          "isSigner": true,
+          "isMut": false,
+          "isSigner": false,
           "docs": [
             "Owner of the Manifest account"
           ]
@@ -649,6 +649,7 @@
           "name": "referrerTokenAccount",
           "isMut": true,
           "isSigner": false,
+          "isOptional": true,
           "docs": [
             "Referrer fee token account"
           ]

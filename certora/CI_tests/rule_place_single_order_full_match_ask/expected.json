@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_place_single_order_full_match_ask": "SUCCESS"
+       }
+}

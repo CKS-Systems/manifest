@@ -1,13 +1,15 @@
 import WebSocket from 'ws';
-import { Connection, ConfirmedSignatureInfo } from '@solana/web3.js';
+import {
+  Connection,
+  ConfirmedSignatureInfo,
+  VersionedTransactionResponse,
+} from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
 import { genAccDiscriminator } from './utils/discriminator';
 import * as promClient from 'prom-client';
-import express from 'express';
-import promBundle from 'express-prom-bundle';
 import { FillLogResult } from './types';
 
 // For live monitoring of the fill feed. For a more complete look at fill
@@ -25,6 +27,7 @@ export class FillFeed {
   private wss: WebSocket.Server;
   private shouldEnd: boolean = false;
   private ended: boolean = false;
+  private lastUpdateUnix: number = Date.now();
 
   constructor(private connection: Connection) {
     this.wss = new WebSocket.Server({ port: 1234 });
@@ -40,6 +43,10 @@ export class FillFeed {
         console.log('Client disconnected');
       });
     });
+  }
+
+  public msSinceLastUpdate() {
+    return Date.now() - this.lastUpdateUnix;
   }
 
   public async stopParseLogs() {
@@ -68,9 +75,15 @@ export class FillFeed {
    */
   public async parseLogs(endEarly?: boolean) {
     // Start with a hopefully recent signature.
-    let lastSignature: string | undefined = (
-      await this.connection.getSignaturesForAddress(PROGRAM_ID)
-    )[0].signature;
+    const lastSignatureStatus = (
+      await this.connection.getSignaturesForAddress(
+        PROGRAM_ID,
+        { limit: 1 },
+        'finalized',
+      )
+    )[0];
+    let lastSignature: string | undefined = lastSignatureStatus.signature;
+    let lastSlot: number = lastSignatureStatus.slot;
 
     // End early is 30 seconds, used for testing.
     const endTime: Date = endEarly
@@ -81,19 +94,54 @@ export class FillFeed {
     while (!this.shouldEnd && new Date(Date.now()) < endTime) {
       await new Promise((f) => setTimeout(f, 10_000));
       const signatures: ConfirmedSignatureInfo[] =
-        await this.connection.getSignaturesForAddress(PROGRAM_ID, {
-          until: lastSignature,
-        });
+        await this.connection.getSignaturesForAddress(
+          PROGRAM_ID,
+          {
+            until: lastSignature,
+          },
+          'finalized',
+        );
       // Flip it so we do oldest first.
       signatures.reverse();
-      if (signatures.length == 0) {
+
+      // Process even single signatures, but handle the edge case differently
+      if (signatures.length === 0) {
         continue;
       }
-      lastSignature = signatures[signatures.length - 1].signature;
 
+      // If we only got back the same signature we already processed, skip it
+      if (
+        signatures.length === 1 &&
+        signatures[0].signature === lastSignature
+      ) {
+        continue;
+      }
       for (const signature of signatures) {
+        // Skip if we already processed this signature
+        if (signature.signature === lastSignature) {
+          continue;
+        }
+
+        // Separately track the last slot. This is necessary because sometimes
+        // gsfa ignores the until param and just gives 1_000 signatures.
+        if (signature.slot < lastSlot) {
+          continue;
+        }
         await this.handleSignature(signature);
       }
+
+      console.log(
+        'New last signature:',
+        signatures[signatures.length - 1].signature,
+        'New last signature slot:',
+        signatures[signatures.length - 1].slot,
+        'num sigs',
+        signatures.length,
+      );
+      lastSignature = signatures[signatures.length - 1].signature;
+      lastSlot = signatures[signatures.length - 1].slot;
+
+      this.lastUpdateUnix = Date.now();
     }
 
     console.log('ended loop');
@@ -106,7 +154,7 @@ export class FillFeed {
    * notification.
    */
   private async handleSignature(signature: ConfirmedSignatureInfo) {
-    console.log('Handling', signature.signature);
+    console.log('Handling', signature.signature, 'slot', signature.slot);
     const tx = await this.connection.getTransaction(signature.signature, {
       maxSupportedTransactionVersion: 0,
     });
@@ -115,9 +163,29 @@ export class FillFeed {
       return;
     }
     if (tx.meta.err != null) {
-      console.log('Skipping failed tx');
+      console.log('Skipping failed tx', signature.signature);
       return;
     }
+
+    // Extract the original signer (fee payer/first signer)
+    let originalSigner: string | undefined;
+    try {
+      const message = tx.transaction.message;
+
+      if ('accountKeys' in message) {
+        // Legacy transaction
+        originalSigner = message.accountKeys[0]?.toBase58();
+      } else {
+        // Versioned transaction (v0) - use staticAccountKeys for the main accounts
+        originalSigner = message.staticAccountKeys[0]?.toBase58();
+      }
+    } catch (error) {
+      console.error('Error extracting original signer:', error);
+    }
+
+    const aggregator: string | undefined = detectAggregator(tx);
+    const originatingProtocol: string | undefined =
+      detectOriginatingProtocol(tx);
 
     const messages: string[] = tx?.meta?.logMessages!;
     const programDatas: string[] = messages.filter((message) => {
@@ -135,21 +203,21 @@ export class FillFeed {
         c.charCodeAt(0),
       );
       const buffer = Buffer.from(byteArray);
-      // Hack to fix the difference in caching on the CI action.
-      if (
-        !buffer.subarray(0, 8).equals(fillDiscriminant) &&
-        !buffer
-          .subarray(0, 8)
-          .equals(Buffer.from([52, 81, 147, 82, 119, 191, 72, 172]))
-      ) {
+      if (!buffer.subarray(0, 8).equals(fillDiscriminant)) {
         continue;
       }
       const deserializedFillLog: FillLog = FillLog.deserialize(
         buffer.subarray(8),
       )[0];
-      const resultString: string = JSON.stringify(
-        toFillLogResult(deserializedFillLog, signature.slot),
+      const fillResult = toFillLogResult(
+        deserializedFillLog,
+        signature.slot,
+        signature.signature,
+        originalSigner,
+        aggregator,
+        originatingProtocol,
       );
+      const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
       fills.inc({
         market: deserializedFillLog.market.toString(),
@@ -157,62 +225,162 @@ export class FillFeed {
         takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
       });
       this.wss.clients.forEach((client) => {
-        client.send(
-          JSON.stringify(toFillLogResult(deserializedFillLog, signature.slot)),
-        );
+        client.send(JSON.stringify(fillResult));
       });
     }
   }
 }
 
-/**
- * Run a fill feed as a websocket server that clients can connect to and get
- * notifications of fills for all manifest markets.
- */
-export async function runFillFeed() {
-  const connection: Connection = new Connection(
-    process.env.RPC_URL || 'http://127.0.0.1:8899',
-    'confirmed',
-  );
+function detectAggregator(
+  tx: VersionedTransactionResponse,
+): string | undefined {
+  // Look for the aggregator program id from a list of known ids.
+  try {
+    // For versioned transactions, we need to handle both static and resolved account keys
+    const message = tx.transaction.message;
 
-  promClient.collectDefaultMetrics({
-    labels: {
-      app: 'fillFeed',
-    },
-  });
+    // Handle both legacy and versioned transactions
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      for (const account of message.accountKeys) {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
+          return 'Swissborg';
+        }
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
+          return 'Titan';
+        }
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
+          return 'OKX';
+        }
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
+          return 'Jupiter';
+        }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
+        }
+      }
+    } else {
+      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
+      for (const account of message.staticAccountKeys) {
+        if (
+          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
+        ) {
+          return 'Swissborg';
+        }
+        if (
+          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
+        ) {
+          return 'Titan';
+        }
+        if (
+          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+        ) {
+          return 'OKX';
+        }
+        if (
+          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
+        ) {
+          return 'Jupiter';
+        }
+        if (
+          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
+        ) {
+          return 'Spur';
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Error detecting aggregator:', error);
+    // Fall back to undefined if we can't detect the aggregator
+  }
+  return undefined;
+}
 
-  const register = new promClient.Registry();
-  register.setDefaultLabels({
-    app: 'fillFeed',
-  });
-  const metricsApp = express();
-  metricsApp.listen(8080);
+function detectOriginatingProtocol(
+  tx: VersionedTransactionResponse,
+): string | undefined {
+  // Look for known originating protocol program IDs in the transaction accounts
+  const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
+  const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
 
-  const promMetrics = promBundle({
-    includeMethod: true,
-    metricsApp,
-    autoregister: false,
-  });
-  metricsApp.use(promMetrics);
+  try {
+    const message = tx.transaction.message;
 
-  const fillFeed: FillFeed = new FillFeed(connection);
-  await fillFeed.parseLogs();
+    // Handle both legacy and versioned transactions
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      for (const account of message.accountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
+    } else {
+      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
+      for (const account of message.staticAccountKeys) {
+        const accountKey = account.toBase58();
+        if (accountKey === KAMINO_PROGRAM_ID) {
+          return 'kamino';
+        }
+        if (accountKey === CABANA_PROGRAM_ID) {
+          return 'cabana';
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Error detecting originating protocol:', error);
+    // Fall back to undefined if we can't detect the originating protocol
+  }
+  return undefined;
 }
 
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
-function toFillLogResult(fillLog: FillLog, slot: number): FillLogResult {
-  return {
+function toFillLogResult(
+  fillLog: FillLog,
+  slot: number,
+  signature: string,
+  originalSigner?: string,
+  aggregator?: string,
+  originatingProtocol?: string,
+): FillLogResult {
+  const result: FillLogResult = {
     market: fillLog.market.toBase58(),
     maker: fillLog.maker.toBase58(),
     taker: fillLog.taker.toBase58(),
     baseAtoms: fillLog.baseAtoms.inner.toString(),
     quoteAtoms: fillLog.quoteAtoms.inner.toString(),
-    price: convertU128(fillLog.price.inner),
+    priceAtoms: convertU128(fillLog.price.inner),
     takerIsBuy: fillLog.takerIsBuy,
     isMakerGlobal: fillLog.isMakerGlobal,
     makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
     takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
+    signature,
     slot,
   };
+
+  if (originalSigner) {
+    result.originalSigner = originalSigner;
+  }
+  if (aggregator) {
+    result.aggregator = aggregator;
+  }
+  if (originatingProtocol) {
+    result.originatingProtocol = originatingProtocol;
+  }
+
+  return result;
 }

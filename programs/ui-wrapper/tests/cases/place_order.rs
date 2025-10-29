@@ -573,10 +573,10 @@ async fn wrapper_place_order_without_globals_test() -> anyhow::Result<()> {
 
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
-    let (global_base, _) = get_global_address(&base_mint);
-    let (global_quote, _) = get_global_address(&quote_mint);
-    let (global_base_vault, _) = get_global_vault_address(&base_mint);
-    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
+    let (_global_base, _) = get_global_address(&base_mint);
+    let (_global_quote, _) = get_global_address(&quote_mint);
+    let (_global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (_global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // place order
     let place_order_ix = Instruction {
@@ -794,22 +794,22 @@ async fn wrapper_place_order_with_mixed_up_mint_ask() -> anyhow::Result<()> {
 
     let payer: Pubkey = test_fixture.payer();
     let payer_keypair: Keypair = test_fixture.payer_keypair().insecure_clone();
-    let (base_mint, trader_token_account_base) = test_fixture
+    let (base_mint, _trader_token_account_base) = test_fixture
         .fund_trader_wallet(&payer_keypair, Token::SOL, 1)
         .await;
     let (quote_mint, trader_token_account_quote) = test_fixture
         .fund_trader_wallet(&payer_keypair, Token::USDC, 1)
         .await;
 
-    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
-    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let _platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let _referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
 
     let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
-    let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
-    let (global_base, _) = get_global_address(&base_mint);
-    let (global_quote, _) = get_global_address(&quote_mint);
-    let (global_base_vault, _) = get_global_vault_address(&base_mint);
-    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
+    let (_base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
+    let (_global_base, _) = get_global_address(&base_mint);
+    let (_global_quote, _) = get_global_address(&quote_mint);
+    let (_global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (_global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // place order as ask, but passing quote currency should fail
     let place_order_ix = Instruction {
@@ -863,19 +863,19 @@ async fn wrapper_place_order_with_mixed_up_mint_bid() -> anyhow::Result<()> {
     let (base_mint, trader_token_account_base) = test_fixture
         .fund_trader_wallet(&payer_keypair, Token::SOL, 1)
         .await;
-    let (quote_mint, trader_token_account_quote) = test_fixture
+    let (quote_mint, _trader_token_account_quote) = test_fixture
         .fund_trader_wallet(&payer_keypair, Token::USDC, 1)
         .await;
 
-    let platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
-    let referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let _platform_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
+    let _referred_token_account = test_fixture.fund_token_account(&quote_mint, &payer).await;
 
-    let (quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
+    let (_quote_vault, _) = get_vault_address(&test_fixture.market.key, &quote_mint);
     let (base_vault, _) = get_vault_address(&test_fixture.market.key, &base_mint);
-    let (global_base, _) = get_global_address(&base_mint);
-    let (global_quote, _) = get_global_address(&quote_mint);
-    let (global_base_vault, _) = get_global_vault_address(&base_mint);
-    let (global_quote_vault, _) = get_global_vault_address(&quote_mint);
+    let (_global_base, _) = get_global_address(&base_mint);
+    let (_global_quote, _) = get_global_address(&quote_mint);
+    let (_global_base_vault, _) = get_global_vault_address(&base_mint);
+    let (_global_quote_vault, _) = get_global_vault_address(&quote_mint);
 
     // place order as ask, but passing quote currency should fail
     let place_order_ix = Instruction {

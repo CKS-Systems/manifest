@@ -21,10 +21,72 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
       connection: conn,
       address: marketPub,
     }).then((m) => {
-      console.log('got market', m);
       marketRef.current = m;
+      preLoad();
     });
+
+    async function preLoad() {
+      const responseJson = await (
+        await fetch(
+          `https://mfx-stats-mainnet.fly.dev/recentFills?market=${marketAddress}`,
+        )
+      ).json();
+      for (const fillLogInd in responseJson[marketAddress]) {
+        await processFill(
+          responseJson[marketAddress][fillLogInd] as unknown as FillLogResult,
+        );
+      }
+    }
   }, [conn, marketAddress]);
+
+  async function processFill(fill: FillLogResult) {
+    if (fill.market !== marketAddress) {
+      return;
+    }
+
+    const quoteTokens =
+      Number(fill.quoteAtoms) /
+      10 ** Number(marketRef.current?.quoteDecimals() || 0);
+    const baseTokens =
+      Number(fill.baseAtoms) /
+      10 ** Number(marketRef.current?.baseDecimals() || 0);
+
+    // Price is the actual price which factors in rounding, not the limit price.
+    const priceTokens = Number((quoteTokens / baseTokens).toFixed(4));
+    const fillUi: FillResultUi = {
+      market: fill.market,
+      maker: fill.maker,
+      taker: fill.taker,
+      baseTokens,
+      quoteTokens,
+      priceTokens,
+      isMakerGlobal: fill.isMakerGlobal,
+      takerSide: fill.takerIsBuy ? 'bid' : 'ask',
+      signature: fill.signature,
+      slot: fill.slot,
+      dateString: await slotToTimestamp(fill.slot),
+    };
+
+    setFills((prevFills) => {
+      if (prevFills.length == 0) {
+        return [fillUi];
+      }
+      if (fillUi.slot < prevFills[0].slot) {
+        return prevFills;
+      }
+      if (
+        fillUi.slot == prevFills[0].slot &&
+        fillUi.maker == prevFills[0].maker &&
+        fillUi.taker == prevFills[0].taker &&
+        fillUi.priceTokens == prevFills[0].priceTokens
+      ) {
+        return prevFills;
+      }
+      return [fillUi, ...prevFills].filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
+    });
+  }
 
   useEffect(() => {
     if (!wsRef.current) {
@@ -40,28 +102,9 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         console.log('fill feed opened:', message);
       };
 
-      ws.onmessage = (message): void => {
+      ws.onmessage = async (message): Promise<void> => {
         const fill: FillLogResult = JSON.parse(message.data);
-        const quoteTokens =
-          Number(fill.quoteAtoms) /
-          10 ** Number(marketRef.current?.quoteDecimals() || 0);
-        const baseTokens =
-          Number(fill.baseAtoms) /
-          10 ** Number(marketRef.current?.baseDecimals() || 0);
-
-        const priceTokens = Number((quoteTokens / baseTokens).toFixed(4));
-        const fillUi: FillResultUi = {
-          market: fill.market,
-          maker: fill.maker,
-          taker: fill.taker,
-          baseTokens,
-          quoteTokens,
-          priceTokens,
-          takerSide: fill.takerIsBuy ? 'bid' : 'ask',
-          slot: fill.slot,
-        };
-
-        setFills((prevFills) => [...prevFills, fillUi]);
+        await processFill(fill);
       };
 
       ws.onclose = (message): void => {
@@ -73,7 +116,27 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         wsRef.current = null;
       };
     }
-  }, []); // Empty dependency array ensures this effect only runs once
+  });
+
+  async function slotToTimestamp(slot: number): Promise<string> {
+    // Local storage isnt necessary here, but if we do ever start saving fills
+    // for page refresh, it will be.
+    try {
+      if (localStorage.getItem(slot.toString())) {
+        return localStorage.getItem(slot.toString())!;
+      } else {
+        const timestamp: number = (await conn.getBlockTime(slot))!;
+        const dateString: string = new Date(timestamp * 1_000)
+          .toTimeString()
+          .slice(0, 9);
+        localStorage.setItem(slot.toString(), dateString);
+        return dateString;
+      }
+    } catch (e) {
+      console.error('getBlockTime:', e);
+    }
+    return '';
+  }
 
   return (
     <div className="m-0 max-w-full text-gray-200 p-4">
@@ -81,25 +144,40 @@ const Fills = ({ marketAddress }: { marketAddress: string }): ReactElement => {
         <table className="table-auto w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-700">
+              <th className="pb-2">Timestamp</th>
               <th className="pb-2">Price</th>
               <th className="pb-2">Base Tokens</th>
               <th className="pb-2">Maker</th>
               <th className="pb-2">Taker</th>
               <th className="pb-2">Taker Side</th>
+              <th className="pb-2">Signature</th>
             </tr>
           </thead>
           <tbody>
-            {fills.map((fill, i) => (
+            {fills.map((fill: FillResultUi, i) => (
               <tr key={i} className="border-b border-gray-700">
+                <td className="py-2">{fill.dateString}</td>
                 <td className="py-2">{fill.priceTokens}</td>
                 <td className="py-2">{Number(fill.baseTokens)}</td>
                 <td className="py-2">
+                  {fill.isMakerGlobal ? '🌎' : ''}
                   <SolscanAddrLink address={fill.maker} />
                 </td>
                 <td className="py-2">
                   <SolscanAddrLink address={fill.taker} />
                 </td>
                 <td className="py-2">{fill.takerSide}</td>
+                <td className="py-2">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={
+                      'https://explorer.manifest.trade/tx/' + fill.signature
+                    }
+                  >
+                    {fill.signature.substring(0, 5) + '...'}
+                  </a>
+                </td>
               </tr>
             ))}
           </tbody>

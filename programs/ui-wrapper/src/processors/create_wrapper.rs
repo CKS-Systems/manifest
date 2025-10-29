@@ -18,7 +18,7 @@ pub(crate) fn process_create_wrapper(
 ) -> ProgramResult {
     // Load account infos
     let account_iter: &mut std::slice::Iter<AccountInfo> = &mut accounts.iter();
-    let owner: Signer = Signer::new(next_account_info(account_iter)?)?;
+    let owner: &AccountInfo = next_account_info(account_iter)?;
     let system_program: Program =
         Program::new(next_account_info(account_iter)?, &system_program::id())?;
     let payer: Signer = Signer::new(next_account_info(account_iter)?)?;

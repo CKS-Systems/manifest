@@ -1,0 +1,6 @@
+{
+       "assertMessages":{},
+       "rules": {
+            "rule_update_balance": "SUCCESS"
+       }
+}

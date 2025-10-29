@@ -1,6 +1,6 @@
 [package]
-name = "manifest"
-version = "0.1.0"
+name = "manifest-dex"
+version = "3.0.0"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Britt Cyr <britt@cks.systems>"]
@@ -19,6 +19,10 @@ test = []
 fuzz = []
 trace = ["hypertree/trace"]
 no-clock = []
+certora = ["no-entrypoint", "dep:cvt", "dep:nondet", "dep:cvt-macros", "dep:early-panic", "dep:calltrace", "dep:solana_cvt", "dep:vectors", "dep:hook_macro",
+           "hypertree/certora", "dep:cvlr"]
+certora_vacuity = ["cvt/vacuity"]
+
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
@@ -49,7 +53,17 @@ num_enum = { workspace = true }
 thiserror = { workspace = true }
 solana-security-txt = { workspace = true }
 static_assertions = { workspace = true }
+nondet = { workspace = true, optional = true}
+cvt = { workspace = true, optional = true}
+cvt-macros = { workspace = true, optional = true}
+early-panic = { workspace = true, optional = true}
+calltrace = { workspace = true, optional = true}
+solana_cvt = { workspace = true, optional = true}
+vectors = { workspace = true, optional = true}
+hook_macro = { workspace = true, optional = true}
+arrayref = { workspace = true}
 solana-invoke = { workspace = true }
+cvlr = { version = "0.4", optional = true } 
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -57,3 +71,10 @@ solana-program-test = { workspace = true }
 solana-logger = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
+serde_json = "1.0.86"
+spl-associated-token-account = { version = "7", features = ["no-entrypoint"] }
+
+[package.metadata.certora]
+sources = ["src/**/*.rs"]
+solana_inlining = ["../../certora/cvt_inlining.txt"]
+solana_summaries = ["../../certora/cvt_summaries.txt"]

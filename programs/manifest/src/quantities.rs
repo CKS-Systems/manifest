@@ -4,7 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use hypertree::trace;
 use shank::ShankAccount;
 use solana_program::program_error::ProgramError;
-use static_assertions::{const_assert, const_assert_eq};
+use static_assertions::const_assert;
 use std::{
     cmp::Ordering,
     fmt::Display,
@@ -227,30 +227,33 @@ basic_u64!(GlobalAtoms);
 #[derive(Clone, Copy, Default, Zeroable, Pod, Deserialize, Serialize, ShankAccount)]
 #[repr(C)]
 pub struct QuoteAtomsPerBaseAtom {
-    inner: [u64; 2],
+    pub(crate) inner: [u64; 2],
 }
 
 // These conversions are necessary, bc. the compiler forces 16 byte alignment
 // on the u128 type, which is not necessary given that the target architecture
 // has no native support for u128 math and requires us only to be 8 byte
 // aligned.
+#[cfg(not(feature = "certora"))]
 const fn u128_to_u64_slice(a: u128) -> [u64; 2] {
     unsafe {
         let ptr: *const u128 = &a;
         *ptr.cast::<[u64; 2]>()
     }
 }
-fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
+pub(crate) fn u64_slice_to_u128(a: [u64; 2]) -> u128 {
     unsafe {
         let ptr: *const [u64; 2] = &a;
         *ptr.cast::<u128>()
     }
 }
 
+#[cfg(not(feature = "certora"))]
 const ATOM_LIMIT: u128 = u64::MAX as u128;
 const D18: u128 = 10u128.pow(18);
 const D18F: f64 = D18 as f64;
 
+#[cfg(not(feature = "certora"))]
 const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(26),
     10u128.pow(25),
@@ -281,16 +284,23 @@ const DECIMAL_CONSTANTS: [u128; 27] = [
     10u128.pow(00),
 ];
 // ensures that the index lookup is correct when converting from floating point
-const_assert_eq!(
+#[cfg(not(feature = "certora"))]
+static_assertions::const_assert_eq!(
     DECIMAL_CONSTANTS[QuoteAtomsPerBaseAtom::MAX_EXP as usize],
     D18
 );
 
 // ensures that we can remove bounds checks on certain multiplications
+#[cfg(not(feature = "certora"))]
 const_assert!(DECIMAL_CONSTANTS[0] * (u32::MAX as u128) < u128::MAX);
+
 const_assert!(D18 * (u64::MAX as u128) < u128::MAX);
 
-// Prices
+#[cfg(feature = "certora")]
+#[path = "quantities_certora.rs"]
+mod quantities_certora;
+
+#[cfg(not(feature = "certora"))]
 impl QuoteAtomsPerBaseAtom {
     pub const ZERO: Self = QuoteAtomsPerBaseAtom { inner: [0; 2] };
     pub const MIN: Self = QuoteAtomsPerBaseAtom::from_mantissa_and_exponent_(1, Self::MIN_EXP);
@@ -307,11 +317,32 @@ impl QuoteAtomsPerBaseAtom {
         -10 -> [18] -> D08
         -18 -> [26] ->  D0
         */
-        let offset = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
+        let offset: usize = (Self::MAX_EXP as i64).wrapping_sub(exponent as i64) as usize;
         // can not overflow 10^26 * u32::MAX < u128::MAX
-        let inner = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
+        let inner: u128 = DECIMAL_CONSTANTS[offset].wrapping_mul(mantissa as u128);
         QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(inner),
+        }
+    }
+
+    pub fn multiply_spread(self, spread_e_5: u32) -> Self {
+        // Stored as u128 * 10^-26
+        let inner: u128 = u64_slice_to_u128(self.inner);
+        let inner_e_minus_5: u128 = inner.wrapping_mul(spread_e_5 as u128);
+        let new_inner: u128 = inner_e_minus_5.div_ceil(100_000);
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(new_inner),
+        }
+    }
+
+    pub fn divide_spread(self, spread_e_5: u32) -> Self {
+        // multiply then divide
+        QuoteAtomsPerBaseAtom {
+            inner: u128_to_u64_slice(
+                u64_slice_to_u128(self.inner)
+                    .wrapping_mul(100_000)
+                    .div_ceil(spread_e_5 as u128),
+            ),
         }
     }
 
@@ -344,14 +375,9 @@ impl QuoteAtomsPerBaseAtom {
             return Ok(BaseAtoms::ZERO);
         }
         // this doesn't need a check, will never overflow: u64::MAX * D18 < u128::MAX
-        let dividend = D18.wrapping_mul(quote_atoms.inner as u128);
+        let dividend: u128 = D18.wrapping_mul(quote_atoms.inner as u128);
         let inner: u128 = u64_slice_to_u128(self.inner);
-        trace!(
-            "checked_base_for_quote {dividend}/{inner} {round_up} {}>{}",
-            dividend.div_ceil(inner),
-            dividend.div(inner)
-        );
-        let base_atoms = if round_up {
+        let base_atoms: u128 = if round_up {
             dividend.div_ceil(inner)
         } else {
             dividend.div(inner)
@@ -373,7 +399,7 @@ impl QuoteAtomsPerBaseAtom {
         let product: u128 = inner
             .checked_mul(base_atoms.inner as u128)
             .ok_or(PriceConversionError(0x8))?;
-        let quote_atoms = if round_up {
+        let quote_atoms: u128 = if round_up {
             product.div_ceil(D18)
         } else {
             product.div(D18)
@@ -505,6 +531,31 @@ impl BaseAtoms {
         round_up: bool,
     ) -> Result<QuoteAtoms, ProgramError> {
         other.checked_quote_for_base(self, round_up)
+    }
+}
+
+#[cfg(feature = "certora")]
+mod nondet {
+    use super::*;
+
+    impl ::nondet::Nondet for BaseAtoms {
+        fn nondet() -> Self {
+            Self::new(::nondet::nondet())
+        }
+    }
+
+    impl ::nondet::Nondet for QuoteAtoms {
+        fn nondet() -> Self {
+            Self::new(::nondet::nondet())
+        }
+    }
+
+    impl ::nondet::Nondet for QuoteAtomsPerBaseAtom {
+        fn nondet() -> Self {
+            Self {
+                inner: [::nondet::nondet(), ::nondet::nondet()],
+            }
+        }
     }
 }
 

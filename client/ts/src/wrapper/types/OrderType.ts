@@ -15,6 +15,7 @@ export enum OrderType {
   ImmediateOrCancel,
   PostOnly,
   Global,
+  Reverse,
 }
 
 /**

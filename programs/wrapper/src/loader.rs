@@ -34,8 +34,8 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
         let wrapper_state: WrapperStateAccountInfo<'a, 'info> = Self::_new_unchecked(info)?;
 
-        let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
+        let wrapper_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
+        let (header_bytes, _) = wrapper_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
 
@@ -51,20 +51,20 @@ impl<'a, 'info> WrapperStateAccountInfo<'a, 'info> {
     pub fn new_init(
         info: &'a AccountInfo<'info>,
     ) -> Result<WrapperStateAccountInfo<'a, 'info>, ProgramError> {
-        let market_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
-        let (header_bytes, _) = market_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
+        let wrapper_bytes: Ref<&mut [u8]> = info.try_borrow_data()?;
+        let (header_bytes, _) = wrapper_bytes.split_at(size_of::<ManifestWrapperStateFixed>());
         let header: &ManifestWrapperStateFixed =
             get_helper::<ManifestWrapperStateFixed>(header_bytes, 0_u32);
         require!(
             info.owner == &crate::ID,
             ProgramError::IllegalOwner,
-            "Market must be owned by the Manifest program",
+            "Wrapper must be owned by the Manifest program",
         )?;
         // On initialization, the discriminant is not set yet.
         require!(
             header.discriminant == 0,
             ProgramError::InvalidAccountData,
-            "Expected uninitialized market with discriminant 0",
+            "Expected uninitialized wrapper with discriminant 0",
         )?;
         Ok(Self { info })
     }

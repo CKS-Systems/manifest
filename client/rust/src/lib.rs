@@ -15,7 +15,7 @@ use manifest::{
         loaders::GlobalTradeAccounts, ManifestAccountInfo,
     },
 };
-use solana_program::account_info::AccountInfo;
+use solana_program::{account_info::AccountInfo, system_program};
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 use std::{cell::RefCell, mem::size_of, rc::Rc};
 
@@ -128,12 +128,12 @@ impl Amm for ManifestLocalMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {
@@ -142,6 +142,7 @@ impl Amm for ManifestLocalMarket {
         })
     }
 
+    /// ManifestLocalMarket::update should be called once before calling this method
     fn get_swap_and_account_metas(&self, swap_params: &SwapParams) -> Result<SwapAndAccountMetas> {
         let SwapParams {
             destination_mint,
@@ -171,6 +172,7 @@ impl Amm for ManifestLocalMarket {
             AccountMeta::new_readonly(manifest::id(), false),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
+            AccountMeta::new(system_program::id(), false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
             AccountMeta::new(base_vault, false),
@@ -195,10 +197,6 @@ impl Amm for ManifestLocalMarket {
         false
     }
 
-    fn get_user_setup(&self) -> Option<jupiter_amm_interface::AmmUserSetup> {
-        None
-    }
-
     fn unidirectional(&self) -> bool {
         false
     }
@@ -211,15 +209,16 @@ impl Amm for ManifestLocalMarket {
         // 1   Program
         // 2   Market
         // 3   Signer
-        // 4   User Base
-        // 5   User Quote
-        // 6   Vault Base
-        // 7   Vault Quote
-        // 8   Base Token Program
-        // 9   Base Mint
-        // 10  Quote Token Program
-        // 11  Quote Mint
-        11
+        // 4   SystemProgram
+        // 5   User Base
+        // 6   User Quote
+        // 7   Vault Base
+        // 8   Vault Quote
+        // 9   Base Token Program
+        // 10  Base Mint
+        // 11  Quote Token Program
+        // 12  Quote Mint
+        12
     }
 }
 
@@ -335,6 +334,21 @@ impl Amm for ManifestMarket {
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
         let market: DynamicAccount<MarketFixed, Vec<u8>> = self.market.clone();
 
+        // The reason for checking can_expand is that jup does not want the
+        // payer to be responsible for gas for the market expansion on a partial
+        // fill against a reversible order. This solution is more restrictive
+        // than it really needs to be because there are many cases where trading
+        // against a reversible will work without the ability to expand, like
+        // filling an order completely, or reversing into a coalescing order. Or
+        // there just might not be reversible orders on the book.
+        let can_expand = market.has_two_free_blocks();
+        if !can_expand {
+            return Ok(Quote {
+                out_amount: 0,
+                ..Quote::default()
+            });
+        }
+
         dynamic_value_opt_to_account_info!(
             quote_global_account_info,
             self.quote_global,
@@ -393,16 +407,19 @@ impl Amm for ManifestMarket {
         let out_amount: u64 = if quote_params.input_mint == self.get_base_mint() {
             let in_atoms: BaseAtoms = BaseAtoms::new(quote_params.amount);
             market
-                .impact_quote_atoms(false, in_atoms, global_trade_accounts)?
+                .impact_quote_atoms_with_slot(false, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         } else {
             let in_atoms: QuoteAtoms = QuoteAtoms::new(quote_params.amount);
             market
-                .impact_base_atoms(true, in_atoms, global_trade_accounts)?
+                .impact_base_atoms_with_slot(true, in_atoms, global_trade_accounts, u32::MAX)?
                 .as_u64()
         };
         Ok(Quote {
             // Artificially penalize by 1 atom to be worse than the non-global version.
+            // This ensures that routes that can be filled without global accounts cause less
+            // lock contention on the global accounts, which will allow them to be included
+            // the block earlier. The UX improvement should be worth at least 1 atom.
             out_amount: out_amount.saturating_sub(1),
             ..Quote::default()
         })
@@ -437,8 +454,14 @@ impl Amm for ManifestMarket {
 
         let account_metas: Vec<AccountMeta> = vec![
             AccountMeta::new_readonly(manifest::id(), false),
+            // This account is intended to be the payer of rent for the tx in
+            // the case of a swap that partially fills a global order and needs
+            // to expand the market. It is not checked to be a signer until it
+            // is required to expand the market.
+            AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
+            AccountMeta::new(system_program::id(), false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
             AccountMeta::new(base_vault, false),
@@ -465,10 +488,6 @@ impl Amm for ManifestMarket {
         false
     }
 
-    fn get_user_setup(&self) -> Option<jupiter_amm_interface::AmmUserSetup> {
-        None
-    }
-
     fn unidirectional(&self) -> bool {
         false
     }
@@ -479,19 +498,21 @@ impl Amm for ManifestMarket {
 
     fn get_accounts_len(&self) -> usize {
         // 1   Program
-        // 2   Market
-        // 3   Signer
-        // 4   User Base
-        // 5   User Quote
-        // 6   Vault Base
-        // 7   Vault Quote
-        // 8   Base Token Program
-        // 9   Base Mint
-        // 10  Quote Token Program
-        // 11  Quote Mint
-        // 12  Global
-        // 13  Global Vault
-        13
+        // 2   Payer
+        // 3   Owner
+        // 4   Market
+        // 5   System Program
+        // 6   User Base
+        // 7   User Quote
+        // 8   Vault Base
+        // 9   Vault Quote
+        // 10  Base Token Program
+        // 11  Base Mint
+        // 12  Quote Token Program
+        // 13  Quote Mint
+        // 14  Global
+        // 15  Global Vault
+        15
     }
 }
 
@@ -510,7 +531,7 @@ mod test {
     };
     use solana_sdk::{account::Account, account_info::AccountInfo, pubkey};
     use spl_token_2022::state::Mint;
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::{cell::RefCell, rc::Rc};
 
     const BASE_MINT_KEY: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
     const QUOTE_MINT_KEY: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -635,8 +656,8 @@ mod test {
 
         let mut market_value: DynamicAccount<MarketFixed, Vec<u8>> = MarketValue {
             fixed: MarketFixed::new_empty(&base_mint, &quote_mint, &MARKET_KEY),
-            // 4 because 1 extra, 1 seat, 2 orders.
-            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
+            // 5 because 2 extra, 1 seat, 2 orders.
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 5],
         };
         // Claim a seat and deposit plenty on both sides.
         market_value.market_expand().unwrap();
@@ -681,6 +702,10 @@ mod test {
             })
             .unwrap();
 
+        // Expand for the second extra for the case of reverse orders.
+        market_value.market_expand().unwrap();
+        market_value.market_expand().unwrap();
+
         dynamic_value_to_account!(market_account, market_value, MARKET_FIXED_SIZE, MarketFixed);
 
         let market_keyed_account: KeyedAccount = KeyedAccount {
@@ -696,9 +721,29 @@ mod test {
         let mut manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([
+        let accounts_map = AccountMap::from_iter([
             (MARKET_KEY, market_account),
             (quote_global_key, quote_global_account),
+            (
+                BASE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+            (
+                QUOTE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
         ]);
         manifest_market.update(&accounts_map).unwrap();
 
@@ -841,7 +886,29 @@ mod test {
         let mut manifest_market: ManifestLocalMarket =
             ManifestLocalMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([(MARKET_KEY, market_account)]);
+        let accounts_map = AccountMap::from_iter([
+            (MARKET_KEY, market_account),
+            (
+                BASE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+            (
+                QUOTE_MINT_KEY,
+                Account {
+                    lamports: 0,
+                    data: Vec::new(),
+                    owner: spl_token::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            ),
+        ]);
         manifest_market.update(&accounts_map).unwrap();
 
         let (base_mint, quote_mint) = {
@@ -946,7 +1013,7 @@ mod test {
         let mut manifest_market: ManifestLocalMarket =
             ManifestLocalMarket::from_keyed_account(&market_keyed_account, &amm_context).unwrap();
 
-        let accounts_map: AccountMap = HashMap::from([(MARKET_KEY, market_account)]);
+        let accounts_map = AccountMap::from_iter([(MARKET_KEY, market_account)]);
         manifest_market.update(&accounts_map).unwrap();
 
         let (base_mint, quote_mint) = {
@@ -1061,7 +1128,7 @@ mod test {
         let manifest_market: ManifestMarket =
             ManifestMarket::from_keyed_account(&market_account, &amm_context).unwrap();
 
-        assert_eq!(manifest_market.get_accounts_len(), 13);
+        assert_eq!(manifest_market.get_accounts_len(), 15);
         assert_eq!(manifest_market.label(), "Manifest");
         assert_eq!(manifest_market.key(), MARKET_KEY);
         assert_eq!(manifest_market.program_id(), manifest::id());
@@ -1076,10 +1143,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_forward: SwapAndAccountMetas = manifest_market
@@ -1094,10 +1161,10 @@ mod test {
             destination_token_account: Pubkey::new_unique(),
             token_transfer_authority: TRADER_KEY,
             missing_dynamic_accounts_as_default: false,
-            open_order_address: None,
             quote_mint_to_referrer: None,
             out_amount: 0,
             jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
         };
 
         let _results_backward: SwapAndAccountMetas = manifest_market
@@ -1106,8 +1173,56 @@ mod test {
 
         manifest_market.clone_amm();
         assert!(!manifest_market.has_dynamic_accounts());
-        assert!(manifest_market.get_user_setup().is_none());
         assert!(!manifest_market.unidirectional());
         assert_eq!(manifest_market.program_dependencies().len(), 0);
+
+        let manifest_local_market: ManifestLocalMarket =
+            ManifestLocalMarket::from_keyed_account(&market_account, &amm_context).unwrap();
+        assert_eq!(manifest_local_market.label(), "Manifest");
+        assert_eq!(manifest_local_market.key(), MARKET_KEY);
+        assert_eq!(manifest_local_market.program_id(), manifest::id());
+        assert_eq!(manifest_local_market.get_accounts_to_update().len(), 3);
+        assert_eq!(manifest_local_market.get_accounts_len(), 12);
+        assert_eq!(manifest_local_market.get_reserve_mints()[0], BASE_MINT_KEY);
+        manifest_local_market.clone_amm();
+        assert!(!manifest_local_market.has_dynamic_accounts());
+        assert!(!manifest_local_market.unidirectional());
+        assert_eq!(manifest_local_market.program_dependencies().len(), 0);
+
+        let swap_params: SwapParams = SwapParams {
+            in_amount: 1,
+            source_mint: manifest_market.get_base_mint(),
+            destination_mint: manifest_market.get_quote_mint(),
+            source_token_account: Pubkey::new_unique(),
+            destination_token_account: Pubkey::new_unique(),
+            token_transfer_authority: TRADER_KEY,
+            missing_dynamic_accounts_as_default: false,
+            quote_mint_to_referrer: None,
+            out_amount: 0,
+            jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
+        };
+
+        let _results_forward: SwapAndAccountMetas = manifest_local_market
+            .get_swap_and_account_metas(&swap_params)
+            .unwrap();
+
+        let swap_params: SwapParams = SwapParams {
+            in_amount: 1,
+            source_mint: manifest_market.get_quote_mint(),
+            destination_mint: manifest_market.get_base_mint(),
+            source_token_account: Pubkey::new_unique(),
+            destination_token_account: Pubkey::new_unique(),
+            token_transfer_authority: TRADER_KEY,
+            missing_dynamic_accounts_as_default: false,
+            quote_mint_to_referrer: None,
+            out_amount: 0,
+            jupiter_program_id: &manifest::id(),
+            swap_mode: SwapMode::ExactIn,
+        };
+
+        let _results_backward: SwapAndAccountMetas = manifest_local_market
+            .get_swap_and_account_metas(&swap_params)
+            .unwrap();
     }
 }

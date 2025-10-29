@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "1.0.0",
   "name": "manifest",
   "instructions": [
     {
@@ -277,6 +277,148 @@
           "isSigner": false,
           "docs": [
             "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "traderBase",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader base token account"
+          ]
+        },
+        {
+          "name": "traderQuote",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader quote token account"
+          ]
+        },
+        {
+          "name": "baseVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base vault PDA, seeds are [b'vault', market_address, base_mint]"
+          ]
+        },
+        {
+          "name": "quoteVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]"
+          ]
+        },
+        {
+          "name": "tokenProgramBase",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22) base"
+          ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "tokenProgramQuote",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token program(22) quote. Optional. Only include if different from base"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SwapParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
+      "name": "SwapV2",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
           ]
         },
         {
@@ -885,6 +1027,140 @@
       "discriminant": {
         "type": "u8",
         "value": 12
+      }
+    },
+    {
+      "name": "SwapV2",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Payer"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Owner"
+          ]
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account holding all market state"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "System program"
+          ]
+        },
+        {
+          "name": "traderBase",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader base token account"
+          ]
+        },
+        {
+          "name": "traderQuote",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Trader quote token account"
+          ]
+        },
+        {
+          "name": "baseVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Base vault PDA, seeds are [b'vault', market_address, base_mint]"
+          ]
+        },
+        {
+          "name": "quoteVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Quote vault PDA, seeds are [b'vault', market_address, quote_mint]"
+          ]
+        },
+        {
+          "name": "tokenProgramBase",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Token program(22) base"
+          ]
+        },
+        {
+          "name": "baseMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Base mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "tokenProgramQuote",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token program(22) quote. Optional. Only include if different from base"
+          ]
+        },
+        {
+          "name": "quoteMint",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Quote mint, only included if base is Token22, otherwise not required"
+          ]
+        },
+        {
+          "name": "global",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global account"
+          ]
+        },
+        {
+          "name": "globalVault",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Global vault"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SwapParams"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
       }
     }
   ],
@@ -1822,6 +2098,9 @@
           },
           {
             "name": "Global"
+          },
+          {
+            "name": "Reverse"
           }
         ]
       }
@@ -2145,16 +2424,12 @@
         },
         {
           "name": "takerIsBuy",
-          "type": {
-            "defined": "PodBool"
-          },
+          "type": "bool",
           "index": false
         },
         {
           "name": "isMakerGlobal",
-          "type": {
-            "defined": "PodBool"
-          },
+          "type": "bool",
           "index": false
         },
         {
@@ -2230,9 +2505,88 @@
         },
         {
           "name": "isBid",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "padding",
           "type": {
-            "defined": "PodBool"
+            "array": [
+              "u8",
+              6
+            ]
           },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PlaceOrderLogV2",
+      "discriminator": [
+        189,
+        97,
+        159,
+        235,
+        136,
+        5,
+        1,
+        141
+      ],
+      "fields": [
+        {
+          "name": "market",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "trader",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "payer",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "price",
+          "type": {
+            "defined": "QuoteAtomsPerBaseAtom"
+          },
+          "index": false
+        },
+        {
+          "name": "baseAtoms",
+          "type": {
+            "defined": "BaseAtoms"
+          },
+          "index": false
+        },
+        {
+          "name": "orderSequenceNumber",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "orderIndex",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "lastValidSlot",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "orderType",
+          "type": {
+            "defined": "OrderType"
+          },
+          "index": false
+        },
+        {
+          "name": "isBid",
+          "type": "bool",
           "index": false
         },
         {

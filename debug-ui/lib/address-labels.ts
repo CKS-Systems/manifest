@@ -1,6 +1,9 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import {
+  Connection,
+  GetProgramAccountsResponse,
+  PublicKey,
+} from '@solana/web3.js';
 import { Metaplex } from '@metaplex-foundation/js';
-import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { ENV, TokenInfo, TokenListProvider } from '@solana/spl-token-registry';
 import { Market } from '@cks-systems/manifest-sdk';
 import { LabelsByAddr } from './types';
@@ -37,45 +40,35 @@ export const getTokenSymbol = async (
   return tokenSymbol || shortenPub(mintPub);
 };
 
-export const checkForBase22 = async (
-  conn: Connection,
-  mint: PublicKey,
-): Promise<boolean> => {
-  const acc = await conn.getAccountInfo(mint);
-  if (!acc) {
-    throw new Error('checkForBase22: account does not exist');
-  }
-
-  return acc.owner === TOKEN_2022_PROGRAM_ID;
-};
-
-// TODO: find a way to cache this between reloads or some other way to prevent rate limiting...
 export const fetchAndSetMfxAddrLabels = async (
   conn: Connection,
-  marketAddrs: Array<string>,
+  marketProgramAccounts: GetProgramAccountsResponse,
   setLabelsByAddr: Dispatch<SetStateAction<LabelsByAddr>>,
+  setInfoByAddr: Dispatch<SetStateAction<LabelsByAddr>>,
 ): Promise<Set<string>> => {
   const mints = new Set<string>();
   const markets: Market[] = [];
-  await Promise.all(
-    marketAddrs.map(async (ma) => {
-      const m = await Market.loadFromAddress({
-        connection: conn,
-        address: new PublicKey(ma),
-      });
-      markets.push(m);
-      mints.add(m.quoteMint().toBase58());
-      mints.add(m.baseMint().toBase58());
-    }),
-  );
+  marketProgramAccounts.forEach((gpaResponse) => {
+    const market: Market = Market.loadFromBuffer({
+      address: gpaResponse.pubkey,
+      buffer: gpaResponse.account.data,
+    });
+    markets.push(market);
+    mints.add(market.quoteMint().toBase58());
+    mints.add(market.baseMint().toBase58());
+  });
 
   const mintLabels: LabelsByAddr = {};
   await Promise.all(
     Array.from(mints.values()).map(async (m) => {
       try {
-        const symbol = await getTokenSymbol(conn, new PublicKey(m));
-
-        mintLabels[m] = symbol;
+        if (localStorage.getItem(m)) {
+          mintLabels[m] = localStorage.getItem(m)!;
+        } else {
+          const symbol = await getTokenSymbol(conn, new PublicKey(m));
+          mintLabels[m] = symbol;
+          localStorage.setItem(m, symbol);
+        }
       } catch (e) {
         console.error('getTokenSymbol:', e);
       }
@@ -83,12 +76,17 @@ export const fetchAndSetMfxAddrLabels = async (
   );
 
   const marketLabels: LabelsByAddr = {};
+  const infoByAddr: LabelsByAddr = {};
   for (const m of markets) {
-    marketLabels[m.address.toBase58()] =
-      `MFX-${shortenPub(m.address)}-${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}`;
+    const marketAddr = m.address.toBase58();
+    marketLabels[marketAddr] =
+      `${pubkeyToLabel(m.baseMint(), mintLabels)}/${pubkeyToLabel(m.quoteMint(), mintLabels)}`;
+    infoByAddr[marketAddr] =
+      `base: ${m.baseMint().toBase58()} quote: ${m.quoteMint().toBase58()} market: ${marketAddr}`;
   }
 
   setLabelsByAddr({ ...mintLabels, ...marketLabels });
+  setInfoByAddr({ ...infoByAddr });
 
   return mints;
 };

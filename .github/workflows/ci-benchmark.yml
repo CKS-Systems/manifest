@@ -11,8 +11,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SOLANA_VERSION: '1.18.22'
-  RUST_TOOLCHAIN: '1.78.0'
+  SOLANA_VERSION: '2.2.12'
+  RUST_TOOLCHAIN: '1.86.0'
 
 jobs:
   benchmark:
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Solana
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
           export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
           solana --version

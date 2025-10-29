@@ -9,13 +9,14 @@ import {
   sendAndConfirmTransaction,
   AccountInfo,
   TransactionSignature,
+  GetProgramAccountsResponse,
 } from '@solana/web3.js';
 import {
   Mint,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
-  getMint,
+  unpackMint,
 } from '@solana/spl-token';
 import {
   createCreateMarketInstruction,
@@ -24,9 +25,10 @@ import {
   createGlobalDepositInstruction,
   createGlobalWithdrawInstruction,
   createSwapInstruction,
+  createBatchUpdateInstruction as createBatchUpdateCoreInstruction,
 } from './manifest/instructions';
 import { OrderType, SwapParams } from './manifest/types';
-import { Market } from './market';
+import { Market, RestingOrder } from './market';
 import { WrapperMarketInfo, Wrapper, WrapperData } from './wrapperObj';
 import { PROGRAM_ID as MANIFEST_PROGRAM_ID, PROGRAM_ID } from './manifest';
 import {
@@ -63,8 +65,8 @@ const marketDiscriminator: Buffer = genAccDiscriminator(
 );
 
 export class ManifestClient {
-  private isBase22: boolean;
-  private isQuote22: boolean;
+  public isBase22: boolean;
+  public isQuote22: boolean;
 
   private constructor(
     public connection: Connection,
@@ -124,6 +126,7 @@ export class ManifestClient {
     connection: Connection,
   ): Promise<PublicKey[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      dataSlice: { offset: 0, length: 0 },
       filters: [
         {
           memcmp: {
@@ -136,6 +139,94 @@ export class ManifestClient {
     });
 
     return accounts.map((a) => a.pubkey);
+  }
+
+  /**
+   * List all Manifest markets that match base and quote mint. If useApi, then
+   * this call uses the manifest stats server instead of the heavy
+   * getProgramAccounts RPC call.
+   *
+   * @param connection Connection
+   * @param baseMint PublicKey
+   * @param quoteMint PublicKey
+   * @param useApi boolean
+   * @returns PublicKey[]
+   */
+  public static async listMarketsForMints(
+    connection: Connection,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    useApi?: boolean,
+  ): Promise<PublicKey[]> {
+    if (useApi) {
+      const responseJson = (await (
+        await fetch('https://mfx-stats-mainnet.fly.dev/tickers')
+      ).json()) as any[];
+      const tickers: PublicKey[] = responseJson
+        .filter((ticker) => {
+          return (
+            ticker.base_currency == baseMint.toBase58() &&
+            ticker.target_currency == quoteMint.toBase58()
+          );
+        })
+        .map((ticker) => {
+          return new PublicKey(ticker.ticker_id);
+        });
+      return tickers;
+    }
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+      dataSlice: { offset: 0, length: 0 },
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: marketDiscriminator.toString('base64'),
+            encoding: 'base64',
+          },
+        },
+        {
+          memcmp: {
+            offset: 16,
+            bytes: baseMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+        {
+          memcmp: {
+            offset: 48,
+            bytes: quoteMint.toBase58(),
+            encoding: 'base58',
+          },
+        },
+      ],
+    });
+
+    return accounts.map((a) => a.pubkey);
+  }
+
+  /**
+   * Get all market program accounts. This is expensive RPC load..
+   *
+   * @param connection Connection
+   * @returns GetProgramAccountsResponse
+   */
+  public static async getMarketProgramAccounts(
+    connection: Connection,
+  ): Promise<GetProgramAccountsResponse> {
+    const accounts: GetProgramAccountsResponse =
+      await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [
+          {
+            memcmp: {
+              offset: 0,
+              bytes: marketDiscriminator.toString('base64'),
+              encoding: 'base64',
+            },
+          },
+        ],
+      });
+
+    return accounts;
   }
 
   /**
@@ -158,8 +249,20 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+    const baseMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(baseMintPk))!;
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo.owner,
+    );
+    const quoteMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(quoteMintPk))!;
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo.owner,
+    );
     const baseGlobal: Global | null = await Global.loadFromAddress({
       connection,
       address: getGlobalAddress(baseMint.address),
@@ -386,8 +489,20 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
+    const baseMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(baseMintPk))!;
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo.owner,
+    );
+    const quoteMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(quoteMintPk))!;
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo.owner,
+    );
 
     const userWrapper = await ManifestClient.fetchFirstUserWrapper(
       connection,
@@ -430,12 +545,14 @@ export class ManifestClient {
    *
    * @param connection Connection
    * @param marketPk PublicKey of the market
+   * @param trader PublicKey for trader whose wrapper to fetch
    *
    * @returns ManifestClient
    */
   public static async getClientReadOnly(
     connection: Connection,
     marketPk: PublicKey,
+    trader?: PublicKey,
   ): Promise<ManifestClient> {
     const marketObject: Market = await Market.loadFromAddress({
       connection: connection,
@@ -443,20 +560,62 @@ export class ManifestClient {
     });
     const baseMintPk: PublicKey = marketObject.baseMint();
     const quoteMintPk: PublicKey = marketObject.quoteMint();
-    const baseMint: Mint = await getMint(connection, baseMintPk);
-    const quoteMint: Mint = await getMint(connection, quoteMintPk);
-    const baseGlobal: Global | null = await Global.loadFromAddress({
-      connection,
-      address: getGlobalAddress(baseMint.address),
-    });
-    const quoteGlobal: Global | null = await Global.loadFromAddress({
-      connection,
-      address: getGlobalAddress(quoteMint.address),
-    });
+    const baseGlobalPk: PublicKey = getGlobalAddress(baseMintPk);
+    const quoteGlobalPk: PublicKey = getGlobalAddress(quoteMintPk);
+
+    const [
+      baseMintAccountInfo,
+      quoteMintAccountInfo,
+      baseGlobalAccountInfo,
+      quoteGlobalAccountInfo,
+    ]: (AccountInfo<Buffer> | null)[] =
+      await connection.getMultipleAccountsInfo([
+        baseMintPk,
+        quoteMintPk,
+        baseGlobalPk,
+        quoteGlobalPk,
+      ]);
+
+    const baseMint: Mint = unpackMint(
+      baseMintPk,
+      baseMintAccountInfo,
+      baseMintAccountInfo!.owner,
+    );
+    const quoteMint: Mint = unpackMint(
+      quoteMintPk,
+      quoteMintAccountInfo,
+      quoteMintAccountInfo!.owner,
+    );
+
+    // Global accounts are optional
+    const baseGlobal: Global | null =
+      baseGlobalAccountInfo &&
+      Global.loadFromBuffer({
+        address: baseGlobalPk,
+        buffer: baseGlobalAccountInfo.data,
+      });
+    const quoteGlobal: Global | null =
+      quoteGlobalAccountInfo &&
+      Global.loadFromBuffer({
+        address: quoteGlobalPk,
+        buffer: quoteGlobalAccountInfo.data,
+      });
+
+    let wrapper: Wrapper | null = null;
+    if (trader != null) {
+      const userWrapper: WrapperResponse | null =
+        await ManifestClient.fetchFirstUserWrapper(connection, trader);
+      if (userWrapper) {
+        wrapper = Wrapper.loadFromBuffer({
+          address: userWrapper.pubkey,
+          buffer: userWrapper.account.data,
+        });
+      }
+    }
 
     return new ManifestClient(
       connection,
-      null,
+      wrapper,
       marketObject,
       null,
       baseMint,
@@ -464,6 +623,132 @@ export class ManifestClient {
       baseGlobal,
       quoteGlobal,
     );
+  }
+
+  /**
+   * Initializes a ReadOnlyClient for each Market the trader has a seat on.
+   * This has been optimized to be as light on the RPC as possible but it is
+   * still using getProgramAccounts. caution: this is a heavy call.
+   *
+   * @param connection Connection
+   * @param trader PublicKey
+   * @returns ManifestClient[]
+   */
+  public static async getClientsReadOnlyForAllTraderSeats(
+    connection: Connection,
+    trader: PublicKey,
+  ): Promise<ManifestClient[]> {
+    const marketAccountResponse = await connection.getProgramAccounts(
+      PROGRAM_ID,
+      {
+        filters: [
+          {
+            memcmp: {
+              offset: 0,
+              bytes: marketDiscriminator.toString('base64'),
+              encoding: 'base64',
+            },
+          },
+        ],
+        withContext: true,
+      },
+    );
+
+    const markets: Market[] = marketAccountResponse.value.map((m) =>
+      Market.loadFromBuffer({
+        address: m.pubkey,
+        buffer: m.account.data,
+        slot: marketAccountResponse.context.slot,
+      }),
+    );
+    const marketsForTrader: Market[] = markets.filter((m) => m.hasSeat(trader));
+
+    const baseMintPks: string[] = marketsForTrader.map((m) =>
+      m.baseMint().toString(),
+    );
+    const quoteMintPks: string[] = marketsForTrader.map((m) =>
+      m.quoteMint().toString(),
+    );
+    const baseGlobalPks: string[] = marketsForTrader.map((m) =>
+      getGlobalAddress(m.baseMint()).toString(),
+    );
+    const quoteGlobalPks: string[] = marketsForTrader.map((m) =>
+      getGlobalAddress(m.quoteMint()).toString(),
+    );
+
+    // ensure every account is only fetched once
+    const allAisFetched: { [pk: string]: AccountInfo<Buffer> | null } = {};
+    const allPksToFetch: string[] = [
+      ...new Set([
+        ...baseMintPks,
+        ...quoteMintPks,
+        ...baseGlobalPks,
+        ...quoteGlobalPks,
+      ]),
+    ];
+    const mutableCopy = Array.from(allPksToFetch);
+    while (mutableCopy.length > 0) {
+      const batchPks: string[] = mutableCopy.splice(0, 100);
+      const batchAis = await connection.getMultipleAccountsInfoAndContext(
+        batchPks.map((a) => new PublicKey(a)),
+      );
+      batchAis.value.forEach((ai, i) => (allAisFetched[batchPks[i]] = ai));
+    }
+
+    let wrapper: Wrapper | null = null;
+    if (trader != null) {
+      const userWrapper: WrapperResponse | null =
+        await ManifestClient.fetchFirstUserWrapper(connection, trader);
+      if (userWrapper) {
+        wrapper = Wrapper.loadFromBuffer({
+          address: userWrapper.pubkey,
+          buffer: userWrapper.account.data,
+        });
+      }
+    }
+
+    return marketsForTrader.map((m, i) => {
+      const baseMintAccountInfo = allAisFetched[baseMintPks[i]];
+      const quoteMintAccountInfo = allAisFetched[quoteMintPks[i]];
+      const baseGlobalAccountInfo = allAisFetched[baseGlobalPks[i]];
+      const quoteGlobalAccountInfo = allAisFetched[quoteGlobalPks[i]];
+
+      const baseMint: Mint = unpackMint(
+        m.baseMint(),
+        baseMintAccountInfo,
+        baseMintAccountInfo!.owner,
+      );
+      const quoteMint: Mint = unpackMint(
+        m.quoteMint(),
+        quoteMintAccountInfo,
+        quoteMintAccountInfo!.owner,
+      );
+
+      // Global accounts are optional
+      const baseGlobal: Global | null =
+        baseGlobalAccountInfo &&
+        Global.loadFromBuffer({
+          address: new PublicKey(baseGlobalPks[i]),
+          buffer: baseGlobalAccountInfo.data,
+        });
+      const quoteGlobal: Global | null =
+        quoteGlobalAccountInfo &&
+        Global.loadFromBuffer({
+          address: new PublicKey(quoteGlobalPks[i]),
+          buffer: quoteGlobalAccountInfo.data,
+        });
+
+      return new ManifestClient(
+        connection,
+        wrapper,
+        m,
+        null,
+        baseMint,
+        quoteMint,
+        baseGlobal,
+        quoteGlobal,
+      );
+    });
   }
 
   /**
@@ -538,13 +823,15 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      mint,
-      payer,
-    );
     const is22: boolean =
       (mint.equals(this.baseMint.address) && this.isBase22) ||
       (mint.equals(this.quoteMint.address) && this.isQuote22);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      mint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
@@ -588,13 +875,15 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const vault: PublicKey = getVaultAddress(this.market.address, mint);
-    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
-      mint,
-      payer,
-    );
     const is22: boolean =
       (mint.equals(this.baseMint.address) && this.isBase22) ||
       (mint.equals(this.quoteMint.address) && this.isQuote22);
+    const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
+      mint,
+      payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+    );
     const mintDecimals =
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
@@ -663,15 +952,18 @@ export class ManifestClient {
   /**
    * PlaceOrder instruction
    *
-   * @param params PlaceOrderParamsExternal including all the information for
-   * placing an order like amount, price, ordertype, ... This is called external
-   * because to avoid conflicts with the autogenerated version which has
-   * problems with expressing some of the parameters.
+   * @param params WrapperPlaceOrderParamsExternal | WrapperPlaceOrderReverseParamsExternal
+   * including all the information for placing an order like amount, price,
+   * ordertype, ... This is called external because to avoid conflicts with the
+   * autogenerated version which has problems with expressing some of the
+   * parameters. The reverse type has a spreadBps field instead of lastValidSlot.
    *
    * @returns TransactionInstruction
    */
   public placeOrderIx(
-    params: WrapperPlaceOrderParamsExternal,
+    params:
+      | WrapperPlaceOrderParamsExternal
+      | WrapperPlaceOrderReverseParamsExternal,
   ): TransactionInstruction {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
@@ -763,16 +1055,19 @@ export class ManifestClient {
    * or quote tokens if not in the withdrawable balances.
    *
    * @param payer PublicKey of the trader
-   * @param params WrapperPlaceOrderParamsExternal including all the information for
-   * placing an order like amount, price, ordertype, ... This is called external
-   * because to avoid conflicts with the autogenerated version which has
-   * problems with expressing some of the parameters.
+   * @param params WrapperPlaceOrderParamsExternal | WrapperPlaceOrderReverseParamsExternal
+   * including all the information for placing an order like amount, price,
+   * ordertype, ... This is called external because to avoid conflicts with the
+   * autogenerated version which has problems with expressing some of the
+   * parameters. The reverse type has a spreadBps field instead of lastValidSlot.
    *
    * @returns TransactionInstruction[]
    */
-  public async placeOrderWithRequiredDepositIx(
+  public async placeOrderWithRequiredDepositIxs(
     payer: PublicKey,
-    params: WrapperPlaceOrderParamsExternal,
+    params:
+      | WrapperPlaceOrderParamsExternal
+      | WrapperPlaceOrderReverseParamsExternal,
   ): Promise<TransactionInstruction[]> {
     const placeOrderIx: TransactionInstruction = this.placeOrderIx(params);
 
@@ -848,10 +1143,14 @@ export class ManifestClient {
     const traderBase: PublicKey = getAssociatedTokenAddressSync(
       this.baseMint.address,
       payer,
+      true,
+      this.isBase22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const traderQuote: PublicKey = getAssociatedTokenAddressSync(
       this.quoteMint.address,
       payer,
+      true,
+      this.isQuote22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const baseVault: PublicKey = getVaultAddress(
       this.market.address,
@@ -901,10 +1200,60 @@ export class ManifestClient {
     );
   }
 
+  public getSwapAltPks(): Set<string> {
+    const pks = new Set<string>();
+
+    pks.add(MANIFEST_PROGRAM_ID.toString());
+    pks.add(SystemProgram.programId.toString());
+    pks.add(this.market.address.toString());
+    if (this.isBase22) {
+      pks.add(this.baseMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+    if (this.isQuote22) {
+      pks.add(this.quoteMint.address.toString());
+      pks.add(TOKEN_2022_PROGRAM_ID.toString());
+    } else {
+      pks.add(TOKEN_PROGRAM_ID.toString());
+    }
+
+    const baseVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.baseMint.address,
+    );
+    pks.add(baseVault.toString());
+
+    const quoteVault: PublicKey = getVaultAddress(
+      this.market.address,
+      this.quoteMint.address,
+    );
+    pks.add(quoteVault.toString());
+
+    const baseGlobal: PublicKey = getGlobalAddress(this.baseMint.address);
+    pks.add(baseGlobal.toString());
+
+    const quoteGlobal: PublicKey = getGlobalAddress(this.quoteMint.address);
+    pks.add(quoteGlobal.toString());
+
+    const baseGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
+    pks.add(baseGlobalVault.toString());
+
+    const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
+      this.baseMint.address,
+    );
+    pks.add(quoteGlobalVault.toString());
+
+    return pks;
+  }
+
   /**
    * CancelOrder instruction
    *
-   * @param params CancelOrderParams includes the orderSequenceNumber of the
+   * @param params WrapperCancelOrderParams includes the clientOrderId of the
    * order to cancel.
    *
    * @returns TransactionInstruction
@@ -938,13 +1287,21 @@ export class ManifestClient {
   /**
    * BatchUpdate instruction
    *
-   * @param params CancelOrderParams includes the orderSequenceNumber of the
+   * @param placeParams (WrapperPlaceOrderParamsExternal | WrapperPlaceOrderReverseParamsExternal)[]
+   * including all the information for placing an order like amount, price,
+   * ordertype, ... This is called external because to avoid conflicts with the
+   * autogenerated version which has problems with expressing some of the
+   * parameters. The reverse type has a spreadBps field instead of lastValidSlot.
+   * @param params WrapperCancelOrderParams[] includes the clientOrderId of the
    * order to cancel.
    *
    * @returns TransactionInstruction
    */
   public batchUpdateIx(
-    placeParams: WrapperPlaceOrderParamsExternal[],
+    placeParams: (
+      | WrapperPlaceOrderParamsExternal
+      | WrapperPlaceOrderReverseParamsExternal
+    )[],
     cancelParams: WrapperCancelOrderParams[],
     cancelAll: boolean,
   ): TransactionInstruction {
@@ -952,12 +1309,20 @@ export class ManifestClient {
       throw new Error('Read only');
     }
     const baseGlobalRequired: boolean = placeParams.some(
-      (placeParams: WrapperPlaceOrderParamsExternal) => {
+      (
+        placeParams:
+          | WrapperPlaceOrderParamsExternal
+          | WrapperPlaceOrderReverseParamsExternal,
+      ) => {
         return !placeParams.isBid && placeParams.orderType == OrderType.Global;
       },
     );
     const quoteGlobalRequired: boolean = placeParams.some(
-      (placeParams: WrapperPlaceOrderParamsExternal) => {
+      (
+        placeParams:
+          | WrapperPlaceOrderParamsExternal
+          | WrapperPlaceOrderReverseParamsExternal,
+      ) => {
         return placeParams.isBid && placeParams.orderType == OrderType.Global;
       },
     );
@@ -973,8 +1338,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1007,8 +1376,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1041,8 +1414,12 @@ export class ManifestClient {
           params: {
             cancels: cancelParams,
             cancelAll,
-            orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-              toWrapperPlaceOrderParams(this.market, params),
+            orders: placeParams.map(
+              (
+                params:
+                  | WrapperPlaceOrderParamsExternal
+                  | WrapperPlaceOrderReverseParamsExternal,
+              ) => toWrapperPlaceOrderParams(this.market, params),
             ),
           },
         },
@@ -1090,8 +1467,12 @@ export class ManifestClient {
         params: {
           cancels: cancelParams,
           cancelAll,
-          orders: placeParams.map((params: WrapperPlaceOrderParamsExternal) =>
-            toWrapperPlaceOrderParams(this.market, params),
+          orders: placeParams.map(
+            (
+              params:
+                | WrapperPlaceOrderParamsExternal
+                | WrapperPlaceOrderReverseParamsExternal,
+            ) => toWrapperPlaceOrderParams(this.market, params),
           ),
         },
       },
@@ -1099,7 +1480,11 @@ export class ManifestClient {
   }
 
   /**
-   * CancelAll instruction. Cancels all orders on a market
+   * CancelAll instruction. Cancels all orders on a market. This is discouraged
+   * outside of circuit breaker usage because it is less efficient and does not
+   * cancel global cleanly. Use batchUpdate instead. This also does not cancel
+   * any orders not placed through the wrapper, which includes reverse orders
+   * that were reversed.
    *
    * @returns TransactionInstruction
    */
@@ -1125,6 +1510,240 @@ export class ManifestClient {
         },
       },
     );
+  }
+
+  /**
+   * CancelAllOnCore instruction. Cancels all orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelAllOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const openOrders: RestingOrder[] = this.market.openOrders();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const openOrder of openOrders) {
+      if (openOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = openOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    if (ordersToCancel.length === 0) {
+      return [];
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+            baseMint: this.baseMint.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
+  }
+
+  /**
+   * CancelBidsOnCore instruction. Cancels all bid orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelBidsOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const bidOrders: RestingOrder[] = this.market.bidsL2();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const bidOrder of bidOrders) {
+      if (bidOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = bidOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    if (ordersToCancel.length === 0) {
+      return [];
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+            baseMint: this.baseMint.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
+  }
+
+  /**
+   * CancelAsksOnCore instruction. Cancels all ask orders on a market directly on the core program,
+   * including reverse orders and global orders with rent prepayment.
+   *
+   * @returns TransactionInstruction[]
+   */
+  public async cancelAsksOnCoreIx(): Promise<TransactionInstruction[]> {
+    if (!this.payer) {
+      throw new Error('Read only');
+    }
+
+    const askOrders: RestingOrder[] = this.market.asksL2();
+    const ordersToCancel: {
+      orderSequenceNumber: bignum;
+      orderIndexHint: null;
+    }[] = [];
+
+    for (const askOrder of askOrders) {
+      if (askOrder.trader.toBase58() === this.payer.toBase58()) {
+        const seqNum: bignum = askOrder.sequenceNumber;
+        ordersToCancel.push({
+          orderSequenceNumber: seqNum,
+          orderIndexHint: null,
+        });
+      }
+    }
+
+    if (ordersToCancel.length === 0) {
+      return [];
+    }
+
+    const MAX_CANCELS_PER_BATCH = 25;
+    const cancelInstructions: TransactionInstruction[] = [];
+
+    for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
+      const batchOfCancels = ordersToCancel.slice(i, i + MAX_CANCELS_PER_BATCH);
+
+      const batchedCancelInstruction: TransactionInstruction =
+        createBatchUpdateCoreInstruction(
+          {
+            payer: this.payer,
+            market: this.market.address,
+            baseMint: this.baseMint.address,
+            baseGlobal: getGlobalAddress(this.baseMint.address),
+            baseGlobalVault: getGlobalVaultAddress(this.baseMint.address),
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            baseMarketVault: getVaultAddress(
+              this.market.address,
+              this.baseMint.address,
+            ),
+            quoteMint: this.quoteMint.address,
+            quoteGlobal: getGlobalAddress(this.quoteMint.address),
+            quoteGlobalVault: getGlobalVaultAddress(this.quoteMint.address),
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+            quoteMarketVault: getVaultAddress(
+              this.market.address,
+              this.quoteMint.address,
+            ),
+          },
+          {
+            params: {
+              cancels: batchOfCancels,
+              orders: [],
+              traderIndexHint: null,
+            },
+          },
+        );
+
+      cancelInstructions.push(batchedCancelInstruction);
+    }
+
+    return cancelInstructions;
   }
 
   /**
@@ -1154,7 +1773,7 @@ export class ManifestClient {
     await this.market.reload(this.connection);
     const withdrawAllIx = this.withdrawAllIx();
     const withdrawAllTx = new Transaction();
-    const wihdrawAllSig = await sendAndConfirmTransaction(
+    const withdrawAllSig = await sendAndConfirmTransaction(
       this.connection,
       withdrawAllTx.add(...withdrawAllIx),
       [payerKeypair],
@@ -1163,7 +1782,7 @@ export class ManifestClient {
         commitment: 'confirmed',
       },
     );
-    return [cancelAllSig, wihdrawAllSig];
+    return [cancelAllSig, withdrawAllSig];
   }
 
   /**
@@ -1182,8 +1801,14 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const global: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
     return createGlobalCreateInstruction({
       payer,
       global,
@@ -1231,13 +1856,21 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const globalAddress: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
       globalMint,
       payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
-    const mintDecimals = mintInfo.decimals;
+    const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
     return createGlobalDepositInstruction(
@@ -1275,13 +1908,21 @@ export class ManifestClient {
   ): Promise<TransactionInstruction> {
     const globalAddress: PublicKey = getGlobalAddress(globalMint);
     const globalVault: PublicKey = getGlobalVaultAddress(globalMint);
+    const globalMintAccountInfo: AccountInfo<Buffer> =
+      (await connection.getAccountInfo(globalMint))!;
+    const mint: Mint = unpackMint(
+      globalMint,
+      globalMintAccountInfo,
+      globalMintAccountInfo.owner,
+    );
+    const is22: boolean = mint.tlvData.length > 0;
     const traderTokenAccount: PublicKey = getAssociatedTokenAddressSync(
       globalMint,
       payer,
+      true,
+      is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
-    const mintInfo: Mint = await getMint(connection, globalMint);
-    const is22: boolean = mintInfo.tlvData.length > 0;
-    const mintDecimals = mintInfo.decimals;
+    const mintDecimals = mint.decimals;
     const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
 
     return createGlobalWithdrawInstruction(
@@ -1312,8 +1953,29 @@ export type WrapperPlaceOrderParamsExternal = {
   tokenPrice: number;
   /** Boolean for whether this order is on the bid side. */
   isBid: boolean;
-  /** Last slot before this order is invalid and will be removed. */
+  /** Last slot before this order is invalid and will be removed. If below
+   * 10_000_000, then will be treated as slots in force when it lands in the
+   * wrapper onchain.
+   */
   lastValidSlot: number;
+  /** Type of order (Limit, PostOnly, ...). */
+  orderType: OrderType;
+  /** Client order id used for cancelling orders. Does not need to be unique. */
+  clientOrderId: bignum;
+};
+
+/**
+ * Same as the autogenerated WrapperPlaceOrderParamsExternal except lastValidSlot is spread.
+ */
+export type WrapperPlaceOrderReverseParamsExternal = {
+  /** Number of base tokens in the order. */
+  numBaseTokens: number;
+  /** Price as float in quote tokens per base tokens. */
+  tokenPrice: number;
+  /** Boolean for whether this order is on the bid side. */
+  isBid: boolean;
+  /** Spread in bps. Can be between 0 and 6553 in increments of .1 */
+  spreadBps: number;
   /** Type of order (Limit, PostOnly, ...). */
   orderType: OrderType;
   /** Client order id used for cancelling orders. Does not need to be unique. */
@@ -1322,8 +1984,17 @@ export type WrapperPlaceOrderParamsExternal = {
 
 function toWrapperPlaceOrderParams(
   market: Market,
-  wrapperPlaceOrderParamsExternal: WrapperPlaceOrderParamsExternal,
+  wrapperPlaceOrderParamsExternal:
+    | WrapperPlaceOrderParamsExternal
+    | WrapperPlaceOrderReverseParamsExternal,
 ): WrapperPlaceOrderParams {
+  // Convert spread bps to 10^-5.
+  if ('spreadBps' in wrapperPlaceOrderParamsExternal) {
+    wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(
+      wrapperPlaceOrderParamsExternal['spreadBps'] * 10,
+    );
+  }
+
   const quoteAtomsPerToken = 10 ** market.quoteDecimals();
   const baseAtomsPerToken = 10 ** market.baseDecimals();
   // Converts token price to atom price since not always equal
@@ -1339,7 +2010,7 @@ function toWrapperPlaceOrderParams(
   );
 
   return {
-    ...wrapperPlaceOrderParamsExternal,
+    ...(wrapperPlaceOrderParamsExternal as WrapperPlaceOrderParamsExternal),
     baseAtoms: numBaseAtoms,
     priceMantissa,
     priceExponent,

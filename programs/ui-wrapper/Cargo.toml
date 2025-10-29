@@ -1,6 +1,6 @@
 [package]
 name = "ui-wrapper"
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
 repository = "https://github.com/CKS-systems/manifest"
 authors = ["Maximilian Schneider <max@mango.markets>"]
@@ -15,11 +15,11 @@ name = "ui_wrapper"
 no-entrypoint = []
 cpi = ["no-entrypoint"]
 default = ["trace"] 
-trace = [ "hypertree/fuzz", "hypertree/trace", "manifest/trace" ]
+trace = [ "hypertree/fuzz", "hypertree/trace", "manifest-dex/trace" ]
 test = []
 
 [dependencies]
-manifest = { path = "../manifest", features = ["no-entrypoint"]  }
+manifest-dex = { path = "../manifest", features = ["no-entrypoint"]  }
 hypertree = { path = "../../lib" }
 # Cannot use workspace because the generator needs to see a version here
 shank = "0.4.2"
