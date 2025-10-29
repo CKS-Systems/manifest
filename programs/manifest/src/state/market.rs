@@ -1882,9 +1882,9 @@ pub fn create_empty_market(
     market_key: &Pubkey,
 ) -> MarketFixed {
     // Values on the mints are not important.
-    use std::{cell::RefCell, rc::Rc, str::FromStr};
     use solana_program::account_info::AccountInfo;
     use spl_token_2022::state::Mint;
+    use std::{cell::RefCell, rc::Rc, str::FromStr};
     let mut lamports: u64 = 0;
     let base_mint: MintAccountInfo = MintAccountInfo {
         mint: Mint {
