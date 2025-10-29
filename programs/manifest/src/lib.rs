@@ -42,7 +42,7 @@ security_txt! {
     policy: "",
     preferred_languages: "en",
     source_code: "https://github.com/CKS-Systems/manifest",
-    auditors: "Certora"
+    auditors: "Certora",
     formal_verification: "https://manifest.trade/audit.pdf"
 }
 
