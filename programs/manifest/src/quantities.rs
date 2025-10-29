@@ -705,6 +705,7 @@ fn test_price_limits() {
     assert!(QuoteAtomsPerBaseAtom::try_from(1f64 / 0f64).is_err());
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Default, Debug)]
 #[repr(C)]
 struct AlignmentTest {
