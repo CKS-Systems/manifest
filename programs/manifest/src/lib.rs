@@ -8,6 +8,11 @@ pub mod state;
 pub mod utils;
 pub mod validation;
 
+// re-export dependencies to allow easy access in dependent packages
+pub mod deps {
+    pub use hypertree::hypertree;
+}
+
 #[cfg(feature = "certora")]
 pub mod certora;
 

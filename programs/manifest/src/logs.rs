@@ -16,7 +16,6 @@ use crate::{
 /// because the goal of this program is to minimize the number of input
 /// accounts, so including the signer for the self CPI is not worth it.
 /// Also, be compatible with anchor parsing clients.
-
 #[cfg(not(feature = "certora"))]
 #[inline(never)] // ensure fresh stack frame
 pub fn emit_stack<T: bytemuck::Pod + Discriminant>(e: T) -> Result<(), ProgramError> {

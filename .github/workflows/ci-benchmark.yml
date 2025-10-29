@@ -55,7 +55,7 @@ jobs:
       - run: rustup toolchain update nightly && rustup default nightly
 
       - name: Run benchmark
-        run: cd $GITHUB_WORKSPACE/manifest-private; sh benchmarking/benchmark.sh
+        run: cd $GITHUB_WORKSPACE/manifest-private; ./benchmarking/benchmark.sh
 
       - name: Move benchmark results
         run: |

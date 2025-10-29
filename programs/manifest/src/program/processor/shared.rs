@@ -106,6 +106,7 @@ fn expand_dynamic<'a, 'info, T: ManifestAccount + Pod + Clone>(
     }
     #[cfg(not(feature = "fuzz"))]
     {
+        #[allow(deprecated)]
         expandable_account.realloc(new_size, false)?;
     }
     Ok(())
@@ -147,6 +148,17 @@ pub fn get_mut_dynamic_account<'a, T: Get>(
 
     let dynamic_account: DynamicAccount<&'a mut T, &'a mut [u8]> =
         DynamicAccount { fixed, dynamic };
+    dynamic_account
+}
+
+pub fn get_dynamic_ref<T: Get>(data: &[u8]) -> DynamicAccount<&'_ T, &'_ [u8]> {
+    let (fixed_data, dynamic_data) = data.split_at(size_of::<T>());
+    let market_fixed: &T = get_helper::<T>(fixed_data, 0_u32);
+
+    let dynamic_account: DynamicAccount<&T, &[u8]> = DynamicAccount {
+        fixed: market_fixed,
+        dynamic: dynamic_data,
+    };
     dynamic_account
 }
 
