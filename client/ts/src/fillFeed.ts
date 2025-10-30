@@ -269,7 +269,7 @@ export class FillFeed {
 }
 
 // 2 orders / tx * 2 / seconds * 60 seconds * 3 minutes = 720
-const LAST_ORDER_LOOKBACK_LIMIT = 360;
+const LAST_ORDER_LOOKBACK_LIMIT = 720;
 
 function parseLE(buf: Uint8Array): bigint {
   let result = 0n
