@@ -43,7 +43,7 @@ pub(crate) fn process_claim_seat(
     let wrapper_state: WrapperStateAccountInfo =
         WrapperStateAccountInfo::new(next_account_info(account_iter)?)?;
     check_signer(&wrapper_state, owner.key);
-    
+
     // Lookup if the trader already has a seat. This will prevent failing when
     // they already had a seat on a different wrapper.
     let trader_index: DataIndex = {
