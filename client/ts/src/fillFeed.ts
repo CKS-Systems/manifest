@@ -3,14 +3,19 @@ import {
   Connection,
   ConfirmedSignatureInfo,
   VersionedTransactionResponse,
+  Finality,
+  PublicKey,
+  MessageCompiledInstruction,
 } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
-import { PROGRAM_ID } from './manifest';
+import { PlaceOrderLog, PROGRAM_ID } from './manifest';
 import { convertU128 } from './utils/numbers';
 import { genAccDiscriminator } from './utils/discriminator';
 import * as promClient from 'prom-client';
 import { FillLogResult } from './types';
+
+const commitment: Finality = 'confirmed';
 
 // For live monitoring of the fill feed. For a more complete look at fill
 // history stats, need to index all trades.
@@ -28,6 +33,7 @@ export class FillFeed {
   private shouldEnd: boolean = false;
   private ended: boolean = false;
   private lastUpdateUnix: number = Date.now();
+  private lastPlacedOrders: {landedSlot: number, localSlot: number, localTimeUs: bigint, order: PlaceOrderLog}[] = [];
 
   constructor(private connection: Connection) {
     this.wss = new WebSocket.Server({ port: 1234 });
@@ -79,7 +85,7 @@ export class FillFeed {
       await this.connection.getSignaturesForAddress(
         PROGRAM_ID,
         { limit: 1 },
-        'finalized',
+        commitment,
       )
     )[0];
     let lastSignature: string | undefined = lastSignatureStatus.signature;
@@ -99,7 +105,7 @@ export class FillFeed {
           {
             until: lastSignature,
           },
-          'finalized',
+          commitment,
         );
       // Flip it so we do oldest first.
       signatures.reverse();
@@ -157,6 +163,7 @@ export class FillFeed {
     console.log('Handling', signature.signature, 'slot', signature.slot);
     const tx = await this.connection.getTransaction(signature.signature, {
       maxSupportedTransactionVersion: 0,
+      commitment
     });
     if (!tx?.meta?.logMessages) {
       console.log('No log messages');
@@ -197,39 +204,83 @@ export class FillFeed {
       return;
     }
 
+    // TODO: parse wood output
     for (const programDataEntry of programDatas) {
       const programData = programDataEntry.split(' ')[2];
       const byteArray: Uint8Array = Uint8Array.from(atob(programData), (c) =>
         c.charCodeAt(0),
       );
       const buffer = Buffer.from(byteArray);
-      if (!buffer.subarray(0, 8).equals(fillDiscriminant)) {
-        continue;
+      if (buffer.subarray(0, 8).equals(fillDiscriminant)) {
+        const deserializedFillLog: FillLog = FillLog.deserialize(
+          buffer.subarray(8),
+        )[0];
+        const fillResult = toFillLogResult(
+          deserializedFillLog,
+          signature.slot,
+          signature.signature,
+          originalSigner,
+          aggregator,
+          originatingProtocol,
+        );
+        const resultString: string = JSON.stringify(fillResult);
+        console.log('Got a fill', resultString);
+        fills.inc({
+          market: deserializedFillLog.market.toString(),
+          isGlobal: deserializedFillLog.isMakerGlobal.toString(),
+          takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
+        });
+        this.wss.clients.forEach((client) => {
+          client.send(JSON.stringify(fillResult));
+        });
       }
-      const deserializedFillLog: FillLog = FillLog.deserialize(
-        buffer.subarray(8),
-      )[0];
-      const fillResult = toFillLogResult(
-        deserializedFillLog,
-        signature.slot,
-        signature.signature,
-        originalSigner,
-        aggregator,
-        originatingProtocol,
-      );
-      const resultString: string = JSON.stringify(fillResult);
-      console.log('Got a fill', resultString);
-      fills.inc({
-        market: deserializedFillLog.market.toString(),
-        isGlobal: deserializedFillLog.isMakerGlobal.toString(),
-        takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
-      });
-      this.wss.clients.forEach((client) => {
-        client.send(JSON.stringify(fillResult));
-      });
+      if (buffer.subarray(0, 8).equals(placeOrderDiscriminant)) {
+        const deserializedPlaceOrderLog: PlaceOrderLog = PlaceOrderLog.deserialize(
+          buffer.subarray(8),
+        )[0];
+        if (originatingProtocol !== "wood") {
+          continue;
+        }
+
+        // TODO: do this once and not on every log line
+        let noopIx: MessageCompiledInstruction | undefined = tx
+          .transaction
+          .message
+          .compiledInstructions
+          .find(ix => tx.transaction.message.staticAccountKeys[ix.programIdIndex] == NOOP_PROGRAM_ID);
+        if (!noopIx) {
+          continue;
+        }
+        let localSlot: number = Number(parseLE(noopIx.data.slice(0, 4)));
+        let localTimeUs: bigint = parseLE(noopIx.data.slice(4, 12));
+
+
+
+        let landedSlot: number = tx.slot;
+
+        if (this.lastPlacedOrders.length > LAST_ORDER_LOOKBACK_LIMIT) {
+          this.lastPlacedOrders.shift();
+        }
+        this.lastPlacedOrders.push({landedSlot, localSlot, localTimeUs, order: deserializedPlaceOrderLog});
+      }
+
     }
   }
 }
+
+// 2 orders / tx * 2 / seconds * 60 seconds * 3 minutes = 720
+const LAST_ORDER_LOOKBACK_LIMIT = 360;
+
+function parseLE(buf: Uint8Array): bigint {
+  let result = 0n
+  for (const i of buf.values()) {
+    const bi = BigInt(i)
+    result = (result << 8n) + bi
+  }
+  return result;
+}
+
+
 
 function detectAggregator(
   tx: VersionedTransactionResponse,
@@ -306,39 +357,27 @@ function detectAggregator(
   return undefined;
 }
 
+const KAMINO_PROGRAM_ID = new PublicKey('LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF');
+const CABANA_PROGRAM_ID = new PublicKey('UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh');
+const WOOD_PROGRAM_ID = new PublicKey('WoodSpirdg3uQQukbf9tx29xP2TNTjjskwWf9KcPSZ5');
+const NOOP_PROGRAM_ID = new PublicKey('noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV');
 function detectOriginatingProtocol(
   tx: VersionedTransactionResponse,
 ): string | undefined {
   // Look for known originating protocol program IDs in the transaction accounts
-  const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
-  const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
 
   try {
-    const message = tx.transaction.message;
+    for (const account of tx.transaction.message.staticAccountKeys) {
+      if (account === KAMINO_PROGRAM_ID) {
+        return 'kamino';
+      }
+      if (account === CABANA_PROGRAM_ID) {
+        return 'cabana';
+      }
+      if (account === WOOD_PROGRAM_ID) {
+        return 'wood';
+      }
 
-    // Handle both legacy and versioned transactions
-    if ('accountKeys' in message) {
-      // Legacy transaction
-      for (const account of message.accountKeys) {
-        const accountKey = account.toBase58();
-        if (accountKey === KAMINO_PROGRAM_ID) {
-          return 'kamino';
-        }
-        if (accountKey === CABANA_PROGRAM_ID) {
-          return 'cabana';
-        }
-      }
-    } else {
-      // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
-      for (const account of message.staticAccountKeys) {
-        const accountKey = account.toBase58();
-        if (accountKey === KAMINO_PROGRAM_ID) {
-          return 'kamino';
-        }
-        if (accountKey === CABANA_PROGRAM_ID) {
-          return 'cabana';
-        }
-      }
     }
   } catch (error) {
     console.warn('Error detecting originating protocol:', error);
@@ -384,3 +423,6 @@ function toFillLogResult(
 
   return result;
 }
+
+
+const placeOrderDiscriminant = genAccDiscriminator('manifest::logs::PlaceOrderLog');
