@@ -1222,11 +1222,31 @@ export class ManifestStatsServer {
    * Get Traders to be used in a leaderboard if a UI wants to.
    * Returns counts for taker/maker trades and volumes.
    */
-  getTraders(includeDebug: boolean = false) {
+  getTraders(includeDebug: boolean = false, limit: number = 500): {
+    [key: string]: {
+      taker: number;
+      maker: number;
+      takerNotionalVolume: number;
+      makerNotionalVolume: number;
+      pnl: number;
+      _debug?: any;
+    };
+  } {
     const allTraders = new Set<string>([
       ...Array.from(this.traderNumTakerTrades.keys()),
       ...Array.from(this.traderNumMakerTrades.keys()),
     ]);
+
+    // Sort traders by total volume to get the most active ones
+    const tradersByVolume = Array.from(allTraders)
+      .map((trader) => ({
+        trader,
+        totalVolume:
+          (this.traderTakerNotionalVolume.get(trader) || 0) +
+          (this.traderMakerNotionalVolume.get(trader) || 0),
+      }))
+      .sort((a, b) => b.totalVolume - a.totalVolume)
+      .slice(0, limit); // Only process top N traders
 
     const traderData: {
       [key: string]: {
@@ -1239,7 +1259,7 @@ export class ManifestStatsServer {
       };
     } = {};
 
-    allTraders.forEach((trader) => {
+    tradersByVolume.forEach(({ trader }) => {
       const takerNotionalVolume =
         this.traderTakerNotionalVolume.get(trader) || 0;
       const makerNotionalVolume =
@@ -1929,7 +1949,8 @@ const run = async () => {
   };
   const tradersHandler: RequestHandler = (req, res) => {
     const includeDebug = req.query.debug === 'true';
-    res.send(statsServer.getTraders(includeDebug));
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 500;
+    res.send(statsServer.getTraders(includeDebug, limit));
   };
   const recentFillsHandler: RequestHandler = (req, res) => {
     res.send(statsServer.getRecentFills(req.query.market as string));
@@ -1970,7 +1991,8 @@ const run = async () => {
   app.get('/volume', volumeHandler);
   app.get('/traders', tradersHandler);
   app.get('/traders/debug', (req, res) => {
-    res.send(statsServer.getTraders(true));
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 500;
+    res.send(statsServer.getTraders(true, limit));
   });
   app.get('/recentFills', recentFillsHandler);
   app.get('/completeFills', completeFillsHandler);
