@@ -929,7 +929,7 @@ impl<
         let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
         // Reverse orders will have their last valid slot overriden to no expiration.
-        if order_type.is_reversible() {
+        if !order_type.is_reversible() {
             assert_not_already_expired(last_valid_slot, now_slot)?;
         }
 
