@@ -984,9 +984,8 @@ async fn reverse_order_type_test() -> anyhow::Result<()> {
 #[tokio::test]
 async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
     // Default payer places reverse orders on both booksides.
-    // Sell 3@3.0015
+    // Sell 3@3
     // Spread is .005%, so the new order is top of book after fill.
-    // (3.0015 -> 3.0)
 
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
@@ -998,8 +997,8 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
         .place_order(
             Side::Ask,
             3 * SOL_UNIT_SIZE,
-            30015,
-            -4,
+            3,
+            0,
             50_000,
             OrderType::ReverseTight,
         )
@@ -1028,7 +1027,7 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
         )
         .await?;
 
-    // 10. Did not change.
+    // 10. Did not change except now due to rounding, there are extra atoms.
     assert_eq!(
         test_fixture
             .market_fixture
@@ -1052,16 +1051,16 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
     assert_eq!(first_bid.get_is_bid(), true);
     assert_eq!(
         first_bid.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3_001_349_925, -9).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(29_985, -4).unwrap()
     );
-    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 1_000_050_002);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 1_000_500_250);
 
     let first_ask: &RestingOrder = resting_orders.get(1).unwrap();
     assert_eq!(first_ask.get_is_bid(), false);
     assert_eq!(first_ask.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
     assert_eq!(
         first_ask.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(30015, -4).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3, 0).unwrap()
     );
 
     // Full fill
@@ -1080,10 +1079,10 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
     assert_eq!(resting_orders.len(), 1);
     let first_bid: &RestingOrder = resting_orders.get(0).unwrap();
     assert_eq!(first_bid.get_is_bid(), true);
-    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 3_000_150_007);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 3_001_500_750);
     assert_eq!(
         first_bid.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3_001_349_925, -9).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(29_985, -4).unwrap()
     );
     // Balance is same.
     assert_eq!(
@@ -1119,17 +1118,17 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
     // First bid is the flipped version of the first ask fully coalesced.
     // Book is bid: 4@1.5, 3@1
     assert_eq!(first_bid.get_is_bid(), true);
-    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 1_000_150_007);
+    assert_eq!(first_bid.get_num_base_atoms().as_u64(), 1_001_500_750);
     assert_eq!(
         first_bid.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3_001_349_925, -9).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(29_985, -4).unwrap()
     );
     let first_ask: &RestingOrder = resting_orders.get(1).unwrap();
     assert_eq!(first_ask.get_is_bid(), false);
     assert_eq!(first_ask.get_num_base_atoms().as_u64(), 2 * SOL_UNIT_SIZE);
     assert_eq!(
         first_ask.get_price(),
-        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(30015, -4).unwrap()
+        QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3, 0).unwrap()
     );
 
     // Maker's balances are unchanged.
