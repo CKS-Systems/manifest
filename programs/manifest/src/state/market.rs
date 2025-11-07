@@ -991,6 +991,7 @@ impl<
 
             let matched_price: QuoteAtomsPerBaseAtom = maker_order.get_price();
             let maker_reverse_price: QuoteAtomsPerBaseAtom = maker_order.reverse_price();
+            let maker_order_type: OrderType = maker_order.get_order_type();
 
             // on full fill: round in favor of the taker
             // on partial fill: round in favor of the maker
@@ -1239,7 +1240,7 @@ impl<
                         0, // Sequence number does not matter, just price
                         NO_EXPIRATION_LAST_VALID_SLOT,
                         is_bid,
-                        OrderType::Reverse,
+                        maker_order_type,
                     )?;
 
                     // Because there is a slight relaxation in matching reverse
@@ -1285,7 +1286,7 @@ impl<
                         // Does not expire.
                         NO_EXPIRATION_LAST_VALID_SLOT,
                         is_bid,
-                        OrderType::Reverse,
+                        maker_order_type,
                     )?;
                     new_reverse_resting_order.set_reverse_spread(maker_reverse_spread);
                     insert_order_into_tree(
@@ -1410,7 +1411,7 @@ impl<
             order_type,
         )?;
 
-        if order_type == OrderType::Reverse {
+        if order_type.is_reversible() {
             resting_order.set_reverse_spread(last_valid_slot as u16);
         }
 

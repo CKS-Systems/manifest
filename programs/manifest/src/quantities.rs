@@ -326,8 +326,13 @@ impl QuoteAtomsPerBaseAtom {
     }
 
     pub fn multiply_spread(self, spread_e_decimals: u32, decimals: u32) -> Self {
+        // TODO: Consider whether this needs to be even larger than a u128 for
+        // tight spread.
+        
         // Stored as u128 * 10^-26
         let inner: u128 = u64_slice_to_u128(self.inner);
+        // multiply then divide
+        // p * (spread / 10^decimals)
         let inner_e_decimals: u128 = inner.wrapping_mul(spread_e_decimals as u128);
         let new_inner: u128 = inner_e_decimals.div_ceil(10_u128.pow(decimals) as u128);
         QuoteAtomsPerBaseAtom {
