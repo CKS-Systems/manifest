@@ -170,7 +170,6 @@ impl RestingOrder {
             return self.price;
         }
 
-        // TODO: Do this different by reverse width
         let price_reverse: QuoteAtomsPerBaseAtom = if self.get_is_bid() {
             // Ask @P --> Bid @P * (1 - spread)
             self.price.multiply_spread(
