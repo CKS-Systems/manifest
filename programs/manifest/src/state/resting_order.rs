@@ -170,7 +170,7 @@ impl RestingOrder {
             return self.price;
         }
 
-        let price_reverse: QuoteAtomsPerBaseAtom = if self.get_is_bid() {
+        let price_reverse: QuoteAtomsPerBaseAtom = if !self.get_is_bid() {
             // Ask @P --> Bid @P * (1 - spread)
             self.price.multiply_spread(
                 100_000_u32 - (self.reverse_spread as u32),
