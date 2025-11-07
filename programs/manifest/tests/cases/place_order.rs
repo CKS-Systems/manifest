@@ -1028,13 +1028,13 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
         )
         .await?;
 
-    // 10. Did not use however received the bonus atom due to partial fill maker rounding.
+    // 10. Did not change.
     assert_eq!(
         test_fixture
             .market_fixture
             .get_quote_balance_atoms(&test_fixture.payer())
             .await,
-        10_000 * USDC_UNIT_SIZE + 1
+        10_000 * USDC_UNIT_SIZE
     );
     // 10 - 3 = 7
     assert_eq!(
@@ -1085,13 +1085,13 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
         first_bid.get_price(),
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(3_001_349_925, -9).unwrap()
     );
-    // Balance is increased from a bonus atom.
+    // Balance is same.
     assert_eq!(
         test_fixture
             .market_fixture
             .get_quote_balance_atoms(&test_fixture.payer())
             .await,
-        10_000_000_001
+        10_000_000_000
     );
     assert_eq!(
         test_fixture
@@ -1138,7 +1138,7 @@ async fn reverse_order_tight_type_test() -> anyhow::Result<()> {
             .market_fixture
             .get_quote_balance_atoms(&test_fixture.payer())
             .await,
-        10_000_000_001
+        10_000_000_000
     );
     assert_eq!(
         test_fixture
