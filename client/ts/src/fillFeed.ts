@@ -244,6 +244,11 @@ function detectAggregator(
       // Legacy transaction
       for (const account of message.accountKeys) {
         if (
+          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
+        ) {
+          return 'DFlow';
+        }
+        if (
           account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
         ) {
           return 'Swissborg';
@@ -272,6 +277,11 @@ function detectAggregator(
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
       for (const account of message.staticAccountKeys) {
+        if (
+          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
+        ) {
+          return 'DFlow';
+        }
         if (
           account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
         ) {
