@@ -1007,7 +1007,6 @@ impl<
             let is_global: bool = maker_order.is_global();
             let is_maker_reverse: bool = maker_order.is_reversible();
 
-            // TODO: Make this correct for the different order types
             let maker_reverse_spread: u16 = maker_order.get_reverse_spread();
 
             if is_global {
