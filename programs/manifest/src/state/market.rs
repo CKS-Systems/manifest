@@ -929,7 +929,7 @@ impl<
         let now_slot: u32 = current_slot.unwrap_or_else(|| get_now_slot());
 
         // Reverse orders will have their last valid slot overriden to no expiration.
-        if order_type != OrderType::Reverse {
+        if order_type.is_reversible() {
             assert_not_already_expired(last_valid_slot, now_slot)?;
         }
 
@@ -1005,7 +1005,9 @@ impl<
                 .trader;
             let taker: Pubkey = get_helper_seat(dynamic, trader_index).get_value().trader;
             let is_global: bool = maker_order.is_global();
-            let is_maker_reverse: bool = maker_order.is_reverse();
+            let is_maker_reverse: bool = maker_order.is_reversible();
+
+            // TODO: Make this correct for the different order types
             let maker_reverse_spread: u16 = maker_order.get_reverse_spread();
 
             if is_global {
@@ -1215,12 +1217,12 @@ impl<
             if is_maker_reverse {
                 let price_reverse: QuoteAtomsPerBaseAtom = if is_bid {
                     // Ask @P --> Bid @P * (1 - spread)
-                    matched_price.multiply_spread(100_000_u32 - (maker_reverse_spread as u32))
+                    matched_price.multiply_spread(100_000_u32 - (maker_reverse_spread as u32), 5)
                 } else {
                     // Bid @P * (1 - spread) --> Ask @P
                     // equivalent to
                     // Bid @P --> Ask @P / (1 - spread)
-                    matched_price.divide_spread(100_000_u32 - (maker_reverse_spread as u32))
+                    matched_price.divide_spread(100_000_u32 - (maker_reverse_spread as u32), 5)
                 };
                 let num_base_atoms_reverse: BaseAtoms = if is_bid {
                     // Maker is now buying with the exact number of quote atoms.
