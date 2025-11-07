@@ -990,6 +990,7 @@ impl<
             };
 
             let matched_price: QuoteAtomsPerBaseAtom = maker_order.get_price();
+            let maker_reverse_price: QuoteAtomsPerBaseAtom = maker_order.reverse_price();
 
             // on full fill: round in favor of the taker
             // on partial fill: round in favor of the maker
@@ -1214,15 +1215,7 @@ impl<
             // This is non-trivial because in order to prevent tons of orders
             // filling the books on partial fills, we coalesce on top of book.
             if is_maker_reverse {
-                let price_reverse: QuoteAtomsPerBaseAtom = if is_bid {
-                    // Ask @P --> Bid @P * (1 - spread)
-                    matched_price.multiply_spread(100_000_u32 - (maker_reverse_spread as u32), 5)
-                } else {
-                    // Bid @P * (1 - spread) --> Ask @P
-                    // equivalent to
-                    // Bid @P --> Ask @P / (1 - spread)
-                    matched_price.divide_spread(100_000_u32 - (maker_reverse_spread as u32), 5)
-                };
+                let price_reverse: QuoteAtomsPerBaseAtom = maker_reverse_price;
                 let num_base_atoms_reverse: BaseAtoms = if is_bid {
                     // Maker is now buying with the exact number of quote atoms.
                     // Do not round_up because there might not be enough atoms
