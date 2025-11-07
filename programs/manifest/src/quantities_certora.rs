@@ -105,11 +105,11 @@ impl QuoteAtomsPerBaseAtom {
         Self { inner: [x, 0] }
     }
 
-    pub fn multiply_spread(self, _spread_e_5: u32) -> Self {
+    pub fn multiply_spread(self, _spread: u32, decimals: u32) -> Self {
         todo!()
     }
 
-    pub fn divide_spread(self, _spread_e_5: u32) -> Self {
+    pub fn divide_spread(self, _spread: u32, decimals: u32) -> Self {
         todo!()
     }
 }
