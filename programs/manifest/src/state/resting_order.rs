@@ -201,12 +201,6 @@ impl RestingOrder {
                 },
             )
         };
-        solana_program::msg!(
-            "============ reversed pricing {} {} {}",
-            self.price,
-            price_reverse,
-            self.reverse_spread
-        );
         price_reverse
     }
 
