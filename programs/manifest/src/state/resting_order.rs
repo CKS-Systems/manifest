@@ -175,9 +175,13 @@ impl RestingOrder {
             // equivalent to
             // Bid @P --> Ask @P / (1 - spread)
             self.price.divide_spread(
-                if self.order_type == OrderType::Reverse { 100_000_u32 } else { 1_000_000_000_u32 } - (self.reverse_spread as u32),
+                if self.order_type == OrderType::Reverse {
+                    100_000_u32
+                } else {
+                    100_000_000_u32
+                } - (self.reverse_spread as u32),
                 if self.order_type == OrderType::ReverseTight {
-                    9
+                    8
                 } else {
                     5
                 },
@@ -185,15 +189,24 @@ impl RestingOrder {
         } else {
             // Ask @P --> Bid @P * (1 - spread)
             self.price.multiply_spread(
-                if self.order_type == OrderType::Reverse { 100_000_u32 } else { 1_000_000_000_u32 } - (self.reverse_spread as u32),
+                if self.order_type == OrderType::Reverse {
+                    100_000_u32
+                } else {
+                    100_000_000_u32
+                } - (self.reverse_spread as u32),
                 if self.order_type == OrderType::ReverseTight {
-                    9
+                    8
                 } else {
                     5
                 },
             )
         };
-        solana_program::msg!("============ reversed pricing {} {} {}", self.price, price_reverse, self.reverse_spread);
+        solana_program::msg!(
+            "============ reversed pricing {} {} {}",
+            self.price,
+            price_reverse,
+            self.reverse_spread
+        );
         price_reverse
     }
 
