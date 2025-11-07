@@ -1543,7 +1543,7 @@ export class ManifestClient {
       return [];
     }
 
-    const MAX_CANCELS_PER_BATCH = 25;
+    const MAX_CANCELS_PER_BATCH = 20;
     const cancelInstructions: TransactionInstruction[] = [];
 
     for (let i = 0; i < ordersToCancel.length; i += MAX_CANCELS_PER_BATCH) {
