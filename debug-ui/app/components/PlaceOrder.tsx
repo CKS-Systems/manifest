@@ -2,21 +2,12 @@
 
 import { ChangeEvent, ReactElement, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import {
-  Transaction,
-  TransactionInstruction,
-  PublicKey,
-} from '@solana/web3.js';
-import {
-  WrapperPlaceOrderParamsExternal,
-  WrapperPlaceOrderReverseParamsExternal,
-} from '@cks-systems/manifest-sdk';
-import { OrderType } from '@cks-systems/manifest-sdk/manifest';
-import { getSolscanSigUrl, setupClient } from '@/lib/util';
+import { Transaction, PublicKey } from '@solana/web3.js';
+import { Market, OrderType, UiWrapper } from '@cks-systems/manifest-sdk';
+import { getSolscanSigUrl } from '@/lib/util';
 import { useAppState } from './AppWalletProvider';
 import { toast } from 'react-toastify';
 import { ensureError } from '@/lib/error';
-import { NO_EXPIRATION_LAST_VALID_SLOT } from '@cks-systems/manifest-sdk/constants';
 
 const PlaceOrder = ({
   marketAddress,
@@ -67,41 +58,65 @@ const PlaceOrder = ({
 
     const marketPub: PublicKey = new PublicKey(marketAddress);
 
-    const mClient = await setupClient(
+    if (!connected || !signerPub) {
+      toast.error('Connect wallet before placing an order');
+      return;
+    }
+
+    const amountNum = Number(amount);
+    const priceNum = Number(price);
+    const clientOrderIdNum = Number(clientOrderId);
+
+    if (Number.isNaN(amountNum) || amountNum <= 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+
+    if (Number.isNaN(priceNum) || priceNum <= 0) {
+      toast.error('Enter a valid price');
+      return;
+    }
+
+    if (Number(orderType) === OrderType.Reverse) {
+      toast.error('Reverse orders not supported via UI wrapper yet');
+      return;
+    }
+
+    const market = await Market.loadFromAddress({
+      connection: conn,
+      address: marketPub,
+    });
+
+    const { ixs, signers } = await UiWrapper.placeOrderCreateIfNotExistsIxs(
       conn,
-      marketPub,
+      market.baseMint(),
+      market.baseDecimals(),
+      market.quoteMint(),
+      market.quoteDecimals(),
       signerPub,
-      connected,
-      sendTransaction,
-      network,
+      signerPub,
+      {
+        isBid: side === 'buy',
+        amount: amountNum,
+        price: priceNum,
+        orderId: clientOrderIdNum > 0 ? clientOrderIdNum : undefined,
+      },
     );
 
-    const orderParams:
-      | WrapperPlaceOrderParamsExternal
-      | WrapperPlaceOrderReverseParamsExternal =
-      Number(orderType) != OrderType.Reverse
-        ? {
-            numBaseTokens: Number(amount),
-            tokenPrice: Number(price),
-            isBid: side == 'buy',
-            lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
-            orderType: Number(orderType),
-            clientOrderId: Number(clientOrderId),
-          }
-        : {
-            numBaseTokens: Number(amount),
-            tokenPrice: Number(price),
-            isBid: side == 'buy',
-            // The sdk is responsible for mapping this value into the correct expressible range of values.
-            spreadBps: Number(spreadBps),
-            orderType: OrderType.Reverse,
-            clientOrderId: Number(clientOrderId),
-          };
-    const placeOrderIx: TransactionInstruction =
-      mClient.placeOrderIx(orderParams);
+    if (ixs.length === 0) {
+      toast.error('Failed to build place order transaction');
+      return;
+    }
+
+    const tx = new Transaction().add(...ixs);
+    const { blockhash } = await conn.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = signerPub;
+    signers.forEach((signer) => tx.partialSign(signer));
+
     try {
       const sig = await sendTransaction(
-        new Transaction().add(placeOrderIx),
+        tx,
         conn,
         { skipPreflight: true },
       );

@@ -1,4 +1,6 @@
-import { ManifestClient } from '@cks-systems/manifest-sdk';
+import { ManifestClient, UiWrapper } from '@cks-systems/manifest-sdk';
+import { createClaimSeatInstruction } from '@cks-systems/manifest-sdk/wrapper';
+import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '@cks-systems/manifest-sdk/manifest';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   SendTransactionOptions,
@@ -7,7 +9,9 @@ import {
 import {
   Connection,
   PublicKey,
+  Signer,
   Transaction,
+  TransactionInstruction,
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
@@ -34,18 +38,55 @@ export const setupClient = async (
     throw new Error('must be connected before setting up client');
   }
 
-  const { setupNeeded, instructions, wrapperKeypair } =
-    await ManifestClient.getSetupIxs(conn, marketPub, signerPub as PublicKey);
+  const existingWrapper = await UiWrapper.fetchFirstUserWrapper(conn, signerPub);
 
-  if (setupNeeded) {
-    console.log(`sending ${instructions.length} setup ixs...`);
-    const tx = new Transaction().add(...instructions);
+  const setupIxs: TransactionInstruction[] = [];
+  const setupSigners: Signer[] = [];
+
+  let wrapperPubkey: PublicKey;
+  if (existingWrapper) {
+    wrapperPubkey = existingWrapper.pubkey;
+    const wrapperParsed = UiWrapper.loadFromBuffer({
+      address: existingWrapper.pubkey,
+      buffer: existingWrapper.account.data,
+    });
+    const hasSeat = wrapperParsed.marketInfoForMarket(marketPub) !== null;
+    if (!hasSeat) {
+      setupIxs.push(
+        createClaimSeatInstruction({
+          owner: signerPub,
+          market: marketPub,
+          wrapperState: wrapperPubkey,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+        }),
+      );
+    }
+  } else {
+    const setup = await UiWrapper.setupIxs(conn, signerPub, signerPub);
+    setupIxs.push(...setup.ixs);
+    setupSigners.push(...setup.signers);
+    const newWrapperSigner = setup.signers[0];
+    if (!newWrapperSigner) {
+      throw new Error('failed to generate wrapper signer during setup');
+    }
+    wrapperPubkey = newWrapperSigner.publicKey;
+    setupIxs.push(
+      createClaimSeatInstruction({
+        owner: signerPub,
+        market: marketPub,
+        wrapperState: wrapperPubkey,
+        manifestProgram: MANIFEST_PROGRAM_ID,
+      }),
+    );
+  }
+
+  if (setupIxs.length > 0) {
+    console.log(`sending ${setupIxs.length} setup ixs...`);
+    const tx = new Transaction().add(...setupIxs);
     const { blockhash } = await conn.getLatestBlockhash();
     tx.recentBlockhash = blockhash;
-    tx.feePayer = signerPub!;
-    if (wrapperKeypair) {
-      tx.sign(wrapperKeypair);
-    }
+    tx.feePayer = signerPub;
+    setupSigners.forEach((signer) => tx.partialSign(signer));
 
     const sig = await sendTransaction(tx, conn);
 
