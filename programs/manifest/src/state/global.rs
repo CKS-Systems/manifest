@@ -163,7 +163,6 @@ impl std::fmt::Display for GlobalDeposit {
         write!(f, "{}", self.trader)
     }
 }
-
 impl GlobalFixed {
     pub fn new_empty(mint: &Pubkey) -> Self {
         let (vault, vault_bump) = get_global_vault_address(mint);
@@ -225,6 +224,10 @@ impl GlobalDeposit {
             balance_atoms: GlobalAtoms::ZERO,
             _padding: 0,
         }
+    }
+    
+    pub fn get_balance_atoms(&self) -> GlobalAtoms {
+        self.balance_atoms
     }
 }
 
