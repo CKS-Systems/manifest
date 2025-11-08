@@ -259,6 +259,11 @@ function detectAggregator(
           return 'OKX';
         }
         if (
+          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
+        ) {
+          return 'DFlow';
+        }
+        if (
           account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
         ) {
           return 'Jupiter';
@@ -286,6 +291,11 @@ function detectAggregator(
           account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
         ) {
           return 'OKX';
+        }
+        if (
+          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
+        ) {
+          return 'DFlow';
         }
         if (
           account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
