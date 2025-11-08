@@ -1,6 +1,8 @@
 use std::mem::size_of;
 
-use crate::quantities::{u64_slice_to_u128, BaseAtoms, QuoteAtomsPerBaseAtom};
+use crate::quantities::{
+    u64_slice_to_u128, BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom,
+};
 #[cfg(feature = "certora")]
 use crate::quantities::{QuoteAtoms, WrapperU64};
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -56,8 +58,16 @@ impl Default for OrderType {
     }
 }
 impl OrderType {
-    pub fn is_reversible(&self) -> bool {
-        *self == OrderType::Reverse || *self == OrderType::ReverseTight
+    pub fn is_reversible(self) -> bool {
+        self == OrderType::Reverse || self == OrderType::ReverseTight
+    }
+
+    pub fn max_exponent(self) -> i8 {
+        match self {
+            OrderType::Reverse => QuoteAtomsPerBaseAtom::MAX_EXP - 5,
+            OrderType::ReverseTight => QuoteAtomsPerBaseAtom::MAX_EXP - 8,
+            _ => QuoteAtomsPerBaseAtom::MAX_EXP
+        }
     }
 }
 
@@ -165,43 +175,24 @@ impl RestingOrder {
         self.order_type.is_reversible()
     }
 
-    pub fn reverse_price(&self) -> QuoteAtomsPerBaseAtom {
-        if !self.is_reversible() {
-            return self.price;
-        }
+    pub fn reverse_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
+        let base = match self.order_type {
+            OrderType::Reverse => 100_000_u32,
+            OrderType::ReverseTight => 100_000_000_u32,
+            _ => return Ok(self.price),
+        };
 
-        let price_reverse: QuoteAtomsPerBaseAtom = if self.get_is_bid() {
+        if self.get_is_bid() {
             // Bid @P * (1 - spread) --> Ask @P
             // equivalent to
             // Bid @P --> Ask @P / (1 - spread)
-            self.price.divide_spread(
-                if self.order_type == OrderType::Reverse {
-                    100_000_u32
-                } else {
-                    100_000_000_u32
-                } - (self.reverse_spread as u32),
-                if self.order_type == OrderType::ReverseTight {
-                    8
-                } else {
-                    5
-                },
-            )
+            self.price
+                .checked_multiply_rational(base, base - self.reverse_spread as u32, false)
         } else {
             // Ask @P --> Bid @P * (1 - spread)
-            self.price.multiply_spread(
-                if self.order_type == OrderType::Reverse {
-                    100_000_u32
-                } else {
-                    100_000_000_u32
-                } - (self.reverse_spread as u32),
-                if self.order_type == OrderType::ReverseTight {
-                    8
-                } else {
-                    5
-                },
-            )
-        };
-        price_reverse
+            self.price
+                .checked_multiply_rational(base - self.reverse_spread as u32, base, true)
+        }
     }
 
     pub fn get_reverse_spread(self) -> u16 {
