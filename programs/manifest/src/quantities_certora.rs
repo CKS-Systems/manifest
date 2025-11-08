@@ -105,11 +105,12 @@ impl QuoteAtomsPerBaseAtom {
         Self { inner: [x, 0] }
     }
 
-    pub fn multiply_spread(self, _spread: u32, decimals: u32) -> Self {
-        todo!()
-    }
-
-    pub fn divide_spread(self, _spread: u32, decimals: u32) -> Self {
-        todo!()
+    pub fn checked_multiply_rational(
+        self,
+        numerator: u32,
+        denominator: u32,
+        round_up: bool,
+    ) -> Result<Self, PriceConversionError> {
+        todo!("")
     }
 }

@@ -325,27 +325,27 @@ impl QuoteAtomsPerBaseAtom {
         }
     }
 
-    pub fn multiply_spread(self, spread_e_decimals: u32, decimals: u32) -> Self {
+    #[inline(always)]
+    pub fn checked_multiply_rational(
+        self,
+        numerator: u32,
+        denominator: u32,
+        round_up: bool,
+    ) -> Result<Self, PriceConversionError> {
         // Stored as u128 * 10^-26
         let inner: u128 = u64_slice_to_u128(self.inner);
         // multiply then divide
-        // p * (spread / 10^decimals)
-        let inner_e_decimals: u128 = inner.wrapping_mul(spread_e_decimals as u128);
-        let new_inner: u128 = inner_e_decimals.div_ceil(10_u128.pow(decimals) as u128);
-        QuoteAtomsPerBaseAtom {
+        let Some(product) = inner.checked_mul(numerator as u128) else {
+            return Err(PriceConversionError(0x4));
+        };
+        let new_inner: u128 = if round_up {
+            product.div_ceil(denominator as u128)
+        } else {
+            product.div(denominator as u128)
+        };
+        Ok(QuoteAtomsPerBaseAtom {
             inner: u128_to_u64_slice(new_inner),
-        }
-    }
-
-    pub fn divide_spread(self, spread_e_decimals: u32, decimals: u32) -> Self {
-        // multiply then divide
-        QuoteAtomsPerBaseAtom {
-            inner: u128_to_u64_slice(
-                u64_slice_to_u128(self.inner)
-                    .wrapping_mul(10_u128.pow(decimals))
-                    .div_ceil(spread_e_decimals as u128),
-            ),
-        }
+        })
     }
 
     pub fn try_from_mantissa_and_exponent(
