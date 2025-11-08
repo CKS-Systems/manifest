@@ -2001,7 +2001,9 @@ function toWrapperPlaceOrderParams(
   let maxExponent = 8;
   if (wrapperPlaceOrderParamsExternal['orderType'] == OrderType.Reverse) {
     maxExponent -= 5;
-  } else if (wrapperPlaceOrderParamsExternal['orderType'] == OrderType.ReverseTight) {
+  } else if (
+    wrapperPlaceOrderParamsExternal['orderType'] == OrderType.ReverseTight
+  ) {
     maxExponent -= 8;
   }
 
@@ -2014,7 +2016,7 @@ function toWrapperPlaceOrderParams(
     (quoteAtomsPerToken / baseAtomsPerToken);
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
-    maxExponent
+    maxExponent,
   );
   const numBaseAtoms: bignum = Math.floor(
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken,
@@ -2029,10 +2031,13 @@ function toWrapperPlaceOrderParams(
 }
 
 function calculateMantissa(value: number, exp: number): number {
-  return Math.round(value * Math.pow(10, -exp))
+  return Math.round(value * Math.pow(10, -exp));
 }
 
-export function toMantissaAndExponent(input: number, maxExponent: number): {
+export function toMantissaAndExponent(
+  input: number,
+  maxExponent: number,
+): {
   priceMantissa: number;
   priceExponent: number;
 } {
@@ -2040,7 +2045,10 @@ export function toMantissaAndExponent(input: number, maxExponent: number): {
   const uInt32Max = 4_294_967_296;
 
   // prevent overflow when casting to u32
-  while (exponent < maxExponent && calculateMantissa(input, exponent) > uInt32Max) {
+  while (
+    exponent < maxExponent &&
+    calculateMantissa(input, exponent) > uInt32Max
+  ) {
     exponent += 1;
   }
 

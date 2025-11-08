@@ -66,7 +66,7 @@ impl OrderType {
         match self {
             OrderType::Reverse => QuoteAtomsPerBaseAtom::MAX_EXP - 5,
             OrderType::ReverseTight => QuoteAtomsPerBaseAtom::MAX_EXP - 8,
-            _ => QuoteAtomsPerBaseAtom::MAX_EXP
+            _ => QuoteAtomsPerBaseAtom::MAX_EXP,
         }
     }
 }
