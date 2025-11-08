@@ -465,7 +465,7 @@ impl std::fmt::Debug for QuoteAtomsPerBaseAtom {
 }
 
 #[derive(Debug)]
-pub struct PriceConversionError(u32);
+pub struct PriceConversionError(pub u32);
 
 const PRICE_CONVERSION_ERROR_BASE: u32 = 100;
 

@@ -58,8 +58,16 @@ impl Default for OrderType {
     }
 }
 impl OrderType {
-    pub fn is_reversible(&self) -> bool {
-        *self == OrderType::Reverse || *self == OrderType::ReverseTight
+    pub fn is_reversible(self) -> bool {
+        self == OrderType::Reverse || self == OrderType::ReverseTight
+    }
+
+    pub fn max_exponent(self) -> i8 {
+        match self {
+            OrderType::Reverse => QuoteAtomsPerBaseAtom::MAX_EXP - 5,
+            OrderType::ReverseTight => QuoteAtomsPerBaseAtom::MAX_EXP - 8,
+            _ => QuoteAtomsPerBaseAtom::MAX_EXP
+        }
     }
 }
 
