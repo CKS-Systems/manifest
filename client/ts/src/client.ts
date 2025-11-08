@@ -1995,6 +1995,18 @@ function toWrapperPlaceOrderParams(
     );
   }
 
+  // Choose max exponent based on ordertype
+  // TODO: warn if the exponent causes resolution issues
+  //       with the desired price
+  let maxExponent = 8;
+  if (wrapperPlaceOrderParamsExternal['orderType'] == OrderType.Reverse) {
+    maxExponent -= 5;
+  } else if (
+    wrapperPlaceOrderParamsExternal['orderType'] == OrderType.ReverseTight
+  ) {
+    maxExponent -= 8;
+  }
+
   const quoteAtomsPerToken = 10 ** market.quoteDecimals();
   const baseAtomsPerToken = 10 ** market.baseDecimals();
   // Converts token price to atom price since not always equal
@@ -2004,6 +2016,7 @@ function toWrapperPlaceOrderParams(
     (quoteAtomsPerToken / baseAtomsPerToken);
   const { priceMantissa, priceExponent } = toMantissaAndExponent(
     priceQuoteAtomsPerBaseAtoms,
+    maxExponent,
   );
   const numBaseAtoms: bignum = Math.floor(
     wrapperPlaceOrderParamsExternal.numBaseTokens * baseAtomsPerToken,
@@ -2017,21 +2030,35 @@ function toWrapperPlaceOrderParams(
   };
 }
 
-export function toMantissaAndExponent(input: number): {
+function calculateMantissa(value: number, exp: number): number {
+  return Math.round(value * Math.pow(10, -exp));
+}
+
+export function toMantissaAndExponent(
+  input: number,
+  maxExponent: number,
+): {
   priceMantissa: number;
   priceExponent: number;
 } {
-  let priceExponent = 0;
-  let priceMantissa = input;
+  let exponent = 0;
   const uInt32Max = 4_294_967_296;
-  while (priceExponent > -20 && priceMantissa < uInt32Max / 100) {
-    priceExponent -= 1;
-    priceMantissa *= 10;
+
+  // prevent overflow when casting to u32
+  while (
+    exponent < maxExponent &&
+    calculateMantissa(input, exponent) > uInt32Max
+  ) {
+    exponent += 1;
   }
-  priceMantissa = Math.floor(priceMantissa);
+
+  // prevent underflow and maximize precision available
+  while (exponent > -20 && calculateMantissa(input, exponent - 1) < uInt32Max) {
+    exponent -= 1;
+  }
 
   return {
-    priceMantissa,
-    priceExponent,
+    priceMantissa: calculateMantissa(input, exponent),
+    priceExponent: exponent,
   };
 }
