@@ -70,12 +70,14 @@ pub(crate) fn expand_wrapper_if_needed<'a, 'info>(
         let wrapper_state: &AccountInfo = wrapper_state_account_info.info;
 
         let wrapper_data: Ref<&mut [u8]> = wrapper_state.try_borrow_data()?;
-        let new_size: usize = wrapper_data.len() + WRAPPER_BLOCK_SIZE;
+        let old_size: usize = wrapper_data.len();
+        let new_size: usize = old_size + WRAPPER_BLOCK_SIZE;
         drop(wrapper_data);
 
         let rent: Rent = Rent::get()?;
         let new_minimum_balance: u64 = rent.minimum_balance(new_size);
-        let lamports_diff: u64 = new_minimum_balance.saturating_sub(wrapper_state.lamports());
+        let old_minimum_balance: u64 = rent.minimum_balance(old_size);
+        let lamports_diff: u64 = new_minimum_balance.saturating_sub(old_minimum_balance);
 
         invoke(
             &system_instruction::transfer(payer.key, wrapper_state.key, lamports_diff),

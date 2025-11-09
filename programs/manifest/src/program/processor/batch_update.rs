@@ -89,6 +89,9 @@ impl PlaceOrderParams {
     }
 
     pub fn try_price(&self) -> Result<QuoteAtomsPerBaseAtom, PriceConversionError> {
+        if self.price_exponent > self.order_type().max_exponent() {
+            return Err(PriceConversionError(0x3));
+        }
         QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(
             self.price_mantissa,
             self.price_exponent,

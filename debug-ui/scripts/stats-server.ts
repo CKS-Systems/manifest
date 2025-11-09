@@ -1222,7 +1222,10 @@ export class ManifestStatsServer {
    * Get Traders to be used in a leaderboard if a UI wants to.
    * Returns counts for taker/maker trades and volumes.
    */
-  getTraders(includeDebug: boolean = false, limit: number = 500): {
+  getTraders(
+    includeDebug: boolean = false,
+    limit: number = 500,
+  ): {
     [key: string]: {
       taker: number;
       maker: number;

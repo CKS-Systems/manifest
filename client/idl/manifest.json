@@ -2101,6 +2101,9 @@
           },
           {
             "name": "Reverse"
+          },
+          {
+            "name": "ReverseTight"
           }
         ]
       }

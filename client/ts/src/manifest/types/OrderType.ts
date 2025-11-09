@@ -16,6 +16,7 @@ export enum OrderType {
   PostOnly,
   Global,
   Reverse,
+  ReverseTight,
 }
 
 /**
