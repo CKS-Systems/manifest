@@ -304,6 +304,8 @@ pub(crate) fn process_batch_update_core(
         trader_index
     };
 
+    // Formal verification does not cover global gas prepayment.
+    #[cfg(not(feature = "certora"))]
     try_to_pay_all_global_gas_prepayment(&orders, &global_trade_accounts_opts)?;
 
     // Result is a vector of (order_sequence_number, data_index)
