@@ -23,7 +23,7 @@ pub(crate) fn process_expand_market(
             if let Some(blocks_missing) = {
                 let market_data: Ref<'_, &mut [u8]> = market.try_borrow_data()?;
                 let dynamic_account: MarketRef = get_dynamic_account(&market_data);
-                dynamic_account.free_blocks_missing_for(num_free_blocks_required)
+                dynamic_account.free_blocks_short_of_n(num_free_blocks_required)
             } {
                 batch_expand_market(&payer, &market, blocks_missing)
             } else {

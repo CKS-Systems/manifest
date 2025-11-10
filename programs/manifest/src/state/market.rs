@@ -466,7 +466,11 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         free_list_head.has_next()
     }
 
-    pub fn free_blocks_missing_for(&self, mut n: u32) -> Option<u32> {
+    /**
+    Returns None if length of the free list is larger or equal n.
+    If less than n blocks are free, returns Some(n - length).
+    */
+    pub fn free_blocks_short_of_n(&self, mut n: u32) -> Option<u32> {
         let DynamicAccount { fixed, dynamic } = self.borrow_market();
         let mut current_index: DataIndex = fixed.free_list_head_index;
 
