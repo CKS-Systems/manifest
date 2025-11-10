@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762798382869,
+  "lastUpdate": 1762807960652,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9799,6 +9799,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5444,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6068ee0def696c008060e4f6a2c513350aff50c",
+          "message": "batch expand market (#462)\n\n* export full hypertree depedendency\n* implement getter for global deposit balance\n* batch expand market",
+          "timestamp": "2025-11-10T21:40:20+01:00",
+          "tree_id": "e65ab1d7e33a2e20c5cf11c4400bcce7a540f852",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e6068ee0def696c008060e4f6a2c513350aff50c"
+        },
+        "date": 1762807958712,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3224,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4933,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5485,
             "range": "",
             "unit": "CU",
             "extra": ""
