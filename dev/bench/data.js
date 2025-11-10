@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762807960652,
+  "lastUpdate": 1762808161552,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9865,6 +9865,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5485,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0069ac6e0396f713f28ce974d319d595ec240cb0",
+          "message": "Make a claim seat on bot wrapper work even when there already is a se… (#448)\n\n* Make a claim seat on bot wrapper work even when there already is a seat on core claimed\n\n* fmt",
+          "timestamp": "2025-11-10T15:43:09-05:00",
+          "tree_id": "a5ce89a4f15b31c6f40b443fd0184d557505d086",
+          "url": "https://github.com/CKS-Systems/manifest/commit/0069ac6e0396f713f28ce974d319d595ec240cb0"
+        },
+        "date": 1762808159485,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3220,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4928,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5466,
             "range": "",
             "unit": "CU",
             "extra": ""
