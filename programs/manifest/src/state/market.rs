@@ -1,7 +1,6 @@
 #[cfg(feature = "certora")]
 use {
-    crate::certora::hooks::*, crate::certora::summaries::impact_base_atoms::impact_base_atoms,
-    hook_macro::cvt_hook_end, nondet::nondet,
+    crate::certora::hooks::*, hook_macro::cvt_hook_end, nondet::nondet,
 };
 
 use bytemuck::{Pod, Zeroable};
