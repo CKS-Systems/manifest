@@ -107,9 +107,9 @@ impl QuoteAtomsPerBaseAtom {
 
     pub fn checked_multiply_rational(
         self,
-        numerator: u32,
-        denominator: u32,
-        round_up: bool,
+        _numerator: u32,
+        _denominator: u32,
+        _round_up: bool,
     ) -> Result<Self, PriceConversionError> {
         todo!("")
     }
