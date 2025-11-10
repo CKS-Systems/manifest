@@ -6,8 +6,9 @@ use crate::{
     quantities::{BaseAtoms, PriceConversionError, QuoteAtomsPerBaseAtom, WrapperU64},
     require,
     state::{
-        utils::get_now_slot, AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType,
-        RestingOrder, MARKET_BLOCK_SIZE,
+        utils::{get_now_slot, try_to_pay_all_global_gas_prepayment},
+        AddOrderToMarketArgs, AddOrderToMarketResult, MarketRefMut, OrderType, RestingOrder,
+        MARKET_BLOCK_SIZE,
     },
     validation::loaders::BatchUpdateContext,
 };
@@ -302,6 +303,8 @@ pub(crate) fn process_batch_update_core(
         }
         trader_index
     };
+
+    try_to_pay_all_global_gas_prepayment(&orders, &global_trade_accounts_opts)?;
 
     // Result is a vector of (order_sequence_number, data_index)
     #[cfg(not(feature = "certora"))]

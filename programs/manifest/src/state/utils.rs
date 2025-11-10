@@ -1,3 +1,4 @@
+use crate::program::batch_update::PlaceOrderParams;
 use std::cell::RefMut;
 
 use crate::{
@@ -129,11 +130,39 @@ pub(crate) fn try_to_add_to_global(
         ..
     } = global_trade_accounts;
 
-    {
-        let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
-        let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
-        global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key)?;
+    let global_data: &mut RefMut<&mut [u8]> = &mut global.try_borrow_mut_data()?;
+    let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
+    global_dynamic_account.add_order(resting_order, gas_payer_opt.as_ref().unwrap().key)
+}
+
+pub(crate) fn try_to_pay_all_global_gas_prepayment(
+    orders: &Vec<PlaceOrderParams>,
+    global_trade_accounts_opts: &[Option<GlobalTradeAccounts>; 2],
+) -> ProgramResult {
+    for (is_bid, account_idx) in [(true, 1), (false, 0)] {
+        let global_order_count: usize = orders
+            .iter()
+            .filter(|o| o.order_type() == OrderType::Global && o.is_bid() == is_bid)
+            .count();
+        if global_order_count > 0 {
+            pay_global_gas_prepayment(
+                global_trade_accounts_opts[account_idx].as_ref().unwrap(),
+                global_order_count as u64,
+            )?;
+        }
     }
+    Ok(())
+}
+
+fn pay_global_gas_prepayment(
+    global_trade_accounts: &GlobalTradeAccounts,
+    num_gas_prepayments: u64,
+) -> ProgramResult {
+    let GlobalTradeAccounts {
+        global,
+        gas_payer_opt,
+        ..
+    } = global_trade_accounts;
 
     // Need to CPI because otherwise we get:
     //
@@ -146,7 +175,9 @@ pub(crate) fn try_to_add_to_global(
         &solana_program::system_instruction::transfer(
             &gas_payer_opt.as_ref().unwrap().info.key,
             &global.key,
-            GAS_DEPOSIT_LAMPORTS,
+            GAS_DEPOSIT_LAMPORTS
+                .checked_mul(num_gas_prepayments)
+                .unwrap(),
         ),
         &[
             gas_payer_opt.as_ref().unwrap().info.clone(),

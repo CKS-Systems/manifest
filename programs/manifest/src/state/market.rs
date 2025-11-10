@@ -1418,23 +1418,13 @@ impl<
         }
 
         if resting_order.is_global() {
-            if is_bid {
-                let global_trade_account_opt = &global_trade_accounts_opts[1];
-                require!(
-                    global_trade_account_opt.is_some(),
-                    ManifestError::MissingGlobal,
-                    "Missing global accounts when adding a global",
-                )?;
-                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
-            } else {
-                let global_trade_account_opt = &global_trade_accounts_opts[0];
-                require!(
-                    global_trade_account_opt.is_some(),
-                    ManifestError::MissingGlobal,
-                    "Missing global accounts when adding a global",
-                )?;
-                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
-            }
+            let global_trade_account_opt = &global_trade_accounts_opts[if is_bid { 1 } else { 0 }];
+            require!(
+                global_trade_account_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Missing global accounts when adding a global",
+            )?;
+            try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
         } else {
             // Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker
