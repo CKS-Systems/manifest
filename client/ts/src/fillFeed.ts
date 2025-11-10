@@ -322,6 +322,7 @@ function detectOriginatingProtocol(
   // Look for known originating protocol program IDs in the transaction accounts
   const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
   const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
+  const JUP_3_PROGRAM_ID = 'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw';
 
   try {
     const message = tx.transaction.message;
@@ -337,6 +338,9 @@ function detectOriginatingProtocol(
         if (accountKey === CABANA_PROGRAM_ID) {
           return 'cabana';
         }
+        if (accountKey === JUP_3_PROGRAM_ID) {
+          return 'jupiter';
+        }
       }
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
@@ -347,6 +351,9 @@ function detectOriginatingProtocol(
         }
         if (accountKey === CABANA_PROGRAM_ID) {
           return 'cabana';
+        }
+        if (accountKey === JUP_3_PROGRAM_ID) {
+          return 'jupiter';
         }
       }
     }
