@@ -1,10 +1,9 @@
-use crate::program::batch_update::PlaceOrderParams;
 use std::cell::RefMut;
 
 use crate::{
     global_vault_seeds_with_bump,
     logs::{emit_stack, GlobalCleanupLog},
-    program::{get_mut_dynamic_account, invoke},
+    program::{get_mut_dynamic_account, invoke, batch_update::PlaceOrderParams},
     quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{loaders::GlobalTradeAccounts, MintAccountInfo, TokenAccountInfo, TokenProgram},
