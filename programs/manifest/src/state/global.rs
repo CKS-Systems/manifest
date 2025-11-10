@@ -225,7 +225,7 @@ impl GlobalDeposit {
             _padding: 0,
         }
     }
-    
+
     pub fn get_balance_atoms(&self) -> GlobalAtoms {
         self.balance_atoms
     }

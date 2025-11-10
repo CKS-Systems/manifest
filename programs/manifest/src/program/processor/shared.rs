@@ -50,6 +50,20 @@ pub(crate) fn expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
     Ok(())
 }
 
+pub(crate) fn batch_expand_market<'a, 'info, T: ManifestAccount + Pod + Clone>(
+    payer: &Signer<'a, 'info>,
+    manifest_account: &ManifestAccountInfo<'a, 'info, T>,
+    num_blocks: u32,
+) -> ProgramResult {
+    expand_dynamic(
+        payer,
+        manifest_account,
+        num_blocks as usize * MARKET_BLOCK_SIZE,
+    )?;
+    expand_market_fixed_n(manifest_account.info, num_blocks)?;
+    Ok(())
+}
+
 // Expand is always needed because global doesnt free bytes ever.
 pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     payer: &Signer<'a, 'info>,
@@ -117,6 +131,14 @@ fn expand_market_fixed(expandable_account: &AccountInfo) -> ProgramResult {
     let mut dynamic_account: DynamicAccount<&mut MarketFixed, &mut [u8]> =
         get_mut_dynamic_account(market_data);
     dynamic_account.market_expand()?;
+    Ok(())
+}
+
+fn expand_market_fixed_n(expandable_account: &AccountInfo, n: u32) -> ProgramResult {
+    let market_data: &mut RefMut<&mut [u8]> = &mut expandable_account.try_borrow_mut_data()?;
+    let mut dynamic_account: DynamicAccount<&mut MarketFixed, &mut [u8]> =
+        get_mut_dynamic_account(market_data);
+    dynamic_account.market_expand_n(n)?;
     Ok(())
 }
 

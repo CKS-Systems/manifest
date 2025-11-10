@@ -29,6 +29,10 @@ impl<T: Pod> FreeListNode<T> {
     pub fn has_next(&self) -> bool {
         self.next_index != NIL
     }
+
+    pub fn get_next_index(&self) -> DataIndex {
+        self.next_index
+    }
 }
 
 impl<'a, T: Pod> FreeList<'a, T> {
