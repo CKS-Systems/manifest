@@ -1,7 +1,5 @@
 #[cfg(feature = "certora")]
-use {
-    crate::certora::hooks::*, hook_macro::cvt_hook_end, nondet::nondet,
-};
+use {crate::certora::hooks::*, hook_macro::cvt_hook_end, nondet::nondet};
 
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
