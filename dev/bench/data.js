@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762632960111,
+  "lastUpdate": 1762798382869,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9733,6 +9733,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5480,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0d774b8ec952187bac2673801351253f7925e19",
+          "message": "Batch global gas prepayment (#463)\n\n* Batch global gas prepayment\n\n* imports\n\n* fmt\n\n* certora\n\n* scope\n\n* fmt",
+          "timestamp": "2025-11-10T13:00:20-05:00",
+          "tree_id": "afb9676ee913eb91933f819fcb29375e9f6075bf",
+          "url": "https://github.com/CKS-Systems/manifest/commit/e0d774b8ec952187bac2673801351253f7925e19"
+        },
+        "date": 1762798380366,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3220,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4937,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5444,
             "range": "",
             "unit": "CU",
             "extra": ""
