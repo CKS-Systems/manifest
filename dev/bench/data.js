@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762808161552,
+  "lastUpdate": 1762879464315,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -9931,6 +9931,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5466,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3385dae22be99f26b6f2d01c146479c33037352e",
+          "message": "Undo archv2 change (#465)\n\n* Try to undo version changes that are breaking titan\n\n* Bump solana invoke to 0.4.0\n\n* update cargo lock\n\n* remove arch v2 everywhere\n\n* version bump",
+          "timestamp": "2025-11-11T11:31:50-05:00",
+          "tree_id": "99fdf50d2184814ef8e40ee3d19539168add96e6",
+          "url": "https://github.com/CKS-Systems/manifest/commit/3385dae22be99f26b6f2d01c146479c33037352e"
+        },
+        "date": 1762879462530,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3221,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4927,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5454,
             "range": "",
             "unit": "CU",
             "extra": ""
