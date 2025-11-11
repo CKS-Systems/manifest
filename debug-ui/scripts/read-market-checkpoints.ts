@@ -17,7 +17,28 @@ async function readMarketCheckpoints() {
 
   try {
     console.log('Connecting to database...');
-    console.log(`Fetching last 10 checkpoints for market: ${TARGET_MARKET}\n`);
+
+    // First, get summary of all markets and their checkpoint counts
+    console.log('\n========================================');
+    console.log('Market Checkpoint Summary:');
+    console.log('========================================');
+
+    const marketSummaryResult = await pool.query(
+      `SELECT market, COUNT(*) as checkpoint_count
+       FROM market_checkpoints
+       GROUP BY market
+       ORDER BY checkpoint_count DESC, market`
+    );
+
+    console.log(`\nFound ${marketSummaryResult.rowCount} markets in database:\n`);
+
+    for (const row of marketSummaryResult.rows) {
+      const isTargetMarket = row.market === TARGET_MARKET ? ' ← TARGET MARKET' : '';
+      console.log(`${row.market}: ${row.checkpoint_count} checkpoints${isTargetMarket}`);
+    }
+
+    console.log('\n========================================');
+    console.log(`\nFetching last 10 checkpoints for market: ${TARGET_MARKET}\n`);
 
     // Get the last 10 checkpoints
     const checkpointResult = await pool.query(
@@ -29,7 +50,7 @@ async function readMarketCheckpoints() {
       return;
     }
 
-    console.log(`Found ${checkpointResult.rowCount} checkpoints\n`);
+    console.log(`Found ${checkpointResult.rowCount} total checkpoints in database\n`);
 
     // Process each checkpoint
     for (const checkpoint of checkpointResult.rows) {
