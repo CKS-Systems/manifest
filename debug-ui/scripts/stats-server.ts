@@ -141,8 +141,6 @@ export class ManifestStatsServer {
 
   constructor() {
     this.connection = new Connection(RPC_URL!);
-    this.resetWebsocket();
-    this.connection = new Connection(RPC_URL!);
 
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -154,8 +152,9 @@ export class ManifestStatsServer {
       // Continue operation - don't let DB errors crash the server
     });
 
-    this.resetWebsocket();
     this.initDatabase(); // Initialize database schema
+    // Note: WebSocket connection moved to end of initialize() to prevent
+    // race condition where fills arrive before loadState() completes
   }
 
   private async withRetry<T>(
@@ -760,6 +759,11 @@ export class ManifestStatsServer {
         mintToSymbols.get(market.quoteMint()!.toBase58())!,
       ]);
     });
+
+    // Connect to WebSocket AFTER state is loaded to prevent race condition
+    // where fills initialize markets with zero checkpoints before loadState() completes
+    console.log('State loaded, now connecting to fill feed WebSocket...');
+    this.resetWebsocket();
   }
 
   async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
