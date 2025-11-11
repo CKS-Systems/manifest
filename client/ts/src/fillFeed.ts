@@ -338,8 +338,10 @@ function detectOriginatingProtocol(
       // Legacy transaction
       for (const account of message.accountKeys) {
         const accountKey = account.toBase58();
-        if (accountKey === PHANTOM_FEES_ID ||
-            accountKey === PHANTOM_FEES_ID_2) {
+        if (
+          accountKey === PHANTOM_FEES_ID ||
+          accountKey === PHANTOM_FEES_ID_2
+        ) {
           return 'phantom';
         }
         if (accountKey === KAMINO_PROGRAM_ID) {
@@ -356,8 +358,10 @@ function detectOriginatingProtocol(
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
       for (const account of message.staticAccountKeys) {
         const accountKey = account.toBase58();
-        if (accountKey === PHANTOM_FEES_ID ||
-            accountKey === PHANTOM_FEES_ID_2) {
+        if (
+          accountKey === PHANTOM_FEES_ID ||
+          accountKey === PHANTOM_FEES_ID_2
+        ) {
           return 'phantom';
         }
         if (accountKey === KAMINO_PROGRAM_ID) {
