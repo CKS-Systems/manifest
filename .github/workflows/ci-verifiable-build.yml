@@ -36,7 +36,7 @@ jobs:
 
       - name: Verifiable build manifest
         run: |
-          solana-verify build --arch=v2 --library-name ${{ env.MANIFEST_NAME }}
+          solana-verify build --library-name ${{ env.MANIFEST_NAME }}
 
       - name: Get hash manifest
         run: |
@@ -55,7 +55,7 @@ jobs:
 
       - name: Verifiable build wrapper
         run: |
-          solana-verify build --arch=v2 --library-name ${{ env.WRAPPER_NAME }}
+          solana-verify build --library-name ${{ env.WRAPPER_NAME }}
 
       - name: Get hash wrapper
         run: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Verifiable build ui wrapper
         run: |
-          solana-verify build --arch=v2 --library-name ${{ env.UI_WRAPPER_NAME }}
+          solana-verify build --library-name ${{ env.UI_WRAPPER_NAME }}
 
       - name: Get hash ui wrapper
         run: |
