@@ -49,10 +49,15 @@ const marketDiscriminator: Buffer = genAccDiscriminator(
   'manifest::state::market::MarketFixed',
 );
 
-const { RPC_URL } = process.env;
+const { RPC_URL, READ_ONLY } = process.env;
 
 if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
+}
+
+const IS_READ_ONLY = READ_ONLY === 'true';
+if (IS_READ_ONLY) {
+  console.log('⚠️  Running in READ-ONLY mode - database writes are disabled');
 }
 
 const fills: promClient.Counter<'market'> = new promClient.Counter({
@@ -138,8 +143,10 @@ export class ManifestStatsServer {
     'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
   ]);
   private pool: Pool;
+  private isReadOnly: boolean;
 
   constructor() {
+    this.isReadOnly = IS_READ_ONLY;
     this.connection = new Connection(RPC_URL!);
     this.resetWebsocket();
     this.connection = new Connection(RPC_URL!);
@@ -155,7 +162,11 @@ export class ManifestStatsServer {
     });
 
     this.resetWebsocket();
-    this.initDatabase(); // Initialize database schema
+
+    // Only initialize database schema if not in read-only mode
+    if (!this.isReadOnly) {
+      this.initDatabase();
+    }
   }
 
   private async withRetry<T>(
@@ -222,16 +233,20 @@ export class ManifestStatsServer {
    * Save complete fill to database immediately (async, non-blocking)
    */
   private async saveCompleteFillToDatabase(fill: FillLogResult): Promise<void> {
+    if (this.isReadOnly) {
+      return; // Skip database writes in read-only mode
+    }
+
     try {
       await this.withRetry(async () => {
         await this.pool.query(
           `
         INSERT INTO fills_complete (
-          slot, market, signature, taker, maker, 
+          slot, market, signature, taker, maker,
           taker_sequence_number, maker_sequence_number, fill_data
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (signature, taker_sequence_number, maker_sequence_number) 
+        ON CONFLICT (signature, taker_sequence_number, maker_sequence_number)
         DO NOTHING
       `,
           [
@@ -1514,6 +1529,11 @@ export class ManifestStatsServer {
    * Save current state to database
    */
   async saveState(): Promise<void> {
+    if (this.isReadOnly) {
+      console.log('Skipping state save (read-only mode)');
+      return;
+    }
+
     console.log('Saving state to database...');
 
     let client;
@@ -1895,7 +1915,7 @@ const run = async () => {
     throw new Error('RPC_URL missing from env');
   }
 
-  if (!DATABASE_URL) {
+  if (!DATABASE_URL && !IS_READ_ONLY) {
     console.warn(
       'WARNING: DATABASE_URL not found in environment. Data persistence will not work!',
     );
@@ -2014,7 +2034,7 @@ const run = async () => {
   const gracefulShutdown = async (signal: string) => {
     console.log(`Received ${signal}, saving state before exit...`);
     try {
-      if (DATABASE_URL) {
+      if (DATABASE_URL && !IS_READ_ONLY) {
         await statsServer.saveState();
       }
       console.log('State saved, exiting');
@@ -2038,7 +2058,7 @@ const run = async () => {
       await Promise.all([
         statsServer.depthProbe(),
         sleep(CHECKPOINT_DURATION_SEC * 1_000),
-        DATABASE_URL ? statsServer.saveState() : () => {},
+        DATABASE_URL && !IS_READ_ONLY ? statsServer.saveState() : Promise.resolve(),
       ]);
     } catch (error) {
       console.error('Error in main loop:', error);
