@@ -10,6 +10,7 @@
     "start:feed": "tsx scripts/start-fill-feed.ts",
     "run:pk-solflare-to-phantom": "tsx scripts/pk-solflare-to-phantom.ts",
     "stats": "tsx scripts/stats-server.ts",
+    "read-checkpoints": "tsx scripts/read-market-checkpoints.ts",
     "liquidity-monitoring": "tsx scripts/liquidity-monitoring.ts",
     "orderbook-snapshots": "tsx scripts/orderbook-snapshots.ts",
     "check-all": "yarn format && yarn lint",
