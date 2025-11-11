@@ -36,7 +36,7 @@ jobs:
 
       - name: Verifiable build manifest
         run: |
-          solana-verify build --arch=v2 --library-name ${{ env.MANIFEST_NAME }}
+          solana-verify build --library-name ${{ env.MANIFEST_NAME }}
 
       - name: Get hash manifest
         run: |

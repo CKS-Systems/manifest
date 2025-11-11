@@ -5412,15 +5412,11 @@ dependencies = [
 
 [[package]]
 name = "solana-invoke"
-version = "0.4.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58f5693c6de226b3626658377168b0184e94e8292ff16e3d31d4766e65627565"
+checksum = "fa261b38140f228b972b3f3a1d3f6c279ea1bd165300107f99c1d6aa82631d78"
 dependencies = [
- "solana-account-info",
- "solana-define-syscall",
- "solana-instruction",
- "solana-program-entrypoint",
- "solana-stable-layout",
+ "solana-program",
 ]
 
 [[package]]
