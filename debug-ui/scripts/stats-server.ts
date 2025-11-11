@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
 import { Mutex } from 'async-mutex';
