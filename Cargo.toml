@@ -20,7 +20,7 @@ num_enum = "=0.5.11"
 thiserror = "1.0.38"
 solana-security-txt = "1.1.0"
 static_assertions = "=1.1.0"
-solana-invoke = "0.2.0"
+solana-invoke = "0.4.0"
 
 anyhow = "1.0.66"
 solana-program-test = "2.2"
