@@ -8,6 +8,11 @@ members = [
   "programs/wrapper",
   "programs/ui-wrapper",
 ]
+default-members = [
+  "programs/manifest",
+  "programs/wrapper",
+  "programs/ui-wrapper",
+]
 
 [workspace.dependencies]
 shank = "0.4.2"
@@ -21,11 +26,12 @@ thiserror = "1.0.38"
 solana-security-txt = "1.1.0"
 static_assertions = "=1.1.0"
 solana-invoke = "0.4.0"
+base64ct = "1.6"
 
 anyhow = "1.0.66"
-solana-program-test = "2.2"
-solana-logger = "2.2"
-solana-sdk = "2.2"
+solana-program-test = "=2.2"
+solana-logger = "=2.2"
+solana-sdk = "=2.2"
 tokio = "1.28.0"
 
 nondet = { git = "https://github.com/Certora/solana-cvt", branch = "solana-v2.2" }
