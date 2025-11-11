@@ -2,13 +2,6 @@ import 'dotenv/config';
 import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
 import { Mutex } from 'async-mutex';
-import { Metaplex, Pda } from '@metaplex-foundation/js';
-import {
-  ENV,
-  TokenInfo,
-  TokenListContainer,
-  TokenListProvider,
-} from '@solana/spl-token-registry';
 import * as promClient from 'prom-client';
 import cors from 'cors';
 import express, { RequestHandler } from 'express';
@@ -31,24 +24,33 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
-import { genAccDiscriminator } from '@cks-systems/manifest-sdk/utils';
 import { Pool } from 'pg';
-
-// Stores checkpoints every 5 minutes
-const CHECKPOINT_DURATION_SEC: number = 5 * 60;
-const ONE_DAY_SEC: number = 24 * 60 * 60;
-const PORT: number = 3000;
-const DEPTHS_BPS: number[] = [50, 100, 200];
-
-// Manifest Program ID
-const MANIFEST_PROGRAM_ID = new PublicKey(
-  'MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms',
-);
-
-// Market discriminator for filtering accounts
-const marketDiscriminator: Buffer = genAccDiscriminator(
-  'manifest::state::market::MarketFixed',
-);
+import {
+  CHECKPOINT_DURATION_SEC,
+  ONE_DAY_SEC,
+  PORT,
+  DEPTHS_BPS,
+  MANIFEST_PROGRAM_ID,
+  MARKET_DISCRIMINATOR,
+  SOL_USDC_MARKET,
+  USDC_MINT,
+  SOL_MINT,
+  KNOWN_AGGREGATORS,
+} from './stats_utils/constants';
+import {
+  withRetry,
+  isKnownAggregator,
+  resolveActualTrader,
+  chunks,
+} from './stats_utils/utils';
+import * as queries from './stats_utils/queries';
+import { lookupMintTicker } from './stats_utils/mint';
+import { fetchMarketProgramAccounts } from './stats_utils/marketFetcher';
+import { calculateTraderPnL } from './stats_utils/pnl';
+import {
+  CompleteFillsQueryOptions,
+  CompleteFillsQueryResult,
+} from './stats_utils/types';
 
 const { RPC_URL, READ_ONLY } = process.env;
 
@@ -136,13 +138,6 @@ export class ManifestStatsServer {
 
   private traderTakerNotionalVolume: Map<string, number> = new Map();
   private traderMakerNotionalVolume: Map<string, number> = new Map();
-  private readonly SOL_USDC_MARKET =
-    'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ';
-  private readonly USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-  private readonly SOL_MINT = 'So11111111111111111111111111111111111111112';
-  private readonly KNOWN_AGGREGATORS = new Set([
-    'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
-  ]);
   private pool: Pool;
   private isReadOnly: boolean;
 
@@ -168,29 +163,6 @@ export class ManifestStatsServer {
     if (!this.isReadOnly) {
       this.initDatabase();
     }
-  }
-
-  private async withRetry<T>(
-    operation: () => Promise<T>,
-    maxRetries = 3,
-    delay = 1000,
-  ): Promise<T> {
-    let lastError;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        console.error(
-          `Database operation failed (attempt ${attempt + 1}/${maxRetries}):`,
-          error,
-        );
-        lastError = error;
-        if (attempt < maxRetries - 1) {
-          await sleep(delay * Math.pow(2, attempt)); // Exponential backoff
-        }
-      }
-    }
-    throw lastError;
   }
 
   private initTraderPositionTracking(trader: string): void {
@@ -239,28 +211,17 @@ export class ManifestStatsServer {
     }
 
     try {
-      await this.withRetry(async () => {
-        await this.pool.query(
-          `
-        INSERT INTO fills_complete (
-          slot, market, signature, taker, maker,
-          taker_sequence_number, maker_sequence_number, fill_data
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (signature, taker_sequence_number, maker_sequence_number)
-        DO NOTHING
-      `,
-          [
-            fill.slot,
-            fill.market,
-            fill.signature,
-            fill.taker,
-            fill.maker,
-            fill.takerSequenceNumber,
-            fill.makerSequenceNumber,
-            JSON.stringify(fill),
-          ],
-        );
+      await withRetry(async () => {
+        await this.pool.query(queries.INSERT_FILL_COMPLETE, [
+          fill.slot,
+          fill.market,
+          fill.signature,
+          fill.taker,
+          fill.maker,
+          fill.takerSequenceNumber,
+          fill.makerSequenceNumber,
+          JSON.stringify(fill),
+        ]);
       });
     } catch (error) {
       console.error('Error saving complete fill to database:', error);
@@ -280,7 +241,7 @@ export class ManifestStatsServer {
         originalSigner,
       } = fill;
 
-      const actualTaker = this.resolveActualTrader(taker, originalSigner);
+      const actualTaker = resolveActualTrader(taker, originalSigner);
 
       // Update trader counts
       this.traderNumTakerTrades.set(
@@ -363,13 +324,12 @@ export class ManifestStatsServer {
       });
 
       this.markets.set(market, marketObject);
-      const metaplex: Metaplex = Metaplex.make(this.connection);
-      const baseSymbol = await this.lookupMintTicker(
-        metaplex,
+      const baseSymbol = await lookupMintTicker(
+        this.connection,
         marketObject.baseMint(),
       );
-      const quoteSymbol = await this.lookupMintTicker(
-        metaplex,
+      const quoteSymbol = await lookupMintTicker(
+        this.connection,
         marketObject.quoteMint(),
       );
 
@@ -391,7 +351,7 @@ export class ManifestStatsServer {
     const { baseAtoms, quoteAtoms, takerIsBuy, maker } = fill;
     const quoteMint = marketObject.quoteMint().toBase58();
 
-    if (quoteMint === this.USDC_MINT) {
+    if (quoteMint === USDC_MINT) {
       const notionalVolume =
         Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
 
@@ -423,10 +383,10 @@ export class ManifestStatsServer {
         Number(quoteAtoms),
         marketObject,
       );
-    } else if (quoteMint === this.SOL_MINT) {
-      const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
+    } else if (quoteMint === SOL_MINT) {
+      const solPriceAtoms = this.lastPriceByMarket.get(SOL_USDC_MARKET);
       if (solPriceAtoms) {
-        const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+        const solUsdcMarket = this.markets.get(SOL_USDC_MARKET);
         if (solUsdcMarket) {
           const solPrice =
             solPriceAtoms *
@@ -447,138 +407,6 @@ export class ManifestStatsServer {
         }
       }
     }
-  }
-
-  private isKnownAggregator(address: string): boolean {
-    return this.KNOWN_AGGREGATORS.has(address);
-  }
-
-  private resolveActualTrader(trader: string, originalSigner?: string): string {
-    if (originalSigner && this.isKnownAggregator(trader)) {
-      return originalSigner;
-    }
-    return trader;
-  }
-
-  // TODO: PnL on all quote asset markets
-  private calculateTraderPnL(
-    trader: string,
-    includeDetails: boolean = false,
-  ):
-    | number
-    | {
-        totalPnL: number;
-        positions: {
-          [mint: string]: {
-            tokenMint: string;
-            marketKey: string | null;
-            position: number;
-            acquisitionValue: number;
-            currentPrice: number;
-            marketValue: number;
-            pnl: number;
-          };
-        };
-      } {
-    let totalPnL = 0;
-
-    if (!this.traderPositions.has(trader)) {
-      return includeDetails ? { totalPnL: 0, positions: {} } : 0;
-    }
-
-    // Setup for detailed return if needed
-    const positionDetails: {
-      [mint: string]: {
-        tokenMint: string;
-        marketKey: string | null;
-        position: number;
-        acquisitionValue: number;
-        currentPrice: number;
-        marketValue: number;
-        pnl: number;
-      };
-    } = {};
-
-    const positions = this.traderPositions.get(trader)!;
-    const acquisitionValues = this.traderAcquisitionValue.get(trader)!;
-
-    // Calculate PnL for each base token position
-    for (const [baseMint, baseAtomPosition] of positions.entries()) {
-      // Skip zero positions
-      if (baseAtomPosition === 0) continue;
-
-      // Find USDC market for this base token
-      let usdcMarket: Market | null = null;
-      let marketKey: string | null = null;
-      let lastPriceAtoms = 0;
-
-      // Special handling for wSOL - directly use the preferred market
-      if (baseMint === this.SOL_MINT) {
-        if (this.markets.has(this.SOL_USDC_MARKET)) {
-          usdcMarket = this.markets.get(this.SOL_USDC_MARKET)!;
-          marketKey = this.SOL_USDC_MARKET;
-          lastPriceAtoms = this.lastPriceByMarket.get(marketKey) || 0;
-        }
-      }
-
-      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) {
-        for (const [marketPk, market] of this.markets.entries()) {
-          if (
-            market.baseMint().toBase58() === baseMint &&
-            market.quoteMint().toBase58() === this.USDC_MINT
-          ) {
-            // Skip markets with zero price
-            const price = this.lastPriceByMarket.get(marketPk) || 0;
-            if (price > 0) {
-              usdcMarket = market;
-              marketKey = marketPk;
-              lastPriceAtoms = price;
-              break;
-            }
-          }
-        }
-      }
-
-      // Skip if no USDC market found for this token or if price is zero
-      if (!usdcMarket || !marketKey || lastPriceAtoms === 0) continue;
-
-      // Calculate current value in USDC
-      const baseDecimals = usdcMarket.baseDecimals();
-      const quoteDecimals = usdcMarket.quoteDecimals();
-      const basePosition = baseAtomPosition / 10 ** baseDecimals;
-
-      // Convert price from atoms to actual price
-      const priceInQuote =
-        lastPriceAtoms * 10 ** (baseDecimals - quoteDecimals);
-
-      // Calculate current market value
-      const currentPositionValue = basePosition * priceInQuote;
-
-      // Get acquisition value
-      const acquisitionValue = acquisitionValues.get(baseMint) || 0;
-
-      // PnL = current value - cost basis
-      const positionPnL = currentPositionValue - acquisitionValue;
-
-      // Add to total PnL
-      totalPnL += positionPnL;
-
-      // Store detailed position info if requested
-      if (includeDetails) {
-        positionDetails[baseMint] = {
-          tokenMint: baseMint,
-          marketKey,
-          position: basePosition,
-          acquisitionValue,
-          currentPrice: priceInQuote,
-          marketValue: currentPositionValue,
-          pnl: positionPnL,
-        };
-      }
-    }
-
-    // Return either detailed object or just the total PnL number
-    return includeDetails ? { totalPnL, positions: positionDetails } : totalPnL;
   }
 
   private resetWebsocket() {
@@ -650,58 +478,8 @@ export class ManifestStatsServer {
   async initialize(): Promise<void> {
     await this.loadState();
 
-    let marketProgramAccounts: GetProgramAccountsResponse;
-    try {
-      marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
-        this.connection,
-      );
-    } catch (error) {
-      console.error(
-        'Failed to get market program accounts with data, retrying with pubkeys only:',
-        error,
-      );
-
-      // Fallback: Get pubkeys only without data
-      try {
-        const marketPubkeys = await this.connection.getProgramAccounts(
-          MANIFEST_PROGRAM_ID,
-          {
-            dataSlice: { offset: 0, length: 0 }, // Request no data, just pubkeys
-            filters: [
-              {
-                memcmp: {
-                  offset: 0,
-                  bytes: marketDiscriminator.toString('base64'),
-                  encoding: 'base64',
-                },
-              },
-            ],
-          },
-        );
-
-        // Create dummy accounts with empty data for initialization
-        marketProgramAccounts = marketPubkeys.map(({ pubkey }) => ({
-          pubkey,
-          account: {
-            data: Buffer.alloc(0), // Empty buffer
-            executable: false,
-            lamports: 0,
-            owner: MANIFEST_PROGRAM_ID,
-          } as AccountInfo<Buffer>,
-        }));
-
-        console.log(
-          `Initialized with ${marketProgramAccounts.length} market pubkeys (no data)`,
-        );
-      } catch (fallbackError) {
-        console.error(
-          'Fallback pubkey-only request also failed:',
-          fallbackError,
-        );
-        console.log('Initializing with empty markets');
-        marketProgramAccounts = [];
-      }
-    }
+    const marketProgramAccounts: GetProgramAccountsResponse =
+      await fetchMarketProgramAccounts(this.connection);
 
     marketProgramAccounts.forEach(
       (
@@ -748,7 +526,6 @@ export class ManifestStatsServer {
     );
 
     const mintToSymbols: Map<string, string> = new Map();
-    const metaplex: Metaplex = Metaplex.make(this.connection);
     this.markets.forEach(async (market: Market) => {
       const baseMint: PublicKey = market.baseMint();
       const quoteMint: PublicKey = market.quoteMint();
@@ -760,14 +537,14 @@ export class ManifestStatsServer {
       } else {
         // Sleep to backoff on RPC load.
         await new Promise((f) => setTimeout(f, 500));
-        baseSymbol = await this.lookupMintTicker(metaplex, baseMint);
+        baseSymbol = await lookupMintTicker(this.connection, baseMint);
       }
       mintToSymbols.set(baseMint.toBase58(), baseSymbol);
 
       if (mintToSymbols.has(quoteMint.toBase58())) {
         quoteSymbol = mintToSymbols.get(quoteMint.toBase58())!;
       } else {
-        quoteSymbol = await this.lookupMintTicker(metaplex, quoteMint);
+        quoteSymbol = await lookupMintTicker(this.connection, quoteMint);
       }
       mintToSymbols.set(quoteMint.toBase58(), quoteSymbol);
 
@@ -776,69 +553,6 @@ export class ManifestStatsServer {
         mintToSymbols.get(market.quoteMint()!.toBase58())!,
       ]);
     });
-  }
-
-  async lookupMintTicker(metaplex: Metaplex, mint: PublicKey) {
-    // First try Metaplex metadata for SPL tokens
-    const metadataAccount: Pda = metaplex.nfts().pdas().metadata({ mint });
-    const metadataAccountInfo =
-      await this.connection.getAccountInfo(metadataAccount);
-    if (metadataAccountInfo) {
-      const token = await metaplex.nfts().findByMint({ mintAddress: mint });
-      return token.symbol;
-    }
-
-    // Then try SPL token registry
-    const provider: TokenListContainer =
-      await new TokenListProvider().resolve();
-    const tokenList: TokenInfo[] = provider
-      .filterByChainId(ENV.MainnetBeta)
-      .getList();
-    const tokenMap: Map<string, TokenInfo> = tokenList.reduce((map, item) => {
-      map.set(item.address, item);
-      return map;
-    }, new Map<string, TokenInfo>());
-
-    const token: TokenInfo | undefined = tokenMap.get(mint.toBase58());
-    if (token) {
-      return token.symbol;
-    }
-
-    // Finally try Token2022 metadata extension as fallback
-    try {
-      const mintAccountInfo = await this.connection.getAccountInfo(mint);
-      if (
-        mintAccountInfo &&
-        mintAccountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
-      ) {
-        const mintData = unpackMint(
-          mint,
-          mintAccountInfo,
-          TOKEN_2022_PROGRAM_ID,
-        );
-        const metadataPointer = getMetadataPointerState(mintData);
-
-        if (metadataPointer && metadataPointer.metadataAddress) {
-          const metadata = await getTokenMetadata(
-            this.connection,
-            mint,
-            'confirmed',
-            TOKEN_2022_PROGRAM_ID,
-          );
-          if (metadata && metadata.symbol) {
-            return metadata.symbol;
-          }
-        }
-      }
-    } catch (error) {
-      console.log(
-        'Token2022 metadata lookup failed for',
-        mint.toBase58(),
-        error,
-      );
-    }
-
-    return '';
   }
 
   /**
@@ -1107,8 +821,8 @@ export class ManifestStatsServer {
     let lifetimeVolume = 0;
 
     // Get SOL price for converting SOL-quoted volumes to USDC equivalent
-    const solPriceAtoms = this.lastPriceByMarket.get(this.SOL_USDC_MARKET);
-    const solUsdcMarket = this.markets.get(this.SOL_USDC_MARKET);
+    const solPriceAtoms = this.lastPriceByMarket.get(SOL_USDC_MARKET);
+    const solUsdcMarket = this.markets.get(SOL_USDC_MARKET);
     let solPrice = 0;
     if (solPriceAtoms && solUsdcMarket) {
       solPrice =
@@ -1138,12 +852,12 @@ export class ManifestStatsServer {
               const quoteMint = market.quoteMint().toBase58();
 
               // Track USDC quote volume directly
-              if (quoteMint == this.USDC_MINT) {
+              if (quoteMint == USDC_MINT) {
                 return Number(market.quoteVolume()) / 10 ** 6;
               }
 
               // Convert SOL quote volume to USDC equivalent
-              if (quoteMint == this.SOL_MINT && solPrice > 0) {
+              if (quoteMint == SOL_MINT && solPrice > 0) {
                 const solVolumeNormalized =
                   Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
                 return solVolumeNormalized * solPrice;
@@ -1196,7 +910,7 @@ export class ManifestStatsServer {
       );
 
       // Handle quote volumes differently for USDC vs other tokens
-      if (market.quoteMint().toBase58() != this.USDC_MINT) {
+      if (market.quoteMint().toBase58() != USDC_MINT) {
         if (!dailyVolumesByToken.has(quoteMint)) {
           dailyVolumesByToken.set(quoteMint, 0);
         }
@@ -1207,16 +921,16 @@ export class ManifestStatsServer {
       }
 
       // Calculate total USDC equivalent volume
-      if (market.quoteMint().toBase58() == this.SOL_MINT && solPrice > 0) {
+      if (market.quoteMint().toBase58() == SOL_MINT && solPrice > 0) {
         dailyUsdcEquivalentVolume += quoteVolume * solPrice;
-      } else if (market.quoteMint().toBase58() == this.USDC_MINT) {
+      } else if (market.quoteMint().toBase58() == USDC_MINT) {
         dailyDirectUsdcVolume += quoteVolume;
         dailyUsdcEquivalentVolume += quoteVolume;
       }
     });
 
     // Report direct USDC volume separately and combined volume under USDC key
-    const usdcKey = 'solana:' + this.USDC_MINT;
+    const usdcKey = 'solana:' + USDC_MINT;
     if (dailyDirectUsdcVolume > 0) {
       dailyVolumesByToken.set(
         'manifest:direct_usdc_volume',
@@ -1284,7 +998,14 @@ export class ManifestStatsServer {
       const makerNotionalVolume =
         this.traderMakerNotionalVolume.get(trader) || 0;
 
-      const pnlResult = this.calculateTraderPnL(trader, includeDebug);
+      const pnlResult = calculateTraderPnL(
+        trader,
+        this.traderPositions,
+        this.traderAcquisitionValue,
+        this.markets,
+        this.lastPriceByMarket,
+        includeDebug,
+      );
 
       const pnl =
         typeof pnlResult === 'number' ? pnlResult : pnlResult.totalPnL;
@@ -1306,9 +1027,7 @@ export class ManifestStatsServer {
   }
 
   async getAlts(): Promise<{ alt: string; market: string }[]> {
-    const response = await this.pool.query(
-      'SELECT alt, market FROM alt_markets',
-    );
+    const response = await this.pool.query(queries.SELECT_ALT_MARKETS);
     return response.rows.map((r) => ({ alt: r.alt, market: r.market }));
   }
 
@@ -1320,21 +1039,8 @@ export class ManifestStatsServer {
   }
 
   async getCompleteFillsFromDatabase(
-    options: {
-      market?: string;
-      taker?: string;
-      maker?: string;
-      signature?: string;
-      limit?: number;
-      offset?: number;
-      fromSlot?: number;
-      toSlot?: number;
-    } = {},
-  ): Promise<{
-    fills: FillLogResult[];
-    total: number;
-    hasMore: boolean;
-  }> {
+    options: CompleteFillsQueryOptions = {},
+  ): Promise<CompleteFillsQueryResult> {
     const {
       market,
       taker,
@@ -1423,101 +1129,15 @@ export class ManifestStatsServer {
   async initDatabase(): Promise<void> {
     try {
       // Create tables if they don't exist
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS state_checkpoints (
-          id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          last_fill_slot BIGINT NOT NULL
-        )
-      `);
-
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS market_volumes (
-          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
-          market TEXT NOT NULL,
-          base_volume_since_last_checkpoint NUMERIC,
-          quote_volume_since_last_checkpoint NUMERIC,
-          PRIMARY KEY (checkpoint_id, market)
-        )
-      `);
-
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS market_checkpoints (
-          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
-          market TEXT NOT NULL,
-          base_volume_checkpoints JSONB NOT NULL,
-          quote_volume_checkpoints JSONB NOT NULL,
-          last_price NUMERIC,
-          PRIMARY KEY (checkpoint_id, market)
-        )
-      `);
-
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS trader_stats (
-          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
-          trader TEXT NOT NULL,
-          num_taker_trades INTEGER DEFAULT 0,
-          num_maker_trades INTEGER DEFAULT 0,
-          taker_notional_volume NUMERIC DEFAULT 0,
-          maker_notional_volume NUMERIC DEFAULT 0,
-          PRIMARY KEY (checkpoint_id, trader)
-        )
-      `);
-
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS fill_log_results (
-          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
-          market TEXT NOT NULL,
-          fill_data JSONB NOT NULL,
-          PRIMARY KEY (checkpoint_id, market)
-        )
-      `);
-
-      await this.pool.query(`
-        CREATE TABLE IF NOT EXISTS trader_positions (
-          checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
-          trader TEXT NOT NULL,
-          mint TEXT NOT NULL,
-          position NUMERIC NOT NULL,
-          acquisition_value NUMERIC NOT NULL,
-          PRIMARY KEY (checkpoint_id, trader, mint)
-        )
-      `);
-
-      await this.pool.query(`
-          CREATE TABLE IF NOT EXISTS fills_complete (
-            id BIGSERIAL PRIMARY KEY,
-            slot BIGINT NOT NULL,
-            market TEXT NOT NULL,
-            signature TEXT NOT NULL,
-            taker TEXT NOT NULL,
-            maker TEXT NOT NULL,
-            taker_sequence_number BIGINT NOT NULL,
-            maker_sequence_number BIGINT NOT NULL,
-            fill_data JSONB NOT NULL,
-            timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            
-            -- Optimal deduplication using signature + sequence numbers
-            CONSTRAINT unique_complete_fill UNIQUE (signature, taker_sequence_number, maker_sequence_number)
-          )
-        `);
-
-      // Create index for efficient querying
-      await this.pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_fills_complete_market_timestamp ON fills_complete (market, timestamp DESC);
-        CREATE INDEX IF NOT EXISTS idx_fills_complete_slot ON fills_complete (slot);
-        CREATE INDEX IF NOT EXISTS idx_fills_complete_signature ON fills_complete (signature);
-        CREATE INDEX IF NOT EXISTS idx_fills_complete_taker ON fills_complete (taker);
-        CREATE INDEX IF NOT EXISTS idx_fills_complete_maker ON fills_complete (maker);
-      `);
-
-      await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS alt_markets (
-        alt TEXT NOT NULL,
-        market TEXT NOT NULL,
-        PRIMARY KEY (alt, market)
-      )
-    `);
+      await this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE);
+      await this.pool.query(queries.CREATE_MARKET_VOLUMES_TABLE);
+      await this.pool.query(queries.CREATE_MARKET_CHECKPOINTS_TABLE);
+      await this.pool.query(queries.CREATE_TRADER_STATS_TABLE);
+      await this.pool.query(queries.CREATE_FILL_LOG_RESULTS_TABLE);
+      await this.pool.query(queries.CREATE_TRADER_POSITIONS_TABLE);
+      await this.pool.query(queries.CREATE_FILLS_COMPLETE_TABLE);
+      await this.pool.query(queries.CREATE_FILLS_COMPLETE_INDEXES);
+      await this.pool.query(queries.CREATE_ALT_MARKETS_TABLE);
 
       console.log('Database schema initialized');
     } catch (error) {
@@ -1549,12 +1169,12 @@ export class ManifestStatsServer {
 
       // Start a transaction
       console.log('Querying begin');
-      await client.query('BEGIN');
+      await client.query(queries.BEGIN_TRANSACTION);
 
       // Insert a new checkpoint
       console.log('Inserting checkpoint');
       const checkpointResult = await client.query(
-        'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id',
+        queries.INSERT_STATE_CHECKPOINT,
         [this.lastFillSlot],
       );
 
@@ -1570,10 +1190,12 @@ export class ManifestStatsServer {
           this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
 
         volumePromises.push(
-          client.query(
-            'INSERT INTO market_volumes (checkpoint_id, market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint) VALUES ($1, $2, $3, $4)',
-            [checkpointId, market, baseVolume, quoteVolume],
-          ),
+          client.query(queries.INSERT_MARKET_VOLUME, [
+            checkpointId,
+            market,
+            baseVolume,
+            quoteVolume,
+          ]),
         );
       }
 
@@ -1588,16 +1210,13 @@ export class ManifestStatsServer {
         const lastPrice = this.lastPriceByMarket.get(market) || 0;
 
         checkpointPromises.push(
-          client.query(
-            'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, last_price) VALUES ($1, $2, $3, $4, $5)',
-            [
-              checkpointId,
-              market,
-              JSON.stringify(baseCheckpoints),
-              JSON.stringify(quoteCheckpoints),
-              lastPrice,
-            ],
-          ),
+          client.query(queries.INSERT_MARKET_CHECKPOINT, [
+            checkpointId,
+            market,
+            JSON.stringify(baseCheckpoints),
+            JSON.stringify(quoteCheckpoints),
+            lastPrice,
+          ]),
         );
       }
 
@@ -1626,17 +1245,14 @@ export class ManifestStatsServer {
           const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
 
           batchPromises.push(
-            client.query(
-              'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)',
-              [
-                checkpointId,
-                trader,
-                numTakerTrades,
-                numMakerTrades,
-                takerVolume,
-                makerVolume,
-              ],
-            ),
+            client.query(queries.INSERT_TRADER_STATS, [
+              checkpointId,
+              trader,
+              numTakerTrades,
+              numMakerTrades,
+              takerVolume,
+              makerVolume,
+            ]),
           );
         }
 
@@ -1672,10 +1288,13 @@ export class ManifestStatsServer {
           }
 
           positionBatchPromises.push(
-            client.query(
-              'INSERT INTO trader_positions (checkpoint_id, trader, mint, position, acquisition_value) VALUES ($1, $2, $3, $4, $5)',
-              [checkpointId, trader, mint, position, acquisitionValue],
-            ),
+            client.query(queries.INSERT_TRADER_POSITION, [
+              checkpointId,
+              trader,
+              mint,
+              position,
+              acquisitionValue,
+            ]),
           );
         }
 
@@ -1752,18 +1371,16 @@ export class ManifestStatsServer {
 
       console.log('Cleaning up old checkpoints');
       // Clean up old checkpoints - keep only the most recent one
-      await client.query('DELETE FROM state_checkpoints WHERE id != $1', [
-        checkpointId,
-      ]);
+      await client.query(queries.DELETE_OLD_CHECKPOINTS, [checkpointId]);
 
       console.log('Committing');
-      await client.query('COMMIT');
+      await client.query(queries.COMMIT_TRANSACTION);
       console.log('State saved successfully to database');
     } catch (error) {
       console.error('Error saving state to database:', error);
       if (client) {
         try {
-          await client.query('ROLLBACK');
+          await client.query(queries.ROLLBACK_TRANSACTION);
         } catch (rollbackError) {
           console.error('Error during rollback:', rollbackError);
           // Continue execution even if rollback fails
@@ -1791,7 +1408,7 @@ export class ManifestStatsServer {
     try {
       // Get the most recent checkpoint
       const checkpointResultRecent = await this.pool.query(
-        'SELECT id, last_fill_slot FROM state_checkpoints ORDER BY created_at DESC LIMIT 1',
+        queries.SELECT_RECENT_CHECKPOINT,
       );
 
       if (checkpointResultRecent.rowCount === 0) {
@@ -1804,7 +1421,7 @@ export class ManifestStatsServer {
 
       // Load market volumes
       const volumeResult = await this.pool.query(
-        'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1',
+        queries.SELECT_MARKET_VOLUMES,
         [checkpointId],
       );
 
@@ -1821,7 +1438,7 @@ export class ManifestStatsServer {
 
       // Load market checkpoints
       const checkpointResult = await this.pool.query(
-        'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1',
+        queries.SELECT_MARKET_CHECKPOINTS,
         [checkpointId],
       );
 
@@ -1849,10 +1466,9 @@ export class ManifestStatsServer {
       }
 
       // Load trader stats
-      const traderResult = await this.pool.query(
-        'SELECT trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume FROM trader_stats WHERE checkpoint_id = $1',
-        [checkpointId],
-      );
+      const traderResult = await this.pool.query(queries.SELECT_TRADER_STATS, [
+        checkpointId,
+      ]);
 
       for (const row of traderResult.rows) {
         this.traderNumTakerTrades.set(row.trader, Number(row.num_taker_trades));
@@ -1869,7 +1485,7 @@ export class ManifestStatsServer {
 
       // Load trader positions
       const positionResult = await this.pool.query(
-        'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1',
+        queries.SELECT_TRADER_POSITIONS,
         [checkpointId],
       );
 
@@ -1891,7 +1507,7 @@ export class ManifestStatsServer {
 
       // Load fill logs
       const fillResult = await this.pool.query(
-        'SELECT market, fill_data FROM fill_log_results WHERE checkpoint_id = $1',
+        queries.SELECT_FILL_LOG_RESULTS,
         [checkpointId],
       );
 
@@ -1981,7 +1597,7 @@ const run = async () => {
   };
   const completeFillsHandler: RequestHandler = async (req, res) => {
     try {
-      const options = {
+      const options: CompleteFillsQueryOptions = {
         market: req.query.market as string,
         taker: req.query.taker as string,
         maker: req.query.maker as string,
@@ -2059,7 +1675,9 @@ const run = async () => {
       await Promise.all([
         statsServer.depthProbe(),
         sleep(CHECKPOINT_DURATION_SEC * 1_000),
-        DATABASE_URL && !IS_READ_ONLY ? statsServer.saveState() : Promise.resolve(),
+        DATABASE_URL && !IS_READ_ONLY
+          ? statsServer.saveState()
+          : Promise.resolve(),
       ]);
     } catch (error) {
       console.error('Error in main loop:', error);
@@ -2073,9 +1691,3 @@ run().catch((e) => {
   console.error('fatal error');
   throw e;
 });
-
-function chunks<T>(array: T[], size: number): T[][] {
-  return Array.apply(0, new Array(Math.ceil(array.length / size))).map(
-    (_, index) => array.slice(index * size, (index + 1) * size),
-  );
-}
