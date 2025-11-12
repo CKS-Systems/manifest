@@ -47,7 +47,7 @@ export type RestingOrder = {
   tokenPrice: number;
   /** OrderType: 🌎 or Limit or PostOnly */
   orderType: OrderType;
-  /** Spread in basis points for reversible orders, stored in 0.1 bps increments (only set for orderType === OrderType.Reverse || OrderType.ReverseTight). */
+  /** Spread in bps for reverse orders. Reverse: [0.1-6553.5] bps (0.1 bps increments). ReverseTight: [0.0001-6.5535] bps (0.0001 bps increments). Only set for orderType === Reverse || ReverseTight. */
   spreadBps?: number;
 };
 
@@ -690,7 +690,7 @@ export class Market {
 
                 return {
                   ...baseOrder,
-                  spreadBps: spreadBps,
+                  spreadBps,
                 };
               }
 
@@ -753,7 +753,7 @@ export class Market {
 
                 return {
                   ...baseOrder,
-                  spreadBps: spreadBps,
+                  spreadBps,
                 };
               }
 
