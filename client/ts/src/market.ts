@@ -669,8 +669,10 @@ export class Market {
                 ...restingOrderInternal,
               };
 
-              if (restingOrderInternal.orderType === OrderType.Reverse ||
-                  restingOrderInternal.orderType === OrderType.ReverseTight) {
+              if (
+                restingOrderInternal.orderType === OrderType.Reverse ||
+                restingOrderInternal.orderType === OrderType.ReverseTight
+              ) {
                 const paddingBytes = restingOrderInternal.padding;
                 const spreadRaw =
                   paddingBytes[0] |
@@ -681,9 +683,10 @@ export class Market {
                 // Convert spreadRaw to bps based on order type
                 // Reverse: spreadRaw is in units of 1/100,000 (base), divide by 10 to get bps
                 // ReverseTight: spreadRaw is in units of 1/100,000,000 (base), divide by 10,000 to get bps
-                const spreadBps = restingOrderInternal.orderType === OrderType.ReverseTight
-                  ? spreadRaw / 10000
-                  : spreadRaw / 10;
+                const spreadBps =
+                  restingOrderInternal.orderType === OrderType.ReverseTight
+                    ? spreadRaw / 10000
+                    : spreadRaw / 10;
 
                 return {
                   ...baseOrder,
@@ -729,8 +732,10 @@ export class Market {
                 ...restingOrderInternal,
               };
 
-              if (restingOrderInternal.orderType === OrderType.Reverse ||
-                  restingOrderInternal.orderType === OrderType.ReverseTight) {
+              if (
+                restingOrderInternal.orderType === OrderType.Reverse ||
+                restingOrderInternal.orderType === OrderType.ReverseTight
+              ) {
                 const paddingBytes = restingOrderInternal.padding;
                 const spreadRaw =
                   paddingBytes[0] |
@@ -741,9 +746,10 @@ export class Market {
                 // Convert spreadRaw to bps based on order type
                 // Reverse: spreadRaw is in units of 1/100,000 (base), divide by 10 to get bps
                 // ReverseTight: spreadRaw is in units of 1/100,000,000 (base), divide by 10,000 to get bps
-                const spreadBps = restingOrderInternal.orderType === OrderType.ReverseTight
-                  ? spreadRaw / 10000
-                  : spreadRaw / 10;
+                const spreadBps =
+                  restingOrderInternal.orderType === OrderType.ReverseTight
+                    ? spreadRaw / 10000
+                    : spreadRaw / 10;
 
                 return {
                   ...baseOrder,
