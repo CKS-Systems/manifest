@@ -137,6 +137,7 @@ export class ManifestStatsServer {
   private readonly KNOWN_AGGREGATORS = new Set([
     'D5YqVMoSxnqeZAKAUUE1Dm3bmjtdxQ5DCF356ozqN9cM', // Titan
     'HV1KXxWFaSeriyFvXyx48FqG9BoFbfinB8njCJonqP7K', // OKX
+    'ARu4n5mFdZogZAravu7CcizaojWnS6oqka37gdLT5SZn', // OKX v1
   ]);
   private pool: Pool;
 
