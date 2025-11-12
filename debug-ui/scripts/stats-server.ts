@@ -1703,7 +1703,7 @@ const run = async () => {
   const gracefulShutdown = async (signal: string) => {
     console.log(`Received ${signal}, saving state before exit...`);
     try {
-      if (DATABASE_URL && !IS_READ_ONLY) {
+      if (DATABASE_URL) {
         await statsServer.saveState();
       }
       console.log('State saved, exiting');
@@ -1727,9 +1727,7 @@ const run = async () => {
       await Promise.all([
         statsServer.depthProbe(),
         sleep(CHECKPOINT_DURATION_SEC * 1_000),
-        DATABASE_URL && !IS_READ_ONLY
-          ? statsServer.saveState()
-          : Promise.resolve(),
+        DATABASE_URL ? statsServer.saveState() : Promise.resolve(),
       ]);
     } catch (error) {
       console.error('Error in main loop:', error);
