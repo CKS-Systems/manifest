@@ -119,9 +119,7 @@ impl RestingOrder {
     ) -> Result<Self, ProgramError> {
         // Reverse orders cannot have expiration. The purpose of those orders is to
         // be a permanent liquidity on the book.
-        assert!(
-            !(order_type.is_reversible() && last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT)
-        );
+        assert!(!(order_type.is_reversible() && last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT));
 
         Ok(RestingOrder {
             trader_index,
