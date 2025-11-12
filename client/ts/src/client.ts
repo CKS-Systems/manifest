@@ -1988,11 +1988,12 @@ function toWrapperPlaceOrderParams(
     | WrapperPlaceOrderParamsExternal
     | WrapperPlaceOrderReverseParamsExternal,
 ): WrapperPlaceOrderParams {
-  // Convert spread bps to 10^-5.
+  // Convert spread bps based on order type
+  // ReverseTight uses 10^-8 precision, Reverse uses 10^-5 precision
   if ('spreadBps' in wrapperPlaceOrderParamsExternal) {
-    wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(
-      wrapperPlaceOrderParamsExternal['spreadBps'] * 10,
-    );
+    const originalSpreadBps = wrapperPlaceOrderParamsExternal['spreadBps'];
+    const multiplier = wrapperPlaceOrderParamsExternal['orderType'] === OrderType.ReverseTight ? 10000 : 10;
+    wrapperPlaceOrderParamsExternal['lastValidSlot'] = Math.floor(originalSpreadBps * multiplier);
   }
 
   // Choose max exponent based on ordertype
