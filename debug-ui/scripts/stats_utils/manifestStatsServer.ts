@@ -24,6 +24,7 @@ import {
   USDC_MINT,
   SOL_MINT,
   CBBTC_MINT,
+  WBTC_MINT,
   STABLECOIN_MINTS,
 } from './constants';
 import { resolveActualTrader, chunks } from './utils';
@@ -365,7 +366,7 @@ export class ManifestStatsServer {
           );
         }
       }
-    } else if (quoteMint === CBBTC_MINT) {
+    } else if (quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) {
       const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
       if (cbbtcPriceAtoms) {
         const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
