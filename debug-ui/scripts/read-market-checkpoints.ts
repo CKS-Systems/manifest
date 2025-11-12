@@ -94,6 +94,29 @@ async function readMarketCheckpoints() {
         console.log('Base Volume Checkpoints:', baseCheckpoints);
         console.log('Quote Volume Checkpoints:', quoteCheckpoints);
 
+        // Get fill statistics for this market and checkpoint
+        const fillStatsResult = await pool.query(
+          `SELECT
+            COUNT(*) as fill_count,
+            MIN(slot) as first_slot,
+            MAX(slot) as last_slot,
+            MIN(timestamp) as first_timestamp,
+            MAX(timestamp) as last_timestamp
+          FROM fills_complete
+          WHERE market = $1 AND slot <= $2`,
+          [row.market, checkpoint.last_fill_slot]
+        );
+
+        if (fillStatsResult.rowCount > 0 && fillStatsResult.rows[0].fill_count > 0) {
+          const stats = fillStatsResult.rows[0];
+          console.log('Fill Activity Up To This Checkpoint:');
+          console.log('  Total Fills:', stats.fill_count);
+          console.log('  Slot Range:', `${stats.first_slot} → ${stats.last_slot}`);
+          console.log('  Time Range:', `${stats.first_timestamp} → ${stats.last_timestamp}`);
+        } else {
+          console.log('Fill Activity: No fills found for this market');
+        }
+
         // Also show volume since last checkpoint
         const volumesResult = await pool.query(
           `SELECT
