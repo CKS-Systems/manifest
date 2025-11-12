@@ -374,7 +374,8 @@ export class ManifestStatsServer {
           const cbbtcPrice =
             cbbtcPriceAtoms *
             10 **
-              (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
+              (cbbtcUsdcMarket.baseDecimals() -
+                cbbtcUsdcMarket.quoteDecimals());
           const notionalVolume =
             (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
             cbbtcPrice;
@@ -820,7 +821,8 @@ export class ManifestStatsServer {
     if (cbbtcPriceAtoms && cbbtcUsdcMarket) {
       cbbtcPrice =
         cbbtcPriceAtoms *
-        10 ** (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
+        10 **
+          (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
     }
 
     try {
@@ -846,7 +848,9 @@ export class ManifestStatsServer {
 
               // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
               if (STABLECOIN_MINTS.has(quoteMint)) {
-                return Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
+                return (
+                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals()
+                );
               }
 
               // Convert SOL quote volume to USDC equivalent
@@ -857,7 +861,10 @@ export class ManifestStatsServer {
               }
 
               // Convert CBBTC/WBTC quote volume to USDC equivalent
-              if ((quoteMint == CBBTC_MINT || quoteMint == WBTC_MINT) && cbbtcPrice > 0) {
+              if (
+                (quoteMint == CBBTC_MINT || quoteMint == WBTC_MINT) &&
+                cbbtcPrice > 0
+              ) {
                 const cbbtcVolumeNormalized =
                   Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
                 return cbbtcVolumeNormalized * cbbtcPrice;

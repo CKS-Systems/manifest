@@ -5,7 +5,7 @@ import { ManifestClient, Market } from '@cks-systems/manifest-sdk';
 import { Pool } from 'pg';
 import express from 'express';
 import cors from 'cors';
-import { STABLECOIN_MINTS } from './stats_utils/constants';
+import { USDC_MINT, STABLECOIN_MINTS } from './stats_utils/constants';
 
 // Configuration constants
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
