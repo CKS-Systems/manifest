@@ -7,7 +7,7 @@ import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 import cors from 'cors';
-import { SOL_MINT, CBBTC_MINT, CBBTC_USDC_MARKET, STABLECOIN_MINTS } from './stats_utils/constants';
+import { SOL_MINT, CBBTC_MINT, WBTC_MINT, CBBTC_USDC_MARKET, STABLECOIN_MINTS } from './stats_utils/constants';
 
 // Configuration constants
 const MONITORING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -196,7 +196,7 @@ export class LiquidityMonitor {
 
       for (const ticker of tickers) {
         const quoteMint = ticker.target_currency;
-        if (!STABLECOIN_MINTS.has(quoteMint) && quoteMint !== SOL_MINT && quoteMint !== CBBTC_MINT) {
+        if (!STABLECOIN_MINTS.has(quoteMint) && quoteMint !== SOL_MINT && quoteMint !== CBBTC_MINT && quoteMint !== WBTC_MINT) {
           continue;
         }
 
@@ -206,8 +206,8 @@ export class LiquidityMonitor {
         } else if (quoteMint === SOL_MINT && solPrice > 0) {
           // Convert SOL volume to USD
           volumeUsd = (ticker.target_volume || 0) * solPrice;
-        } else if (quoteMint === CBBTC_MINT && cbbtcPrice > 0) {
-          // Convert CBBTC volume to USD
+        } else if ((quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) && cbbtcPrice > 0) {
+          // Convert CBBTC/WBTC volume to USD (both use CBBTC price)
           volumeUsd = (ticker.target_volume || 0) * cbbtcPrice;
         }
 
@@ -253,9 +253,9 @@ export class LiquidityMonitor {
             continue;
           }
 
-          // Only include USDC and SOL quote markets
+          // Only include stablecoin, SOL, CBBTC, and WBTC quote markets
           const quoteMint = market.quoteMint().toBase58();
-          if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
+          if (!STABLECOIN_MINTS.has(quoteMint) && quoteMint !== SOL_MINT && quoteMint !== CBBTC_MINT && quoteMint !== WBTC_MINT) {
             continue;
           }
 
@@ -271,7 +271,13 @@ export class LiquidityMonitor {
             quoteDecimals: market.quoteDecimals(),
           });
 
-          const marketType = quoteMint === USDC_MINT ? 'USDC' : 'SOL';
+          const marketType = STABLECOIN_MINTS.has(quoteMint)
+            ? 'Stablecoin'
+            : quoteMint === SOL_MINT
+            ? 'SOL'
+            : quoteMint === CBBTC_MINT
+            ? 'CBBTC'
+            : 'WBTC';
           console.log(
             `Added ${marketType} market ${marketPk} with $${volume24h.toLocaleString()} 24h volume`,
           );
@@ -281,7 +287,7 @@ export class LiquidityMonitor {
       }
     }
 
-    console.log(`Loaded ${this.markets.size} eligible markets (USDC + SOL)`);
+    console.log(`Loaded ${this.markets.size} eligible markets (Stablecoin + SOL + CBBTC + WBTC)`);
   }
 
   /**

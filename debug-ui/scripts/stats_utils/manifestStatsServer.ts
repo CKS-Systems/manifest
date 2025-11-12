@@ -856,8 +856,8 @@ export class ManifestStatsServer {
                 return solVolumeNormalized * solPrice;
               }
 
-              // Convert CBBTC quote volume to USDC equivalent
-              if (quoteMint == CBBTC_MINT && cbbtcPrice > 0) {
+              // Convert CBBTC/WBTC quote volume to USDC equivalent
+              if ((quoteMint == CBBTC_MINT || quoteMint == WBTC_MINT) && cbbtcPrice > 0) {
                 const cbbtcVolumeNormalized =
                   Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
                 return cbbtcVolumeNormalized * cbbtcPrice;
