@@ -19,8 +19,24 @@ export const MARKET_DISCRIMINATOR: Buffer = genAccDiscriminator(
 
 // Market and mint addresses
 export const SOL_USDC_MARKET = 'ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ';
+export const CBBTC_USDC_MARKET = 'Bey9vLee8CrC8S7iqNseb146upQCnSTbJQbu6vLiBRpD';
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 export const SOL_MINT = 'So11111111111111111111111111111111111111112';
+export const CBBTC_MINT = 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+
+// Stablecoin mints (treated as 1:1 USD equivalent)
+export const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+export const PYUSD_MINT = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo';
+export const USDS_MINT = 'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA';
+export const USD1_MINT = 'USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB';
+
+export const STABLECOIN_MINTS = new Set([
+  USDC_MINT,
+  USDT_MINT,
+  PYUSD_MINT,
+  USDS_MINT,
+  USD1_MINT,
+]);
 
 // Known aggregators
 export const KNOWN_AGGREGATORS = new Set([

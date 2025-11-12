@@ -20,8 +20,11 @@ import {
   ONE_DAY_SEC,
   DEPTHS_BPS,
   SOL_USDC_MARKET,
+  CBBTC_USDC_MARKET,
   USDC_MINT,
   SOL_MINT,
+  CBBTC_MINT,
+  STABLECOIN_MINTS,
 } from './constants';
 import { resolveActualTrader, chunks } from './utils';
 import * as queries from './queries';
@@ -307,7 +310,7 @@ export class ManifestStatsServer {
     const { baseAtoms, quoteAtoms, takerIsBuy, maker } = fill;
     const quoteMint = marketObject.quoteMint().toBase58();
 
-    if (quoteMint === USDC_MINT) {
+    if (STABLECOIN_MINTS.has(quoteMint)) {
       const notionalVolume =
         Number(quoteAtoms) / 10 ** marketObject.quoteDecimals();
 
@@ -351,6 +354,29 @@ export class ManifestStatsServer {
           const notionalVolume =
             (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
             solPrice;
+
+          this.traderTakerNotionalVolume.set(
+            actualTaker,
+            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
+          );
+          this.traderMakerNotionalVolume.set(
+            maker,
+            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+          );
+        }
+      }
+    } else if (quoteMint === CBBTC_MINT) {
+      const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
+      if (cbbtcPriceAtoms) {
+        const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
+        if (cbbtcUsdcMarket) {
+          const cbbtcPrice =
+            cbbtcPriceAtoms *
+            10 **
+              (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
+          const notionalVolume =
+            (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+            cbbtcPrice;
 
           this.traderTakerNotionalVolume.set(
             actualTaker,
@@ -786,6 +812,16 @@ export class ManifestStatsServer {
         10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
     }
 
+    // Get CBBTC price for converting CBBTC-quoted volumes to USDC equivalent
+    const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
+    const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
+    let cbbtcPrice = 0;
+    if (cbbtcPriceAtoms && cbbtcUsdcMarket) {
+      cbbtcPrice =
+        cbbtcPriceAtoms *
+        10 ** (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
+    }
+
     try {
       marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
         this.connection,
@@ -807,9 +843,9 @@ export class ManifestStatsServer {
               });
               const quoteMint = market.quoteMint().toBase58();
 
-              // Track USDC quote volume directly
-              if (quoteMint == USDC_MINT) {
-                return Number(market.quoteVolume()) / 10 ** 6;
+              // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
+              if (STABLECOIN_MINTS.has(quoteMint)) {
+                return Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
               }
 
               // Convert SOL quote volume to USDC equivalent
@@ -817,6 +853,13 @@ export class ManifestStatsServer {
                 const solVolumeNormalized =
                   Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
                 return solVolumeNormalized * solPrice;
+              }
+
+              // Convert CBBTC quote volume to USDC equivalent
+              if (quoteMint == CBBTC_MINT && cbbtcPrice > 0) {
+                const cbbtcVolumeNormalized =
+                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
+                return cbbtcVolumeNormalized * cbbtcPrice;
               }
 
               return 0;

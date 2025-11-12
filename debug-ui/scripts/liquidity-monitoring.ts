@@ -7,14 +7,13 @@ import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 import cors from 'cors';
+import { SOL_MINT, CBBTC_MINT, CBBTC_USDC_MARKET, STABLECOIN_MINTS } from './stats_utils/constants';
 
 // Configuration constants
 const MONITORING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_VOLUME_THRESHOLD_USD = 1_000; // $1k minimum 24hr volume
 const SPREAD_BPS = [10, 50, 100, 200]; // 0.1%, 0.5%, 1%, 2%
 const MIN_NOTIONAL_USD = 10; // $10 minimum total notional to be considered a market maker
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const PORT = 3001;
 
 // Environment variables
@@ -188,25 +187,35 @@ export class LiquidityMonitor {
       );
       const solPrice = solUsdcTicker?.last_price || 0;
 
+      // Get CBBTC price from CBBTC/USDC market
+      const cbbtcUsdcTicker = tickers.find(
+        (t: any) =>
+          t.ticker_id === CBBTC_USDC_MARKET,
+      );
+      const cbbtcPrice = cbbtcUsdcTicker?.last_price || 0;
+
       for (const ticker of tickers) {
         const quoteMint = ticker.target_currency;
-        if (quoteMint !== USDC_MINT && quoteMint !== SOL_MINT) {
+        if (!STABLECOIN_MINTS.has(quoteMint) && quoteMint !== SOL_MINT && quoteMint !== CBBTC_MINT) {
           continue;
         }
 
         let volumeUsd = 0;
-        if (quoteMint === USDC_MINT) {
+        if (STABLECOIN_MINTS.has(quoteMint)) {
           volumeUsd = ticker.target_volume || 0;
         } else if (quoteMint === SOL_MINT && solPrice > 0) {
           // Convert SOL volume to USD
           volumeUsd = (ticker.target_volume || 0) * solPrice;
+        } else if (quoteMint === CBBTC_MINT && cbbtcPrice > 0) {
+          // Convert CBBTC volume to USD
+          volumeUsd = (ticker.target_volume || 0) * cbbtcPrice;
         }
 
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
 
       console.log(
-        `Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}`,
+        `Fetched volumes: ${volumeMap.size} markets, SOL price: $${solPrice}, CBBTC price: $${cbbtcPrice}`,
       );
       return volumeMap;
     } catch (error) {
