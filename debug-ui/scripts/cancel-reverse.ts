@@ -35,7 +35,8 @@ const run = async () => {
   const openOrders: RestingOrder[] = client.market.openOrders();
   for (const openOrder of openOrders) {
     if (
-      openOrder.orderType == OrderType.Reverse &&
+      (openOrder.orderType == OrderType.Reverse ||
+        openOrder.orderType == OrderType.ReverseTight) &&
       openOrder.trader.toBase58() == keypair.publicKey.toBase58()
     ) {
       const seqNum: bignum = openOrder.sequenceNumber;
