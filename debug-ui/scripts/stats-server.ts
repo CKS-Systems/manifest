@@ -463,7 +463,6 @@ export class ManifestStatsServer {
         this.fillLogResults.set(market, prevFills);
 
         fills.inc({ market });
-        console.log('Got fill', fill);
 
         // Queue for background processing
         setImmediate(() => this.processFillAsync(fill));
@@ -1152,6 +1151,59 @@ export class ManifestStatsServer {
   async saveState(): Promise<void> {
     if (this.isReadOnly) {
       console.log('Skipping state save (read-only mode)');
+
+      // Log what would be inserted for target market
+      const TARGET_MARKET = '8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ';
+
+      if (this.baseVolumeAtomsSinceLastCheckpoint.has(TARGET_MARKET) ||
+          this.baseVolumeAtomsCheckpoints.has(TARGET_MARKET)) {
+        console.log('\n========================================');
+        console.log(`[READ_ONLY] Would insert for market ${TARGET_MARKET}:`);
+        console.log('========================================');
+
+        const mockCheckpointId = '<CHECKPOINT_ID>';
+
+        // Log market_volumes INSERT
+        if (this.baseVolumeAtomsSinceLastCheckpoint.has(TARGET_MARKET)) {
+          const baseVolume = this.baseVolumeAtomsSinceLastCheckpoint.get(TARGET_MARKET) || 0;
+          const quoteVolume = this.quoteVolumeAtomsSinceLastCheckpoint.get(TARGET_MARKET) || 0;
+
+          console.log('\n--- market_volumes INSERT ---');
+          console.log(queries.INSERT_MARKET_VOLUME);
+          console.log('Parameters:');
+          console.log(`  $1 (checkpoint_id): ${mockCheckpointId}`);
+          console.log(`  $2 (market): ${TARGET_MARKET}`);
+          console.log(`  $3 (base_volume_since_last_checkpoint): ${baseVolume}`);
+          console.log(`  $4 (quote_volume_since_last_checkpoint): ${quoteVolume}`);
+        }
+
+        // Log market_checkpoints INSERT
+        if (this.baseVolumeAtomsCheckpoints.has(TARGET_MARKET)) {
+          const baseCheckpoints = this.baseVolumeAtomsCheckpoints.get(TARGET_MARKET) || [];
+          const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(TARGET_MARKET) || [];
+          const lastPrice = this.lastPriceByMarket.get(TARGET_MARKET) || 0;
+
+          console.log('\n--- market_checkpoints INSERT ---');
+          console.log(queries.INSERT_MARKET_CHECKPOINT);
+          console.log('Parameters:');
+          console.log(`  $1 (checkpoint_id): ${mockCheckpointId}`);
+          console.log(`  $2 (market): ${TARGET_MARKET}`);
+          console.log(`  $3 (base_volume_checkpoints): ${JSON.stringify(baseCheckpoints)}`);
+          console.log(`  $4 (quote_volume_checkpoints): ${JSON.stringify(quoteCheckpoints)}`);
+          console.log(`  $5 (last_price): ${lastPrice}`);
+
+          console.log('\n--- Checkpoint Array Details ---');
+          console.log(`  Base checkpoints length: ${baseCheckpoints.length}`);
+          console.log(`  Quote checkpoints length: ${quoteCheckpoints.length}`);
+          console.log(`  Total base volume in checkpoints: ${baseCheckpoints.reduce((sum, val) => sum + val, 0)}`);
+          console.log(`  Total quote volume in checkpoints: ${quoteCheckpoints.reduce((sum, val) => sum + val, 0)}`);
+        }
+
+        console.log('\n========================================\n');
+      } else {
+        console.log(`[READ_ONLY] No checkpoint data for target market ${TARGET_MARKET}`);
+      }
+
       return;
     }
 
