@@ -60,58 +60,59 @@ async function readMarketCheckpoints() {
       console.log('Created At:', checkpoint.created_at);
       console.log('========================================');
 
-      // Get market checkpoint data for this specific market
-      const marketCheckpointsResult = await pool.query(
+      // Get ALL market checkpoint data for this checkpoint
+      const allMarketsResult = await pool.query(
         `SELECT
           market,
           base_volume_checkpoints::text AS base_volume_checkpoints_text,
           quote_volume_checkpoints::text AS quote_volume_checkpoints_text,
           last_price
         FROM market_checkpoints
-        WHERE checkpoint_id = $1 AND market = $2`,
-        [checkpoint.id, TARGET_MARKET]
+        WHERE checkpoint_id = $1
+        ORDER BY market`,
+        [checkpoint.id]
       );
 
-      if (marketCheckpointsResult.rowCount === 0) {
-        console.log(`No data found for market ${TARGET_MARKET} in this checkpoint\n`);
-        continue;
+      console.log(`\nMarkets in this checkpoint: ${allMarketsResult.rowCount}\n`);
+
+      // Show all markets
+      for (const row of allMarketsResult.rows) {
+        const baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
+        const quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
+
+        // Calculate total volume from checkpoints
+        const totalBaseVolume = baseCheckpoints.reduce((sum: number, vol: number) => sum + vol, 0);
+        const totalQuoteVolume = quoteCheckpoints.reduce((sum: number, vol: number) => sum + vol, 0);
+
+        const isTargetMarket = row.market === TARGET_MARKET ? ' ← TARGET MARKET' : '';
+
+        console.log(`--- Market: ${row.market}${isTargetMarket} ---`);
+        console.log('Last Price:', row.last_price);
+        console.log('Number of Checkpoints:', baseCheckpoints.length);
+        console.log('Total Base Volume (atoms):', totalBaseVolume);
+        console.log('Total Quote Volume (atoms):', totalQuoteVolume);
+        console.log('Base Volume Checkpoints:', baseCheckpoints);
+        console.log('Quote Volume Checkpoints:', quoteCheckpoints);
+
+        // Also show volume since last checkpoint
+        const volumesResult = await pool.query(
+          `SELECT
+            base_volume_since_last_checkpoint,
+            quote_volume_since_last_checkpoint
+          FROM market_volumes
+          WHERE checkpoint_id = $1 AND market = $2`,
+          [checkpoint.id, row.market]
+        );
+
+        if (volumesResult.rowCount > 0) {
+          const volRow = volumesResult.rows[0];
+          console.log('Volume Since Last Checkpoint:');
+          console.log('  Base Volume:', volRow.base_volume_since_last_checkpoint);
+          console.log('  Quote Volume:', volRow.quote_volume_since_last_checkpoint);
+        }
+
+        console.log('');
       }
-
-      const row = marketCheckpointsResult.rows[0];
-      const baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
-      const quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
-
-      // Calculate total volume from checkpoints
-      const totalBaseVolume = baseCheckpoints.reduce((sum: number, vol: number) => sum + vol, 0);
-      const totalQuoteVolume = quoteCheckpoints.reduce((sum: number, vol: number) => sum + vol, 0);
-
-      console.log('Market:', row.market);
-      console.log('Last Price:', row.last_price);
-      console.log('Number of Checkpoints:', baseCheckpoints.length);
-      console.log('Total Base Volume (atoms):', totalBaseVolume);
-      console.log('Total Quote Volume (atoms):', totalQuoteVolume);
-      console.log('Base Volume Checkpoints:', baseCheckpoints);
-      console.log('Quote Volume Checkpoints:', quoteCheckpoints);
-
-      // Also show volume since last checkpoint
-      const volumesResult = await pool.query(
-        `SELECT
-          market,
-          base_volume_since_last_checkpoint,
-          quote_volume_since_last_checkpoint
-        FROM market_volumes
-        WHERE checkpoint_id = $1 AND market = $2`,
-        [checkpoint.id, TARGET_MARKET]
-      );
-
-      if (volumesResult.rowCount > 0) {
-        const volRow = volumesResult.rows[0];
-        console.log('\nVolume Since Last Checkpoint:');
-        console.log('  Base Volume:', volRow.base_volume_since_last_checkpoint);
-        console.log('  Quote Volume:', volRow.quote_volume_since_last_checkpoint);
-      }
-
-      console.log('');
     }
 
   } catch (error) {
