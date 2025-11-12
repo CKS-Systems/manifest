@@ -65,6 +65,22 @@ yarn run:rando-bot
 
 The UI will be available at [http://localhost:3000](http://localhost:3000)
 
+### Running Stats Server in Read-Only Mode
+
+For debugging database issues locally without making any writes to the database:
+
+```bash
+# Set READ_ONLY environment variable
+READ_ONLY=true yarn stats
+```
+
+In read-only mode:
+- All database write operations are skipped
+- The server can still read from the database
+- Fill processing and metrics collection still work
+- State is not persisted to the database
+- Useful for local debugging without affecting production data
+
 ## 📊 API Documentation
 
 The Manifest protocol provides comprehensive APIs for market data, trading analytics, and liquidity monitoring.
@@ -112,7 +128,7 @@ curl "http://https://mfx-liquidity-monitor-mainnet.fly.dev/market-makers?hours=2
 
 - `yarn start:feed` - Start the fill feed server
 - `yarn run:rando-bot` - Run trading bot simulation
-- `yarn stats-server` - Start the stats server
+- `yarn stats` - Start the stats server
 - `yarn liquidity-monitoring` - Start liquidity monitoring
 
 ### Management Scripts
@@ -176,6 +192,7 @@ The stats server uses PostgreSQL with the following main tables:
 | `NEXT_PUBLIC_FEED_URL` | WebSocket feed URL | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Optional* |
 | `RPC_URL` | RPC endpoint for scripts | Yes |
+| `READ_ONLY` | Stats server read-only mode (set to `true`) | No |
 
 *Required for data persistence in stats server
 
