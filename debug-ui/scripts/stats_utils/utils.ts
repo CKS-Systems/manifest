@@ -55,3 +55,19 @@ export function chunks<T>(array: T[], size: number): T[][] {
     (_, index) => array.slice(index * size, (index + 1) * size),
   );
 }
+
+/**
+ * Fetch BTC price from CoinGecko as fallback
+ */
+export async function fetchBtcPriceFromCoinGecko(): Promise<number> {
+  try {
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+    );
+    const data = await response.json();
+    return data.bitcoin?.usd || 0;
+  } catch (error) {
+    console.error('Error fetching BTC price from CoinGecko:', error);
+    return 0;
+  }
+}
