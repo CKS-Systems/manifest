@@ -1,5 +1,5 @@
 import { Market } from '@cks-systems/manifest-sdk';
-import { SOL_MINT, SOL_USDC_MARKET, USDC_MINT } from './constants';
+import { SOL_MINT, SOL_USDC_MARKET, STABLECOIN_MINTS } from './constants';
 
 export interface TraderPnLDetails {
   totalPnL: number;
@@ -55,12 +55,12 @@ export function calculateTraderPnL(
     // Skip zero positions
     if (baseAtomPosition === 0) continue;
 
-    // Find USDC market for this base token
+    // Find stablecoin market for this base token (USDC, USDT, PYUSD, USDS, USD1)
     let usdcMarket: Market | null = null;
     let marketKey: string | null = null;
     let lastPriceAtoms = 0;
 
-    // Special handling for wSOL - directly use the preferred market
+    // Special handling for wSOL - directly use the preferred market (SOL/USDC)
     if (baseMint === SOL_MINT) {
       if (markets.has(SOL_USDC_MARKET)) {
         usdcMarket = markets.get(SOL_USDC_MARKET)!;
@@ -73,7 +73,7 @@ export function calculateTraderPnL(
       for (const [marketPk, market] of markets.entries()) {
         if (
           market.baseMint().toBase58() === baseMint &&
-          market.quoteMint().toBase58() === USDC_MINT
+          STABLECOIN_MINTS.has(market.quoteMint().toBase58())
         ) {
           // Skip markets with zero price
           const price = lastPriceByMarket.get(marketPk) || 0;
@@ -87,10 +87,10 @@ export function calculateTraderPnL(
       }
     }
 
-    // Skip if no USDC market found for this token or if price is zero
+    // Skip if no stablecoin market found for this token or if price is zero
     if (!usdcMarket || !marketKey || lastPriceAtoms === 0) continue;
 
-    // Calculate current value in USDC
+    // Calculate current value in USD (using stablecoin market)
     const baseDecimals = usdcMarket.baseDecimals();
     const quoteDecimals = usdcMarket.quoteDecimals();
     const basePosition = baseAtomPosition / 10 ** baseDecimals;
@@ -104,7 +104,7 @@ export function calculateTraderPnL(
     // Get acquisition value
     const acquisitionValue = acquisitionValues.get(baseMint) || 0;
 
-    // PnL = current value - cost basis
+    // PnL = current value - cost basis (in USD equivalent)
     const positionPnL = currentPositionValue - acquisitionValue;
 
     // Add to total PnL

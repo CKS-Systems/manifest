@@ -5,13 +5,13 @@ import { ManifestClient, Market } from '@cks-systems/manifest-sdk';
 import { Pool } from 'pg';
 import express from 'express';
 import cors from 'cors';
+import { USDC_MINT, STABLECOIN_MINTS } from './stats_utils/constants';
 
 // Configuration constants
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_VOLUME_THRESHOLD_USD = 1; // $1 minimum 24hr volume
 const GUARANTEED_ORDERS_COUNT = 10; // Always include first 10 orders regardless of spread
 const MAX_SPREAD_FROM_REFERENCE = 0.25; // 25% max distance from reference price (applied after first 10)
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const PORT = 3001;
 
 // Environment variables
@@ -128,7 +128,7 @@ export class MarketMakerLeaderboard {
       const volumeMap = new Map<string, number>();
 
       for (const ticker of tickers) {
-        if (ticker.target_currency !== USDC_MINT) continue;
+        if (!STABLECOIN_MINTS.has(ticker.target_currency)) continue;
         const volumeUsd = ticker.target_volume || 0;
         volumeMap.set(ticker.ticker_id, volumeUsd);
       }
