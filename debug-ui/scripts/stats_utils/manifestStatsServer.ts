@@ -878,9 +878,6 @@ export class ManifestStatsServer {
     // If no BTC price available from markets, fetch from CoinGecko
     if (btcPrice === 0) {
       btcPrice = await fetchBtcPriceFromCoinGecko();
-      if (btcPrice > 0) {
-        console.log(`Using CoinGecko BTC price: $${btcPrice}`);
-      }
     }
 
     this.markets.forEach((market: Market, marketPk: string) => {
@@ -919,28 +916,6 @@ export class ManifestStatsServer {
         btcPrice > 0
       ) {
         notionalByMarket[marketPk] = quoteVolume * btcPrice;
-        return;
-      }
-
-      // Special case: For BTC/BTC markets (like CBBTC/WBTC), use base volume if we have no quote price
-      const baseMint = market.baseMint().toBase58();
-      if (
-        (baseMint === CBBTC_MINT || baseMint === WBTC_MINT) &&
-        (quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) &&
-        btcPrice > 0
-      ) {
-        // Use base volume since base and quote are roughly equivalent (both BTC)
-        const baseCheckpointsVolume = this.baseVolumeAtomsCheckpoints
-          .get(marketPk)!
-          .reduce((sum, num) => sum + num, 0);
-        const baseCurrentPeriodVolume =
-          this.baseVolumeAtomsSinceLastCheckpoint.get(marketPk) || 0;
-        const baseTotalVolumeAtoms =
-          baseCheckpointsVolume + baseCurrentPeriodVolume;
-        const baseVolume: number =
-          baseTotalVolumeAtoms / 10 ** market.baseDecimals();
-
-        notionalByMarket[marketPk] = baseVolume * btcPrice;
         return;
       }
 
