@@ -12,4 +12,3 @@ export * from './manifest/instructions';
 export * from './manifest/types/OrderType';
 
 export * from './wrapperObj';
-export * from './uiWrapperObj';

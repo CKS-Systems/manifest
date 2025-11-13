@@ -4,7 +4,7 @@ const path = require('path');
 const idlDir = __dirname;
 
 async function main() {
-  ['manifest', 'ui_wrapper', 'wrapper'].forEach((programName) => {
+  ['manifest', 'wrapper'].forEach((programName) => {
     const sdkDir = path.join(__dirname, '..', 'ts', 'src', programName);
     const accountsPath = path.join(sdkDir, 'accounts/*');
     const typesPath = path.join(sdkDir, 'types/*');

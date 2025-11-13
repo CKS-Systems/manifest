@@ -13,7 +13,7 @@ const rootDir = path.join(__dirname, '..', '..', '.crates');
 
 async function main() {
   console.log('Root dir address:', rootDir);
-  ['manifest', 'ui-wrapper', 'wrapper'].map(async (programName) => {
+  ['manifest', 'wrapper'].map(async (programName) => {
     const programDir = path.join(
       __dirname,
       '..',
@@ -235,73 +235,6 @@ function modifyIdlCore(programName) {
     // Return type has a tuple which anchor does not support
     idl.types = idl.types.filter((idlType) => idlType.name != "BatchUpdateReturn");
 
-  } else if (programName == 'ui_wrapper') {
-    idl.types.push({
-      name: 'OrderType',
-      type: {
-        kind: 'enum',
-        variants: [
-          {
-            name: 'Limit',
-          },
-          {
-            name: 'ImmediateOrCancel',
-          },
-          {
-            name: 'PostOnly',
-          },
-        ],
-      },
-    });
-
-    updateIdlTypes(idl);
-
-    for (const instruction of idl.instructions) {
-      switch (instruction.name) {
-        case 'CreateWrapper': {
-          break;
-        }
-        case 'ClaimSeatUnused': {
-          // Claim seat does not have params
-          break;
-        }
-        case 'PlaceOrder': {
-          instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'WrapperPlaceOrderParams',
-            },
-          });
-          break;
-        }
-        case 'EditOrder': {
-          // Edit Order is not yet implemented
-          break;
-        }
-        case 'CancelOrder': {
-          instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'WrapperCancelOrderParams',
-            },
-          });
-          break;
-        }
-        case 'SettleFunds': {
-          instruction.args.push({
-            name: 'params',
-            type: {
-              defined: 'WrapperSettleFundsParams',
-            },
-          });
-          break;
-        }
-        default: {
-          console.log(instruction);
-          throw new Error('Unexpected instruction');
-        }
-      }
-    }
   } else if (programName == 'wrapper') {
     idl.types.push({
       name: 'WrapperDepositParams',
