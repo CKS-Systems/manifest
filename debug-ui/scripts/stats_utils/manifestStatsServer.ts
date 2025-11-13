@@ -28,7 +28,11 @@ import {
   WBTC_MINT,
   STABLECOIN_MINTS,
 } from './constants';
-import { resolveActualTrader, chunks, fetchBtcPriceFromCoinGecko } from './utils';
+import {
+  resolveActualTrader,
+  chunks,
+  fetchBtcPriceFromCoinGecko,
+} from './utils';
 import * as queries from './queries';
 import { lookupMintTicker } from './mint';
 import { fetchMarketProgramAccounts } from './marketFetcher';
@@ -815,8 +819,10 @@ export class ManifestStatsServer {
     } = {};
 
     this.markets.forEach((_market: Market, marketPk: string) => {
-      const baseCheckpoints = this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
-      const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
+      const baseCheckpoints =
+        this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
+      const quoteCheckpoints =
+        this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
 
       checkpointsByMarket[marketPk] = {
         baseCheckpoints,
@@ -863,8 +869,7 @@ export class ManifestStatsServer {
     if (wbtcPriceAtoms && wbtcUsdcMarket) {
       wbtcPrice =
         wbtcPriceAtoms *
-        10 **
-          (wbtcUsdcMarket.baseDecimals() - wbtcUsdcMarket.quoteDecimals());
+        10 ** (wbtcUsdcMarket.baseDecimals() - wbtcUsdcMarket.quoteDecimals());
     }
 
     // Use whichever BTC price is available (prefer CBBTC, fallback to WBTC, then CoinGecko)
@@ -880,15 +885,15 @@ export class ManifestStatsServer {
 
     this.markets.forEach((market: Market, marketPk: string) => {
       // Include both the checkpoints AND the volume since last checkpoint
-      const checkpointsVolume =
-        this.quoteVolumeAtomsCheckpoints
-          .get(marketPk)!
-          .reduce((sum, num) => sum + num, 0);
+      const checkpointsVolume = this.quoteVolumeAtomsCheckpoints
+        .get(marketPk)!
+        .reduce((sum, num) => sum + num, 0);
       const currentPeriodVolume =
         this.quoteVolumeAtomsSinceLastCheckpoint.get(marketPk) || 0;
       const totalVolumeAtoms = checkpointsVolume + currentPeriodVolume;
 
-      const quoteVolume: number = totalVolumeAtoms / 10 ** market.quoteDecimals();
+      const quoteVolume: number =
+        totalVolumeAtoms / 10 ** market.quoteDecimals();
 
       if (quoteVolume === 0) {
         return;
@@ -909,7 +914,10 @@ export class ManifestStatsServer {
       }
 
       // Convert CBBTC/WBTC quote volume to USDC equivalent
-      if ((quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) && btcPrice > 0) {
+      if (
+        (quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) &&
+        btcPrice > 0
+      ) {
         notionalByMarket[marketPk] = quoteVolume * btcPrice;
         return;
       }
@@ -922,14 +930,15 @@ export class ManifestStatsServer {
         btcPrice > 0
       ) {
         // Use base volume since base and quote are roughly equivalent (both BTC)
-        const baseCheckpointsVolume =
-          this.baseVolumeAtomsCheckpoints
-            .get(marketPk)!
-            .reduce((sum, num) => sum + num, 0);
+        const baseCheckpointsVolume = this.baseVolumeAtomsCheckpoints
+          .get(marketPk)!
+          .reduce((sum, num) => sum + num, 0);
         const baseCurrentPeriodVolume =
           this.baseVolumeAtomsSinceLastCheckpoint.get(marketPk) || 0;
-        const baseTotalVolumeAtoms = baseCheckpointsVolume + baseCurrentPeriodVolume;
-        const baseVolume: number = baseTotalVolumeAtoms / 10 ** market.baseDecimals();
+        const baseTotalVolumeAtoms =
+          baseCheckpointsVolume + baseCurrentPeriodVolume;
+        const baseVolume: number =
+          baseTotalVolumeAtoms / 10 ** market.baseDecimals();
 
         notionalByMarket[marketPk] = baseVolume * btcPrice;
         return;
