@@ -254,7 +254,9 @@ function detectAggregator(
           return 'Titan';
         }
         if (
-          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+          account.toBase58() ==
+            '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma' ||
+          account.toBase58() == 'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u'
         ) {
           return 'OKX';
         }
@@ -288,7 +290,9 @@ function detectAggregator(
           return 'Titan';
         }
         if (
-          account.toBase58() == '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma'
+          account.toBase58() ==
+            '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma' ||
+          account.toBase58() == 'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u'
         ) {
           return 'OKX';
         }
@@ -322,6 +326,9 @@ function detectOriginatingProtocol(
   // Look for known originating protocol program IDs in the transaction accounts
   const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
   const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
+  const JUP_3_PROGRAM_ID = 'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw';
+  const PHANTOM_FEES_ID = '9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf';
+  const PHANTOM_FEES_ID_2 = '8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf';
 
   try {
     const message = tx.transaction.message;
@@ -331,22 +338,40 @@ function detectOriginatingProtocol(
       // Legacy transaction
       for (const account of message.accountKeys) {
         const accountKey = account.toBase58();
+        if (
+          accountKey === PHANTOM_FEES_ID ||
+          accountKey === PHANTOM_FEES_ID_2
+        ) {
+          return 'phantom';
+        }
         if (accountKey === KAMINO_PROGRAM_ID) {
           return 'kamino';
         }
         if (accountKey === CABANA_PROGRAM_ID) {
           return 'cabana';
+        }
+        if (accountKey === JUP_3_PROGRAM_ID) {
+          return 'jupiter';
         }
       }
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
       for (const account of message.staticAccountKeys) {
         const accountKey = account.toBase58();
+        if (
+          accountKey === PHANTOM_FEES_ID ||
+          accountKey === PHANTOM_FEES_ID_2
+        ) {
+          return 'phantom';
+        }
         if (accountKey === KAMINO_PROGRAM_ID) {
           return 'kamino';
         }
         if (accountKey === CABANA_PROGRAM_ID) {
           return 'cabana';
+        }
+        if (accountKey === JUP_3_PROGRAM_ID) {
+          return 'jupiter';
         }
       }
     }

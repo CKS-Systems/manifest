@@ -119,9 +119,7 @@ impl RestingOrder {
     ) -> Result<Self, ProgramError> {
         // Reverse orders cannot have expiration. The purpose of those orders is to
         // be a permanent liquidity on the book.
-        assert!(
-            !(order_type == OrderType::Reverse && last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT)
-        );
+        assert!(!(order_type.is_reversible() && last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT));
 
         Ok(RestingOrder {
             trader_index,
@@ -266,7 +264,7 @@ impl PartialEq for RestingOrder {
         if self.trader_index != other.trader_index || self.order_type != other.order_type {
             return false;
         }
-        if self.order_type == OrderType::Reverse || self.order_type == OrderType::ReverseTight {
+        if self.order_type.is_reversible() {
             // Allow off by 1 for reverse orders to enable coalescing. Otherwise there is a back and forth that fragments into many orders.
             self.price == other.price
                 || u64_slice_to_u128(self.price.inner) + 1 == u64_slice_to_u128(other.price.inner)

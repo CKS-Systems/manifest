@@ -1,8 +1,5 @@
 #[cfg(feature = "certora")]
-use {
-    crate::certora::hooks::*, crate::certora::summaries::impact_base_atoms::impact_base_atoms,
-    hook_macro::cvt_hook_end, nondet::nondet,
-};
+use {crate::certora::hooks::*, hook_macro::cvt_hook_end, nondet::nondet};
 
 use bytemuck::{Pod, Zeroable};
 use hypertree::{
@@ -466,6 +463,32 @@ impl<Fixed: DerefOrBorrow<MarketFixed>, Dynamic: DerefOrBorrow<[u8]>>
         free_list_head.has_next()
     }
 
+    /**
+    Returns None if length of the free list is larger or equal n.
+    If less than n blocks are free, returns Some(n - length).
+    */
+    pub fn free_blocks_short_of_n(&self, mut n: u32) -> Option<u32> {
+        let DynamicAccount { fixed, dynamic } = self.borrow_market();
+        let mut current_index: DataIndex = fixed.free_list_head_index;
+
+        while n > 0 {
+            if current_index == NIL {
+                return Some(n);
+            }
+
+            let current_node =
+                get_helper::<FreeListNode<MarketUnusedFreeListPadding>>(dynamic, current_index);
+            current_index = current_node.get_next_index();
+            n -= 1;
+        }
+
+        if current_index == NIL {
+            Some(0)
+        } else {
+            None
+        }
+    }
+
     pub fn impact_quote_atoms(
         &self,
         is_bid: bool,
@@ -824,6 +847,19 @@ impl<
         free_list.add(fixed.num_bytes_allocated);
         fixed.num_bytes_allocated += MARKET_BLOCK_SIZE as u32;
         fixed.free_list_head_index = free_list.get_head();
+        Ok(())
+    }
+
+    pub fn market_expand_n(&mut self, mut n: u32) -> ProgramResult {
+        let DynamicAccount { fixed, dynamic } = self.borrow_mut();
+        let mut free_list: FreeList<MarketUnusedFreeListPadding> =
+            FreeList::new(dynamic, fixed.free_list_head_index);
+        while n > 0 {
+            free_list.add(fixed.num_bytes_allocated);
+            fixed.num_bytes_allocated += MARKET_BLOCK_SIZE as u32;
+            fixed.free_list_head_index = free_list.get_head();
+            n -= 1;
+        }
         Ok(())
     }
 
@@ -1418,23 +1454,13 @@ impl<
         }
 
         if resting_order.is_global() {
-            if is_bid {
-                let global_trade_account_opt = &global_trade_accounts_opts[1];
-                require!(
-                    global_trade_account_opt.is_some(),
-                    ManifestError::MissingGlobal,
-                    "Missing global accounts when adding a global",
-                )?;
-                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
-            } else {
-                let global_trade_account_opt = &global_trade_accounts_opts[0];
-                require!(
-                    global_trade_account_opt.is_some(),
-                    ManifestError::MissingGlobal,
-                    "Missing global accounts when adding a global",
-                )?;
-                try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
-            }
+            let global_trade_account_opt = &global_trade_accounts_opts[if is_bid { 1 } else { 0 }];
+            require!(
+                global_trade_account_opt.is_some(),
+                ManifestError::MissingGlobal,
+                "Missing global accounts when adding a global",
+            )?;
+            try_to_add_to_global(&global_trade_account_opt.as_ref().unwrap(), &resting_order)?;
         } else {
             // Place the remaining.
             // Rounds up quote atoms so price can be rounded in favor of taker

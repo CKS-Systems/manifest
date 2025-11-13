@@ -2770,7 +2770,7 @@ dependencies = [
 
 [[package]]
 name = "manifest-dex"
-version = "3.0.4"
+version = "3.0.6"
 dependencies = [
  "anyhow",
  "arrayref",

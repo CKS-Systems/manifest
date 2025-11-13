@@ -40,6 +40,8 @@ export type FillLogResult = {
   /**
    * Name of originating protocol that initiated the tx if detected.
    * For dual attribution (e.g., Kamino using Spur aggregator).
+   * In the case of metagrregation (user on Jup gets Dflow for example), this
+   * could be either.
    * Optional for backwards compatibility.
    */
   originatingProtocol?: string;

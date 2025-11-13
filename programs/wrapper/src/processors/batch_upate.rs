@@ -271,9 +271,12 @@ fn prepare_orders(
                         }
                     }
                 }
+                // Sanity check for if the user inputs a slots in force instead
+                // of a last valid slot. Does not apply to reversible since that
+                // is not allowed to expire.
                 let expiration = if order.last_valid_slot != NO_EXPIRATION_LAST_VALID_SLOT
                     && order.last_valid_slot < 10_000_000
-                    && order.order_type != OrderType::Reverse
+                    && !order.order_type.is_reversible()
                 {
                     now_slot + order.last_valid_slot
                 } else {
