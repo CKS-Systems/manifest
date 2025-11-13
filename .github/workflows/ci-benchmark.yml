@@ -11,7 +11,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SOLANA_VERSION: '2.2.12'
+  SOLANA_VERSION: '2.2.20'
   RUST_TOOLCHAIN: '1.86.0'
 
 jobs:
