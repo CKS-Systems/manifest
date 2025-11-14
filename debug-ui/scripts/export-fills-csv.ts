@@ -10,16 +10,22 @@
  */
 
 import { Pool } from 'pg';
-import { FillLogResult } from '@cks-systems/manifest-sdk';
+import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { createWriteStream } from 'fs';
+import { Connection, PublicKey } from '@solana/web3.js';
 import stringify = require('csv-stringify');
 
 const DATABASE_URL = process.env.DATABASE_URL;
+const RPC_URL = process.env.RPC_URL;
 const BATCH_SIZE = 1000; // Fetch 1000 fills at a time to avoid overloading DB
+const RPC_DELAY_MS = 50; // Delay between RPC calls to avoid rate limiting
 
 interface FillRow {
   slot: number;
+  timestamp: number;
   market: string;
+  baseMint: string;
+  quoteMint: string;
   signature: string;
   taker: string;
   maker: string;
@@ -31,6 +37,104 @@ interface FillRow {
   takerSequenceNumber: string;
   makerSequenceNumber: string;
   originalSigner?: string;
+}
+
+interface MarketInfo {
+  baseMint: string;
+  quoteMint: string;
+}
+
+/**
+ * Sleep for a specified duration
+ */
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch block timestamp with retry and backoff
+ */
+async function getBlockTimestamp(
+  connection: Connection,
+  slot: number,
+  timestampCache: Map<number, number>,
+): Promise<number> {
+  // Check cache first
+  if (timestampCache.has(slot)) {
+    return timestampCache.get(slot)!;
+  }
+
+  let retries = 0;
+  const maxRetries = 3;
+
+  while (retries < maxRetries) {
+    try {
+      await sleep(RPC_DELAY_MS);
+      const blockTime = await connection.getBlockTime(slot);
+
+      if (blockTime !== null) {
+        timestampCache.set(slot, blockTime);
+        return blockTime;
+      }
+
+      // Block time is null, retry
+      retries++;
+      await sleep(1000 * retries); // Exponential backoff
+    } catch (error) {
+      retries++;
+      console.warn(
+        `Failed to get block time for slot ${slot} (attempt ${retries}/${maxRetries}):`,
+        error,
+      );
+      if (retries < maxRetries) {
+        await sleep(1000 * retries); // Exponential backoff
+      }
+    }
+  }
+
+  // If we couldn't get the timestamp, return 0
+  console.warn(`Could not get timestamp for slot ${slot}, using 0`);
+  timestampCache.set(slot, 0);
+  return 0;
+}
+
+/**
+ * Fetch market info with caching
+ */
+async function getMarketInfo(
+  connection: Connection,
+  marketAddress: string,
+  marketCache: Map<string, MarketInfo>,
+): Promise<MarketInfo> {
+  // Check cache first
+  if (marketCache.has(marketAddress)) {
+    return marketCache.get(marketAddress)!;
+  }
+
+  try {
+    await sleep(RPC_DELAY_MS);
+    const market = await Market.loadFromAddress({
+      connection,
+      address: new PublicKey(marketAddress),
+    });
+
+    const marketInfo: MarketInfo = {
+      baseMint: market.baseMint().toBase58(),
+      quoteMint: market.quoteMint().toBase58(),
+    };
+
+    marketCache.set(marketAddress, marketInfo);
+    return marketInfo;
+  } catch (error) {
+    console.error(`Failed to load market ${marketAddress}:`, error);
+    // Return empty strings on error
+    const fallback: MarketInfo = {
+      baseMint: '',
+      quoteMint: '',
+    };
+    marketCache.set(marketAddress, fallback);
+    return fallback;
+  }
 }
 
 /**
@@ -95,10 +199,18 @@ async function fetchFillsInBatches(
 /**
  * Convert FillLogResult to CSV row
  */
-function fillToRow(fill: FillLogResult): FillRow {
+function fillToRow(
+  fill: FillLogResult,
+  timestamp: number,
+  baseMint: string,
+  quoteMint: string,
+): FillRow {
   return {
     slot: fill.slot,
+    timestamp,
     market: fill.market,
+    baseMint,
+    quoteMint,
     signature: fill.signature,
     taker: fill.taker,
     maker: fill.maker,
@@ -175,22 +287,86 @@ async function main() {
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL environment variable is required');
   }
+  if (!RPC_URL) {
+    throw new Error('RPC_URL environment variable is required');
+  }
+
+  // Connect to RPC
+  console.log('\nConnecting to RPC...');
+  const connection = new Connection(RPC_URL, 'confirmed');
 
   // Connect to database
-  console.log('\nConnecting to database...');
+  console.log('Connecting to database...');
   const pool = new Pool({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
 
   try {
-    // Create CSV writer
+    // Create caches
+    const timestampCache = new Map<number, number>();
+    const marketCache = new Map<string, MarketInfo>();
+
+    // First pass: Fetch all fills from database
+    console.log('\nFetching fills from database...');
+    const allFills: FillLogResult[] = [];
+    await fetchFillsInBatches(pool, fromSlot, toSlot, async (fills) => {
+      allFills.push(...fills);
+    });
+
+    console.log(`Total fills fetched: ${allFills.length}`);
+
+    // Collect unique slots and markets
+    const uniqueSlots = new Set<number>();
+    const uniqueMarkets = new Set<string>();
+
+    for (const fill of allFills) {
+      uniqueSlots.add(fill.slot);
+      uniqueMarkets.add(fill.market);
+    }
+
+    console.log(
+      `\nEnriching data: ${uniqueSlots.size} unique slots, ${uniqueMarkets.size} unique markets`,
+    );
+
+    // Fetch timestamps for all unique slots
+    console.log('\nFetching block timestamps...');
+    const slotsArray = Array.from(uniqueSlots);
+    let fetchedTimestamps = 0;
+    for (const slot of slotsArray) {
+      await getBlockTimestamp(connection, slot, timestampCache);
+      fetchedTimestamps++;
+      if (fetchedTimestamps % 100 === 0) {
+        console.log(
+          `  Fetched ${fetchedTimestamps}/${slotsArray.length} timestamps`,
+        );
+      }
+    }
+    console.log(`  Fetched all ${fetchedTimestamps} timestamps`);
+
+    // Fetch market info for all unique markets
+    console.log('\nFetching market information...');
+    const marketsArray = Array.from(uniqueMarkets);
+    let fetchedMarkets = 0;
+    for (const market of marketsArray) {
+      await getMarketInfo(connection, market, marketCache);
+      fetchedMarkets++;
+      console.log(
+        `  Fetched market ${fetchedMarkets}/${marketsArray.length}: ${market}`,
+      );
+    }
+
+    // Second pass: Write to CSV with enriched data
+    console.log('\nWriting to CSV...');
     const writeStream = createWriteStream(outputFile);
     const csvStringifier = stringify({
       header: true,
       columns: [
         'slot',
+        'timestamp',
         'market',
+        'baseMint',
+        'quoteMint',
         'signature',
         'taker',
         'maker',
@@ -207,19 +383,29 @@ async function main() {
 
     csvStringifier.pipe(writeStream);
 
-    // Track statistics
     let fillsWritten = 0;
+    for (const fill of allFills) {
+      const timestamp = timestampCache.get(fill.slot) || 0;
+      const marketInfo = marketCache.get(fill.market) || {
+        baseMint: '',
+        quoteMint: '',
+      };
 
-    // Fetch and write fills in batches
-    await fetchFillsInBatches(pool, fromSlot, toSlot, async (fills) => {
-      for (const fill of fills) {
-        const row = fillToRow(fill);
-        csvStringifier.write(row);
-        fillsWritten++;
+      const row = fillToRow(
+        fill,
+        timestamp,
+        marketInfo.baseMint,
+        marketInfo.quoteMint,
+      );
+      csvStringifier.write(row);
+      fillsWritten++;
+
+      if (fillsWritten % 1000 === 0) {
+        console.log(`  Written ${fillsWritten}/${allFills.length} fills`);
       }
-    });
+    }
 
-    console.log(`\nFills written to CSV: ${fillsWritten}`);
+    console.log(`\nTotal fills written to CSV: ${fillsWritten}`);
 
     // Close CSV writer
     csvStringifier.end();
