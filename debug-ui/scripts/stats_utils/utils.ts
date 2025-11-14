@@ -96,7 +96,7 @@ export function getLifetimeVolumeForMarkets(
           });
           const quoteMint = market.quoteMint().toBase58();
 
-          // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
+          // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1, CASH, USDG)
           if (STABLECOIN_MINTS.has(quoteMint)) {
             return Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
           }
