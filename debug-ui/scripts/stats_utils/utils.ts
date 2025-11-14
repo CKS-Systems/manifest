@@ -82,6 +82,7 @@ export async function fetchBtcPriceFromCoinGecko(): Promise<number> {
     console.error('Error fetching BTC price from CoinGecko:', error);
     return 0;
   }
+}
 
 /**
  * Calculate lifetime volume across all markets in USDC equivalent
