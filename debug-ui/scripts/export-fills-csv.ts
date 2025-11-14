@@ -13,7 +13,6 @@ import { Pool } from 'pg';
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { createWriteStream, existsSync, readFileSync } from 'fs';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { parse } from 'csv-parse/sync';
 import stringify = require('csv-stringify');
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -60,13 +59,26 @@ function readFillsFromCSV(filePath: string): FillLogResult[] {
 
   try {
     const fileContent = readFileSync(filePath, 'utf-8');
-    const records = parse(fileContent, {
-      columns: true,
-      skip_empty_lines: true,
-    });
+    const lines = fileContent.trim().split('\n');
 
-    const fills: FillLogResult[] = records.map((row: any) => {
-      return {
+    if (lines.length < 2) {
+      throw new Error('CSV file is empty or has no data rows');
+    }
+
+    // Parse header
+    const headers = lines[0].split(',');
+    const fills: FillLogResult[] = [];
+
+    // Parse data rows
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: any = {};
+
+      headers.forEach((header, index) => {
+        row[header] = values[index];
+      });
+
+      fills.push({
         slot: parseInt(row.slot, 10),
         market: row.market,
         signature: row.signature,
@@ -80,8 +92,8 @@ function readFillsFromCSV(filePath: string): FillLogResult[] {
         takerSequenceNumber: row.takerSequenceNumber,
         makerSequenceNumber: row.makerSequenceNumber,
         originalSigner: row.originalSigner || undefined,
-      } as FillLogResult;
-    });
+      } as FillLogResult);
+    }
 
     console.log(`Loaded ${fills.length} fills from CSV`);
     return fills;
