@@ -30,6 +30,8 @@ export const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
 export const PYUSD_MINT = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo';
 export const USDS_MINT = 'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA';
 export const USD1_MINT = 'USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB';
+export const CASH_MINT = 'CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH';
+export const USDG_MINT = 'USDGmN7zGcsB2sE3W9i13tqM4j4t2UaB5s1M3m8UaU';
 
 export const STABLECOIN_MINTS = new Set([
   USDC_MINT,
@@ -37,6 +39,8 @@ export const STABLECOIN_MINTS = new Set([
   PYUSD_MINT,
   USDS_MINT,
   USD1_MINT,
+  CASH_MINT,
+  USDG_MINT,
 ]);
 
 // Known aggregators
