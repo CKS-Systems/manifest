@@ -13,8 +13,8 @@ import { Pool } from 'pg';
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
 import { createWriteStream, existsSync, readFileSync } from 'fs';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { parse } from 'csv-parse/sync';
 import stringify = require('csv-stringify');
-const { parse } = require('csv-parse/sync');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const RPC_URL = process.env.RPC_URL;
