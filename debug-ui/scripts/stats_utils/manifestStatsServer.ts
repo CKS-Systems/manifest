@@ -27,7 +27,7 @@ import {
   WBTC_MINT,
   STABLECOIN_MINTS,
 } from './constants';
-import { resolveActualTrader, chunks } from './utils';
+import { resolveActualTrader, chunks, getLifetimeVolumeForMarkets } from './utils';
 import * as queries from './queries';
 import { lookupMintTicker } from './mint';
 import { fetchMarketProgramAccounts } from './marketFetcher';
@@ -344,51 +344,36 @@ export class ManifestStatsServer {
         marketObject,
       );
     } else if (quoteMint === SOL_MINT) {
-      const solPriceAtoms = this.lastPriceByMarket.get(SOL_USDC_MARKET);
-      if (solPriceAtoms) {
-        const solUsdcMarket = this.markets.get(SOL_USDC_MARKET);
-        if (solUsdcMarket) {
-          const solPrice =
-            solPriceAtoms *
-            10 **
-              (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
-          const notionalVolume =
-            (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
-            solPrice;
+      const { solPrice } = this.getSolAndBtcPrices();
+      if (solPrice > 0) {
+        const notionalVolume =
+          (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+          solPrice;
 
-          this.traderTakerNotionalVolume.set(
-            actualTaker,
-            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
-          );
-          this.traderMakerNotionalVolume.set(
-            maker,
-            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
-          );
-        }
+        this.traderTakerNotionalVolume.set(
+          actualTaker,
+          this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
+        );
+        this.traderMakerNotionalVolume.set(
+          maker,
+          this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+        );
       }
     } else if (quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) {
-      const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
-      if (cbbtcPriceAtoms) {
-        const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
-        if (cbbtcUsdcMarket) {
-          const cbbtcPrice =
-            cbbtcPriceAtoms *
-            10 **
-              (cbbtcUsdcMarket.baseDecimals() -
-                cbbtcUsdcMarket.quoteDecimals());
-          const notionalVolume =
-            (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
-            cbbtcPrice;
+      const { cbbtcPrice } = this.getSolAndBtcPrices();
+      if (cbbtcPrice > 0) {
+        const notionalVolume =
+          (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
+          cbbtcPrice;
 
-          this.traderTakerNotionalVolume.set(
-            actualTaker,
-            this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
-          );
-          this.traderMakerNotionalVolume.set(
-            maker,
-            this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
-          );
-        }
+        this.traderTakerNotionalVolume.set(
+          actualTaker,
+          this.traderTakerNotionalVolume.get(actualTaker)! + notionalVolume,
+        );
+        this.traderMakerNotionalVolume.set(
+          maker,
+          this.traderMakerNotionalVolume.get(maker)! + notionalVolume,
+        );
       }
     }
   }
@@ -796,18 +781,16 @@ export class ManifestStatsServer {
   }
 
   /**
-   * Get Volume
-   *
-   * https://docs.llama.fi/list-your-project/other-dashboards/dimensions
+   * Get normalized SOL and BTC prices
+   * @returns Object containing solPrice and cbbtcPrice (both normalized to USDC)
    */
-  async getVolume() {
-    let marketProgramAccounts: GetProgramAccountsResponse;
-    let lifetimeVolume = 0;
+  private getSolAndBtcPrices(): { solPrice: number; cbbtcPrice: number } {
+    let solPrice = 0;
+    let cbbtcPrice = 0;
 
     // Get SOL price for converting SOL-quoted volumes to USDC equivalent
     const solPriceAtoms = this.lastPriceByMarket.get(SOL_USDC_MARKET);
     const solUsdcMarket = this.markets.get(SOL_USDC_MARKET);
-    let solPrice = 0;
     if (solPriceAtoms && solUsdcMarket) {
       solPrice =
         solPriceAtoms *
@@ -817,7 +800,6 @@ export class ManifestStatsServer {
     // Get CBBTC price for converting CBBTC-quoted volumes to USDC equivalent
     const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
     const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
-    let cbbtcPrice = 0;
     if (cbbtcPriceAtoms && cbbtcUsdcMarket) {
       cbbtcPrice =
         cbbtcPriceAtoms *
@@ -825,59 +807,31 @@ export class ManifestStatsServer {
           (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
     }
 
+    return { solPrice, cbbtcPrice };
+  }
+
+  /**
+   * Get Volume
+   *
+   * https://docs.llama.fi/list-your-project/other-dashboards/dimensions
+   */
+  async getVolume() {
+    let marketProgramAccounts: GetProgramAccountsResponse;
+    let lifetimeVolume = 0;
+
+    // Get normalized SOL and BTC prices
+    const { solPrice, cbbtcPrice } = this.getSolAndBtcPrices();
+
     try {
       marketProgramAccounts = await ManifestClient.getMarketProgramAccounts(
         this.connection,
       );
 
-      lifetimeVolume = marketProgramAccounts
-        .map(
-          (
-            value: Readonly<{
-              account: AccountInfo<Buffer>;
-              pubkey: PublicKey;
-            }>,
-          ) => {
-            try {
-              const marketPk: string = value.pubkey.toBase58();
-              const market: Market = Market.loadFromBuffer({
-                buffer: value.account.data,
-                address: new PublicKey(marketPk),
-              });
-              const quoteMint = market.quoteMint().toBase58();
-
-              // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
-              if (STABLECOIN_MINTS.has(quoteMint)) {
-                return (
-                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals()
-                );
-              }
-
-              // Convert SOL quote volume to USDC equivalent
-              if (quoteMint == SOL_MINT && solPrice > 0) {
-                const solVolumeNormalized =
-                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
-                return solVolumeNormalized * solPrice;
-              }
-
-              // Convert CBBTC/WBTC quote volume to USDC equivalent
-              if (
-                (quoteMint == CBBTC_MINT || quoteMint == WBTC_MINT) &&
-                cbbtcPrice > 0
-              ) {
-                const cbbtcVolumeNormalized =
-                  Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
-                return cbbtcVolumeNormalized * cbbtcPrice;
-              }
-
-              return 0;
-            } catch (err) {
-              console.error('Error processing market account:', err);
-              return 0;
-            }
-          },
-        )
-        .reduce((sum, num) => sum + num, 0);
+      lifetimeVolume = getLifetimeVolumeForMarkets(
+        marketProgramAccounts,
+        solPrice,
+        cbbtcPrice,
+      );
     } catch (error) {
       console.error(
         'Failed to get market program accounts for volume calculation:',
