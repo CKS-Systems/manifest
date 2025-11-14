@@ -122,11 +122,13 @@ async function getBlockTimestamp(
   while (retries < maxRetries) {
     try {
       await sleep(RPC_DELAY_MS);
-      const blockTime = await connection.getBlockTime(slot);
+      const block = await connection.getBlock(slot, {
+        transactionDetails: 'none',
+      });
 
-      if (blockTime !== null) {
-        timestampCache.set(slot, blockTime);
-        return blockTime;
+      if (block?.blockTime !== null && block?.blockTime !== undefined) {
+        timestampCache.set(slot, block.blockTime);
+        return block.blockTime;
       }
 
       // Block time is null, retry
