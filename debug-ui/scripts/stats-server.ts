@@ -209,6 +209,12 @@ const run = async () => {
   const altsHandler: RequestHandler = async (_req, res) => {
     res.send(await statsServer.getAlts());
   };
+  const notionalHandler: RequestHandler = async (_req, res) => {
+    res.send(await statsServer.getNotional());
+  };
+  const checkpointsHandler: RequestHandler = (_req, res) => {
+    res.send(statsServer.getCheckpoints());
+  };
 
   const app = express();
   app.use(cors());
@@ -224,6 +230,8 @@ const run = async () => {
   app.get('/recentFills', recentFillsHandler);
   app.get('/completeFills', completeFillsHandler);
   app.get('/alts', altsHandler);
+  app.get('/notional', notionalHandler);
+  app.get('/checkpoints', checkpointsHandler);
 
   // Add health check endpoint for Fly.io
   app.get('/health', (_req, res) => {

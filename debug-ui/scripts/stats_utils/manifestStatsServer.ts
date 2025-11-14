@@ -21,6 +21,7 @@ import {
   DEPTHS_BPS,
   SOL_USDC_MARKET,
   CBBTC_USDC_MARKET,
+  WBTC_USDC_MARKET,
   USDC_MINT,
   SOL_MINT,
   CBBTC_MINT,
@@ -30,6 +31,7 @@ import {
 import {
   resolveActualTrader,
   chunks,
+  fetchBtcPriceFromCoinGecko,
   getLifetimeVolumeForMarkets,
 } from './utils';
 import * as queries from './queries';
@@ -781,6 +783,131 @@ export class ManifestStatsServer {
       console.log('Error getOrderbook', tickerId, depth, err);
       return {};
     }
+  }
+
+  /**
+   * Get Checkpoints
+   *
+   * Returns all base and quote volume checkpoints for all markets
+   */
+  getCheckpoints(): {
+    [market: string]: {
+      baseCheckpoints: number[];
+      quoteCheckpoints: number[];
+    };
+  } {
+    const checkpointsByMarket: {
+      [market: string]: {
+        baseCheckpoints: number[];
+        quoteCheckpoints: number[];
+      };
+    } = {};
+
+    this.markets.forEach((_market: Market, marketPk: string) => {
+      const baseCheckpoints =
+        this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
+      const quoteCheckpoints =
+        this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
+
+      checkpointsByMarket[marketPk] = {
+        baseCheckpoints,
+        quoteCheckpoints,
+      };
+    });
+
+    return checkpointsByMarket;
+  }
+
+  /**
+   * Get Notional Volume (USD) by Market
+   *
+   * Returns USD notional traded on each market in the last 24 hours
+   */
+  async getNotional(): Promise<{ [market: string]: number }> {
+    const notionalByMarket: { [market: string]: number } = {};
+
+    // Get SOL price for converting SOL-quoted volumes to USDC equivalent
+    const solPriceAtoms = this.lastPriceByMarket.get(SOL_USDC_MARKET);
+    const solUsdcMarket = this.markets.get(SOL_USDC_MARKET);
+    let solPrice = 0;
+    if (solPriceAtoms && solUsdcMarket) {
+      solPrice =
+        solPriceAtoms *
+        10 ** (solUsdcMarket.baseDecimals() - solUsdcMarket.quoteDecimals());
+    }
+
+    // Get CBBTC price for converting CBBTC-quoted volumes to USDC equivalent
+    const cbbtcPriceAtoms = this.lastPriceByMarket.get(CBBTC_USDC_MARKET);
+    const cbbtcUsdcMarket = this.markets.get(CBBTC_USDC_MARKET);
+    let cbbtcPrice = 0;
+    if (cbbtcPriceAtoms && cbbtcUsdcMarket) {
+      cbbtcPrice =
+        cbbtcPriceAtoms *
+        10 **
+          (cbbtcUsdcMarket.baseDecimals() - cbbtcUsdcMarket.quoteDecimals());
+    }
+
+    // Get WBTC price as fallback for BTC conversion
+    const wbtcPriceAtoms = this.lastPriceByMarket.get(WBTC_USDC_MARKET);
+    const wbtcUsdcMarket = this.markets.get(WBTC_USDC_MARKET);
+    let wbtcPrice = 0;
+    if (wbtcPriceAtoms && wbtcUsdcMarket) {
+      wbtcPrice =
+        wbtcPriceAtoms *
+        10 ** (wbtcUsdcMarket.baseDecimals() - wbtcUsdcMarket.quoteDecimals());
+    }
+
+    // Use whichever BTC price is available (prefer CBBTC, fallback to WBTC, then CoinGecko)
+    let btcPrice = cbbtcPrice > 0 ? cbbtcPrice : wbtcPrice;
+
+    // If no BTC price available from markets, fetch from CoinGecko
+    if (btcPrice === 0) {
+      btcPrice = await fetchBtcPriceFromCoinGecko();
+    }
+
+    this.markets.forEach((market: Market, marketPk: string) => {
+      // Include both the checkpoints AND the volume since last checkpoint
+      const checkpointsVolume = this.quoteVolumeAtomsCheckpoints
+        .get(marketPk)!
+        .reduce((sum, num) => sum + num, 0);
+      const currentPeriodVolume =
+        this.quoteVolumeAtomsSinceLastCheckpoint.get(marketPk) || 0;
+      const totalVolumeAtoms = checkpointsVolume + currentPeriodVolume;
+
+      const quoteVolume: number =
+        totalVolumeAtoms / 10 ** market.quoteDecimals();
+
+      if (quoteVolume === 0) {
+        return;
+      }
+
+      const quoteMint = market.quoteMint().toBase58();
+
+      // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
+      if (STABLECOIN_MINTS.has(quoteMint)) {
+        notionalByMarket[marketPk] = quoteVolume;
+        return;
+      }
+
+      // Convert SOL quote volume to USDC equivalent
+      if (quoteMint === SOL_MINT && solPrice > 0) {
+        notionalByMarket[marketPk] = quoteVolume * solPrice;
+        return;
+      }
+
+      // Convert CBBTC/WBTC quote volume to USDC equivalent
+      if (
+        (quoteMint === CBBTC_MINT || quoteMint === WBTC_MINT) &&
+        btcPrice > 0
+      ) {
+        notionalByMarket[marketPk] = quoteVolume * btcPrice;
+        return;
+      }
+
+      // If we can't convert to USD, don't include it
+    });
+
+    return notionalByMarket;
   }
 
   /**
