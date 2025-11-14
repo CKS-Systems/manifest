@@ -1,12 +1,12 @@
 /**
- * Export fills to CSV for a given 24-hour UTC period
+ * Export fills to CSV for a given slot range
  *
  * Usage:
- *   npm run export-fills -- 2025-01-13
- *   npm run export-fills -- 2025-01-13 --output fills-2025-01-13.csv
+ *   npm run export-fills -- --from-slot 378922129 --to-slot 379922129
+ *   npm run export-fills -- --from-slot 378922129 --to-slot 379922129 --output fills.csv
+ *   npm run export-fills -- --to-slot 379922129 --count 1000000
  *
- * This will export all fills for the specified day (midnight to midnight UTC)
- * If no date is provided, it defaults to yesterday
+ * The --count option will go back N slots from the to-slot
  */
 
 import { Pool } from 'pg';
@@ -34,37 +34,6 @@ interface FillRow {
 }
 
 /**
- * Parse date string in YYYY-MM-DD format and return start/end timestamps in UTC
- */
-function parseDateRange(dateStr: string): { start: Date; end: Date } {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-  const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
-  return { start, end };
-}
-
-/**
- * Get yesterday's date in YYYY-MM-DD format (UTC)
- */
-function getYesterdayDate(): string {
-  const yesterday = new Date();
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  return yesterday.toISOString().split('T')[0];
-}
-
-/**
- * Convert timestamp to slot (approximate)
- * Solana slots are approximately 400ms apart
- * Genesis timestamp: 2020-03-16T00:00:00.000Z (slot 0)
- */
-function timestampToSlot(timestamp: Date): number {
-  const GENESIS_TIMESTAMP = new Date('2020-03-16T00:00:00.000Z').getTime();
-  const SLOT_DURATION_MS = 400; // Approximate
-  const diffMs = timestamp.getTime() - GENESIS_TIMESTAMP;
-  return Math.floor(diffMs / SLOT_DURATION_MS);
-}
-
-/**
  * Fetch fills from database in batches
  */
 async function fetchFillsInBatches(
@@ -77,7 +46,7 @@ async function fetchFillsInBatches(
   let hasMore = true;
   let totalFetched = 0;
 
-  console.log(`Fetching fills from slot ${fromSlot} to ${toSlot}...`);
+  console.log(`\nFetching fills from slot ${fromSlot} to ${toSlot}...`);
 
   while (hasMore) {
     const query = `
@@ -86,7 +55,7 @@ async function fetchFillsInBatches(
       WHERE
         (fill_data->>'slot')::bigint >= $1
         AND (fill_data->>'slot')::bigint <= $2
-      ORDER BY (fill_data->>'slot')::bigint ASC, (fill_data->>'timestamp')::bigint ASC
+      ORDER BY (fill_data->>'slot')::bigint ASC
       LIMIT $3 OFFSET $4
     `;
 
@@ -145,33 +114,70 @@ function fillToRow(fill: FillLogResult): FillRow {
 }
 
 /**
+ * Parse command line arguments
+ */
+function parseArgs(args: string[]): {
+  fromSlot: number;
+  toSlot: number;
+  outputFile: string;
+} {
+  let fromSlot: number | undefined;
+  let toSlot: number | undefined;
+  let count: number | undefined;
+  let outputFile = 'fills.csv';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--from-slot' && args[i + 1]) {
+      fromSlot = parseInt(args[i + 1], 10);
+      i++;
+    } else if (args[i] === '--to-slot' && args[i + 1]) {
+      toSlot = parseInt(args[i + 1], 10);
+      i++;
+    } else if (args[i] === '--count' && args[i + 1]) {
+      count = parseInt(args[i + 1], 10);
+      i++;
+    } else if (args[i] === '--output' && args[i + 1]) {
+      outputFile = args[i + 1];
+      i++;
+    }
+  }
+
+  if (!toSlot) {
+    throw new Error('--to-slot is required');
+  }
+
+  if (count && !fromSlot) {
+    fromSlot = toSlot - count;
+  }
+
+  if (!fromSlot) {
+    throw new Error(
+      'Either --from-slot or --count must be provided with --to-slot',
+    );
+  }
+
+  return { fromSlot, toSlot, outputFile };
+}
+
+/**
  * Main function
  */
 async function main() {
   // Parse command line arguments
   const args = process.argv.slice(2);
-  const dateArg = args.find((arg) => !arg.startsWith('--'));
-  const outputArg = args.find((arg, idx) => args[idx - 1] === '--output');
+  const { fromSlot, toSlot, outputFile } = parseArgs(args);
 
-  const dateStr = dateArg || getYesterdayDate();
-  const outputFile = outputArg || `fills-${dateStr}.csv`;
+  console.log(`Exporting fills from slot ${fromSlot} to ${toSlot}`);
+  console.log(`Output file: ${outputFile}`);
+  console.log(`Slot range: ${toSlot - fromSlot} slots`);
 
-  console.log(`Exporting fills for ${dateStr} to ${outputFile}`);
-
-  // Parse date range
-  const { start, end } = parseDateRange(dateStr);
-  console.log(`Date range: ${start.toISOString()} to ${end.toISOString()}`);
-
-  // Convert to approximate slot range
-  const fromSlot = timestampToSlot(start);
-  const toSlot = timestampToSlot(end);
-  console.log(`Approximate slot range: ${fromSlot} to ${toSlot}`);
-
-  // Connect to database
+  // Validate environment variables
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL environment variable is required');
   }
 
+  // Connect to database
+  console.log('\nConnecting to database...');
   const pool = new Pool({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -201,13 +207,19 @@ async function main() {
 
     csvStringifier.pipe(writeStream);
 
+    // Track statistics
+    let fillsWritten = 0;
+
     // Fetch and write fills in batches
     await fetchFillsInBatches(pool, fromSlot, toSlot, async (fills) => {
       for (const fill of fills) {
         const row = fillToRow(fill);
         csvStringifier.write(row);
+        fillsWritten++;
       }
     });
+
+    console.log(`\nFills written to CSV: ${fillsWritten}`);
 
     // Close CSV writer
     csvStringifier.end();
