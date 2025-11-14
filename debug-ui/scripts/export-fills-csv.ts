@@ -11,9 +11,10 @@
 
 import { Pool } from 'pg';
 import { FillLogResult, Market } from '@cks-systems/manifest-sdk';
-import { createWriteStream } from 'fs';
+import { createWriteStream, existsSync, readFileSync } from 'fs';
 import { Connection, PublicKey } from '@solana/web3.js';
 import stringify = require('csv-stringify');
+const { parse } = require('csv-parse/sync');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const RPC_URL = process.env.RPC_URL;
@@ -49,6 +50,45 @@ interface MarketInfo {
  */
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Read fills from existing CSV file
+ */
+function readFillsFromCSV(filePath: string): FillLogResult[] {
+  console.log(`Reading existing fills from ${filePath}...`);
+
+  try {
+    const fileContent = readFileSync(filePath, 'utf-8');
+    const records = parse(fileContent, {
+      columns: true,
+      skip_empty_lines: true,
+    });
+
+    const fills: FillLogResult[] = records.map((row: any) => {
+      return {
+        slot: parseInt(row.slot, 10),
+        market: row.market,
+        signature: row.signature,
+        taker: row.taker,
+        maker: row.maker,
+        baseAtoms: row.baseAtoms,
+        quoteAtoms: row.quoteAtoms,
+        priceAtoms: parseFloat(row.priceAtoms),
+        takerIsBuy: row.takerIsBuy === 'true',
+        isMakerGlobal: row.isMakerGlobal === 'true',
+        takerSequenceNumber: row.takerSequenceNumber,
+        makerSequenceNumber: row.makerSequenceNumber,
+        originalSigner: row.originalSigner || undefined,
+      } as FillLogResult;
+    });
+
+    console.log(`Loaded ${fills.length} fills from CSV`);
+    return fills;
+  } catch (error) {
+    console.error(`Failed to read CSV file: ${error}`);
+    throw error;
+  }
 }
 
 /**
@@ -284,37 +324,55 @@ async function main() {
   console.log(`Slot range: ${toSlot - fromSlot} slots`);
 
   // Validate environment variables
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is required');
-  }
   if (!RPC_URL) {
     throw new Error('RPC_URL environment variable is required');
+  }
+
+  // DATABASE_URL only required if we need to fetch from database
+  const unenrichedFile = 'fills.csv';
+  if (!existsSync(unenrichedFile) && !DATABASE_URL) {
+    throw new Error(
+      'DATABASE_URL environment variable is required (or provide existing fills.csv)',
+    );
   }
 
   // Connect to RPC
   console.log('\nConnecting to RPC...');
   const connection = new Connection(RPC_URL, 'confirmed');
 
-  // Connect to database
-  console.log('Connecting to database...');
-  const pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
+  // Check if fills.csv already exists
+  let allFills: FillLogResult[] = [];
+
+  if (existsSync(unenrichedFile)) {
+    console.log(
+      `\nFound existing ${unenrichedFile}, using it instead of fetching from database`,
+    );
+    allFills = readFillsFromCSV(unenrichedFile);
+  } else {
+    // Connect to database
+    console.log('\nConnecting to database...');
+    const pool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    try {
+      // First pass: Fetch all fills from database
+      console.log('\nFetching fills from database...');
+      await fetchFillsInBatches(pool, fromSlot, toSlot, async (fills) => {
+        allFills.push(...fills);
+      });
+
+      console.log(`Total fills fetched: ${allFills.length}`);
+    } finally {
+      await pool.end();
+    }
+  }
 
   try {
     // Create caches
     const timestampCache = new Map<number, number>();
     const marketCache = new Map<string, MarketInfo>();
-
-    // First pass: Fetch all fills from database
-    console.log('\nFetching fills from database...');
-    const allFills: FillLogResult[] = [];
-    await fetchFillsInBatches(pool, fromSlot, toSlot, async (fills) => {
-      allFills.push(...fills);
-    });
-
-    console.log(`Total fills fetched: ${allFills.length}`);
 
     // Collect unique slots and markets
     const uniqueSlots = new Set<number>();
@@ -420,8 +478,6 @@ async function main() {
   } catch (error) {
     console.error('Error exporting fills:', error);
     throw error;
-  } finally {
-    await pool.end();
   }
 }
 
