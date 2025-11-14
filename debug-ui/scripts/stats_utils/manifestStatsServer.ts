@@ -27,7 +27,11 @@ import {
   WBTC_MINT,
   STABLECOIN_MINTS,
 } from './constants';
-import { resolveActualTrader, chunks, getLifetimeVolumeForMarkets } from './utils';
+import {
+  resolveActualTrader,
+  chunks,
+  getLifetimeVolumeForMarkets,
+} from './utils';
 import * as queries from './queries';
 import { lookupMintTicker } from './mint';
 import { fetchMarketProgramAccounts } from './marketFetcher';
@@ -347,8 +351,7 @@ export class ManifestStatsServer {
       const { solPrice } = this.getSolAndBtcPrices();
       if (solPrice > 0) {
         const notionalVolume =
-          (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) *
-          solPrice;
+          (Number(quoteAtoms) / 10 ** marketObject.quoteDecimals()) * solPrice;
 
         this.traderTakerNotionalVolume.set(
           actualTaker,

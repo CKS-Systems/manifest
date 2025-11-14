@@ -1,6 +1,16 @@
 import { sleep } from '@/lib/util';
-import { KNOWN_AGGREGATORS, SOL_MINT, CBBTC_MINT, WBTC_MINT, STABLECOIN_MINTS } from './constants';
-import { AccountInfo, GetProgramAccountsResponse, PublicKey } from '@solana/web3.js';
+import {
+  KNOWN_AGGREGATORS,
+  SOL_MINT,
+  CBBTC_MINT,
+  WBTC_MINT,
+  STABLECOIN_MINTS,
+} from './constants';
+import {
+  AccountInfo,
+  GetProgramAccountsResponse,
+  PublicKey,
+} from '@solana/web3.js';
 import { Market } from '@cks-systems/manifest-sdk';
 
 /**
@@ -88,9 +98,7 @@ export function getLifetimeVolumeForMarkets(
 
           // Track stablecoin quote volume directly (USDC, USDT, PYUSD, USDS, USD1)
           if (STABLECOIN_MINTS.has(quoteMint)) {
-            return (
-              Number(market.quoteVolume()) / 10 ** market.quoteDecimals()
-            );
+            return Number(market.quoteVolume()) / 10 ** market.quoteDecimals();
           }
 
           // Convert SOL quote volume to USDC equivalent
