@@ -1,6 +1,6 @@
 {
   "name": "@cks-systems/manifest-sdk",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "files": [
     "dist/",
     "README.md",

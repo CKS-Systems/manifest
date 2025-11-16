@@ -167,20 +167,31 @@ export class FillFeed {
       return;
     }
 
-    // Extract the original signer (fee payer/first signer)
+    // Extract the original signer (fee payer/first signer) and all signers
     let originalSigner: string | undefined;
+    let signers: string[] | undefined;
     try {
       const message = tx.transaction.message;
 
       if ('accountKeys' in message) {
         // Legacy transaction
         originalSigner = message.accountKeys[0]?.toBase58();
+        // Extract all signers using isAccountSigner method
+        signers = message.accountKeys
+          .map((key, index) => ({ key, index }))
+          .filter(({ index }) => message.isAccountSigner(index))
+          .map(({ key }) => key.toBase58());
       } else {
         // Versioned transaction (v0) - use staticAccountKeys for the main accounts
         originalSigner = message.staticAccountKeys[0]?.toBase58();
+        // Extract all signers using isAccountSigner method
+        signers = message.staticAccountKeys
+          .map((key, index) => ({ key, index }))
+          .filter(({ index }) => message.isAccountSigner(index))
+          .map(({ key }) => key.toBase58());
       }
     } catch (error) {
-      console.error('Error extracting original signer:', error);
+      console.error('Error extracting signers:', error);
     }
 
     const aggregator: string | undefined = detectAggregator(tx);
@@ -216,6 +227,7 @@ export class FillFeed {
         originalSigner,
         aggregator,
         originatingProtocol,
+        signers,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -391,6 +403,7 @@ function toFillLogResult(
   originalSigner?: string,
   aggregator?: string,
   originatingProtocol?: string,
+  signers?: string[],
 ): FillLogResult {
   const result: FillLogResult = {
     market: fillLog.market.toBase58(),
@@ -415,6 +428,9 @@ function toFillLogResult(
   }
   if (originatingProtocol) {
     result.originatingProtocol = originatingProtocol;
+  }
+  if (signers && signers.length > 0) {
+    result.signers = signers;
   }
 
   return result;
