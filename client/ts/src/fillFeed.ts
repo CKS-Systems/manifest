@@ -176,17 +176,19 @@ export class FillFeed {
       if ('accountKeys' in message) {
         // Legacy transaction
         originalSigner = message.accountKeys[0]?.toBase58();
-        // Extract all signers
+        // Extract all signers using isAccountSigner method
         signers = message.accountKeys
-          .filter((_, index) => message.header.numRequiredSignatures > index)
-          .map((key) => key.toBase58());
+          .map((key, index) => ({ key, index }))
+          .filter(({ index }) => message.isAccountSigner(index))
+          .map(({ key }) => key.toBase58());
       } else {
         // Versioned transaction (v0) - use staticAccountKeys for the main accounts
         originalSigner = message.staticAccountKeys[0]?.toBase58();
-        // Extract all signers
+        // Extract all signers using isAccountSigner method
         signers = message.staticAccountKeys
-          .filter((_, index) => message.header.numRequiredSignatures > index)
-          .map((key) => key.toBase58());
+          .map((key, index) => ({ key, index }))
+          .filter(({ index }) => message.isAccountSigner(index))
+          .map(({ key }) => key.toBase58());
       }
     } catch (error) {
       console.error('Error extracting signers:', error);
