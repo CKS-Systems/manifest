@@ -8,7 +8,6 @@ import {
   PublicKey,
   RpcResponseAndContext,
 } from '@solana/web3.js';
-import { getMint } from '@solana/spl-token';
 import bs58 from 'bs58';
 
 const { RPC_URL } = process.env;
@@ -148,18 +147,29 @@ const run = async () => {
       const mint = global.tokenMint();
       const vault = (global as any).data.vault;
 
-      // Calculate total expected balance from all seats
+      // Fetch both vault and global account from the same slot
+      const parsedAccounts = await connection.getMultipleParsedAccounts([
+        globalAccount.pubkey,
+        vault,
+      ]);
+
+      // Re-load global from the fetched data to ensure consistency
+      const refetchedGlobal = Global.loadFromBuffer({
+        address: globalAccount.pubkey,
+        buffer: parsedAccounts.value[0]?.data as Buffer,
+      });
+
+      // Calculate total expected balance from all seats using refetched data
       let totalExpectedAtoms = 0;
-      const deposits = (global as any).data.globalDeposits;
+      const deposits = (refetchedGlobal as any).data.globalDeposits;
       for (const deposit of deposits) {
         totalExpectedAtoms += Number(deposit.balanceAtoms);
       }
 
-      // Get actual vault balance
-      const vaultAccount = await connection.getParsedAccountInfo(vault);
-      const actualVaultAtoms = vaultAccount.value?.data
+      // Get actual vault balance from the same RPC call
+      const actualVaultAtoms = parsedAccounts.value[1]?.data
         ? Number(
-            (vaultAccount.value.data as ParsedAccountData).parsed.info
+            (parsedAccounts.value[1].data as ParsedAccountData).parsed.info
               .tokenAmount.amount,
           )
         : 0;
@@ -170,6 +180,28 @@ const run = async () => {
       console.log(
         `Vault actual ${actualVaultAtoms} expected ${totalExpectedAtoms} difference ${difference} seats ${deposits.length}`,
       );
+
+      // Check if there's a mismatch
+      if (Math.abs(difference) > 1 || totalExpectedAtoms > actualVaultAtoms) {
+        console.log('MISMATCH DETECTED - Listing all seats:');
+        console.log('=====================================');
+
+        for (let i = 0; i < deposits.length; i++) {
+          const deposit = deposits[i];
+          const trader = deposit.trader;
+          const balanceAtoms = Number(deposit.balanceAtoms);
+
+          console.log(
+            `Seat ${i}: trader=${trader.toBase58()} balance=${balanceAtoms} atoms`,
+          );
+        }
+
+        console.log('=====================================');
+        console.log(`Total from seats: ${totalExpectedAtoms} atoms`);
+        console.log(`Actual in vault: ${actualVaultAtoms} atoms`);
+        console.log(`Difference: ${difference} atoms`);
+        console.log('=====================================');
+      }
 
       // Only crash on a loss of funds
       if (totalExpectedAtoms > actualVaultAtoms) {
