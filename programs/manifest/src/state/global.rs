@@ -16,7 +16,7 @@ use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
 use crate::{
-    quantities::GlobalAtoms,
+    quantities::{GlobalAtoms, WrapperU64},
     require,
     validation::{get_global_address, get_global_vault_address, ManifestAccount},
 };
