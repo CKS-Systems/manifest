@@ -487,31 +487,6 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             GlobalAtoms::new(resting_order.get_num_base_atoms().as_u64())
         };
 
-        // Verify that there are enough deposited atoms.
-        {
-            let global_deposit_opt: Option<&mut GlobalDeposit> =
-                get_mut_global_deposit(fixed, dynamic, global_trade_owner);
-            require!(
-                global_deposit_opt.is_some(),
-                crate::program::ManifestError::MissingGlobal,
-                "Could not find global deposit for {}",
-                global_trade_owner
-            )?;
-            let global_deposit: &mut GlobalDeposit = global_deposit_opt.unwrap();
-
-            let global_atoms_deposited: GlobalAtoms = global_deposit.balance_atoms;
-
-            // This can be trivial to circumvent by using flash loans. This is just
-            // an informational safety check.
-            require!(
-                num_global_atoms <= global_atoms_deposited,
-                crate::program::ManifestError::GlobalInsufficient,
-                "Insufficient funds for global order needed {} has {}",
-                num_global_atoms,
-                global_atoms_deposited
-            )?;
-        }
-
         Ok(())
     }
 
