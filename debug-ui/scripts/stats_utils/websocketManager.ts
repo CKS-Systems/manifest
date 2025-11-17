@@ -30,7 +30,7 @@ export class WebSocketManager {
   private isConnecting: boolean = false;
   private shouldReconnect: boolean = true;
   private isClosed: boolean = false;
-  
+
   // Callbacks
   private onMessage: (data: any) => void;
   private onConnect?: () => void;
@@ -54,25 +54,32 @@ export class WebSocketManager {
 
   public connect(): void {
     if (this.isClosed) {
-      throw new Error('WebSocketManager has been closed and cannot be reconnected');
+      throw new Error(
+        'WebSocketManager has been closed and cannot be reconnected',
+      );
     }
     this.shouldReconnect = true;
     this.connectInternal();
   }
 
   private connectInternal(): void {
-    if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
+    if (
+      this.isConnecting ||
+      (this.ws && this.ws.readyState === WebSocket.OPEN)
+    ) {
       return; // Already connecting or connected
     }
 
     this.isConnecting = true;
     this.cleanup();
 
-    console.log(`[WebSocket] Connecting to ${this.url} (attempt ${this.reconnectAttempts + 1})`);
-    
+    console.log(
+      `[WebSocket] Connecting to ${this.url} (attempt ${this.reconnectAttempts + 1})`,
+    );
+
     try {
       this.ws = new WebSocket(this.url);
-      
+
       // Set connection timeout
       this.connectionTimer = setTimeout(() => {
         console.error('[WebSocket] Connection timeout');
@@ -87,33 +94,35 @@ export class WebSocketManager {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.lastPongTime = Date.now();
-        
+
         // Start heartbeat
         this.startHeartbeat();
-        
+
         // Call user callback
         this.onConnect?.();
       };
 
       this.ws.onclose = (event) => {
-        console.log(`[WebSocket] Closed: code=${event.code}, reason=${event.reason}`);
+        console.log(
+          `[WebSocket] Closed: code=${event.code}, reason=${event.reason}`,
+        );
         this.clearConnectionTimeout();
         this.isConnecting = false;
-        
+
         // Call user callback
         this.onDisconnect?.(event.code, event.reason);
-        
+
         // Schedule reconnection if needed
         if (this.shouldReconnect && !this.isClosed) {
           this.scheduleReconnect();
         }
       };
-      
+
       this.ws.onerror = (event) => {
         console.error('[WebSocket] Error:', event.message);
         this.clearConnectionTimeout();
         this.isConnecting = false;
-        
+
         // Call user callback
         this.onError?.(new Error(event.message));
       };
@@ -131,11 +140,10 @@ export class WebSocketManager {
         this.lastPongTime = Date.now();
         console.debug('[WebSocket] Received pong');
       });
-
     } catch (error) {
       console.error('[WebSocket] Connection error:', error);
       this.isConnecting = false;
-      
+
       if (this.shouldReconnect && !this.isClosed) {
         this.scheduleReconnect();
       }
@@ -144,10 +152,12 @@ export class WebSocketManager {
 
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    
+
     this.heartbeatTimer = setInterval(() => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        console.log('[WebSocket] Heartbeat: connection not open, stopping heartbeat');
+        console.log(
+          '[WebSocket] Heartbeat: connection not open, stopping heartbeat',
+        );
         this.stopHeartbeat();
         return;
       }
@@ -184,12 +194,14 @@ export class WebSocketManager {
     // Calculate exponential backoff delay
     const delay = Math.min(
       this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
-      this.maxReconnectDelay
+      this.maxReconnectDelay,
     );
 
     this.reconnectAttempts++;
-    console.log(`[WebSocket] Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
+    console.log(
+      `[WebSocket] Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts})`,
+    );
+
     // Call user callback
     this.onReconnectAttempt?.(this.reconnectAttempts);
 
@@ -209,7 +221,7 @@ export class WebSocketManager {
     // Clear timers
     this.stopHeartbeat();
     this.clearConnectionTimeout();
-    
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -224,10 +236,12 @@ export class WebSocketManager {
         this.ws.onerror = () => {};
         this.ws.onmessage = () => {};
         this.ws.removeAllListeners();
-        
+
         // Close if still open
-        if (this.ws.readyState === WebSocket.OPEN || 
-            this.ws.readyState === WebSocket.CONNECTING) {
+        if (
+          this.ws.readyState === WebSocket.OPEN ||
+          this.ws.readyState === WebSocket.CONNECTING
+        ) {
           this.ws.close(1000, 'Closing for reconnection');
         }
       } catch (error) {
@@ -252,7 +266,7 @@ export class WebSocketManager {
     if (!this.isConnected()) {
       throw new Error('WebSocket is not connected');
     }
-    
+
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
       this.ws!.send(message);

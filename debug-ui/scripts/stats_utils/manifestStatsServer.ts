@@ -196,14 +196,7 @@ export class ManifestStatsServer {
 
   private async processFillAsync(fill: FillLogResult): Promise<void> {
     try {
-      const {
-        market,
-        baseAtoms,
-        quoteAtoms,
-        priceAtoms,
-        taker,
-        maker,
-      } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, taker, maker } = fill;
 
       // Use originalSigner if available (it's optional in FillLogResult)
       const originalSigner = (fill as any).originalSigner;
@@ -422,7 +415,9 @@ export class ManifestStatsServer {
         console.log('WebSocket connected to fill feed');
       },
       onDisconnect: (code, reason) => {
-        console.log(`WebSocket disconnected from fill feed: ${code} - ${reason}`);
+        console.log(
+          `WebSocket disconnected from fill feed: ${code} - ${reason}`,
+        );
         this.reconnects.inc();
       },
       onError: (error) => {
@@ -430,7 +425,9 @@ export class ManifestStatsServer {
         this.reconnects.inc();
       },
       onReconnectAttempt: (attempt) => {
-        console.log(`Attempting to reconnect to fill feed (attempt ${attempt})`);
+        console.log(
+          `Attempting to reconnect to fill feed (attempt ${attempt})`,
+        );
       },
     });
 
@@ -1626,18 +1623,18 @@ export class ManifestStatsServer {
    */
   public async shutdown(): Promise<void> {
     console.log('Shutting down ManifestStatsServer...');
-    
+
     // Close WebSocket connection
     if (this.wsManager) {
       this.wsManager.close();
       this.wsManager = null;
     }
-    
+
     // Close database pool
     if (this.pool) {
       await this.pool.end();
     }
-    
+
     console.log('ManifestStatsServer shutdown complete');
   }
 }
