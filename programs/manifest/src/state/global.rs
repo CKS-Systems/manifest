@@ -16,7 +16,7 @@ use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
 use crate::{
-    quantities::{GlobalAtoms, WrapperU64},
+    quantities::GlobalAtoms,
     require,
     validation::{get_global_address, get_global_vault_address, ManifestAccount},
 };
@@ -584,6 +584,7 @@ fn get_global_deposit<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::quantities::WrapperU64;
 
     #[test]
     fn test_display_trader() {
