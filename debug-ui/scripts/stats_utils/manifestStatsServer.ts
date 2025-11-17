@@ -205,8 +205,9 @@ export class ManifestStatsServer {
         maker,
       } = fill;
 
-      // For now, use taker directly. If originalSigner is needed, it should be added to FillLogResult type
-      const actualTaker = taker;
+      // Use originalSigner if available (it's optional in FillLogResult)
+      const originalSigner = (fill as any).originalSigner;
+      const actualTaker = resolveActualTrader(taker, originalSigner);
 
       // Update trader counts
       this.traderNumTakerTrades.set(
