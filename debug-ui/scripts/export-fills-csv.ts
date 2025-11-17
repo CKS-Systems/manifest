@@ -324,6 +324,64 @@ function parseArgs(args: string[]): {
 }
 
 /**
+ * Write unenriched fills to CSV
+ */
+async function writeUnenrichedFills(
+  fills: FillLogResult[],
+  outputFile: string,
+): Promise<void> {
+  console.log('\nWriting unenriched fills to CSV...');
+  const writeStream = createWriteStream(outputFile);
+  const csvStringifier = stringify({
+    header: true,
+    columns: [
+      'slot',
+      'market',
+      'signature',
+      'taker',
+      'maker',
+      'baseAtoms',
+      'quoteAtoms',
+      'priceAtoms',
+      'takerIsBuy',
+      'isMakerGlobal',
+      'takerSequenceNumber',
+      'makerSequenceNumber',
+      'originalSigner',
+    ],
+  });
+
+  csvStringifier.pipe(writeStream);
+
+  for (const fill of fills) {
+    csvStringifier.write({
+      slot: fill.slot,
+      market: fill.market,
+      signature: fill.signature,
+      taker: fill.taker,
+      maker: fill.maker,
+      baseAtoms: fill.baseAtoms.toString(),
+      quoteAtoms: fill.quoteAtoms.toString(),
+      priceAtoms: fill.priceAtoms,
+      takerIsBuy: fill.takerIsBuy,
+      isMakerGlobal: fill.isMakerGlobal,
+      takerSequenceNumber: fill.takerSequenceNumber.toString(),
+      makerSequenceNumber: fill.makerSequenceNumber.toString(),
+      originalSigner: fill.originalSigner,
+    });
+  }
+
+  csvStringifier.end();
+
+  await new Promise((resolve, reject) => {
+    writeStream.on('finish', resolve);
+    writeStream.on('error', reject);
+  });
+
+  console.log(`Wrote ${fills.length} unenriched fills to ${outputFile}`);
+}
+
+/**
  * Main function
  */
 async function main() {
@@ -376,6 +434,9 @@ async function main() {
       });
 
       console.log(`Total fills fetched: ${allFills.length}`);
+      
+      // Write unenriched fills to outputFile after first pass
+      await writeUnenrichedFills(allFills, outputFile);
     } finally {
       await pool.end();
     }
@@ -426,8 +487,8 @@ async function main() {
       );
     }
 
-    // Second pass: Write to CSV with enriched data
-    console.log('\nWriting to CSV...');
+    // Second pass: Overwrite CSV with enriched data
+    console.log('\nOverwriting CSV with enriched data...');
     const writeStream = createWriteStream(outputFile);
     const csvStringifier = stringify({
       header: true,
@@ -475,7 +536,7 @@ async function main() {
       }
     }
 
-    console.log(`\nTotal fills written to CSV: ${fillsWritten}`);
+    console.log(`\nTotal enriched fills written to CSV: ${fillsWritten}`);
 
     // Close CSV writer
     csvStringifier.end();
@@ -486,7 +547,7 @@ async function main() {
       writeStream.on('error', reject);
     });
 
-    console.log(`Successfully exported fills to ${outputFile}`);
+    console.log(`Successfully exported enriched fills to ${outputFile}`);
   } catch (error) {
     console.error('Error exporting fills:', error);
     throw error;
