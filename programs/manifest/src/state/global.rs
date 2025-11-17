@@ -467,7 +467,8 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         Ok(())
     }
 
-    /// Add global order to the global account and specific market.
+    /// Adding to global only checks whether they have a seat. It was previously unnecessarily
+    /// checking if the trader had enough balance to not immediately get their order cancellable.
     pub fn add_order(
         &mut self,
         _resting_order: &RestingOrder,
