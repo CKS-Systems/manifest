@@ -16,7 +16,7 @@ use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use static_assertions::const_assert_eq;
 
 use crate::{
-    quantities::{GlobalAtoms, WrapperU64},
+    quantities::GlobalAtoms,
     require,
     validation::{get_global_address, get_global_vault_address, ManifestAccount},
 };
@@ -470,7 +470,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     /// Add global order to the global account and specific market.
     pub fn add_order(
         &mut self,
-        resting_order: &RestingOrder,
+        _resting_order: &RestingOrder,
         global_trade_owner: &Pubkey,
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
@@ -479,7 +479,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
             get_global_trader(fixed, dynamic, global_trade_owner,).is_some(),
             crate::program::ManifestError::GlobalInsufficient,
             "Trying to place global order but did not have global seat"
-        );
+        )?;
 
         Ok(())
     }
