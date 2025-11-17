@@ -228,7 +228,7 @@ export class FillFeed {
         aggregator,
         originatingProtocol,
         signers,
-        tx.blockTime ?? undefined,
+        signature.blockTime ?? undefined,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
