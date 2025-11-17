@@ -475,17 +475,11 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
     ) -> ProgramResult {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut_global();
 
-        let num_global_atoms: GlobalAtoms = if resting_order.get_is_bid() {
-            GlobalAtoms::new(
-                resting_order
-                    .get_num_base_atoms()
-                    .checked_mul(resting_order.get_price(), true)
-                    .unwrap()
-                    .as_u64(),
-            )
-        } else {
-            GlobalAtoms::new(resting_order.get_num_base_atoms().as_u64())
-        };
+        require!(
+            get_global_trader(fixed, dynamic, global_trade_owner,).is_some(),
+            crate::program::ManifestError::GlobalInsufficient,
+            "Trying to place global order but did not have global seat"
+        );
 
         Ok(())
     }
