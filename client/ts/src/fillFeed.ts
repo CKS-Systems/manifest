@@ -228,6 +228,7 @@ export class FillFeed {
         aggregator,
         originatingProtocol,
         signers,
+        tx.blockTime ?? undefined,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -404,6 +405,7 @@ function toFillLogResult(
   aggregator?: string,
   originatingProtocol?: string,
   signers?: string[],
+  blockTime?: number,
 ): FillLogResult {
   const result: FillLogResult = {
     market: fillLog.market.toBase58(),
@@ -431,6 +433,9 @@ function toFillLogResult(
   }
   if (signers && signers.length > 0) {
     result.signers = signers;
+  }
+  if (blockTime !== undefined) {
+    result.blockTime = blockTime;
   }
 
   return result;
