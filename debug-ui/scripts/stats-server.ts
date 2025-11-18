@@ -1,63 +1,14 @@
 import 'dotenv/config';
-import WebSocket from 'ws';
 import { sleep } from '@/lib/util';
-import { Mutex } from 'async-mutex';
 import * as promClient from 'prom-client';
 import cors from 'cors';
 import express, { RequestHandler } from 'express';
 import promBundle from 'express-prom-bundle';
-import {
-  AccountInfo,
-  Connection,
-  GetProgramAccountsResponse,
-  PublicKey,
-} from '@solana/web3.js';
-import {
-  TOKEN_2022_PROGRAM_ID,
-  getMetadataPointerState,
-  getTokenMetadata,
-  unpackMint,
-} from '@solana/spl-token';
-import {
-  FillLogResult,
-  ManifestClient,
-  Market,
-  RestingOrder,
-} from '@cks-systems/manifest-sdk';
-import { Pool } from 'pg';
-import {
-  CHECKPOINT_DURATION_SEC,
-  ONE_DAY_SEC,
-  PORT,
-  DEPTHS_BPS,
-  MANIFEST_PROGRAM_ID,
-  MARKET_DISCRIMINATOR,
-  SOL_USDC_MARKET,
-  USDC_MINT,
-  SOL_MINT,
-  KNOWN_AGGREGATORS,
-} from './stats_utils/constants';
-import {
-  withRetry,
-  isKnownAggregator,
-  resolveActualTrader,
-  chunks,
-} from './stats_utils/utils';
-import * as queries from './stats_utils/queries';
-import { lookupMintTicker } from './stats_utils/mint';
-import { fetchMarketProgramAccounts } from './stats_utils/marketFetcher';
-import { calculateTraderPnL } from './stats_utils/pnl';
-import {
-  CompleteFillsQueryOptions,
-  CompleteFillsQueryResult,
-} from './stats_utils/types';
+import { CHECKPOINT_DURATION_SEC, PORT } from './stats_utils/constants';
+import { CompleteFillsQueryOptions } from './stats_utils/types';
 import { ManifestStatsServer } from './stats_utils/manifestStatsServer';
 
-const { RPC_URL, READ_ONLY } = process.env;
-
-if (!RPC_URL) {
-  throw new Error('RPC_URL missing from env');
-}
+const { READ_ONLY } = process.env;
 
 const IS_READ_ONLY = READ_ONLY === 'true';
 if (IS_READ_ONLY) {
@@ -99,7 +50,6 @@ const depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'> =
  * Server for serving stats according to this spec:
  * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0
  */
-
 const run = async () => {
   // Validate environment variables
   const { RPC_URL, DATABASE_URL } = process.env;
@@ -126,7 +76,38 @@ const run = async () => {
     app: 'stats',
   });
   const metricsApp = express();
-  metricsApp.listen(9090);
+
+  // Find available port starting from 9090
+  const findAvailablePort = async (startPort: number): Promise<number> => {
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      const port = startPort + i;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const server = metricsApp
+            .listen(port, () => {
+              server.close();
+              resolve();
+            })
+            .on('error', reject);
+        });
+        return port;
+      } catch (error: any) {
+        if (error.code !== 'EADDRINUSE') {
+          throw error;
+        }
+        // Port is in use, try next one
+      }
+    }
+    throw new Error(
+      `Could not find available port after ${maxAttempts} attempts starting from ${startPort}`,
+    );
+  };
+
+  const metricsPort = await findAvailablePort(9090);
+  metricsApp.listen(metricsPort, () => {
+    console.log(`Prometheus metrics server listening on port ${metricsPort}`);
+  });
 
   const promMetrics = promBundle({
     includeMethod: true,
@@ -249,6 +230,7 @@ const run = async () => {
       if (DATABASE_URL && !IS_READ_ONLY) {
         await statsServer.saveState();
       }
+      await statsServer.shutdown();
       console.log('State saved, exiting');
       process.exit(0);
     } catch (error) {

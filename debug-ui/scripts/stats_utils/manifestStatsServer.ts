@@ -1,5 +1,3 @@
-import WebSocket from 'ws';
-import { sleep } from '@/lib/util';
 import { Mutex } from 'async-mutex';
 import * as promClient from 'prom-client';
 import {
@@ -40,10 +38,11 @@ import { fetchMarketProgramAccounts } from './marketFetcher';
 import { calculateTraderPnL } from './pnl';
 import { CompleteFillsQueryOptions, CompleteFillsQueryResult } from './types';
 import { withRetry } from './utils';
+import { WebSocketManager } from './websocketManager';
 
 export class ManifestStatsServer {
   private connection: Connection;
-  private ws: WebSocket | null = null;
+  private wsManager: WebSocketManager | null = null;
   // Base and quote volume
   private baseVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
   private quoteVolumeAtomsSinceLastCheckpoint: Map<string, number> = new Map();
@@ -123,7 +122,7 @@ export class ManifestStatsServer {
       // Continue operation - don't let DB errors crash the server
     });
 
-    this.resetWebsocket();
+    this.initWebSocket();
 
     // Only initialize database schema if not in read-only mode
     if (!this.isReadOnly) {
@@ -197,16 +196,10 @@ export class ManifestStatsServer {
 
   private async processFillAsync(fill: FillLogResult): Promise<void> {
     try {
-      const {
-        market,
-        baseAtoms,
-        quoteAtoms,
-        priceAtoms,
-        taker,
-        maker,
-        originalSigner,
-      } = fill;
+      const { market, baseAtoms, quoteAtoms, priceAtoms, taker, maker } = fill;
 
+      // Use originalSigner if available (it's optional in FillLogResult)
+      const originalSigner = (fill as any).originalSigner;
       const actualTaker = resolveActualTrader(taker, originalSigner);
 
       // Update trader counts
@@ -383,67 +376,62 @@ export class ManifestStatsServer {
     }
   }
 
-  private resetWebsocket() {
-    // Allow old one to timeout.
-    if (this.ws != null) {
-      try {
-        this.ws.close();
-      } catch (err) {
-        /* empty */
-      }
-    }
+  private initWebSocket(): void {
+    this.wsManager = new WebSocketManager({
+      url: 'wss://mfx-feed-mainnet.fly.dev',
+      reconnectDelay: 1000,
+      maxReconnectDelay: 30000,
+      heartbeatInterval: 30000,
+      connectionTimeout: 10000,
+      onMessage: (fill: FillLogResult) => {
+        this.fillMutex.runExclusive(async () => {
+          // Track slot for database persistence
+          this.lastFillSlot = Math.max(this.lastFillSlot, fill.slot);
 
-    this.ws = new WebSocket('wss://mfx-feed-mainnet.fly.dev');
+          // Immediately save to recent fill
+          const { market } = fill;
+          if (!this.fillLogResults.has(market)) {
+            this.fillLogResults.set(market, []);
+          }
 
-    this.ws.onopen = () => {};
+          const prevFills = this.fillLogResults.get(market)!;
+          prevFills.push(fill);
 
-    this.ws.onclose = () => {
-      // Rely on the next iteration to force a reconnect. This happens without a
-      // keep-alive.
-      this.reconnects.inc();
-    };
-    this.ws.onerror = () => {
-      // Rely on the next iteration to force a reconnect.
-      this.reconnects.inc();
-    };
+          const FILLS_TO_SAVE = 1000;
+          if (prevFills.length > FILLS_TO_SAVE) {
+            prevFills.splice(0, prevFills.length - FILLS_TO_SAVE);
+          }
+          this.fillLogResults.set(market, prevFills);
 
-    this.ws.onmessage = (message) => {
-      this.fillMutex.runExclusive(async () => {
-        let fill: FillLogResult;
+          this.fills.inc({ market });
+          console.log('Got fill', fill);
 
-        try {
-          fill = JSON.parse(message.data.toString());
-        } catch (error) {
-          console.error('Failed to parse fill message:', error);
-          return;
-        }
+          // Queue for background processing
+          setImmediate(() => this.processFillAsync(fill));
+          setImmediate(() => this.saveCompleteFillToDatabase(fill));
+        });
+      },
+      onConnect: () => {
+        console.log('WebSocket connected to fill feed');
+      },
+      onDisconnect: (code, reason) => {
+        console.log(
+          `WebSocket disconnected from fill feed: ${code} - ${reason}`,
+        );
+        this.reconnects.inc();
+      },
+      onError: (error) => {
+        console.error('WebSocket error:', error);
+        this.reconnects.inc();
+      },
+      onReconnectAttempt: (attempt) => {
+        console.log(
+          `Attempting to reconnect to fill feed (attempt ${attempt})`,
+        );
+      },
+    });
 
-        // Track slot for database persistence
-        this.lastFillSlot = Math.max(this.lastFillSlot, fill.slot);
-
-        // Immediately save to recent fill
-        const { market } = fill;
-        if (!this.fillLogResults.has(market)) {
-          this.fillLogResults.set(market, []);
-        }
-
-        const prevFills = this.fillLogResults.get(market)!;
-        prevFills.push(fill);
-
-        const FILLS_TO_SAVE = 1000;
-        if (prevFills.length > FILLS_TO_SAVE) {
-          prevFills.splice(0, prevFills.length - FILLS_TO_SAVE);
-        }
-        this.fillLogResults.set(market, prevFills);
-
-        this.fills.inc({ market });
-        console.log('Got fill', fill);
-
-        // Queue for background processing
-        setImmediate(() => this.processFillAsync(fill));
-        setImmediate(() => this.saveCompleteFillToDatabase(fill));
-      });
-    };
+    this.wsManager.connect();
   }
 
   /**
@@ -535,9 +523,11 @@ export class ManifestStatsServer {
   saveCheckpoints(): void {
     console.log('Saving checkpoints');
 
-    // Reset the websocket. It sometimes disconnects quietly, so just to be
-    // safe, do it here.
-    this.resetWebsocket();
+    // Check websocket connection status - no need to reset every time
+    if (this.wsManager && !this.wsManager.isConnected()) {
+      console.log('WebSocket disconnected, reconnecting...');
+      this.wsManager.connect();
+    }
 
     this.markets.forEach((value: Market, market: string) => {
       console.log(
@@ -1626,5 +1616,25 @@ export class ManifestStatsServer {
       console.error('Error loading state from database:', error);
       return false;
     }
+  }
+
+  /**
+   * Clean shutdown of the server
+   */
+  public async shutdown(): Promise<void> {
+    console.log('Shutting down ManifestStatsServer...');
+
+    // Close WebSocket connection
+    if (this.wsManager) {
+      this.wsManager.close();
+      this.wsManager = null;
+    }
+
+    // Close database pool
+    if (this.pool) {
+      await this.pool.end();
+    }
+
+    console.log('ManifestStatsServer shutdown complete');
   }
 }
