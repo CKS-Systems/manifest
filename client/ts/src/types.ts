@@ -51,4 +51,9 @@ export type FillLogResult = {
    * Optional for backwards compatibility.
    */
   signers?: string[];
+  /**
+   * Block time of the transaction in seconds since Unix epoch.
+   * Optional for backwards compatibility.
+   */
+  blockTime?: number;
 };
