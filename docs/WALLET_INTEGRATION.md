@@ -46,7 +46,8 @@ Real on-chain limit orders that actually add liquidity to the ecosystem:
 Integrating Manifest gives you a real competitive edge. Most wallets still use triggered swap orders disguised as "limit orders" - they're just market orders that execute when price is hit. That means slippage, MEV, and poor fills.
 
 With Manifest, your users get:
-- Orders that rest on the orderbook and fill at limit price or better
+- Orders that rest on the orderbook and fill at limit price
+- Open market competition to fill orders
 - No slippage, no MEV extraction
 - Ability to trade exotic pairs that don't exist elsewhere
 
@@ -123,7 +124,7 @@ Manifest supports multiple order types to match various trading strategies:
 
 - **Market account**: Contains full orderbook (~0.007 SOL rent)
 - **Base/Quote vaults**: Hold deposited tokens
-- **Seats**: One-time claim per trader per market (required to trade)
+- **Seats**: One-time claim per trader per market (required to rest a limit order, seats not required to swap)
 
 ### Two Ways to Trade
 
@@ -328,7 +329,7 @@ Common fee tiers:
 ## Advanced Features
 
 ### Global Orders
-Same capital supports orders across multiple markets. Good for market makers.
+Same capital supports orders across multiple markets. Good for market makers and power users who are capital sensitive. For example, a user with 100 USDC in their wallet could set a global buy order for 100 USDC to purchase SOL, BONK or any other token without need more than 100 USDC.
 
 ```typescript
 orderType: OrderType.Global
