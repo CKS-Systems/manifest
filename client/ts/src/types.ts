@@ -45,4 +45,10 @@ export type FillLogResult = {
    * Optional for backwards compatibility.
    */
   originatingProtocol?: string;
+  /**
+   * All transaction signers in order.
+   * signers[0] is the fee payer, signers[1] is typically the owner for aggregator swaps.
+   * Optional for backwards compatibility.
+   */
+  signers?: string[];
 };

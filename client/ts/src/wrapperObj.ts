@@ -29,6 +29,8 @@ export interface WrapperData {
 export interface WrapperMarketInfo {
   /** Public key for market. */
   market: PublicKey;
+  /** Location of the traders seat in the market dynamic data. */
+  traderIndex: number;
   /** Base balance in atoms. */
   baseBalanceAtoms: bignum;
   /** Quote balance in atoms. */
@@ -275,6 +277,7 @@ export class Wrapper {
 
         return {
           market: marketInfoRaw.market,
+          traderIndex: marketInfoRaw.traderIndex,
           baseBalanceAtoms: marketInfoRaw.baseBalance,
           quoteBalanceAtoms: marketInfoRaw.quoteBalance,
           quoteVolumeAtoms: marketInfoRaw.quoteVolume,
