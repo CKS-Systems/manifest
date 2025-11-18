@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1763077786028,
+  "lastUpdate": 1763435315486,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -10193,6 +10193,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5459,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "514831a548fdcdb753ae170a19c527cbcabcac97",
+          "message": "Remove global balance check when placing an order (#484)\n\n* Remove global balance check when placing an order\n\n* fmt\n\n* clippy\n\n* test\n\n* test\n\n* comment",
+          "timestamp": "2025-11-17T21:56:09-05:00",
+          "tree_id": "4115d0f80d6873159409bf7fe7c688c104871735",
+          "url": "https://github.com/CKS-Systems/manifest/commit/514831a548fdcdb753ae170a19c527cbcabcac97"
+        },
+        "date": 1763435313447,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3223,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4930,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5479,
             "range": "",
             "unit": "CU",
             "extra": ""
