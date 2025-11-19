@@ -408,7 +408,7 @@ export class ManifestStatsServer {
 
           await this.processFillAsync(fill);
 
-          // Queue for background processing
+          // Queue for background processing to avoid waiting for db operation.
           setImmediate(() => this.saveCompleteFillToDatabase(fill));
         });
       },
@@ -521,48 +521,50 @@ export class ManifestStatsServer {
   /**
    * Periodically save the volume so a 24 hour rolling volume can be calculated.
    */
-  saveCheckpoints(): void {
-    console.log('Saving checkpoints');
+  async saveCheckpoints(): Promise<void> {
+    this.fillMutex.runExclusive(async () => {
+      console.log('Saving checkpoints');
 
-    // Check websocket connection status - no need to reset every time
-    if (this.wsManager && !this.wsManager.isConnected()) {
-      console.log('WebSocket disconnected, reconnecting...');
-      this.wsManager.connect();
-    }
+      // Check websocket connection status - no need to reset every time
+      if (this.wsManager && !this.wsManager.isConnected()) {
+        console.log('WebSocket disconnected, reconnecting...');
+        this.wsManager.connect();
+      }
 
-    this.markets.forEach((value: Market, market: string) => {
-      console.log(
-        'Saving checkpoints for market',
-        market,
-        'base since last',
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market),
-      );
-      this.baseVolumeAtomsCheckpoints.set(market, [
-        ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
-        this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
-      ]);
-      this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
+      this.markets.forEach((value: Market, market: string) => {
+        console.log(
+          'Saving checkpoints for market',
+          market,
+          'base since last',
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market),
+        );
+        this.baseVolumeAtomsCheckpoints.set(market, [
+          ...this.baseVolumeAtomsCheckpoints.get(market)!.slice(1),
+          this.baseVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ]);
+        this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
-      this.quoteVolumeAtomsCheckpoints.set(market, [
-        ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
-        this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
-      ]);
-      this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
+        this.quoteVolumeAtomsCheckpoints.set(market, [
+          ...this.quoteVolumeAtomsCheckpoints.get(market)!.slice(1),
+          this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
+        ]);
+        this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
-      const baseMint: string = value.baseMint().toBase58();
-      const quoteMint: string = value.quoteMint().toBase58();
-      this.volume.set(
-        { market, mint: baseMint, side: 'base' },
-        this.baseVolumeAtomsCheckpoints
-          .get(market)!
-          .reduce((sum, num) => sum + num, 0),
-      );
-      this.volume.set(
-        { market, mint: quoteMint, side: 'quote' },
-        this.quoteVolumeAtomsCheckpoints
-          .get(market)!
-          .reduce((sum, num) => sum + num, 0),
-      );
+        const baseMint: string = value.baseMint().toBase58();
+        const quoteMint: string = value.quoteMint().toBase58();
+        this.volume.set(
+          { market, mint: baseMint, side: 'base' },
+          this.baseVolumeAtomsCheckpoints
+            .get(market)!
+            .reduce((sum, num) => sum + num, 0),
+        );
+        this.volume.set(
+          { market, mint: quoteMint, side: 'quote' },
+          this.quoteVolumeAtomsCheckpoints
+            .get(market)!
+            .reduce((sum, num) => sum + num, 0),
+        );
+      });
     });
   }
 

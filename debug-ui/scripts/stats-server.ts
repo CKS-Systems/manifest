@@ -246,10 +246,9 @@ const run = async () => {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      statsServer.saveCheckpoints();
-
       // Run depth probe and wait for next checkpoint
       await Promise.all([
+        statsServer.saveCheckpoints(),
         statsServer.depthProbe(),
         sleep(CHECKPOINT_DURATION_SEC * 1_000),
         DATABASE_URL && !IS_READ_ONLY
