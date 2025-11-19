@@ -406,8 +406,9 @@ export class ManifestStatsServer {
           this.fills.inc({ market });
           console.log('Got fill', fill);
 
+          await this.processFillAsync(fill);
+
           // Queue for background processing
-          setImmediate(() => this.processFillAsync(fill));
           setImmediate(() => this.saveCompleteFillToDatabase(fill));
         });
       },
