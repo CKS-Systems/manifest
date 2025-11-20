@@ -87,7 +87,7 @@ export class FillFeedBlockSub {
           
           // Skip this block and continue with the next one
           this.currentSlot++;
-
+          
           // Add a longer delay on errors to avoid rapid retries
           await new Promise((resolve) => setTimeout(resolve, this.blockProcessingDelay * 3));
         }
