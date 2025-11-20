@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { WebSocketManager } from './utils/WebSocketManager';
 import {
   Connection,
   ConfirmedSignatureInfo,
@@ -24,41 +25,13 @@ const fills = new promClient.Counter({
  * FillFeed example implementation.
  */
 export class FillFeed {
-  private wss: WebSocket.Server;
+  private wsManager: WebSocketManager;
   private shouldEnd: boolean = false;
   private ended: boolean = false;
   private lastUpdateUnix: number = Date.now();
-  private clientHeartbeats: Map<WebSocket, NodeJS.Timeout> = new Map();
-  private heartbeatInterval: number = 30000; // 30 seconds
 
   constructor(private connection: Connection) {
-    this.wss = new WebSocket.Server({ port: 1234 });
-
-    this.wss.on('connection', (ws: WebSocket) => {
-      console.log('New client connected');
-
-      // Start heartbeat for this client
-      this.startClientHeartbeat(ws);
-
-      ws.on('message', (message: string) => {
-        console.log(`Received message: ${message}`);
-      });
-
-      ws.on('pong', () => {
-        // Client is still alive, reset the heartbeat timer
-        this.resetClientHeartbeat(ws);
-      });
-
-      ws.on('close', () => {
-        console.log('Client disconnected');
-        this.stopClientHeartbeat(ws);
-      });
-
-      ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-        this.stopClientHeartbeat(ws);
-      });
-    });
+    this.wsManager = new WebSocketManager(1234, 30000);
   }
 
   public msSinceLastUpdate() {
@@ -161,63 +134,8 @@ export class FillFeed {
     }
 
     console.log('ended loop');
-
-    // Clean up all heartbeats before closing
-    this.clientHeartbeats.forEach((timeout, ws) => {
-      clearTimeout(timeout);
-      ws.close();
-    });
-    this.clientHeartbeats.clear();
-
-    this.wss.close();
+    this.wsManager.close();
     this.ended = true;
-  }
-
-  private startClientHeartbeat(ws: WebSocket): void {
-    const timeout = setTimeout(() => {
-      console.log('Client heartbeat timeout, closing connection');
-      ws.terminate();
-      this.clientHeartbeats.delete(ws);
-    }, this.heartbeatInterval * 2); // Wait for 2x heartbeat interval before considering dead
-
-    this.clientHeartbeats.set(ws, timeout);
-
-    // Send initial ping
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.ping();
-    }
-  }
-
-  private resetClientHeartbeat(ws: WebSocket): void {
-    // Clear existing timeout
-    const existingTimeout = this.clientHeartbeats.get(ws);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-
-    // Set new timeout and send next ping
-    const timeout = setTimeout(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.ping();
-        // Set another timeout for the pong response
-        const pongTimeout = setTimeout(() => {
-          console.log('Client pong timeout, closing connection');
-          ws.terminate();
-          this.clientHeartbeats.delete(ws);
-        }, this.heartbeatInterval);
-        this.clientHeartbeats.set(ws, pongTimeout);
-      }
-    }, this.heartbeatInterval);
-
-    this.clientHeartbeats.set(ws, timeout);
-  }
-
-  private stopClientHeartbeat(ws: WebSocket): void {
-    const timeout = this.clientHeartbeats.get(ws);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.clientHeartbeats.delete(ws);
-    }
   }
 
   /**
@@ -309,11 +227,50 @@ export class FillFeed {
         isGlobal: deserializedFillLog.isMakerGlobal.toString(),
         takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
       });
-      this.wss.clients.forEach((client) => {
-        client.send(JSON.stringify(fillResult));
-      });
+      this.wsManager.broadcast(JSON.stringify(fillResult));
     }
   }
+}
+
+// Constants for known aggregators and protocols
+export const AGGREGATOR_PROGRAM_IDS = {
+  'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg': 'Swissborg',
+  'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT': 'Titan',
+  '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma': 'OKX',
+  'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u': 'OKX',
+  'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH': 'DFlow',
+  'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter',
+  'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8': 'Spur',
+} as const;
+
+export const ORIGINATING_PROTOCOL_IDS = {
+  'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF': 'kamino',
+  'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh': 'cabana',
+  'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw': 'jupiter',
+  '9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf': 'phantom',
+  '8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf': 'phantom',
+} as const;
+
+// Helper function to detect aggregator from account keys
+export function detectAggregatorFromKeys(accountKeys: string[]): string | undefined {
+  for (const account of accountKeys) {
+    const aggregator = AGGREGATOR_PROGRAM_IDS[account as keyof typeof AGGREGATOR_PROGRAM_IDS];
+    if (aggregator) {
+      return aggregator;
+    }
+  }
+  return undefined;
+}
+
+// Helper function to detect originating protocol from account keys
+export function detectOriginatingProtocolFromKeys(accountKeys: string[]): string | undefined {
+  for (const accountKey of accountKeys) {
+    const protocol = ORIGINATING_PROTOCOL_IDS[accountKey as keyof typeof ORIGINATING_PROTOCOL_IDS];
+    if (protocol) {
+      return protocol;
+    }
+  }
+  return undefined;
 }
 
 function detectAggregator(
@@ -327,76 +284,12 @@ function detectAggregator(
     // Handle both legacy and versioned transactions
     if ('accountKeys' in message) {
       // Legacy transaction
-      for (const account of message.accountKeys) {
-        if (
-          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
-        ) {
-          return 'Swissborg';
-        }
-        if (
-          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
-        ) {
-          return 'Titan';
-        }
-        if (
-          account.toBase58() ==
-            '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma' ||
-          account.toBase58() == 'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u'
-        ) {
-          return 'OKX';
-        }
-        if (
-          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
-        ) {
-          return 'DFlow';
-        }
-        if (
-          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
-        ) {
-          return 'Jupiter';
-        }
-        if (
-          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
-        ) {
-          return 'Spur';
-        }
-      }
+      const accountKeysStr = message.accountKeys.map(k => k.toBase58());
+      return detectAggregatorFromKeys(accountKeysStr);
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
-      for (const account of message.staticAccountKeys) {
-        if (
-          account.toBase58() == 'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg'
-        ) {
-          return 'Swissborg';
-        }
-        if (
-          account.toBase58() == 'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT'
-        ) {
-          return 'Titan';
-        }
-        if (
-          account.toBase58() ==
-            '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma' ||
-          account.toBase58() == 'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u'
-        ) {
-          return 'OKX';
-        }
-        if (
-          account.toBase58() == 'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH'
-        ) {
-          return 'DFlow';
-        }
-        if (
-          account.toBase58() == 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'
-        ) {
-          return 'Jupiter';
-        }
-        if (
-          account.toBase58() == 'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8'
-        ) {
-          return 'Spur';
-        }
-      }
+      const accountKeysStr = message.staticAccountKeys.map(k => k.toBase58());
+      return detectAggregatorFromKeys(accountKeysStr);
     }
   } catch (error) {
     console.warn('Error detecting aggregator:', error);
@@ -408,12 +301,6 @@ function detectAggregator(
 function detectOriginatingProtocol(
   tx: VersionedTransactionResponse,
 ): string | undefined {
-  // Look for known originating protocol program IDs in the transaction accounts
-  const KAMINO_PROGRAM_ID = 'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF';
-  const CABANA_PROGRAM_ID = 'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh';
-  const JUP_3_PROGRAM_ID = 'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw';
-  const PHANTOM_FEES_ID = '9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf';
-  const PHANTOM_FEES_ID_2 = '8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf';
 
   try {
     const message = tx.transaction.message;
@@ -421,44 +308,12 @@ function detectOriginatingProtocol(
     // Handle both legacy and versioned transactions
     if ('accountKeys' in message) {
       // Legacy transaction
-      for (const account of message.accountKeys) {
-        const accountKey = account.toBase58();
-        if (
-          accountKey === PHANTOM_FEES_ID ||
-          accountKey === PHANTOM_FEES_ID_2
-        ) {
-          return 'phantom';
-        }
-        if (accountKey === KAMINO_PROGRAM_ID) {
-          return 'kamino';
-        }
-        if (accountKey === CABANA_PROGRAM_ID) {
-          return 'cabana';
-        }
-        if (accountKey === JUP_3_PROGRAM_ID) {
-          return 'jupiter';
-        }
-      }
+      const accountKeysStr = message.accountKeys.map(k => k.toBase58());
+      return detectOriginatingProtocolFromKeys(accountKeysStr);
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
-      for (const account of message.staticAccountKeys) {
-        const accountKey = account.toBase58();
-        if (
-          accountKey === PHANTOM_FEES_ID ||
-          accountKey === PHANTOM_FEES_ID_2
-        ) {
-          return 'phantom';
-        }
-        if (accountKey === KAMINO_PROGRAM_ID) {
-          return 'kamino';
-        }
-        if (accountKey === CABANA_PROGRAM_ID) {
-          return 'cabana';
-        }
-        if (accountKey === JUP_3_PROGRAM_ID) {
-          return 'jupiter';
-        }
-      }
+      const accountKeysStr = message.staticAccountKeys.map(k => k.toBase58());
+      return detectOriginatingProtocolFromKeys(accountKeysStr);
     }
   } catch (error) {
     console.warn('Error detecting originating protocol:', error);
@@ -467,9 +322,9 @@ function detectOriginatingProtocol(
   return undefined;
 }
 
-const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
+export const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
 
-function toFillLogResult(
+export function toFillLogResult(
   fillLog: FillLog,
   slot: number,
   signature: string,

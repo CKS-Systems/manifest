@@ -1,21 +1,26 @@
 import 'dotenv/config';
 
-import { FillFeed } from '@cks-systems/manifest-sdk/fillFeed';
+import { FillFeedBlockSub } from '@cks-systems/manifest-sdk/fillFeedBlockSub';
 import { Connection } from '@solana/web3.js';
 import { sleep } from '@/lib/util';
 import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 
-const { RPC_URL } = process.env;
+const { RPC_URL, GEYSER_URL } = process.env;
 
 if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
-const rpcUrl = RPC_URL as string;
+if (!GEYSER_URL) {
+  throw new Error('GEYSER_URL missing from env');
+}
 
-const monitorFeed = async (feed: FillFeed) => {
+const rpcUrl = RPC_URL as string;
+const geyserUrl = GEYSER_URL as string;
+
+const monitorFeed = async (feed: FillFeedBlockSub) => {
   // 5 minutes
   const deadThreshold = 300_000;
   // eslint-disable-next-line no-constant-condition
@@ -55,25 +60,25 @@ const run = async () => {
   const timeoutMs = 5_000;
 
   console.log('starting feed...');
-  let feed: FillFeed | null = null;
+  let feed: FillFeedBlockSub | null = null;
   while (true) {
     try {
       console.log('setting up connection...');
       const conn = new Connection(rpcUrl, 'confirmed');
       console.log('setting up feed...');
-      feed = new FillFeed(conn);
-      console.log('parsing logs...');
-      await Promise.all([monitorFeed(feed), feed.parseLogs(false)]);
+      feed = new FillFeedBlockSub(conn, geyserUrl);
+      console.log('starting Geyser stream...');
+      await Promise.all([monitorFeed(feed), feed.start()]);
     } catch (e: unknown) {
       console.error('start:feed: error: ', e);
       if (feed) {
         console.log('shutting down feed before restarting...');
-        await feed.stopParseLogs();
+        await feed.stop();
         console.log('feed has shut down successfully');
       }
     } finally {
       console.warn(`sleeping ${timeoutMs / 1000} before restarting`);
-      sleep(timeoutMs);
+      await sleep(timeoutMs);
     }
   }
 };
