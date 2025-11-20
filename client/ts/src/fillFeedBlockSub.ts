@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, VersionedBlockResponse } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
@@ -17,73 +17,26 @@ import { WebSocketManager } from './utils/WebSocketManager';
 // For live monitoring of the fill feed. For a more complete look at fill
 // history stats, need to index all trades.
 const fills = new promClient.Counter({
-  name: 'fills_geyser',
-  help: 'Number of fills from Geyser stream',
+  name: 'fills_block',
+  help: 'Number of fills from block processing',
   labelNames: ['market', 'isGlobal', 'takerIsBuy'] as const,
 });
 
-interface GeyserSubscriptionRequest {
-  jsonrpc: '2.0';
-  id: number;
-  method: string;
-  params?: any;
-}
-
-interface GeyserTransaction {
-  signature: string;
-  slot: number;
-  transaction: {
-    message: {
-      accountKeys: string[];
-      recentBlockhash: string;
-      instructions: Array<{
-        programIdIndex: number;
-        accounts: number[];
-        data: string;
-      }>;
-    };
-  };
-  meta?: {
-    err?: any;
-    logMessages?: string[];
-    postBalances?: number[];
-    preBalances?: number[];
-  };
-  blockTime?: number;
-}
-
-interface GeyserNotification {
-  jsonrpc: '2.0';
-  method: 'transactionNotification';
-  params: {
-    result: {
-      transaction: GeyserTransaction;
-    };
-    subscription: number;
-  };
-}
-
 /**
- * FillFeedBlockSub - Subscribes to Geyser stream for all Manifest program transactions
+ * FillFeedBlockSub - Processes blocks sequentially using getBlock to find Manifest program transactions
  */
 export class FillFeedBlockSub {
   private wsManager: WebSocketManager;
-  private geyserWs: WebSocket | null = null;
   private shouldEnd: boolean = false;
   private ended: boolean = false;
   private lastUpdateUnix: number = Date.now();
-  private geyserUrl: string;
-  private subscriptionId: number | null = null;
-  private reconnectDelay: number = 5000; // 5 seconds
-  private maxReconnectDelay: number = 300000; // 5 minutes
-  private currentReconnectDelay: number = this.reconnectDelay;
+  private currentSlot: number = 0;
+  private blockProcessingDelay: number = 1000; // 1 second delay between blocks
 
   constructor(
     private connection: Connection,
-    geyserUrl: string,
     wsPort: number = 1234,
   ) {
-    this.geyserUrl = geyserUrl;
     this.wsManager = new WebSocketManager(wsPort, 30000);
   }
 
@@ -94,25 +47,18 @@ export class FillFeedBlockSub {
   public async stop() {
     this.shouldEnd = true;
 
-    // Unsubscribe from Geyser if connected
-    if (this.geyserWs && this.subscriptionId !== null) {
-      try {
-        const unsubscribeRequest: GeyserSubscriptionRequest = {
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'transactionUnsubscribe',
-          params: [this.subscriptionId],
-        };
-        this.geyserWs.send(JSON.stringify(unsubscribeRequest));
-      } catch (error) {
-        console.error('Error unsubscribing from Geyser:', error);
-      }
-    }
+    // Wait for processing to finish gracefully
+    const start = Date.now();
+    while (!this.ended) {
+      const timeout = 10_000;
+      const pollInterval = 500;
 
-    // Close Geyser connection
-    if (this.geyserWs) {
-      this.geyserWs.close();
-      this.geyserWs = null;
+      if (Date.now() - start > timeout) {
+        console.warn('Force stopping block processing after timeout');
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
 
     // Close WebSocket server
@@ -121,195 +67,159 @@ export class FillFeedBlockSub {
   }
 
   /**
-   * Connect to Geyser and subscribe to Manifest program transactions
+   * Start processing blocks sequentially
    */
   public async start() {
-    while (!this.shouldEnd) {
-      try {
-        await this.connectToGeyser();
-        await this.subscribeToManifestTransactions();
+    try {
+      // Get the current slot to start processing from
+      this.currentSlot = await this.connection.getSlot('finalized');
+      console.log(`Starting block processing from slot ${this.currentSlot}`);
 
-        // Reset reconnect delay on successful connection
-        this.currentReconnectDelay = this.reconnectDelay;
+      while (!this.shouldEnd) {
+        try {
+          await this.processBlock(this.currentSlot);
+          this.currentSlot++;
+          
+          // Add a small delay between blocks to avoid overwhelming the RPC
+          await new Promise((resolve) => setTimeout(resolve, this.blockProcessingDelay));
+        } catch (error) {
+          console.error(`Error processing block ${this.currentSlot}:`, error);
+          
+          // Skip this block and continue with the next one
+          this.currentSlot++;
 
-        // Wait for disconnection or stop signal
-        await new Promise<void>((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (
-              this.shouldEnd ||
-              !this.geyserWs ||
-              this.geyserWs.readyState !== WebSocket.OPEN
-            ) {
-              clearInterval(checkInterval);
-              resolve();
-            }
-          }, 1000);
-        });
-      } catch (error) {
-        console.error('Error in Geyser connection:', error);
-
-        // Exponential backoff for reconnection
-        console.log(
-          `Reconnecting in ${this.currentReconnectDelay / 1000} seconds...`,
-        );
-        await new Promise((resolve) =>
-          setTimeout(resolve, this.currentReconnectDelay),
-        );
-        this.currentReconnectDelay = Math.min(
-          this.currentReconnectDelay * 2,
-          this.maxReconnectDelay,
-        );
+          // Add a longer delay on errors to avoid rapid retries
+          await new Promise((resolve) => setTimeout(resolve, this.blockProcessingDelay * 3));
+        }
       }
-    }
-
-    console.log('FillFeedBlockSub ended');
-  }
-
-  private async connectToGeyser(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      console.log(`Connecting to Geyser at ${this.geyserUrl}`);
-
-      this.geyserWs = new WebSocket(this.geyserUrl);
-
-      const connectionTimeout = setTimeout(() => {
-        if (
-          this.geyserWs &&
-          this.geyserWs.readyState !== WebSocket.OPEN
-        ) {
-          this.geyserWs.close();
-          reject(new Error('Geyser connection timeout'));
-        }
-      }, 30000);
-
-      this.geyserWs.on('open', () => {
-        clearTimeout(connectionTimeout);
-        console.log('Connected to Geyser');
-        resolve();
-      });
-
-      this.geyserWs.on('message', (data: WebSocket.Data) => {
-        try {
-          const message = JSON.parse(data.toString());
-          this.handleGeyserMessage(message);
-        } catch (error) {
-          console.error('Error parsing Geyser message:', error);
-        }
-      });
-
-      this.geyserWs.on('error', (error) => {
-        clearTimeout(connectionTimeout);
-        console.error('Geyser WebSocket error:', error);
-        reject(error);
-      });
-
-      this.geyserWs.on('close', () => {
-        console.log('Geyser connection closed');
-        this.subscriptionId = null;
-      });
-    });
-  }
-
-  private async subscribeToManifestTransactions(): Promise<void> {
-    if (!this.geyserWs || this.geyserWs.readyState !== WebSocket.OPEN) {
-      throw new Error('Geyser WebSocket not connected');
-    }
-
-    const subscriptionRequest: GeyserSubscriptionRequest = {
-      jsonrpc: '2.0',
-      id: Date.now(),
-      method: 'transactionSubscribe',
-      params: [
-        {
-          // Subscribe to all transactions that mention the Manifest program
-          mentions: [PROGRAM_ID.toBase58()],
-          // Optionally add other filters
-          failed: false,
-          commitment: 'confirmed',
-        },
-        {
-          // Request full transaction details
-          encoding: 'json',
-          transactionDetails: 'full',
-          showRewards: false,
-        },
-      ],
-    };
-
-    return new Promise((resolve, reject) => {
-      const subscriptionTimeout = setTimeout(() => {
-        reject(new Error('Subscription timeout'));
-      }, 10000);
-
-      // Set up one-time handler for subscription response
-      const handleSubscriptionResponse = (data: WebSocket.Data) => {
-        try {
-          const response = JSON.parse(data.toString());
-          if (response.id === subscriptionRequest.id) {
-            if (response.result) {
-              this.subscriptionId = response.result;
-              console.log(
-                `Subscribed to Manifest transactions with ID: ${this.subscriptionId}`,
-              );
-              clearTimeout(subscriptionTimeout);
-              resolve();
-            } else if (response.error) {
-              clearTimeout(subscriptionTimeout);
-              reject(
-                new Error(
-                  `Subscription error: ${JSON.stringify(response.error)}`,
-                ),
-              );
-            }
-          }
-        } catch (error) {
-          // Not the subscription response, ignore
-        }
-      };
-
-      this.geyserWs!.once('message', handleSubscriptionResponse);
-      this.geyserWs!.send(JSON.stringify(subscriptionRequest));
-    });
-  }
-
-  private handleGeyserMessage(message: any) {
-    if (message.method === 'transactionNotification') {
-      const notification = message as GeyserNotification;
-      this.handleTransaction(notification.params.result.transaction);
+    } catch (error) {
+      console.error('Fatal error in block processing:', error);
+    } finally {
+      console.log('FillFeedBlockSub ended');
+      this.ended = true;
     }
   }
 
-  private async handleTransaction(tx: GeyserTransaction) {
-    console.log('Handling transaction', tx.signature, 'slot', tx.slot);
+  /**
+   * Process a single block and extract fill logs from Manifest program transactions
+   */
+  private async processBlock(slot: number): Promise<void> {
+    try {
+      const block = await this.connection.getBlock(slot, {
+        maxSupportedTransactionVersion: 0,
+        transactionDetails: 'full',
+        commitment: 'finalized'
+      });
+
+      if (!block) {
+        // Block doesn't exist or is not finalized yet
+        return;
+      }
+
+      console.log(`Processing block ${slot} with ${block.transactions.length} transactions`);
+
+      for (const tx of block.transactions) {
+        if (tx.meta?.err !== null) {
+          // Skip failed transactions
+          continue;
+        }
+
+        // Check if this transaction involves the Manifest program
+        const hasManifestProgram = this.transactionInvolvesManifestProgram(tx);
+        if (!hasManifestProgram) {
+          continue;
+        }
+
+        await this.processTransaction(tx, slot, block.blockTime);
+      }
+
+      this.lastUpdateUnix = Date.now();
+    } catch (error) {
+      // Re-throw to be handled by the caller
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a transaction involves the Manifest program
+   */
+  private transactionInvolvesManifestProgram(tx: any): boolean {
+    if (!tx.transaction?.message) {
+      return false;
+    }
+
+    const message = tx.transaction.message;
+    const programId = PROGRAM_ID.toBase58();
+
+    // Check legacy transaction format
+    if ('accountKeys' in message) {
+      return message.accountKeys.some((key: any) => key.toBase58() === programId);
+    }
+    
+    // Check versioned transaction format
+    if ('staticAccountKeys' in message) {
+      return message.staticAccountKeys.some((key: any) => key.toBase58() === programId);
+    }
+
+    return false;
+  }
+
+  /**
+   * Process a single transaction from a block
+   */
+  private async processTransaction(tx: any, slot: number, blockTime?: number | null): Promise<void> {
+    const signature = tx.transaction.signatures[0];
+    console.log('Handling transaction', signature, 'slot', slot);
 
     if (!tx.meta?.logMessages) {
       console.log('No log messages');
       return;
     }
-    if (tx.meta.err != null) {
-      console.log('Skipping failed tx', tx.signature);
+
+    // Extract signers from the transaction
+    let originalSigner: string | undefined;
+    let signers: string[] = [];
+    let accountKeysStr: string[] = [];
+
+    try {
+      const message = tx.transaction.message;
+
+      if ('accountKeys' in message) {
+        // Legacy transaction
+        accountKeysStr = message.accountKeys.map((key: any) => key.toBase58());
+        originalSigner = accountKeysStr[0];
+        // Extract all signers using isAccountSigner method
+        signers = message.accountKeys
+          .map((key: any, index: number) => ({ key, index }))
+          .filter(({ index }: any) => message.isAccountSigner(index))
+          .map(({ key }: any) => key.toBase58());
+      } else {
+        // Versioned transaction (v0) - use staticAccountKeys
+        accountKeysStr = message.staticAccountKeys.map((key: any) => key.toBase58());
+        originalSigner = accountKeysStr[0];
+        // Extract all signers using isAccountSigner method
+        signers = message.staticAccountKeys
+          .map((key: any, index: number) => ({ key, index }))
+          .filter(({ index }: any) => message.isAccountSigner(index))
+          .map(({ key }: any) => key.toBase58());
+      }
+    } catch (error) {
+      console.error('Error extracting signers:', error);
       return;
     }
 
-    // Extract signers
-    const accountKeys = tx.transaction.message.accountKeys;
-    const originalSigner = accountKeys[0];
-    // In Geyser format, we need to determine signers differently
-    // For now, we'll use the first account key as the signer
-    const signers = [originalSigner];
-
-    const aggregator = detectAggregatorFromKeys(accountKeys);
-    const originatingProtocol = detectOriginatingProtocolFromKeys(accountKeys);
+    const aggregator = detectAggregatorFromKeys(accountKeysStr);
+    const originatingProtocol = detectOriginatingProtocolFromKeys(accountKeysStr);
 
     const messages: string[] = tx.meta.logMessages;
     const programDatas: string[] = messages.filter((message) => {
       return message.includes('Program data:');
     });
 
-    if (programDatas.length == 0) {
+    if (programDatas.length === 0) {
       console.log('No program datas');
       return;
     }
-
 
     for (const programDataEntry of programDatas) {
       const programData = programDataEntry.split(' ')[2];
@@ -325,13 +235,13 @@ export class FillFeedBlockSub {
       )[0];
       const fillResult = toFillLogResult(
         deserializedFillLog,
-        tx.slot,
-        tx.signature,
+        slot,
+        signature,
         originalSigner,
         aggregator,
         originatingProtocol,
         signers,
-        tx.blockTime,
+        blockTime ?? undefined,
       );
       const resultString: string = JSON.stringify(fillResult);
       console.log('Got a fill', resultString);
@@ -340,9 +250,6 @@ export class FillFeedBlockSub {
         isGlobal: deserializedFillLog.isMakerGlobal.toString(),
         takerIsBuy: deserializedFillLog.takerIsBuy.toString(),
       });
-
-      // Update last update time
-      this.lastUpdateUnix = Date.now();
 
       // Send to all connected clients
       this.wsManager.broadcast(JSON.stringify(fillResult));

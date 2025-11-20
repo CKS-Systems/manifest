@@ -7,18 +7,13 @@ import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 
-const { RPC_URL, GEYSER_URL } = process.env;
+const { RPC_URL } = process.env;
 
 if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
-if (!GEYSER_URL) {
-  throw new Error('GEYSER_URL missing from env');
-}
-
 const rpcUrl = RPC_URL as string;
-const geyserUrl = GEYSER_URL as string;
 
 const monitorFeed = async (feed: FillFeedBlockSub) => {
   // 5 minutes
@@ -66,7 +61,7 @@ const run = async () => {
       console.log('setting up connection...');
       const conn = new Connection(rpcUrl, 'confirmed');
       console.log('setting up feed...');
-      feed = new FillFeedBlockSub(conn, geyserUrl);
+      feed = new FillFeedBlockSub(conn);
       console.log('starting Geyser stream...');
       await Promise.all([monitorFeed(feed), feed.start()]);
     } catch (e: unknown) {
