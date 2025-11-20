@@ -62,7 +62,6 @@ const run = async () => {
       const conn = new Connection(rpcUrl, 'confirmed');
       console.log('setting up feed...');
       feed = new FillFeedBlockSub(conn);
-      console.log('starting Geyser stream...');
       await Promise.all([monitorFeed(feed), feed.start()]);
     } catch (e: unknown) {
       console.error('start:feed: error: ', e);
