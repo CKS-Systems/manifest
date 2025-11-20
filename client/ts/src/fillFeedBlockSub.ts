@@ -79,17 +79,21 @@ export class FillFeedBlockSub {
         try {
           await this.processBlock(this.currentSlot);
           this.currentSlot++;
-          
+
           // Add a small delay between blocks to avoid overwhelming the RPC
-          await new Promise((resolve) => setTimeout(resolve, this.blockProcessingDelay));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.blockProcessingDelay),
+          );
         } catch (error) {
           console.error(`Error processing block ${this.currentSlot}:`, error);
-          
+
           // Skip this block and continue with the next one
           this.currentSlot++;
-          
+
           // Add a longer delay on errors to avoid rapid retries
-          await new Promise((resolve) => setTimeout(resolve, this.blockProcessingDelay * 3));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.blockProcessingDelay * 3),
+          );
         }
       }
     } catch (error) {
@@ -108,7 +112,7 @@ export class FillFeedBlockSub {
       const block = await this.connection.getBlock(slot, {
         maxSupportedTransactionVersion: 0,
         transactionDetails: 'full',
-        commitment: 'finalized'
+        commitment: 'finalized',
       });
 
       if (!block) {
@@ -116,7 +120,9 @@ export class FillFeedBlockSub {
         return;
       }
 
-      console.log(`Processing block ${slot} with ${block.transactions.length} transactions`);
+      console.log(
+        `Processing block ${slot} with ${block.transactions.length} transactions`,
+      );
 
       for (const tx of block.transactions) {
         if (tx.meta?.err !== null) {
@@ -153,12 +159,16 @@ export class FillFeedBlockSub {
 
     // Check legacy transaction format
     if ('accountKeys' in message) {
-      return message.accountKeys.some((key: any) => key.toBase58() === programId);
+      return message.accountKeys.some(
+        (key: any) => key.toBase58() === programId,
+      );
     }
-    
+
     // Check versioned transaction format
     if ('staticAccountKeys' in message) {
-      return message.staticAccountKeys.some((key: any) => key.toBase58() === programId);
+      return message.staticAccountKeys.some(
+        (key: any) => key.toBase58() === programId,
+      );
     }
 
     return false;
@@ -167,7 +177,11 @@ export class FillFeedBlockSub {
   /**
    * Process a single transaction from a block
    */
-  private async processTransaction(tx: any, slot: number, blockTime?: number | null): Promise<void> {
+  private async processTransaction(
+    tx: any,
+    slot: number,
+    blockTime?: number | null,
+  ): Promise<void> {
     const signature = tx.transaction.signatures[0];
     console.log('Handling transaction', signature, 'slot', slot);
 
@@ -195,7 +209,9 @@ export class FillFeedBlockSub {
           .map(({ key }: any) => key.toBase58());
       } else {
         // Versioned transaction (v0) - use staticAccountKeys
-        accountKeysStr = message.staticAccountKeys.map((key: any) => key.toBase58());
+        accountKeysStr = message.staticAccountKeys.map((key: any) =>
+          key.toBase58(),
+        );
         originalSigner = accountKeysStr[0];
         // Extract all signers using isAccountSigner method
         signers = message.staticAccountKeys
@@ -209,7 +225,8 @@ export class FillFeedBlockSub {
     }
 
     const aggregator = detectAggregatorFromKeys(accountKeysStr);
-    const originatingProtocol = detectOriginatingProtocolFromKeys(accountKeysStr);
+    const originatingProtocol =
+      detectOriginatingProtocolFromKeys(accountKeysStr);
 
     const messages: string[] = tx.meta.logMessages;
     const programDatas: string[] = messages.filter((message) => {

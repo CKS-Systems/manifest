@@ -234,27 +234,30 @@ export class FillFeed {
 
 // Constants for known aggregators and protocols
 export const AGGREGATOR_PROGRAM_IDS = {
-  'MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg': 'Swissborg',
-  'T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT': 'Titan',
+  MEXkeo4BPUCZuEJ4idUUwMPu4qvc9nkqtLn3yAyZLxg: 'Swissborg',
+  T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT: 'Titan',
   '6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma': 'OKX',
-  'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u': 'OKX',
-  'DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH': 'DFlow',
-  'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter',
-  'SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8': 'Spur',
+  proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u: 'OKX',
+  DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH: 'DFlow',
+  JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4: 'Jupiter',
+  SPURp82qAR9nvzy8j1gP31zmzGytrgDBKcpGzeGkka8: 'Spur',
 } as const;
 
 export const ORIGINATING_PROTOCOL_IDS = {
-  'LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF': 'kamino',
-  'UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh': 'cabana',
-  'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw': 'jupiter',
+  LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF: 'kamino',
+  UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh: 'cabana',
+  HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw: 'jupiter',
   '9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf': 'phantom',
   '8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf': 'phantom',
 } as const;
 
 // Helper function to detect aggregator from account keys
-export function detectAggregatorFromKeys(accountKeys: string[]): string | undefined {
+export function detectAggregatorFromKeys(
+  accountKeys: string[],
+): string | undefined {
   for (const account of accountKeys) {
-    const aggregator = AGGREGATOR_PROGRAM_IDS[account as keyof typeof AGGREGATOR_PROGRAM_IDS];
+    const aggregator =
+      AGGREGATOR_PROGRAM_IDS[account as keyof typeof AGGREGATOR_PROGRAM_IDS];
     if (aggregator) {
       return aggregator;
     }
@@ -263,9 +266,14 @@ export function detectAggregatorFromKeys(accountKeys: string[]): string | undefi
 }
 
 // Helper function to detect originating protocol from account keys
-export function detectOriginatingProtocolFromKeys(accountKeys: string[]): string | undefined {
+export function detectOriginatingProtocolFromKeys(
+  accountKeys: string[],
+): string | undefined {
   for (const accountKey of accountKeys) {
-    const protocol = ORIGINATING_PROTOCOL_IDS[accountKey as keyof typeof ORIGINATING_PROTOCOL_IDS];
+    const protocol =
+      ORIGINATING_PROTOCOL_IDS[
+        accountKey as keyof typeof ORIGINATING_PROTOCOL_IDS
+      ];
     if (protocol) {
       return protocol;
     }
@@ -284,11 +292,11 @@ function detectAggregator(
     // Handle both legacy and versioned transactions
     if ('accountKeys' in message) {
       // Legacy transaction
-      const accountKeysStr = message.accountKeys.map(k => k.toBase58());
+      const accountKeysStr = message.accountKeys.map((k) => k.toBase58());
       return detectAggregatorFromKeys(accountKeysStr);
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
-      const accountKeysStr = message.staticAccountKeys.map(k => k.toBase58());
+      const accountKeysStr = message.staticAccountKeys.map((k) => k.toBase58());
       return detectAggregatorFromKeys(accountKeysStr);
     }
   } catch (error) {
@@ -301,18 +309,17 @@ function detectAggregator(
 function detectOriginatingProtocol(
   tx: VersionedTransactionResponse,
 ): string | undefined {
-
   try {
     const message = tx.transaction.message;
 
     // Handle both legacy and versioned transactions
     if ('accountKeys' in message) {
       // Legacy transaction
-      const accountKeysStr = message.accountKeys.map(k => k.toBase58());
+      const accountKeysStr = message.accountKeys.map((k) => k.toBase58());
       return detectOriginatingProtocolFromKeys(accountKeysStr);
     } else {
       // V0 transaction - use staticAccountKeys directly to avoid lookup resolution issues
-      const accountKeysStr = message.staticAccountKeys.map(k => k.toBase58());
+      const accountKeysStr = message.staticAccountKeys.map((k) => k.toBase58());
       return detectOriginatingProtocolFromKeys(accountKeysStr);
     }
   } catch (error) {
