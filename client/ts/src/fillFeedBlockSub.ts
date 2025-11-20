@@ -1,11 +1,8 @@
-import WebSocket from 'ws';
-import { Connection, PublicKey, VersionedBlockResponse } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 
 import { FillLog } from './manifest/accounts/FillLog';
 import { PROGRAM_ID } from './manifest';
-import { convertU128 } from './utils/numbers';
 import * as promClient from 'prom-client';
-import { FillLogResult } from './types';
 import {
   fillDiscriminant,
   toFillLogResult,
@@ -141,8 +138,7 @@ export class FillFeedBlockSub {
 
       this.lastUpdateUnix = Date.now();
     } catch (error) {
-      // Re-throw to be handled by the caller
-      throw error;
+      console.log('Error handling block', error);
     }
   }
 

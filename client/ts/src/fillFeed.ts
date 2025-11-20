@@ -1,4 +1,3 @@
-import WebSocket from 'ws';
 import { WebSocketManager } from './utils/WebSocketManager';
 import {
   Connection,
