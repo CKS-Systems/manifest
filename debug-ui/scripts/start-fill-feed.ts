@@ -57,7 +57,9 @@ const run = async () => {
 
   const timeoutMs = 5_000;
 
-  console.log(`starting feed... (using ${useBlockFeed ? 'block' : 'GSFA'} feed)`);
+  console.log(
+    `starting feed... (using ${useBlockFeed ? 'block' : 'GSFA'} feed)`,
+  );
   let feed: FillFeed | FillFeedBlockSub | null = null;
   while (true) {
     try {
@@ -67,7 +69,10 @@ const run = async () => {
       feed = useBlockFeed ? new FillFeedBlockSub(conn) : new FillFeed(conn);
 
       if (useBlockFeed) {
-        await Promise.all([monitorFeed(feed), (feed as FillFeedBlockSub).start()]);
+        await Promise.all([
+          monitorFeed(feed),
+          (feed as FillFeedBlockSub).start(),
+        ]);
       } else {
         await Promise.all([monitorFeed(feed), (feed as FillFeed).parseLogs()]);
       }
