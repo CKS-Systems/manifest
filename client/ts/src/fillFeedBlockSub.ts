@@ -28,7 +28,7 @@ export class FillFeedBlockSub {
   private ended: boolean = false;
   private lastUpdateUnix: number = Date.now();
   private currentSlot: number = 0;
-  private blockProcessingDelay: number = 1000; // 1 second delay between blocks
+  private blockProcessingDelay: number = 100; // 100ms delay between iterations
 
   constructor(
     private connection: Connection,
@@ -74,20 +74,87 @@ export class FillFeedBlockSub {
 
       while (!this.shouldEnd) {
         try {
-          await this.processBlock(this.currentSlot);
-          this.currentSlot++;
+          // Get the latest finalized slot
+          const latestSlot = await this.connection.getSlot('finalized');
 
-          // Add a small delay between blocks to avoid overwhelming the RPC
+          // Determine which slots need to be processed
+          const slotsToProcess: number[] = [];
+          for (let slot = this.currentSlot; slot <= latestSlot; slot++) {
+            slotsToProcess.push(slot);
+          }
+
+          if (slotsToProcess.length === 0) {
+            // No new slots to process, wait before checking again
+            await new Promise((resolve) =>
+              setTimeout(resolve, this.blockProcessingDelay),
+            );
+            continue;
+          }
+
+          console.log(
+            `Fetching ${slotsToProcess.length} blocks in parallel (${this.currentSlot} to ${latestSlot})`,
+          );
+
+          // Fetch all blocks in parallel
+          const blockPromises = slotsToProcess.map((slot) =>
+            this.connection.getBlock(slot, {
+              maxSupportedTransactionVersion: 0,
+              transactionDetails: 'full',
+              commitment: 'finalized',
+            }),
+          );
+
+          const blocks = await Promise.all(blockPromises);
+
+          // Process blocks in order
+          for (let i = 0; i < blocks.length; i++) {
+            const slot = slotsToProcess[i];
+            const block = blocks[i];
+
+            if (!block) {
+              // Block doesn't exist or is not finalized yet
+              continue;
+            }
+
+            console.log(
+              `Processing block ${slot} with ${block.transactions.length} transactions`,
+            );
+
+            for (const tx of block.transactions) {
+              if (tx.meta?.err !== null) {
+                // Skip failed transactions
+                continue;
+              }
+
+              // Check if this transaction involves the Manifest program
+              const hasManifestProgram =
+                this.transactionInvolvesManifestProgram(tx);
+              if (!hasManifestProgram) {
+                continue;
+              }
+
+              await this.processTransaction(tx, slot, block.blockTime);
+            }
+
+            this.lastUpdateUnix = Date.now();
+          }
+
+          // Update current slot to continue from the next unprocessed slot
+          this.currentSlot = latestSlot + 1;
+
+          // Add a small delay between iterations
           await new Promise((resolve) =>
             setTimeout(resolve, this.blockProcessingDelay),
           );
         } catch (error) {
-          console.error(`Error processing block ${this.currentSlot}:`, error);
+          console.error(
+            `Error processing blocks from ${this.currentSlot}:`,
+            error,
+          );
 
-          // Skip this block and continue with the next one
+          // On error, move forward one slot and add a longer delay
           this.currentSlot++;
 
-          // Add a longer delay on errors to avoid rapid retries
           await new Promise((resolve) =>
             setTimeout(resolve, this.blockProcessingDelay * 3),
           );
@@ -102,48 +169,8 @@ export class FillFeedBlockSub {
   }
 
   /**
-   * Process a single block and extract fill logs from Manifest program transactions
-   */
-  private async processBlock(slot: number): Promise<void> {
-    try {
-      const block = await this.connection.getBlock(slot, {
-        maxSupportedTransactionVersion: 0,
-        transactionDetails: 'full',
-        commitment: 'finalized',
-      });
-
-      if (!block) {
-        // Block doesn't exist or is not finalized yet
-        return;
-      }
-
-      console.log(
-        `Processing block ${slot} with ${block.transactions.length} transactions`,
-      );
-
-      for (const tx of block.transactions) {
-        if (tx.meta?.err !== null) {
-          // Skip failed transactions
-          continue;
-        }
-
-        // Check if this transaction involves the Manifest program
-        const hasManifestProgram = this.transactionInvolvesManifestProgram(tx);
-        if (!hasManifestProgram) {
-          continue;
-        }
-
-        await this.processTransaction(tx, slot, block.blockTime);
-      }
-
-      this.lastUpdateUnix = Date.now();
-    } catch (error) {
-      console.log('Error handling block', error);
-    }
-  }
-
-  /**
    * Check if a transaction involves the Manifest program
+   * This checks account keys and addresses loaded from lookup tables
    */
   private transactionInvolvesManifestProgram(tx: any): boolean {
     if (!tx.transaction?.message) {
@@ -155,16 +182,45 @@ export class FillFeedBlockSub {
 
     // Check legacy transaction format
     if ('accountKeys' in message) {
-      return message.accountKeys.some(
+      const inAccountKeys = message.accountKeys.some(
         (key: any) => key.toBase58() === programId,
       );
+      if (inAccountKeys) {
+        return true;
+      }
     }
 
     // Check versioned transaction format
     if ('staticAccountKeys' in message) {
-      return message.staticAccountKeys.some(
+      const inAccountKeys = message.staticAccountKeys.some(
         (key: any) => key.toBase58() === programId,
       );
+      if (inAccountKeys) {
+        return true;
+      }
+    }
+
+    // Check addresses loaded from address lookup tables (ALTs)
+    if (tx.meta?.loadedAddresses) {
+      const loadedAddresses = tx.meta.loadedAddresses;
+
+      if (loadedAddresses.writable) {
+        const inWritable = loadedAddresses.writable.some(
+          (key: any) => (typeof key === 'string' ? key : key.toBase58()) === programId,
+        );
+        if (inWritable) {
+          return true;
+        }
+      }
+
+      if (loadedAddresses.readonly) {
+        const inReadonly = loadedAddresses.readonly.some(
+          (key: any) => (typeof key === 'string' ? key : key.toBase58()) === programId,
+        );
+        if (inReadonly) {
+          return true;
+        }
+      }
     }
 
     return false;
