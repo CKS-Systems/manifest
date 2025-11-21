@@ -198,7 +198,8 @@ export class FillFeedBlockSub {
 
       if (loadedAddresses.writable) {
         const inWritable = loadedAddresses.writable.some(
-          (key: any) => (typeof key === 'string' ? key : key.toBase58()) === programId,
+          (key: any) =>
+            (typeof key === 'string' ? key : key.toBase58()) === programId,
         );
         if (inWritable) {
           return true;
@@ -207,7 +208,8 @@ export class FillFeedBlockSub {
 
       if (loadedAddresses.readonly) {
         const inReadonly = loadedAddresses.readonly.some(
-          (key: any) => (typeof key === 'string' ? key : key.toBase58()) === programId,
+          (key: any) =>
+            (typeof key === 'string' ? key : key.toBase58()) === programId,
         );
         if (inReadonly) {
           return true;
