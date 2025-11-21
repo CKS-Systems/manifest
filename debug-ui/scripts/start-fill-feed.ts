@@ -67,7 +67,7 @@ const run = async () => {
       feed = useBlockFeed ? new FillFeedBlockSub(conn) : new FillFeed(conn);
 
       if (useBlockFeed) {
-        await Promise.all([monitorFeed(feed), feed.start()]);
+        await Promise.all([monitorFeed(feed), (feed as FillFeedBlockSub).start()]);
       } else {
         await Promise.all([monitorFeed(feed), (feed as FillFeed).parseLogs()]);
       }
