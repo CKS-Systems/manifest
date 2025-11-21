@@ -84,10 +84,7 @@ export class FillFeedBlockSub {
           }
 
           if (slotsToProcess.length === 0) {
-            // No new slots to process, wait before checking again
-            await new Promise((resolve) =>
-              setTimeout(resolve, this.blockProcessingDelay),
-            );
+            // No new slots to process, continue immediately
             continue;
           }
 
@@ -141,11 +138,6 @@ export class FillFeedBlockSub {
 
           // Update current slot to continue from the next unprocessed slot
           this.currentSlot = latestSlot + 1;
-
-          // Add a small delay between iterations
-          await new Promise((resolve) =>
-            setTimeout(resolve, this.blockProcessingDelay),
-          );
         } catch (error) {
           console.error(
             `Error processing blocks from ${this.currentSlot}:`,

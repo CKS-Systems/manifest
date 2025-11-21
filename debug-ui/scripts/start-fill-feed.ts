@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+import { FillFeed } from '@cks-systems/manifest-sdk/fillFeed';
 import { FillFeedBlockSub } from '@cks-systems/manifest-sdk/fillFeedBlockSub';
 import { Connection } from '@solana/web3.js';
 import { sleep } from '@/lib/util';
@@ -7,15 +8,17 @@ import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 
-const { RPC_URL } = process.env;
+const { RPC_URL, USE_BLOCK_FEED } = process.env;
 
 if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
 const rpcUrl = RPC_URL as string;
+// Default to block feed (the original behavior)
+const useBlockFeed = USE_BLOCK_FEED !== 'false';
 
-const monitorFeed = async (feed: FillFeedBlockSub) => {
+const monitorFeed = async (feed: FillFeed | FillFeedBlockSub) => {
   // 5 minutes
   const deadThreshold = 300_000;
   // eslint-disable-next-line no-constant-condition
@@ -54,20 +57,29 @@ const run = async () => {
 
   const timeoutMs = 5_000;
 
-  console.log('starting feed...');
-  let feed: FillFeedBlockSub | null = null;
+  console.log(`starting feed... (using ${useBlockFeed ? 'block' : 'GSFA'} feed)`);
+  let feed: FillFeed | FillFeedBlockSub | null = null;
   while (true) {
     try {
       console.log('setting up connection...');
       const conn = new Connection(rpcUrl, 'confirmed');
       console.log('setting up feed...');
-      feed = new FillFeedBlockSub(conn);
-      await Promise.all([monitorFeed(feed), feed.start()]);
+      feed = useBlockFeed ? new FillFeedBlockSub(conn) : new FillFeed(conn);
+
+      if (useBlockFeed) {
+        await Promise.all([monitorFeed(feed), feed.start()]);
+      } else {
+        await Promise.all([monitorFeed(feed), (feed as FillFeed).parseLogs()]);
+      }
     } catch (e: unknown) {
       console.error('start:feed: error: ', e);
       if (feed) {
         console.log('shutting down feed before restarting...');
-        await feed.stop();
+        if (useBlockFeed) {
+          await (feed as FillFeedBlockSub).stop();
+        } else {
+          await (feed as FillFeed).stopParseLogs();
+        }
         console.log('feed has shut down successfully');
       }
     } finally {
