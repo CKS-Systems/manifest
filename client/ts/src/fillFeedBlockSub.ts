@@ -74,6 +74,7 @@ export class FillFeedBlockSub {
 
       while (!this.shouldEnd) {
         try {
+          // TODO: If the last one had too many, dont waste time with getSlot and just get a bunch.
           // Get the latest finalized slot
           const latestSlot = await this.connection.getSlot('finalized');
 
