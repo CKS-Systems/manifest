@@ -16,7 +16,7 @@ if (!RPC_URL) {
 
 const rpcUrl = RPC_URL as string;
 // Default to block feed
-const useBlockFeed = USE_BLOCK_FEED !== 'true';
+const useBlockFeed = USE_BLOCK_FEED === 'true';
 
 const monitorFeed = async (feed: FillFeed | FillFeedBlockSub) => {
   // 5 minutes
