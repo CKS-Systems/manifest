@@ -8,15 +8,16 @@ import * as promClient from 'prom-client';
 import express from 'express';
 import promBundle from 'express-prom-bundle';
 
-const { RPC_URL, USE_BLOCK_FEED } = process.env;
+const { RPC_URL } = process.env;
 
 if (!RPC_URL) {
   throw new Error('RPC_URL missing from env');
 }
 
 const rpcUrl = RPC_URL as string;
-// Default to block feed
-const useBlockFeed = USE_BLOCK_FEED === 'true';
+// Default to no block feed
+// USE_BLOCK_FEED === 'true';
+const useBlockFeed = false;
 
 const monitorFeed = async (feed: FillFeed | FillFeedBlockSub) => {
   // 5 minutes
