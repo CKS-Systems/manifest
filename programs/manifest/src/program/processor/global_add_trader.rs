@@ -1,6 +1,5 @@
 use std::cell::RefMut;
 
-use crate::program::invoke;
 use hypertree::trace;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
@@ -10,7 +9,7 @@ use spl_token::state::Account;
 
 use crate::{
     logs::{emit_stack, GlobalAddTraderLog},
-    program::{expand_global, get_mut_dynamic_account},
+    program::{expand_global, get_mut_dynamic_account, invoke},
     state::GlobalRefMut,
     validation::loaders::GlobalAddTraderContext,
 };
