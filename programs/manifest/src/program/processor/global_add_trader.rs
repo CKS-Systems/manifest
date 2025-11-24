@@ -26,7 +26,6 @@ pub(crate) fn process_global_add_trader(
     let GlobalAddTraderContext {
         payer,
         global,
-        system_program,
     } = global_add_trader_context;
 
     // Needs a spot for this trader on the global account.
