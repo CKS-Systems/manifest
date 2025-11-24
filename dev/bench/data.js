@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1763435315486,
+  "lastUpdate": 1764021720816,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -10259,6 +10259,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5479,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@maximilianschneider.net",
+            "name": "Maximilian Schneider",
+            "username": "mschneider"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "50b047f7dc534198e50eea57d12c89c45e1def96",
+          "message": "global helpers (#491)\n\n* add accessor to check for existence of global seat\n* expose eviction limit\n* bump version to 3.0.9",
+          "timestamp": "2025-11-24T22:49:28+01:00",
+          "tree_id": "f02e3200ae993de3097990e198a561006da164b8",
+          "url": "https://github.com/CKS-Systems/manifest/commit/50b047f7dc534198e50eea57d12c89c45e1def96"
+        },
+        "date": 1764021718423,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3222,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4925,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5435,
             "range": "",
             "unit": "CU",
             "extra": ""
