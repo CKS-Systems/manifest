@@ -23,10 +23,7 @@ pub(crate) fn process_global_add_trader(
     trace!("process_global_add_trader accs={accounts:?}");
     let global_add_trader_context: GlobalAddTraderContext = GlobalAddTraderContext::load(accounts)?;
 
-    let GlobalAddTraderContext {
-        payer,
-        global,
-    } = global_add_trader_context;
+    let GlobalAddTraderContext { payer, global, .. } = global_add_trader_context;
 
     // Needs a spot for this trader on the global account.
     expand_global(&payer, &global)?;
