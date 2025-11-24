@@ -253,6 +253,11 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
         }
     }
 
+    pub fn has_global_seat(&self, trader: &Pubkey) -> bool {
+        let DynamicAccount { fixed, dynamic } = self.borrow_global();
+        get_global_deposit(fixed, dynamic, trader).is_some()
+    }
+
     pub fn get_balance_atoms(&self, trader: &Pubkey) -> GlobalAtoms {
         let DynamicAccount { fixed, dynamic } = self.borrow_global();
         // If the trader got evicted, then they wont be found.
