@@ -738,7 +738,11 @@ async fn global_run_out_of_seats() -> anyhow::Result<()> {
         let _ = send_tx_with_retry(
             Rc::clone(&test_fixture.context),
             &[
-                transfer(&payer, &keypair.pubkey(), 10_000_000),
+                transfer(
+                    &payer,
+                    &keypair.pubkey(),
+                    10_000_000_u64 + 165_u64 * 10_u64 * 2_039_280_u64 * MAX_GLOBAL_SEATS as u64,
+                ),
                 global_add_trader_instruction(&test_fixture.global_fixture.key, &keypair.pubkey()),
             ],
             Some(&payer),
