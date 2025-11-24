@@ -57,6 +57,11 @@ pub(crate) fn process_global_evict(
     {
         // Do verifications that this is a valid eviction.
         require!(
+            global_dynamic_account.fixed.needs_eviction(),
+            crate::program::ManifestError::InvalidEvict,
+            "Eviction is only allowed when global is at capacity",
+        )?;
+        require!(
             evictee_balance < GlobalAtoms::new(amount_atoms),
             crate::program::ManifestError::InvalidEvict,
             "Evictee balance {} is more than evictor wants to deposit",

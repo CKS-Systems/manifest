@@ -190,6 +190,9 @@ impl GlobalFixed {
     pub fn get_vault_bump(&self) -> u8 {
         self.vault_bump
     }
+    pub fn needs_eviction(&self) -> bool {
+        self.num_seats_claimed >= MAX_GLOBAL_SEATS
+    }
 }
 
 impl ManifestAccount for GlobalFixed {
@@ -366,7 +369,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         global_trader_tree.insert(free_address_trader, global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
         require!(
-            fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
+            !fixed.needs_eviction(),
             crate::program::ManifestError::TooManyGlobalSeats,
             "There is a strict limit on number of seats available in a global, use evict",
         )?;

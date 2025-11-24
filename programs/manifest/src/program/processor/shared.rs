@@ -70,8 +70,7 @@ pub(crate) fn expand_global<'a, 'info, T: ManifestAccount + Pod + Clone>(
     manifest_account: &ManifestAccountInfo<'a, 'info, T>,
 ) -> ProgramResult {
     // Expand twice because of two trees at once.
-    expand_dynamic(payer, manifest_account, GLOBAL_BLOCK_SIZE)?;
-    expand_dynamic(payer, manifest_account, GLOBAL_BLOCK_SIZE)?;
+    expand_dynamic(payer, manifest_account, 2 * GLOBAL_BLOCK_SIZE)?;
     expand_global_fixed(manifest_account.info)?;
     Ok(())
 }
