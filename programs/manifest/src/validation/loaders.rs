@@ -653,7 +653,7 @@ impl<'a, 'info> GlobalCreateContext<'a, 'info> {
 pub(crate) struct GlobalAddTraderContext<'a, 'info> {
     pub payer: Signer<'a, 'info>,
     pub global: ManifestAccountInfo<'a, 'info, GlobalFixed>,
-    pub _system_program: Program<'a, 'info>,
+    pub system_program: Program<'a, 'info>,
 }
 
 impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
@@ -675,12 +675,12 @@ impl<'a, 'info> GlobalAddTraderContext<'a, 'info> {
         )?;
         drop(global_data);
 
-        let _system_program: Program =
+        let system_program: Program =
             Program::new(next_account_info(account_iter)?, &system_program::id())?;
         Ok(Self {
             payer,
             global,
-            _system_program,
+            system_program,
         })
     }
 }

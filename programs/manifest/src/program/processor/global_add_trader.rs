@@ -1,7 +1,12 @@
 use std::cell::RefMut;
 
+use crate::program::invoke;
 use hypertree::trace;
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_pack::Pack, pubkey::Pubkey,
+    rent::Rent, sysvar::Sysvar,
+};
+use spl_token::state::Account;
 
 use crate::{
     logs::{emit_stack, GlobalAddTraderLog},
@@ -18,7 +23,11 @@ pub(crate) fn process_global_add_trader(
     trace!("process_global_add_trader accs={accounts:?}");
     let global_add_trader_context: GlobalAddTraderContext = GlobalAddTraderContext::load(accounts)?;
 
-    let GlobalAddTraderContext { payer, global, .. } = global_add_trader_context;
+    let GlobalAddTraderContext {
+        payer,
+        global,
+        system_program,
+    } = global_add_trader_context;
 
     // Needs a spot for this trader on the global account.
     expand_global(&payer, &global)?;
@@ -27,6 +36,21 @@ pub(crate) fn process_global_add_trader(
     let mut global_dynamic_account: GlobalRefMut = get_mut_dynamic_account(global_data);
 
     global_dynamic_account.add_trader(payer.key)?;
+
+    // Charge a seat fee. This is stranded similar to forfeited global gas prepayments.
+    // This is necessary to prevent an attack where an attacker would claim a
+    // global seat and then delete their token account. In order for someone
+    // else to get that seat, they would need to init a token account for the
+    // attacker, giving them rent.
+    let rent: Rent = Rent::get()?;
+    invoke(
+        &solana_program::system_instruction::transfer(
+            &payer.key,
+            &global.key,
+            rent.minimum_balance(Account::LEN as usize) * 10,
+        ),
+        &[payer.info.clone(), global.info.clone()],
+    )?;
 
     emit_stack(GlobalAddTraderLog {
         global: *global.key,
