@@ -190,6 +190,9 @@ impl GlobalFixed {
     pub fn get_vault_bump(&self) -> u8 {
         self.vault_bump
     }
+    pub fn needs_eviction(&self) -> bool {
+        self.num_seats_claimed >= MAX_GLOBAL_SEATS
+    }
 }
 
 impl ManifestAccount for GlobalFixed {
@@ -251,6 +254,11 @@ impl<Fixed: DerefOrBorrow<GlobalFixed>, Dynamic: DerefOrBorrow<[u8]>>
             fixed: self.fixed.deref_or_borrow(),
             dynamic: self.dynamic.deref_or_borrow(),
         }
+    }
+
+    pub fn has_global_seat(&self, trader: &Pubkey) -> bool {
+        let DynamicAccount { fixed, dynamic } = self.borrow_global();
+        get_global_deposit(fixed, dynamic, trader).is_some()
     }
 
     pub fn get_balance_atoms(&self, trader: &Pubkey) -> GlobalAtoms {
@@ -361,7 +369,7 @@ impl<Fixed: DerefOrBorrowMut<GlobalFixed>, Dynamic: DerefOrBorrowMut<[u8]>>
         global_trader_tree.insert(free_address_trader, global_trader);
         fixed.global_traders_root_index = global_trader_tree.get_root_index();
         require!(
-            fixed.num_seats_claimed < MAX_GLOBAL_SEATS,
+            !fixed.needs_eviction(),
             crate::program::ManifestError::TooManyGlobalSeats,
             "There is a strict limit on number of seats available in a global, use evict",
         )?;
