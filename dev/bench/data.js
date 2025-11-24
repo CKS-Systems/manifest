@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1764021720816,
+  "lastUpdate": 1764023418385,
   "repoUrl": "https://github.com/CKS-Systems/manifest",
   "entries": {
     "CU Benchmark": [
@@ -10325,6 +10325,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 5435,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da885a6a38a9c1dfe2285faa0ead1f4469cbe6b0",
+          "message": "Add global seat fee (#492)\n\n* Add global seat fee\n\n* unused system program\n\n* fmt\n\n* test\n\n* test\n\n* Drop borrows\n\n* 2x\n\n* fmt",
+          "timestamp": "2025-11-24T17:18:10-05:00",
+          "tree_id": "a2f6d454f5d2ab40ae258eac31085ba7bcfb0a76",
+          "url": "https://github.com/CKS-Systems/manifest/commit/da885a6a38a9c1dfe2285faa0ead1f4469cbe6b0"
+        },
+        "date": 1764023416051,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6787,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 13209,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 13904,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 3224,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 4932,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 5498,
             "range": "",
             "unit": "CU",
             "extra": ""
