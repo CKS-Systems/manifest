@@ -36,7 +36,7 @@ pub(crate) fn process_global_add_trader(
             &solana_program::system_instruction::transfer(
                 &payer.key,
                 &global.key,
-                rent.minimum_balance(Account::LEN as usize) * 10,
+                rent.minimum_balance(Account::LEN as usize) * 2,
             ),
             &[payer.info.clone(), global.info.clone()],
         )?;
