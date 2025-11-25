@@ -50,7 +50,7 @@ export class ManifestStatsServer {
   // Hourly checkpoints
   private baseVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
   private quoteVolumeAtomsCheckpoints: Map<string, number[]> = new Map();
-  
+
   // Unix timestamps for each checkpoint (in seconds)
   private checkpointTimestamps: Map<string, number[]> = new Map();
 
@@ -543,7 +543,7 @@ export class ManifestStatsServer {
       }
 
       const currentTimestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
-      
+
       this.markets.forEach((value: Market, market: string) => {
         console.log(
           'Saving checkpoints for market',
@@ -562,7 +562,7 @@ export class ManifestStatsServer {
           this.quoteVolumeAtomsSinceLastCheckpoint.get(market)!,
         ]);
         this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-        
+
         // Update checkpoint timestamps
         this.checkpointTimestamps.set(market, [
           ...this.checkpointTimestamps.get(market)!.slice(1),
@@ -571,27 +571,24 @@ export class ManifestStatsServer {
 
         const baseMint: string = value.baseMint().toBase58();
         const quoteMint: string = value.quoteMint().toBase58();
-        
+
         // Calculate volume using only checkpoints from the last 24 hours
         const timestamps = this.checkpointTimestamps.get(market)!;
         const baseCheckpoints = this.baseVolumeAtomsCheckpoints.get(market)!;
         const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(market)!;
         const twentyFourHoursAgo = currentTimestamp - ONE_DAY_SEC;
-        
+
         let baseVolume = 0;
         let quoteVolume = 0;
-        
+
         for (let i = 0; i < timestamps.length; i++) {
           if (timestamps[i] >= twentyFourHoursAgo) {
             baseVolume += baseCheckpoints[i];
             quoteVolume += quoteCheckpoints[i];
           }
         }
-        
-        this.volume.set(
-          { market, mint: baseMint, side: 'base' },
-          baseVolume,
-        );
+
+        this.volume.set({ market, mint: baseMint, side: 'base' }, baseVolume);
         this.volume.set(
           { market, mint: quoteMint, side: 'quote' },
           quoteVolume,
@@ -704,23 +701,25 @@ export class ManifestStatsServer {
     const tickers: any = [];
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const twentyFourHoursAgo = currentTimestamp - ONE_DAY_SEC;
-    
+
     this.markets.forEach((market: Market, marketPk: string) => {
       // Calculate volume using only checkpoints from the last 24 hours
       const timestamps = this.checkpointTimestamps.get(marketPk) || [];
-      const baseCheckpoints = this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
-      const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
-      
+      const baseCheckpoints =
+        this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
+      const quoteCheckpoints =
+        this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
+
       let baseVolumeAtoms = 0;
       let quoteVolumeAtoms = 0;
-      
+
       for (let i = 0; i < timestamps.length; i++) {
         if (timestamps[i] >= twentyFourHoursAgo) {
           baseVolumeAtoms += baseCheckpoints[i];
           quoteVolumeAtoms += quoteCheckpoints[i];
         }
       }
-      
+
       const bids = market.bids();
       const asks = market.asks();
       const bestBid = bids.length > 0 ? bids[bids.length - 1].tokenPrice : 0;
@@ -844,8 +843,7 @@ export class ManifestStatsServer {
         this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
       const quoteCheckpoints =
         this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
-      const timestamps =
-        this.checkpointTimestamps.get(marketPk) || [];
+      const timestamps = this.checkpointTimestamps.get(marketPk) || [];
 
       checkpointsByMarket[marketPk] = {
         baseCheckpoints,
@@ -906,19 +904,20 @@ export class ManifestStatsServer {
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const twentyFourHoursAgo = currentTimestamp - ONE_DAY_SEC;
-    
+
     this.markets.forEach((market: Market, marketPk: string) => {
       // Calculate volume using only checkpoints from the last 24 hours
       const timestamps = this.checkpointTimestamps.get(marketPk) || [];
-      const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
-      
+      const quoteCheckpoints =
+        this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
+
       let checkpointsVolume = 0;
       for (let i = 0; i < timestamps.length; i++) {
         if (timestamps[i] >= twentyFourHoursAgo) {
           checkpointsVolume += quoteCheckpoints[i];
         }
       }
-      
+
       // Include both the checkpoints AND the volume since last checkpoint
       const currentPeriodVolume =
         this.quoteVolumeAtomsSinceLastCheckpoint.get(marketPk) || 0;
@@ -1024,28 +1023,31 @@ export class ManifestStatsServer {
     const dailyVolumesByToken: Map<string, number> = new Map();
     let dailyUsdcEquivalentVolume = 0;
     let dailyDirectUsdcVolume = 0;
-    
+
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const twentyFourHoursAgo = currentTimestamp - ONE_DAY_SEC;
 
     this.markets.forEach((market: Market, marketPk: string) => {
       // Calculate volume using only checkpoints from the last 24 hours
       const timestamps = this.checkpointTimestamps.get(marketPk) || [];
-      const baseCheckpoints = this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
-      const quoteCheckpoints = this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
-      
+      const baseCheckpoints =
+        this.baseVolumeAtomsCheckpoints.get(marketPk) || [];
+      const quoteCheckpoints =
+        this.quoteVolumeAtomsCheckpoints.get(marketPk) || [];
+
       let baseVolumeAtoms = 0;
       let quoteVolumeAtoms = 0;
-      
+
       for (let i = 0; i < timestamps.length; i++) {
         if (timestamps[i] >= twentyFourHoursAgo) {
           baseVolumeAtoms += baseCheckpoints[i];
           quoteVolumeAtoms += quoteCheckpoints[i];
         }
       }
-      
+
       const baseVolume: number = baseVolumeAtoms / 10 ** market.baseDecimals();
-      const quoteVolume: number = quoteVolumeAtoms / 10 ** market.quoteDecimals();
+      const quoteVolume: number =
+        quoteVolumeAtoms / 10 ** market.quoteDecimals();
       const baseMint: string = 'solana:' + market.baseMint().toBase58();
       const quoteMint: string = 'solana:' + market.quoteMint().toBase58();
       if (baseVolume == 0 || quoteVolume == 0) {
@@ -1602,7 +1604,7 @@ export class ManifestStatsServer {
       for (const row of checkpointResult.rows) {
         let baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
         let quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
-        let checkpointTimestamps = row.checkpoint_timestamps_text 
+        let checkpointTimestamps = row.checkpoint_timestamps_text
           ? JSON.parse(row.checkpoint_timestamps_text)
           : new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0);
 
