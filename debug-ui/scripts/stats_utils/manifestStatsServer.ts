@@ -671,6 +671,11 @@ export class ManifestStatsServer {
   getTickers() {
     const tickers: any = [];
     this.markets.forEach((market: Market, marketPk: string) => {
+      const bids = market.bids();
+      const asks = market.asks();
+      const bestBid = bids.length > 0 ? bids[bids.length - 1].tokenPrice : 0;
+      const bestAsk = asks.length > 0 ? asks[asks.length - 1].tokenPrice : 0;
+
       tickers.push({
         ticker_id: marketPk,
         base_currency: market.baseMint().toBase58(),
@@ -691,11 +696,11 @@ export class ManifestStatsServer {
         pool_id: marketPk,
         // Does not apply to orderbooks.
         liquidity_in_usd: 0,
+        bid: bestBid,
+        ask: bestAsk,
         // Optional: not yet implemented
-        // "bid": 0,
-        // "ask": 0,
-        // "high": 0,
-        // "low": 0,
+        // high: 0,
+        // low: 0,
       });
     });
     return tickers;
@@ -721,9 +726,12 @@ export class ManifestStatsServer {
         connection: this.connection,
         address: new PublicKey(tickerId),
       });
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+
       if (depth == 0) {
         return {
           ticker_id: tickerId,
+          timestamp,
           bids: market
             .bids()
             .reverse()
@@ -746,25 +754,16 @@ export class ManifestStatsServer {
       }
       const bids: RestingOrder[] = market.bids().reverse();
       const asks: RestingOrder[] = market.asks().reverse();
-      const bidsUpToDepth: RestingOrder[] = [];
-      const asksUpToDepth: RestingOrder[] = [];
-      let bidTokens: number = 0;
-      let askTokens: number = 0;
-      bids.forEach((bid: RestingOrder) => {
-        if (bidTokens < depth) {
-          bidTokens += Number(bid.numBaseTokens);
-          bidsUpToDepth.push(bid);
-        }
-      });
-      asks.forEach((ask: RestingOrder) => {
-        if (askTokens < depth) {
-          askTokens += Number(ask.numBaseTokens);
-          asksUpToDepth.push(ask);
-        }
-      });
+
+      // CoinGecko spec: depth = total orders, split evenly between bids/asks
+      // depth=100 means 50 bids + 50 asks
+      const ordersPerSide = Math.floor(depth / 2);
+      const bidsUpToDepth = bids.slice(0, ordersPerSide);
+      const asksUpToDepth = asks.slice(0, ordersPerSide);
 
       return {
         ticker_id: tickerId,
+        timestamp,
         bids: bidsUpToDepth.map((restingOrder: RestingOrder) => {
           return [restingOrder.tokenPrice, Number(restingOrder.numBaseTokens)];
         }),
