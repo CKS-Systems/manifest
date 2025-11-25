@@ -19,7 +19,7 @@ export const INSERT_MARKET_VOLUME =
   'INSERT INTO market_volumes (checkpoint_id, market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint) VALUES ($1, $2, $3, $4)';
 
 export const INSERT_MARKET_CHECKPOINT =
-  'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, last_price) VALUES ($1, $2, $3, $4, $5)';
+  'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, checkpoint_timestamps, last_price) VALUES ($1, $2, $3, $4, $5, $6)';
 
 export const INSERT_TRADER_STATS =
   'INSERT INTO trader_stats (checkpoint_id, trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume) VALUES ($1, $2, $3, $4, $5, $6)';
@@ -38,7 +38,7 @@ export const SELECT_MARKET_VOLUMES =
   'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1';
 
 export const SELECT_MARKET_CHECKPOINTS =
-  'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1';
+  'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, checkpoint_timestamps::text AS checkpoint_timestamps_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1';
 
 export const SELECT_TRADER_STATS =
   'SELECT trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume FROM trader_stats WHERE checkpoint_id = $1';
@@ -92,6 +92,7 @@ export const CREATE_MARKET_CHECKPOINTS_TABLE = `
     market TEXT NOT NULL,
     base_volume_checkpoints JSONB NOT NULL,
     quote_volume_checkpoints JSONB NOT NULL,
+    checkpoint_timestamps JSONB NOT NULL,
     last_price NUMERIC,
     PRIMARY KEY (checkpoint_id, market)
   )
@@ -161,4 +162,11 @@ export const CREATE_ALT_MARKETS_TABLE = `
     market TEXT NOT NULL,
     PRIMARY KEY (alt, market)
   )
+`;
+
+// ========== ALTER TABLE QUERIES ==========
+
+export const ALTER_MARKET_CHECKPOINTS_ADD_TIMESTAMPS = `
+  ALTER TABLE market_checkpoints 
+  ADD COLUMN IF NOT EXISTS checkpoint_timestamps JSONB;
 `;

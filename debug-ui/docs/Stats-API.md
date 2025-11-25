@@ -441,6 +441,28 @@ Service health check endpoint.
 
 ---
 
+### `GET /checkpoints`
+Returns volume checkpoint data for all markets including timestamps.
+
+#### Response Format
+```json
+{
+  "ENhU8LsaR7vDD2G1CsWcsuSGNrih9Cv5WZEk7q9kPapQ": {
+    "baseCheckpoints": [1248765, 989234, 1123456, ...],
+    "quoteCheckpoints": [56475, 45234, 52134, ...],
+    "timestamps": [1736946000, 1736946300, 1736946600, ...]
+  }
+}
+```
+
+#### Usage Notes
+- Each checkpoint represents a 5-minute period
+- Arrays contain up to 288 checkpoints (24 hours worth)
+- Timestamps are Unix timestamps in seconds
+- Only checkpoints from the last 24 hours are used for volume calculations
+
+---
+
 ## 🎯 Common Use Cases
 
 ### Trading Interface
