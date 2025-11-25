@@ -282,7 +282,7 @@ impl Amm for ManifestMarket {
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(*token_transfer_authority, true),
             AccountMeta::new(self.key, false),
-            AccountMeta::new(system_program::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new(*base_account, false),
             AccountMeta::new(*quote_account, false),
             AccountMeta::new(base_vault, false),
