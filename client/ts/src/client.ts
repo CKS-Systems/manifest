@@ -973,8 +973,78 @@ export class ManifestClient {
     const hasQuoteGlobal = this.quoteGlobal !== null;
     const hasBaseGlobal = this.baseGlobal !== null;
 
-    // If no global accounts exist, use the regular batch update instruction
-    if (!hasQuoteGlobal && !hasBaseGlobal) {
+    // For non-Global order types, we might still need to include global accounts
+    // because the counterparty (maker) might be using a global order
+    if (params.orderType != OrderType.Global) {
+      // Bid (buy) orders need base global (sellers might use base global)
+      if (params.isBid && hasBaseGlobal) {
+        const global: PublicKey = getGlobalAddress(this.baseMint.address);
+        const globalVault: PublicKey = getGlobalVaultAddress(
+          this.baseMint.address,
+        );
+        const vault: PublicKey = getVaultAddress(
+          this.market.address,
+          this.baseMint.address,
+        );
+        return createBatchUpdateBaseGlobalInstruction(
+          {
+            market: this.market.address,
+            manifestProgram: MANIFEST_PROGRAM_ID,
+            owner: this.payer,
+            wrapperState: this.wrapper.address,
+            baseMint: this.baseMint.address,
+            baseGlobal: global,
+            baseGlobalVault: globalVault,
+            baseMarketVault: vault,
+            baseTokenProgram: this.isBase22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+          },
+          {
+            params: {
+              cancels: [],
+              cancelAll: false,
+              orders: [toWrapperPlaceOrderParams(this.market, params)],
+            },
+          },
+        );
+      }
+
+      // Ask (sell) orders need quote global (buyers might use quote global)
+      if (!params.isBid && hasQuoteGlobal) {
+        const global: PublicKey = getGlobalAddress(this.quoteMint.address);
+        const globalVault: PublicKey = getGlobalVaultAddress(
+          this.quoteMint.address,
+        );
+        const vault: PublicKey = getVaultAddress(
+          this.market.address,
+          this.quoteMint.address,
+        );
+        return createBatchUpdateQuoteGlobalInstruction(
+          {
+            market: this.market.address,
+            manifestProgram: MANIFEST_PROGRAM_ID,
+            owner: this.payer,
+            wrapperState: this.wrapper.address,
+            quoteMint: this.quoteMint.address,
+            quoteGlobal: global,
+            quoteGlobalVault: globalVault,
+            quoteMarketVault: vault,
+            quoteTokenProgram: this.isQuote22
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
+          },
+          {
+            params: {
+              cancels: [],
+              cancelAll: false,
+              orders: [toWrapperPlaceOrderParams(this.market, params)],
+            },
+          },
+        );
+      }
+
+      // No global accounts exist or not needed - use regular batch update
       return createBatchUpdateInstruction(
         {
           market: this.market.address,
@@ -991,9 +1061,7 @@ export class ManifestClient {
         },
       );
     }
-
-    // Include global accounts for bids or asks when they exist
-    if (params.isBid && hasQuoteGlobal) {
+    if (params.isBid) {
       const global: PublicKey = getGlobalAddress(this.quoteMint.address);
       const globalVault: PublicKey = getGlobalVaultAddress(
         this.quoteMint.address,
@@ -1024,7 +1092,7 @@ export class ManifestClient {
           },
         },
       );
-    } else if (!params.isBid && hasBaseGlobal) {
+    } else {
       const global: PublicKey = getGlobalAddress(this.baseMint.address);
       const globalVault: PublicKey = getGlobalVaultAddress(
         this.baseMint.address,
@@ -1046,23 +1114,6 @@ export class ManifestClient {
           baseTokenProgram: this.isBase22
             ? TOKEN_2022_PROGRAM_ID
             : TOKEN_PROGRAM_ID,
-        },
-        {
-          params: {
-            cancels: [],
-            cancelAll: false,
-            orders: [toWrapperPlaceOrderParams(this.market, params)],
-          },
-        },
-      );
-    } else {
-      // Fallback to regular batch update if the required global doesn't exist
-      return createBatchUpdateInstruction(
-        {
-          market: this.market.address,
-          manifestProgram: MANIFEST_PROGRAM_ID,
-          owner: this.payer,
-          wrapperState: this.wrapper.address,
         },
         {
           params: {
@@ -1333,24 +1384,40 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
-    const baseGlobalRequired: boolean = placeParams.some(
-      (
-        placeParams:
-          | WrapperPlaceOrderParamsExternal
-          | WrapperPlaceOrderReverseParamsExternal,
-      ) => {
-        return !placeParams.isBid && placeParams.orderType == OrderType.Global;
-      },
-    );
-    const quoteGlobalRequired: boolean = placeParams.some(
-      (
-        placeParams:
-          | WrapperPlaceOrderParamsExternal
-          | WrapperPlaceOrderReverseParamsExternal,
-      ) => {
-        return placeParams.isBid && placeParams.orderType == OrderType.Global;
-      },
-    );
+    // Check if base global is needed:
+    // 1. Bid orders (non-Global) might match with makers using base global
+    // 2. Ask orders with Global orderType use their own base global
+    const baseGlobalRequired: boolean =
+      this.baseGlobal !== null &&
+      placeParams.some(
+        (
+          placeParams:
+            | WrapperPlaceOrderParamsExternal
+            | WrapperPlaceOrderReverseParamsExternal,
+        ) => {
+          return (
+            placeParams.isBid ||
+            (!placeParams.isBid && placeParams.orderType === OrderType.Global)
+          );
+        },
+      );
+    // Check if quote global is needed:
+    // 1. Ask orders (non-Global) might match with makers using quote global
+    // 2. Bid orders with Global orderType use their own quote global
+    const quoteGlobalRequired: boolean =
+      this.quoteGlobal !== null &&
+      placeParams.some(
+        (
+          placeParams:
+            | WrapperPlaceOrderParamsExternal
+            | WrapperPlaceOrderReverseParamsExternal,
+        ) => {
+          return (
+            !placeParams.isBid ||
+            (placeParams.isBid && placeParams.orderType === OrderType.Global)
+          );
+        },
+      );
     if (!baseGlobalRequired && !quoteGlobalRequired) {
       return createBatchUpdateInstruction(
         {
