@@ -968,7 +968,13 @@ export class ManifestClient {
     if (!this.wrapper || !this.payer) {
       throw new Error('Read only');
     }
-    if (params.orderType != OrderType.Global) {
+
+    // Check if global accounts exist for this market
+    const hasQuoteGlobal = this.quoteGlobal !== null;
+    const hasBaseGlobal = this.baseGlobal !== null;
+
+    // If no global accounts exist, use the regular batch update instruction
+    if (!hasQuoteGlobal && !hasBaseGlobal) {
       return createBatchUpdateInstruction(
         {
           market: this.market.address,
@@ -985,7 +991,9 @@ export class ManifestClient {
         },
       );
     }
-    if (params.isBid) {
+
+    // Include global accounts for bids or asks when they exist
+    if (params.isBid && hasQuoteGlobal) {
       const global: PublicKey = getGlobalAddress(this.quoteMint.address);
       const globalVault: PublicKey = getGlobalVaultAddress(
         this.quoteMint.address,
@@ -1016,7 +1024,7 @@ export class ManifestClient {
           },
         },
       );
-    } else {
+    } else if (!params.isBid && hasBaseGlobal) {
       const global: PublicKey = getGlobalAddress(this.baseMint.address);
       const globalVault: PublicKey = getGlobalVaultAddress(
         this.baseMint.address,
@@ -1038,6 +1046,23 @@ export class ManifestClient {
           baseTokenProgram: this.isBase22
             ? TOKEN_2022_PROGRAM_ID
             : TOKEN_PROGRAM_ID,
+        },
+        {
+          params: {
+            cancels: [],
+            cancelAll: false,
+            orders: [toWrapperPlaceOrderParams(this.market, params)],
+          },
+        },
+      );
+    } else {
+      // Fallback to regular batch update if the required global doesn't exist
+      return createBatchUpdateInstruction(
+        {
+          market: this.market.address,
+          manifestProgram: MANIFEST_PROGRAM_ID,
+          owner: this.payer,
+          wrapperState: this.wrapper.address,
         },
         {
           params: {
