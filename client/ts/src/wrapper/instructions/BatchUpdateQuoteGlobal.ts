@@ -124,12 +124,12 @@ export function createBatchUpdateQuoteGlobalInstruction(
     },
     {
       pubkey: accounts.quoteGlobalVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.quoteMarketVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
