@@ -124,12 +124,12 @@ export function createBatchUpdateBaseGlobalInstruction(
     },
     {
       pubkey: accounts.baseGlobalVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.baseMarketVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
