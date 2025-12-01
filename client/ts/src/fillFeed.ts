@@ -80,7 +80,12 @@ export class FillFeed {
 
     // TODO: remove endTime in favor of stopParseLogs for testing
     while (!this.shouldEnd && new Date(Date.now()) < endTime) {
-      await new Promise((f) => setTimeout(f, 10_000));
+      // This sleep was originally implemented to wait until there was enough
+      // transactions to avoid just spamming the RPC. Reduced to just
+      // enough to avoid RPC spam, but not wait too long since the router
+      // integrations give us steady flow.
+      await new Promise((f) => setTimeout(f, 400));
+
       const signatures: ConfirmedSignatureInfo[] =
         await this.connection.getSignaturesForAddress(
           PROGRAM_ID,
