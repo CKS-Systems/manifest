@@ -254,6 +254,7 @@ export const ORIGINATING_PROTOCOL_IDS = {
   '2MFoS3MPtvyQ4Wh4M9pdfPjz6UhVoNbFbGJAskCPCj3h': 'jupiter', // JUP 2
   HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw: 'jupiter', // JUP 3
   '6LXutJvKUw8Q5ue2gCgKHQdAN4suWW8awzFVC6XCguFx': 'jupiter', // JUP 5
+  CapuXNQoDviLvU1PxFiizLgPNQCxrsag1uMeyk6zLVps: 'jupiter', // JUP 6
   GGztQqQ6pCPaJQnNpXBgELr5cs3WwDakRbh1iEMzjgSJ: 'jupiter', // JUP 7
   '9nnLbotNTcUhvbrsA6Mdkx45Sm82G35zo28AqUvjExn8': 'jupiter', // JUP 8
   '6U91aKa8pmMxkJwBCfPTmUEfZi6dHe7DcFq2ALvB2tbB': 'jupiter', // JUP 12
