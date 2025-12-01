@@ -84,7 +84,7 @@ export class FillFeed {
       // transactions to avoid just spamming the RPC. Reduced to just
       // enough to avoid RPC spam, but not wait too long since the router
       // integrations give us steady flow.
-      await new Promise((f) => setTimeout(f, 10));
+      await new Promise((f) => setTimeout(f, 400));
 
       const signatures: ConfirmedSignatureInfo[] =
         await this.connection.getSignaturesForAddress(
