@@ -250,11 +250,11 @@ export const AGGREGATOR_PROGRAM_IDS = {
 export const ORIGINATING_PROTOCOL_IDS = {
   LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF: 'kamino',
   UMnFStVeG1ecZFc2gc5K3vFy3sMpotq8C91mXBQDGwh: 'cabana',
-  'BQ72nSv9f3PRyRKCBnHLVrerrv37CYTHm5h3s9VSGQDV': 'jupiter', // JUP 1
+  BQ72nSv9f3PRyRKCBnHLVrerrv37CYTHm5h3s9VSGQDV: 'jupiter', // JUP 1
   '2MFoS3MPtvyQ4Wh4M9pdfPjz6UhVoNbFbGJAskCPCj3h': 'jupiter', // JUP 2
-  'HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw': 'jupiter', // JUP 3
+  HU23r7UoZbqTUuh3vA7emAGztFtqwTeVips789vqxxBw: 'jupiter', // JUP 3
   '6LXutJvKUw8Q5ue2gCgKHQdAN4suWW8awzFVC6XCguFx': 'jupiter', // JUP 5
-  'GGztQqQ6pCPaJQnNpXBgELr5cs3WwDakRbh1iEMzjgSJ': 'jupiter', // JUP 7
+  GGztQqQ6pCPaJQnNpXBgELr5cs3WwDakRbh1iEMzjgSJ: 'jupiter', // JUP 7
   '9nnLbotNTcUhvbrsA6Mdkx45Sm82G35zo28AqUvjExn8': 'jupiter', // JUP 8
   '6U91aKa8pmMxkJwBCfPTmUEfZi6dHe7DcFq2ALvB2tbB': 'jupiter', // JUP 12
   '4xDsmeTWPNjgSVSS1VTfzFq3iHZhp77ffPkAmkZkdu71': 'jupiter', // JUP 14
