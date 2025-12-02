@@ -75,9 +75,9 @@ const printOrderTable = (
 
   console.log(`\n${color}=== ${side}S ===${reset}`);
   console.log(
-    `${'Price'.padStart(14)} | ${'Size'.padStart(14)} | ${'Type'.padStart(12)} | ${'Expiration'.padStart(20)} | Trader`,
+    `${'Price'.padStart(14)} | ${'Size'.padStart(14)} | ${'Type'.padStart(12)} | ${'Expiration'.padStart(20)} | ${'SeqNum'.padStart(12)} | Trader`,
   );
-  console.log('-'.repeat(100));
+  console.log('-'.repeat(115));
 
   if (orders.length === 0) {
     console.log('  (no orders)');
@@ -96,8 +96,10 @@ const printOrderTable = (
       typeDisplay = `${orderType}(${order.spreadBps.toFixed(2)}bps)`;
     }
 
+    const seqNum = order.sequenceNumber.toString();
+
     console.log(
-      `${color}${price.padStart(14)}${reset} | ${size.padStart(14)} | ${typeDisplay.padStart(12)} | ${expiration.padStart(20)} | ${trader}`,
+      `${color}${price.padStart(14)}${reset} | ${size.padStart(14)} | ${typeDisplay.padStart(12)} | ${expiration.padStart(20)} | ${seqNum.padStart(12)} | ${trader}`,
     );
   }
 };
