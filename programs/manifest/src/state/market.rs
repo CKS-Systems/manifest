@@ -1545,7 +1545,13 @@ impl<
         }
 
         // Do not fail silently.
-        Err(ManifestError::InvalidCancel.into())
+        require!(
+            false,
+            ManifestError::InvalidCancel,
+            "Unable to find the order for cancel. Sequence number: {}",
+            order_sequence_number
+        )?;
+        Ok(())
     }
 
     #[cfg_attr(feature = "certora", cvt_hook_end(cancel_order_by_index_was_called()))]
