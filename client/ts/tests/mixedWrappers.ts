@@ -26,7 +26,6 @@ import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
 // Import UI wrapper from old SDK version
 import {
   createCreateWrapperInstruction as createCreateUIWrapperInstruction,
-  createClaimSeatUnusedInstruction as createClaimSeatUIInstruction,
   PROGRAM_ID as UI_WRAPPER_PROGRAM_ID,
 } from '@cks-systems/manifest-sdk-old/dist/cjs/ui_wrapper';
 import { UiWrapper } from '@cks-systems/manifest-sdk-old/dist/cjs/uiWrapperObj';
@@ -90,29 +89,8 @@ async function testMixedWrappers(): Promise<void> {
     buffer: uiWrapperAccountInfo.data,
   });
 
-  // Claim seat on market using UI wrapper
-  const systemProgram: PublicKey = SystemProgram.programId;
-  const manifestProgram: PublicKey = MANIFEST_PROGRAM_ID;
-  const owner: PublicKey = payerKeypair.publicKey;
-
-  const claimSeatIx = createClaimSeatUIInstruction({
-    wrapperState: uiWrapperKeypair.publicKey,
-    owner: owner,
-    payer: payerKeypair.publicKey,
-    market: marketAddress,
-    systemProgram: systemProgram,
-    manifestProgram: manifestProgram,
-  });
-
-  await sendAndConfirmTransaction(
-    connection,
-    new Transaction().add(claimSeatIx),
-    [payerKeypair],
-  );
-
-  console.log('Claimed seat on market using UI wrapper');
-
-  // Deposit and place an order using UI wrapper
+  // UI wrapper now handles seat claiming automatically in PlaceOrder
+  // Deposit and place an order using UI wrapper (seat will be claimed automatically)
   await deposit(
     connection,
     payerKeypair,
@@ -131,7 +109,9 @@ async function testMixedWrappers(): Promise<void> {
     0,
   );
 
-  console.log('Successfully placed order using UI wrapper');
+  console.log(
+    'Successfully placed order using UI wrapper (seat claimed automatically)',
+  );
 
   // Reload wrapper to see the order
   await uiWrapper.reload(connection);
@@ -186,7 +166,11 @@ async function testMixedWrappers(): Promise<void> {
     address: normalWrapperKeypair.publicKey,
   });
 
-  // Try to claim seat on the same market using normal wrapper
+  // Normal wrapper still requires explicit seat claiming
+  const systemProgram: PublicKey = SystemProgram.programId;
+  const manifestProgram: PublicKey = MANIFEST_PROGRAM_ID;
+  const owner: PublicKey = payerKeypair.publicKey;
+
   const claimSeatNormalIx = createClaimSeatInstruction({
     wrapperState: normalWrapperKeypair.publicKey,
     owner: owner,
