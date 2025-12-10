@@ -12,7 +12,10 @@ import { createMarket } from './createMarket';
 import { assert } from 'chai';
 import { OrderType } from '../src/manifest';
 import { deposit } from './deposit';
-import { FIXED_WRAPPER_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT } from '../src/constants';
+import {
+  FIXED_WRAPPER_HEADER_SIZE,
+  NO_EXPIRATION_LAST_VALID_SLOT,
+} from '../src/constants';
 import { airdropSol } from '../src/utils/solana';
 import { ManifestClient } from '../src/client';
 import {
