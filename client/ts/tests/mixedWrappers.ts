@@ -28,8 +28,8 @@ import {
   createCreateWrapperInstruction as createCreateUIWrapperInstruction,
   createClaimSeatUnusedInstruction as createClaimSeatUIInstruction,
   PROGRAM_ID as UI_WRAPPER_PROGRAM_ID,
-} from '@cks-systems/manifest-sdk-old/dist/types/src/ui_wrapper';
-import { UiWrapper } from '@cks-systems/manifest-sdk-old/dist/types/src/uiWrapperObj';
+} from '@cks-systems/manifest-sdk-old/dist/cjs/ui_wrapper';
+import { UiWrapper } from '@cks-systems/manifest-sdk-old/dist/cjs/uiWrapperObj';
 
 async function testMixedWrappers(): Promise<void> {
   const connection: Connection = new Connection(
