@@ -10,25 +10,24 @@ import {
 import { Market } from '../src/market';
 import { createMarket } from './createMarket';
 import { assert } from 'chai';
-import { placeOrder } from './placeOrder';
 import { OrderType } from '../src/manifest';
 import { deposit } from './deposit';
-import {
-  createCreateWrapperInstruction,
-  createClaimSeatInstruction,
-  PROGRAM_ID as WRAPPER_PROGRAM_ID,
-} from '../src/wrapper';
-import { Wrapper } from '../src/wrapperObj';
-import { FIXED_WRAPPER_HEADER_SIZE } from '../src/constants';
+import { FIXED_WRAPPER_HEADER_SIZE, NO_EXPIRATION_LAST_VALID_SLOT } from '../src/constants';
 import { airdropSol } from '../src/utils/solana';
-import { PROGRAM_ID as MANIFEST_PROGRAM_ID } from '../src/manifest';
+import { ManifestClient } from '../src/client';
+import {
+  mintTo,
+  createAssociatedTokenAccountIdempotent,
+  getMint,
+} from '@solana/spl-token';
 
-// Import UI wrapper from old SDK version
+// Import UI wrapper and Market from old SDK version
 import {
   createCreateWrapperInstruction as createCreateUIWrapperInstruction,
   PROGRAM_ID as UI_WRAPPER_PROGRAM_ID,
 } from '@cks-systems/manifest-sdk-old/dist/cjs/ui_wrapper';
 import { UiWrapper } from '@cks-systems/manifest-sdk-old/dist/cjs/uiWrapperObj';
+import { Market as OldMarket } from '@cks-systems/manifest-sdk-old/dist/cjs/market';
 
 async function testMixedWrappers(): Promise<void> {
   const connection: Connection = new Connection(
@@ -89,24 +88,52 @@ async function testMixedWrappers(): Promise<void> {
     buffer: uiWrapperAccountInfo.data,
   });
 
-  // UI wrapper now handles seat claiming automatically in PlaceOrder
-  // Deposit and place an order using UI wrapper (seat will be claimed automatically)
-  await deposit(
+  // Load market using old SDK's Market class for compatibility with UiWrapper.placeOrderIx
+  const oldMarket = await OldMarket.loadFromAddress({
+    connection,
+    address: marketAddress,
+  });
+
+  // Mint base tokens to the trader's associated token account
+  // (UI wrapper will auto-deposit from this account when placing the sell order)
+  const baseMint = market.baseMint();
+  const traderBaseTokenAccount = await createAssociatedTokenAccountIdempotent(
     connection,
     payerKeypair,
-    marketAddress,
-    market.baseMint(),
-    100,
+    baseMint,
+    payerKeypair.publicKey,
   );
-  await placeOrder(
+  const baseMintDecimals = (await getMint(connection, baseMint)).decimals;
+  const amountBaseAtoms = Math.ceil(100 * 10 ** baseMintDecimals);
+  await mintTo(
     connection,
     payerKeypair,
-    marketAddress,
-    10,
-    5,
-    false,
-    OrderType.Limit,
-    0,
+    baseMint,
+    traderBaseTokenAccount,
+    payerKeypair.publicKey,
+    amountBaseAtoms,
+  );
+  console.log('Minted base tokens to trader');
+
+  // Place an order using UI wrapper's placeOrderIx method
+  // This will claim the seat and auto-deposit base tokens
+  const placeOrderUIIx = uiWrapper.placeOrderIx(
+    oldMarket,
+    {
+      payer: payerKeypair.publicKey,
+    },
+    {
+      isBid: false,
+      amount: 10,
+      price: 5,
+      orderId: 0,
+    },
+  );
+
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(placeOrderUIIx),
+    [payerKeypair],
   );
 
   console.log(
@@ -127,82 +154,40 @@ async function testMixedWrappers(): Promise<void> {
 
   console.log('\n=== Step 2: Creating normal wrapper with same wallet ===');
 
-  // Step 2: Now create a normal wrapper with the same wallet
-  const normalWrapperKeypair: Keypair = Keypair.generate();
-
-  const createNormalWrapperAccountIx: TransactionInstruction =
-    SystemProgram.createAccount({
-      fromPubkey: payerKeypair.publicKey,
-      newAccountPubkey: normalWrapperKeypair.publicKey,
-      space: FIXED_WRAPPER_HEADER_SIZE,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        FIXED_WRAPPER_HEADER_SIZE,
-      ),
-      programId: WRAPPER_PROGRAM_ID,
-    });
-
-  const createNormalWrapperIx: TransactionInstruction =
-    createCreateWrapperInstruction({
-      owner: payerKeypair.publicKey,
-      wrapperState: normalWrapperKeypair.publicKey,
-    });
-
-  await sendAndConfirmTransaction(
+  // Step 2: Use ManifestClient which will create a normal wrapper automatically
+  // (since it only searches WRAPPER_PROGRAM_ID, not UI_WRAPPER_PROGRAM_ID)
+  const client = await ManifestClient.getClientForMarket(
     connection,
-    new Transaction()
-      .add(createNormalWrapperAccountIx)
-      .add(createNormalWrapperIx),
-    [payerKeypair, normalWrapperKeypair],
+    marketAddress,
+    payerKeypair,
   );
 
-  console.log(
-    'Normal Wrapper created at:',
-    normalWrapperKeypair.publicKey.toBase58(),
-  );
+  const normalWrapper = client.wrapper!;
+  console.log('Normal Wrapper created at:', normalWrapper.address.toBase58());
 
-  // Load the normal wrapper
-  const normalWrapper = await Wrapper.loadFromAddress({
-    connection,
-    address: normalWrapperKeypair.publicKey,
-  });
-
-  // Normal wrapper still requires explicit seat claiming
-  const systemProgram: PublicKey = SystemProgram.programId;
-  const manifestProgram: PublicKey = MANIFEST_PROGRAM_ID;
-  const owner: PublicKey = payerKeypair.publicKey;
-
-  const claimSeatNormalIx = createClaimSeatInstruction({
-    wrapperState: normalWrapperKeypair.publicKey,
-    owner: owner,
-    market: marketAddress,
-    systemProgram: systemProgram,
-    manifestProgram: manifestProgram,
-  });
-
-  try {
-    await sendAndConfirmTransaction(
-      connection,
-      new Transaction().add(claimSeatNormalIx),
-      [payerKeypair],
-    );
-    console.log('Successfully claimed seat on market using normal wrapper');
-  } catch (error) {
-    console.log(
-      'Failed to claim seat with normal wrapper (expected if seat already claimed):',
-      error,
-    );
-  }
-
-  // Place another order using normal wrapper
-  await placeOrder(
+  // Deposit to the market through the normal wrapper
+  await deposit(
     connection,
     payerKeypair,
     marketAddress,
-    15,
-    6,
-    false,
-    OrderType.Limit,
-    0,
+    market.baseMint(),
+    100,
+  );
+
+  // Place an order using the normal wrapper via ManifestClient
+  const placeOrderNormalIx = client.placeOrderIx({
+    numBaseTokens: 15,
+    tokenPrice: 6,
+    isBid: false,
+    lastValidSlot: NO_EXPIRATION_LAST_VALID_SLOT,
+    orderType: OrderType.Limit,
+    clientOrderId: 1,
+  });
+
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(placeOrderNormalIx),
+    [payerKeypair],
   );
 
   console.log('Successfully placed order using normal wrapper');
@@ -245,6 +230,11 @@ async function testMixedWrappers(): Promise<void> {
 
   console.log('\n--- Normal Wrapper State ---');
   normalWrapper.prettyPrint();
+
+  // Reload and print the market to show both orders from the same wallet
+  await market.reload(connection);
+  console.log('\n--- Market State (showing both orders from same wallet) ---');
+  market.prettyPrint();
 }
 
 describe('Mixed Wrappers test', () => {
