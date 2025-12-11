@@ -520,25 +520,6 @@ const hasSeat = global.hasSeat(trader.publicKey);
 
 ## Advanced Patterns
 
-### Adding Priority Fees
-
-```typescript
-import { ComputeBudgetProgram } from '@solana/web3.js';
-
-const priorityFeeIx = ComputeBudgetProgram.setComputeUnitPrice({
-  microLamports: 100000, // Adjust based on network conditions
-});
-
-const computeUnitsIx = ComputeBudgetProgram.setComputeUnitLimit({
-  units: 200000,
-});
-
-const tx = new Transaction()
-  .add(priorityFeeIx)
-  .add(computeUnitsIx)
-  .add(client.placeOrderIx(/* ... */));
-```
-
 ### Batch Order Updates
 
 ```typescript
@@ -582,28 +563,6 @@ for (const client of clients) {
     true,
   );
   console.log('Base balance:', baseBalance);
-}
-```
-
-### Using the Wrapper for Order Tracking
-
-```typescript
-// The wrapper caches your open orders for faster access
-const client = await ManifestClient.getClientForMarket(
-  connection,
-  marketAddress,
-  trader,
-);
-
-// Reload wrapper to get latest order state
-await client.wrapper.reload(connection);
-
-// Get market-specific info from wrapper
-const marketInfo = client.wrapper.marketInfoForMarket(marketAddress);
-if (marketInfo) {
-  console.log('Base balance:', marketInfo.baseBalanceTokens);
-  console.log('Quote balance:', marketInfo.quoteBalanceTokens);
-  console.log('Open orders:', marketInfo.orders.length);
 }
 ```
 
