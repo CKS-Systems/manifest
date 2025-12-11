@@ -414,8 +414,7 @@ async function tradingBot() {
 
     const bestBid = client.market.bestBidPrice();
     const bestAsk = client.market.bestAskPrice();
-    const spread =
-      bestAsk && bestBid ? (bestAsk - bestBid) / bestBid : null;
+    const spread = bestAsk && bestBid ? (bestAsk - bestBid) / bestBid : null;
 
     console.log(
       `Best Bid: ${bestBid}, Best Ask: ${bestAsk}, Spread: ${spread}`,
@@ -642,43 +641,43 @@ const depositIx = client.depositIx(
 
 ### ManifestClient
 
-| Method                                                 | Description                                     |
-| ------------------------------------------------------ | ----------------------------------------------- |
-| `getClientForMarket(connection, marketPk, keypair)`    | Create client with auto-setup                   |
-| `getClientForMarketNoPrivateKey(connection, marketPk, trader)` | Create read-only client               |
-| `getSetupIxs(connection, marketPk, trader)`            | Get setup instructions for wallet integration   |
-| `listMarketPublicKeys(connection)`                     | List all market addresses                       |
-| `listMarketsForMints(connection, base, quote)`         | Find markets for token pair                     |
-| `depositIx(payer, mint, amount)`                       | Deposit tokens to market                        |
-| `withdrawIx(payer, mint, amount)`                      | Withdraw tokens from market                     |
-| `withdrawAllIx()`                                      | Withdraw all funds                              |
-| `placeOrderIx(params)`                                 | Place an order                                  |
-| `cancelOrderIx(clientOrderId)`                         | Cancel specific order                           |
-| `cancelAllIx()`                                        | Cancel all orders                               |
-| `batchUpdateIx(params)`                                | Batch cancel and place orders                   |
+| Method                                                         | Description                                   |
+| -------------------------------------------------------------- | --------------------------------------------- |
+| `getClientForMarket(connection, marketPk, keypair)`            | Create client with auto-setup                 |
+| `getClientForMarketNoPrivateKey(connection, marketPk, trader)` | Create read-only client                       |
+| `getSetupIxs(connection, marketPk, trader)`                    | Get setup instructions for wallet integration |
+| `listMarketPublicKeys(connection)`                             | List all market addresses                     |
+| `listMarketsForMints(connection, base, quote)`                 | Find markets for token pair                   |
+| `depositIx(payer, mint, amount)`                               | Deposit tokens to market                      |
+| `withdrawIx(payer, mint, amount)`                              | Withdraw tokens from market                   |
+| `withdrawAllIx()`                                              | Withdraw all funds                            |
+| `placeOrderIx(params)`                                         | Place an order                                |
+| `cancelOrderIx(clientOrderId)`                                 | Cancel specific order                         |
+| `cancelAllIx()`                                                | Cancel all orders                             |
+| `batchUpdateIx(params)`                                        | Batch cancel and place orders                 |
 
 ### Market
 
-| Method                                      | Description                       |
-| ------------------------------------------- | --------------------------------- |
-| `loadFromAddress({connection, address})`    | Load market from chain            |
-| `loadFromBuffer({address, buffer})`         | Load from account data            |
-| `reload(connection)`                        | Refresh market data               |
-| `bids()`                                    | Get bid orders                    |
-| `asks()`                                    | Get ask orders                    |
-| `bestBidPrice()`                            | Get best bid price                |
-| `bestAskPrice()`                            | Get best ask price                |
+| Method                                         | Description                    |
+| ---------------------------------------------- | ------------------------------ |
+| `loadFromAddress({connection, address})`       | Load market from chain         |
+| `loadFromBuffer({address, buffer})`            | Load from account data         |
+| `reload(connection)`                           | Refresh market data            |
+| `bids()`                                       | Get bid orders                 |
+| `asks()`                                       | Get ask orders                 |
+| `bestBidPrice()`                               | Get best bid price             |
+| `bestAskPrice()`                               | Get best ask price             |
 | `getWithdrawableBalanceTokens(trader, isBase)` | Get trader's available balance |
-| `hasSeat(trader)`                           | Check if trader has seat          |
-| `baseMint()` / `quoteMint()`                | Get token mints                   |
-| `baseDecimals()` / `quoteDecimals()`        | Get token decimals                |
+| `hasSeat(trader)`                              | Check if trader has seat       |
+| `baseMint()` / `quoteMint()`                   | Get token mints                |
+| `baseDecimals()` / `quoteDecimals()`           | Get token decimals             |
 
 ### Global
 
-| Method                                      | Description                        |
-| ------------------------------------------- | ---------------------------------- |
-| `loadFromAddress({connection, address})`    | Load global account                |
-| `findGlobalAddress(mint)`                   | Derive global account PDA          |
-| `getGlobalBalanceTokens(connection, trader)`| Get trader's global balance        |
-| `hasSeat(trader)`                           | Check if trader has global seat    |
-| `tokenMint()`                               | Get token mint                     |
+| Method                                       | Description                     |
+| -------------------------------------------- | ------------------------------- |
+| `loadFromAddress({connection, address})`     | Load global account             |
+| `findGlobalAddress(mint)`                    | Derive global account PDA       |
+| `getGlobalBalanceTokens(connection, trader)` | Get trader's global balance     |
+| `hasSeat(trader)`                            | Check if trader has global seat |
+| `tokenMint()`                                | Get token mint                  |
