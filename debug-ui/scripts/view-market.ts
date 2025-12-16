@@ -29,7 +29,10 @@ const orderTypeToString = (orderType: OrderType): string => {
   }
 };
 
-const formatExpiration = (lastValidSlot: bigint | number, orderType: OrderType): string => {
+const formatExpiration = (
+  lastValidSlot: bigint | number,
+  orderType: OrderType,
+): string => {
   // Reverse orders never expire
   if (orderType === OrderType.Reverse || orderType === OrderType.ReverseTight) {
     return 'Never';
@@ -71,7 +74,10 @@ const formatBalance = (atoms: number, decimals: number): string => {
   if (tokens === 0) {
     return '0';
   } else if (tokens >= 1) {
-    return tokens.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+    return tokens.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
   } else {
     return tokens.toFixed(6);
   }
@@ -82,15 +88,16 @@ const formatVolume = (atoms: number, decimals: number): string => {
   if (tokens === 0) {
     return '0';
   } else if (tokens >= 1) {
-    return tokens.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return tokens.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   } else {
     return tokens.toFixed(6);
   }
 };
 
-const printSeatsTable = (
-  market: Market,
-): void => {
+const printSeatsTable = (market: Market): void => {
   const seats = market.claimedSeats();
   const baseDecimals = market.baseDecimals();
   const quoteDecimals = market.quoteDecimals();
@@ -118,8 +125,12 @@ const printSeatsTable = (
 
     const baseWithdrawTokens = Number(seat.baseBalance) / 10 ** baseDecimals;
     const quoteWithdrawTokens = Number(seat.quoteBalance) / 10 ** quoteDecimals;
-    const totalBaseTokens = balances.baseWithdrawableBalanceTokens + balances.baseOpenOrdersBalanceTokens;
-    const totalQuoteTokens = balances.quoteWithdrawableBalanceTokens + balances.quoteOpenOrdersBalanceTokens;
+    const totalBaseTokens =
+      balances.baseWithdrawableBalanceTokens +
+      balances.baseOpenOrdersBalanceTokens;
+    const totalQuoteTokens =
+      balances.quoteWithdrawableBalanceTokens +
+      balances.quoteOpenOrdersBalanceTokens;
     const quoteVolTokens = Number(seat.quoteVolume) / 10 ** quoteDecimals;
 
     totalBaseWithdraw += baseWithdrawTokens;
@@ -129,9 +140,18 @@ const printSeatsTable = (
     totalQuoteVol += quoteVolTokens;
 
     const baseWithdraw = formatBalance(Number(seat.baseBalance), baseDecimals);
-    const quoteWithdraw = formatBalance(Number(seat.quoteBalance), quoteDecimals);
-    const totalBase = formatBalance(totalBaseTokens * 10 ** baseDecimals, baseDecimals);
-    const totalQuote = formatBalance(totalQuoteTokens * 10 ** quoteDecimals, quoteDecimals);
+    const quoteWithdraw = formatBalance(
+      Number(seat.quoteBalance),
+      quoteDecimals,
+    );
+    const totalBase = formatBalance(
+      totalBaseTokens * 10 ** baseDecimals,
+      baseDecimals,
+    );
+    const totalQuote = formatBalance(
+      totalQuoteTokens * 10 ** quoteDecimals,
+      quoteDecimals,
+    );
     const quoteVol = formatVolume(Number(seat.quoteVolume), quoteDecimals);
 
     console.log(
@@ -141,21 +161,33 @@ const printSeatsTable = (
 
   // Print summary
   console.log('-'.repeat(148));
-  const sumBaseWithdraw = formatVolume(totalBaseWithdraw * 10 ** baseDecimals, baseDecimals);
-  const sumQuoteWithdraw = formatVolume(totalQuoteWithdraw * 10 ** quoteDecimals, quoteDecimals);
-  const sumTotalBase = formatVolume(totalBaseAll * 10 ** baseDecimals, baseDecimals);
-  const sumTotalQuote = formatVolume(totalQuoteAll * 10 ** quoteDecimals, quoteDecimals);
-  const sumQuoteVol = formatVolume(totalQuoteVol * 10 ** quoteDecimals, quoteDecimals);
+  const sumBaseWithdraw = formatVolume(
+    totalBaseWithdraw * 10 ** baseDecimals,
+    baseDecimals,
+  );
+  const sumQuoteWithdraw = formatVolume(
+    totalQuoteWithdraw * 10 ** quoteDecimals,
+    quoteDecimals,
+  );
+  const sumTotalBase = formatVolume(
+    totalBaseAll * 10 ** baseDecimals,
+    baseDecimals,
+  );
+  const sumTotalQuote = formatVolume(
+    totalQuoteAll * 10 ** quoteDecimals,
+    quoteDecimals,
+  );
+  const sumQuoteVol = formatVolume(
+    totalQuoteVol * 10 ** quoteDecimals,
+    quoteDecimals,
+  );
 
   console.log(
     `${'TOTAL (' + seats.length + ' seats)'.padEnd(46)} | ${sumBaseWithdraw.padStart(18)} | ${sumQuoteWithdraw.padStart(18)} | ${sumTotalBase.padStart(14)} | ${sumTotalQuote.padStart(14)} | ${sumQuoteVol.padStart(14)}`,
   );
 };
 
-const printOrderTable = (
-  orders: RestingOrder[],
-  side: 'BID' | 'ASK',
-): void => {
+const printOrderTable = (orders: RestingOrder[], side: 'BID' | 'ASK'): void => {
   const color = side === 'BID' ? '\x1b[32m' : '\x1b[31m';
   const reset = '\x1b[0m';
 
@@ -174,11 +206,18 @@ const printOrderTable = (
     const price = formatPrice(order.tokenPrice);
     const size = formatSize(Number(order.numBaseTokens));
     const orderType = orderTypeToString(order.orderType);
-    const expiration = formatExpiration(Number(order.lastValidSlot), order.orderType);
+    const expiration = formatExpiration(
+      Number(order.lastValidSlot),
+      order.orderType,
+    );
     const trader = order.trader.toBase58().slice(0, 8) + '...';
 
     let typeDisplay = orderType;
-    if ((order.orderType === OrderType.Reverse || order.orderType === OrderType.ReverseTight) && order.spreadBps !== undefined) {
+    if (
+      (order.orderType === OrderType.Reverse ||
+        order.orderType === OrderType.ReverseTight) &&
+      order.spreadBps !== undefined
+    ) {
       typeDisplay = `${orderType}(${order.spreadBps.toFixed(2)}bps)`;
     }
 
@@ -193,12 +232,18 @@ const printOrderTable = (
 const run = async () => {
   const args = process.argv.slice(2);
   const showSeats = args.includes('--seats');
-  const marketPkArg = args.find(arg => !arg.startsWith('--'));
+  const marketPkArg = args.find((arg) => !arg.startsWith('--'));
 
   if (!marketPkArg) {
-    console.error('Usage: tsx scripts/view-market.ts <market_pubkey> [--seats]');
-    console.error('Example: tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1');
-    console.error('         tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1 --seats');
+    console.error(
+      'Usage: tsx scripts/view-market.ts <market_pubkey> [--seats]',
+    );
+    console.error(
+      'Example: tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1',
+    );
+    console.error(
+      '         tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1 --seats',
+    );
     process.exit(1);
   }
 
@@ -231,8 +276,12 @@ const run = async () => {
   console.log('='.repeat(90));
   console.log(`Base Mint:  ${market.baseMint().toBase58()}`);
   console.log(`Quote Mint: ${market.quoteMint().toBase58()}`);
-  console.log(`Decimals:   Base=${market.baseDecimals()}, Quote=${market.quoteDecimals()}`);
-  console.log(`Volume:     ${Number(market.quoteVolume()).toLocaleString()} quote atoms`);
+  console.log(
+    `Decimals:   Base=${market.baseDecimals()}, Quote=${market.quoteDecimals()}`,
+  );
+  console.log(
+    `Volume:     ${Number(market.quoteVolume()).toLocaleString()} quote atoms`,
+  );
   console.log(`Current Slot: ${currentSlot}`);
 
   const bestBid = market.bestBidPrice();
@@ -240,7 +289,9 @@ const run = async () => {
   if (bestBid && bestAsk) {
     const spread = bestAsk - bestBid;
     const spreadPct = ((spread / bestAsk) * 100).toFixed(4);
-    console.log(`\nBest Bid: ${formatPrice(bestBid)} | Best Ask: ${formatPrice(bestAsk)} | Spread: ${formatPrice(spread)} (${spreadPct}%)`);
+    console.log(
+      `\nBest Bid: ${formatPrice(bestBid)} | Best Ask: ${formatPrice(bestAsk)} | Spread: ${formatPrice(spread)} (${spreadPct}%)`,
+    );
   } else if (bestBid) {
     console.log(`\nBest Bid: ${formatPrice(bestBid)} | Best Ask: (none)`);
   } else if (bestAsk) {
