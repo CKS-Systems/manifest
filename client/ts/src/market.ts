@@ -61,6 +61,8 @@ export type ClaimedSeat = {
   baseBalance: bignum;
   /** Balance of quote atoms that are withdrawable (excluding in open orders). */
   quoteBalance: bignum;
+  /** Quote volume traded by this trader in atoms. */
+  quoteVolume: bignum;
 };
 
 /**
@@ -530,6 +532,15 @@ export class Market {
   }
 
   /**
+   * Get all claimed seats on the market.
+   *
+   * @returns ClaimedSeat[]
+   */
+  public claimedSeats(): ClaimedSeat[] {
+    return this.data.claimedSeats;
+  }
+
+  /**
    * Gets the quote volume traded over the lifetime of the market.
    *
    * @returns bigint
@@ -565,7 +576,7 @@ export class Market {
     console.log('ClaimedSeats:');
     this.data.claimedSeats.forEach((claimedSeat) => {
       console.log(
-        `publicKey: ${claimedSeat.publicKey.toBase58()} baseBalance: ${claimedSeat.baseBalance} quoteBalance: ${claimedSeat.quoteBalance}`,
+        `publicKey: ${claimedSeat.publicKey.toBase58()} baseBalance: ${claimedSeat.baseBalance} quoteBalance: ${claimedSeat.quoteBalance} quoteVolume: ${claimedSeat.quoteVolume}`,
       );
     });
     console.log(`========================`);
@@ -778,6 +789,7 @@ export class Market {
               publicKey: claimedSeatInternal.trader,
               baseBalance: claimedSeatInternal.baseWithdrawableBalance,
               quoteBalance: claimedSeatInternal.quoteWithdrawableBalance,
+              quoteVolume: claimedSeatInternal.quoteVolume,
             };
           })
         : [];

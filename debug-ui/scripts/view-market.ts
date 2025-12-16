@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Market, RestingOrder } from '@cks-systems/manifest-sdk';
+import { Market, RestingOrder, ClaimedSeat } from '@cks-systems/manifest-sdk';
 import { OrderType } from '@cks-systems/manifest-sdk/manifest/types';
 
 const { RPC_URL } = process.env;
@@ -66,6 +66,92 @@ const formatSize = (size: number): string => {
   }
 };
 
+const formatBalance = (atoms: number, decimals: number): string => {
+  const tokens = atoms / 10 ** decimals;
+  if (tokens === 0) {
+    return '0';
+  } else if (tokens >= 1) {
+    return tokens.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  } else {
+    return tokens.toFixed(6);
+  }
+};
+
+const formatVolume = (atoms: number, decimals: number): string => {
+  const tokens = atoms / 10 ** decimals;
+  if (tokens === 0) {
+    return '0';
+  } else if (tokens >= 1) {
+    return tokens.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } else {
+    return tokens.toFixed(6);
+  }
+};
+
+const printSeatsTable = (
+  market: Market,
+): void => {
+  const seats = market.claimedSeats();
+  const baseDecimals = market.baseDecimals();
+  const quoteDecimals = market.quoteDecimals();
+
+  console.log('\n\x1b[36m=== SEATS ===\x1b[0m');
+  console.log(
+    `${'Pubkey'.padEnd(46)} | ${'Base Withdrawable'.padStart(18)} | ${'Quote Withdrawable'.padStart(18)} | ${'Total Base'.padStart(14)} | ${'Total Quote'.padStart(14)} | ${'Quote Volume'.padStart(14)}`,
+  );
+  console.log('-'.repeat(148));
+
+  if (seats.length === 0) {
+    console.log('  (no seats)');
+    return;
+  }
+
+  let totalBaseWithdraw = 0;
+  let totalQuoteWithdraw = 0;
+  let totalBaseAll = 0;
+  let totalQuoteAll = 0;
+  let totalQuoteVol = 0;
+
+  for (const seat of seats) {
+    const pubkey = seat.publicKey.toBase58();
+    const balances = market.getBalances(seat.publicKey);
+
+    const baseWithdrawTokens = Number(seat.baseBalance) / 10 ** baseDecimals;
+    const quoteWithdrawTokens = Number(seat.quoteBalance) / 10 ** quoteDecimals;
+    const totalBaseTokens = balances.baseWithdrawableBalanceTokens + balances.baseOpenOrdersBalanceTokens;
+    const totalQuoteTokens = balances.quoteWithdrawableBalanceTokens + balances.quoteOpenOrdersBalanceTokens;
+    const quoteVolTokens = Number(seat.quoteVolume) / 10 ** quoteDecimals;
+
+    totalBaseWithdraw += baseWithdrawTokens;
+    totalQuoteWithdraw += quoteWithdrawTokens;
+    totalBaseAll += totalBaseTokens;
+    totalQuoteAll += totalQuoteTokens;
+    totalQuoteVol += quoteVolTokens;
+
+    const baseWithdraw = formatBalance(Number(seat.baseBalance), baseDecimals);
+    const quoteWithdraw = formatBalance(Number(seat.quoteBalance), quoteDecimals);
+    const totalBase = formatBalance(totalBaseTokens * 10 ** baseDecimals, baseDecimals);
+    const totalQuote = formatBalance(totalQuoteTokens * 10 ** quoteDecimals, quoteDecimals);
+    const quoteVol = formatVolume(Number(seat.quoteVolume), quoteDecimals);
+
+    console.log(
+      `${pubkey.padEnd(46)} | ${baseWithdraw.padStart(18)} | ${quoteWithdraw.padStart(18)} | ${totalBase.padStart(14)} | ${totalQuote.padStart(14)} | ${quoteVol.padStart(14)}`,
+    );
+  }
+
+  // Print summary
+  console.log('-'.repeat(148));
+  const sumBaseWithdraw = formatVolume(totalBaseWithdraw * 10 ** baseDecimals, baseDecimals);
+  const sumQuoteWithdraw = formatVolume(totalQuoteWithdraw * 10 ** quoteDecimals, quoteDecimals);
+  const sumTotalBase = formatVolume(totalBaseAll * 10 ** baseDecimals, baseDecimals);
+  const sumTotalQuote = formatVolume(totalQuoteAll * 10 ** quoteDecimals, quoteDecimals);
+  const sumQuoteVol = formatVolume(totalQuoteVol * 10 ** quoteDecimals, quoteDecimals);
+
+  console.log(
+    `${'TOTAL (' + seats.length + ' seats)'.padEnd(46)} | ${sumBaseWithdraw.padStart(18)} | ${sumQuoteWithdraw.padStart(18)} | ${sumTotalBase.padStart(14)} | ${sumTotalQuote.padStart(14)} | ${sumQuoteVol.padStart(14)}`,
+  );
+};
+
 const printOrderTable = (
   orders: RestingOrder[],
   side: 'BID' | 'ASK',
@@ -105,10 +191,14 @@ const printOrderTable = (
 };
 
 const run = async () => {
-  const marketPkArg = process.argv[2];
+  const args = process.argv.slice(2);
+  const showSeats = args.includes('--seats');
+  const marketPkArg = args.find(arg => !arg.startsWith('--'));
+
   if (!marketPkArg) {
-    console.error('Usage: tsx scripts/view-market.ts <market_pubkey>');
+    console.error('Usage: tsx scripts/view-market.ts <market_pubkey> [--seats]');
     console.error('Example: tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1');
+    console.error('         tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1 --seats');
     process.exit(1);
   }
 
@@ -167,6 +257,11 @@ const run = async () => {
 
   // Print bids
   printOrderTable(bids, 'BID');
+
+  // Print seats if flag is set
+  if (showSeats) {
+    printSeatsTable(market);
+  }
 
   console.log('\n');
 };
