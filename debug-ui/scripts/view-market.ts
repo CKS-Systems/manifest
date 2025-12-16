@@ -174,7 +174,7 @@ const printOrderTable = (
     const price = formatPrice(order.tokenPrice);
     const size = formatSize(Number(order.numBaseTokens));
     const orderType = orderTypeToString(order.orderType);
-    const expiration = formatExpiration(order.lastValidSlot, order.orderType);
+    const expiration = formatExpiration(Number(order.lastValidSlot), order.orderType);
     const trader = order.trader.toBase58().slice(0, 8) + '...';
 
     let typeDisplay = orderType;
