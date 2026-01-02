@@ -836,7 +836,7 @@ export class ManifestClient {
       this.market.quoteMint().toBase58() === mint.toBase58()
         ? this.market.quoteDecimals()
         : this.market.baseDecimals();
-    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+    const amountAtoms = Math.round(amountTokens * 10 ** mintDecimals);
 
     return createDepositInstruction(
       {
@@ -1963,7 +1963,7 @@ export class ManifestClient {
       is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const mintDecimals = mint.decimals;
-    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+    const amountAtoms = Math.round(amountTokens * 10 ** mintDecimals);
 
     return createGlobalDepositInstruction(
       {
@@ -2015,7 +2015,7 @@ export class ManifestClient {
       is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
     );
     const mintDecimals = mint.decimals;
-    const amountAtoms = Math.ceil(amountTokens * 10 ** mintDecimals);
+    const amountAtoms = Math.round(amountTokens * 10 ** mintDecimals);
 
     return createGlobalWithdrawInstruction(
       {
