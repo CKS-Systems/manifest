@@ -31,6 +31,7 @@ import {
   chunks,
   fetchBtcPriceFromCoinGecko,
   getLifetimeVolumeForMarkets,
+  sendDiscordNotification,
 } from './utils';
 import * as queries from './queries';
 import { lookupMintTicker } from './mint';
@@ -94,6 +95,10 @@ export class ManifestStatsServer {
   private lastPrice: promClient.Gauge<'market'>;
   private depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'>;
 
+  // Discord alerting
+  private discordWebhookUrl: string | undefined;
+  private readOnlyAlertSent: boolean = false;
+
   constructor(
     rpcUrl: string,
     isReadOnly: boolean,
@@ -114,6 +119,7 @@ export class ManifestStatsServer {
     this.volume = metrics.volume;
     this.lastPrice = metrics.lastPrice;
     this.depth = metrics.depth;
+    this.discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     this.pool = new Pool({
       connectionString: databaseUrl,
@@ -171,6 +177,50 @@ export class ManifestStatsServer {
   }
 
   /**
+   * Send Discord alert for database read-only mode
+   */
+  private async sendReadOnlyAlert(error: any): Promise<void> {
+    // Check if this is a read-only transaction error (PostgreSQL error code 25006)
+    const isReadOnlyError =
+      error?.code === '25006' ||
+      error?.message?.includes('read-only transaction');
+
+    if (!isReadOnlyError || this.readOnlyAlertSent || !this.discordWebhookUrl) {
+      return;
+    }
+
+    this.readOnlyAlertSent = true;
+
+    const message = `**Database Read-Only Alert**
+
+The stats server database has entered read-only mode and cannot save new fills.
+
+**Error Details:**
+- Code: ${error.code}
+- Message: ${error.message}
+- Time: ${new Date().toISOString()}
+
+**Possible Causes:**
+- Disk space critically low
+- Database failover/replication issue
+- Manual read-only mode activation
+
+**Action Required:**
+1. Check database disk usage: \`fly ssh console -a manifest-stats-db -C "df -h /data"\`
+2. Check database status: \`fly status -a manifest-stats-db\`
+3. Review database logs: \`fly logs -a manifest-stats-db\`
+4. If disk is full, extend volume: \`fly volumes extend <volume-id> -s <new-size>\`
+5. Restart database if needed: \`fly machine restart <machine-id> -a manifest-stats-db\``;
+
+    await sendDiscordNotification(this.discordWebhookUrl, message, {
+      title: '🚨 Database Read-Only Mode Detected',
+      timestamp: true,
+    });
+
+    console.error('Discord alert sent for read-only database error');
+  }
+
+  /**
    * Save complete fill to database immediately (async, non-blocking)
    */
   private async saveCompleteFillToDatabase(fill: FillLogResult): Promise<void> {
@@ -193,6 +243,8 @@ export class ManifestStatsServer {
       });
     } catch (error) {
       console.error('Error saving complete fill to database:', error);
+      // Send Discord alert if this is a read-only error
+      await this.sendReadOnlyAlert(error);
       // Don't throw - fire and forget
     }
   }
@@ -1537,6 +1589,8 @@ export class ManifestStatsServer {
       console.log('State saved successfully to database');
     } catch (error) {
       console.error('Error saving state to database:', error);
+      // Send Discord alert if this is a read-only error
+      await this.sendReadOnlyAlert(error);
       if (client) {
         try {
           await client.query(queries.ROLLBACK_TRANSACTION);
