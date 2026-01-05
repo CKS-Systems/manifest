@@ -182,7 +182,10 @@ export class ManifestStatsServer {
   private async sendDatabaseErrorAlert(error: any): Promise<void> {
     // Only send the alert once an hour to avoid spam.
     const now_ms: number = Date.now();
-    if (!this.discordWebhookUrl || now_ms - this.lastErrorAlertSentTimeMs < 60 * 60 * 1_000) {
+    if (
+      !this.discordWebhookUrl ||
+      now_ms - this.lastErrorAlertSentTimeMs < 60 * 60 * 1_000
+    ) {
       return;
     }
 
