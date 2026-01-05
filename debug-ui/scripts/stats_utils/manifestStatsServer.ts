@@ -186,7 +186,7 @@ export class ManifestStatsServer {
       return;
     }
 
-    this.readOnlyAlertSent = true;
+    this.lastErrorAlertSentTimeMs = Date.now();
 
     const message = `**Database Alert**
 **Error Details:**
