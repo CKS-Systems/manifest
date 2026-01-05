@@ -1571,8 +1571,7 @@ export class ManifestStatsServer {
       console.log('State saved successfully to database');
     } catch (error) {
       console.error('Error saving state to database:', error);
-      // Send Discord alert if this is a read-only error
-      await this.sendReadOnlyAlert(error);
+      await this.sendDatabaseErrorAlert(error);
       if (client) {
         try {
           await client.query(queries.ROLLBACK_TRANSACTION);
