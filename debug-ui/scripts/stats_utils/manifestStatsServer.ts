@@ -97,7 +97,7 @@ export class ManifestStatsServer {
 
   // Discord alerting
   private discordWebhookUrl: string | undefined;
-  private readOnlyAlertSent: boolean = false;
+  private lastErrorAlertSentTimeMs: number = Date.now();
 
   constructor(
     rpcUrl: string,
@@ -177,47 +177,35 @@ export class ManifestStatsServer {
   }
 
   /**
-   * Send Discord alert for database read-only mode
+   * Send Discord alert for database error
    */
-  private async sendReadOnlyAlert(error: any): Promise<void> {
+  private async sendDatabaseErrorAlert(error: any): Promise<void> {
     // Check if this is a read-only transaction error (PostgreSQL error code 25006)
     const isReadOnlyError =
       error?.code === '25006' ||
       error?.message?.includes('read-only transaction');
 
-    if (!isReadOnlyError || this.readOnlyAlertSent || !this.discordWebhookUrl) {
+    // Only send the alert once an hour to avoid spam.
+    const now_ms: number = Date.now();
+    if (!this.discordWebhookUrl || now_ms - this.lastErrorAlertSentTimeMs < 60 * 60 * 1_000) {
       return;
     }
 
     this.readOnlyAlertSent = true;
 
-    const message = `**Database Read-Only Alert**
-
-The stats server database has entered read-only mode and cannot save new fills.
-
+    const message = `**Database Alert**
 **Error Details:**
 - Code: ${error.code}
 - Message: ${error.message}
 - Time: ${new Date().toISOString()}
-
-**Possible Causes:**
-- Disk space critically low
-- Database failover/replication issue
-- Manual read-only mode activation
-
-**Action Required:**
-1. Check database disk usage: \`fly ssh console -a manifest-stats-db -C "df -h /data"\`
-2. Check database status: \`fly status -a manifest-stats-db\`
-3. Review database logs: \`fly logs -a manifest-stats-db\`
-4. If disk is full, extend volume: \`fly volumes extend <volume-id> -s <new-size>\`
-5. Restart database if needed: \`fly machine restart <machine-id> -a manifest-stats-db\``;
+`;
 
     await sendDiscordNotification(this.discordWebhookUrl, message, {
-      title: '🚨 Database Read-Only Mode Detected',
+      title: '🚨 Database Error Detected',
       timestamp: true,
     });
 
-    console.error('Discord alert sent for read-only database error');
+    console.error('Discord alert sent for database error');
   }
 
   /**
@@ -243,8 +231,7 @@ The stats server database has entered read-only mode and cannot save new fills.
       });
     } catch (error) {
       console.error('Error saving complete fill to database:', error);
-      // Send Discord alert if this is a read-only error
-      await this.sendReadOnlyAlert(error);
+      await this.sendDatabaseErrorAlert(error);
       // Don't throw - fire and forget
     }
   }
