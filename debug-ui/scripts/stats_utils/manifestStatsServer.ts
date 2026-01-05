@@ -31,6 +31,7 @@ import {
   chunks,
   fetchBtcPriceFromCoinGecko,
   getLifetimeVolumeForMarkets,
+  sendDiscordNotification,
 } from './utils';
 import * as queries from './queries';
 import { lookupMintTicker } from './mint';
@@ -94,6 +95,10 @@ export class ManifestStatsServer {
   private lastPrice: promClient.Gauge<'market'>;
   private depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'>;
 
+  // Discord alerting
+  private discordWebhookUrl: string | undefined;
+  private lastErrorAlertSentTimeMs: number = Date.now();
+
   constructor(
     rpcUrl: string,
     isReadOnly: boolean,
@@ -114,6 +119,7 @@ export class ManifestStatsServer {
     this.volume = metrics.volume;
     this.lastPrice = metrics.lastPrice;
     this.depth = metrics.depth;
+    this.discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     this.pool = new Pool({
       connectionString: databaseUrl,
@@ -171,6 +177,36 @@ export class ManifestStatsServer {
   }
 
   /**
+   * Send Discord alert for database error
+   */
+  private async sendDatabaseErrorAlert(error: any): Promise<void> {
+    // Only send the alert once an hour to avoid spam.
+    const now_ms: number = Date.now();
+    if (
+      !this.discordWebhookUrl ||
+      now_ms - this.lastErrorAlertSentTimeMs < 60 * 60 * 1_000
+    ) {
+      return;
+    }
+
+    this.lastErrorAlertSentTimeMs = Date.now();
+
+    const message = `**Database Alert**
+**Error Details:**
+- Code: ${error.code}
+- Message: ${error.message}
+- Time: ${new Date().toISOString()}
+`;
+
+    await sendDiscordNotification(this.discordWebhookUrl, message, {
+      title: '🚨 Database Error Detected',
+      timestamp: true,
+    });
+
+    console.error('Discord alert sent for database error');
+  }
+
+  /**
    * Save complete fill to database immediately (async, non-blocking)
    */
   private async saveCompleteFillToDatabase(fill: FillLogResult): Promise<void> {
@@ -193,6 +229,7 @@ export class ManifestStatsServer {
       });
     } catch (error) {
       console.error('Error saving complete fill to database:', error);
+      await this.sendDatabaseErrorAlert(error);
       // Don't throw - fire and forget
     }
   }
@@ -1537,6 +1574,7 @@ export class ManifestStatsServer {
       console.log('State saved successfully to database');
     } catch (error) {
       console.error('Error saving state to database:', error);
+      await this.sendDatabaseErrorAlert(error);
       if (client) {
         try {
           await client.query(queries.ROLLBACK_TRANSACTION);
