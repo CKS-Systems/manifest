@@ -180,11 +180,6 @@ export class ManifestStatsServer {
    * Send Discord alert for database error
    */
   private async sendDatabaseErrorAlert(error: any): Promise<void> {
-    // Check if this is a read-only transaction error (PostgreSQL error code 25006)
-    const isReadOnlyError =
-      error?.code === '25006' ||
-      error?.message?.includes('read-only transaction');
-
     // Only send the alert once an hour to avoid spam.
     const now_ms: number = Date.now();
     if (!this.discordWebhookUrl || now_ms - this.lastErrorAlertSentTimeMs < 60 * 60 * 1_000) {
