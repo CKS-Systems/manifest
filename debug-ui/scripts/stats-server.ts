@@ -267,7 +267,7 @@ const run = async () => {
     // Isolate advancing checkpoints so that it is more reliable. The most
     // important feature of stats server is accurate volume reporting, so dont
     // let the database cause issues with live serving of volume.
-    () => {
+    async () => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
@@ -282,7 +282,7 @@ const run = async () => {
         }
       }
     },
-    () => {
+    async () => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
