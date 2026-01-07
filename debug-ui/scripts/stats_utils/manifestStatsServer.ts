@@ -14,7 +14,7 @@ import {
 } from '@cks-systems/manifest-sdk';
 import { Pool, PoolClient, QueryResult } from 'pg';
 import {
-  CHECKPOINT_DURATION_SEC,
+  VOLUME_CHECKPOINT_DURATION_SEC,
   ONE_DAY_SEC,
   DEPTHS_BPS,
   SOL_USDC_MARKET,
@@ -365,15 +365,15 @@ export class ManifestStatsServer {
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
       this.baseVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
       this.quoteVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
       this.checkpointTimestamps.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
 
       const marketPk = new PublicKey(market);
@@ -578,15 +578,15 @@ export class ManifestStatsServer {
           this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
           this.baseVolumeAtomsCheckpoints.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
           );
           this.quoteVolumeAtomsCheckpoints.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
           );
           this.checkpointTimestamps.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
           );
         }
       },
