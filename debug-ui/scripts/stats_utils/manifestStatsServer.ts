@@ -1836,7 +1836,7 @@ export class ManifestStatsServer {
     console.log('Saving state to database...');
 
     try {
-      // Save checkpoint first and get the ID
+      // Save checkpoint first and get the ID. This is a different checkpoint from the volume checkpoints.
       const checkpointId: number = await this.saveCheckpoint();
 
       // Save volume and market data in separate transaction

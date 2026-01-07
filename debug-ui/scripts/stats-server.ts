@@ -4,7 +4,11 @@ import * as promClient from 'prom-client';
 import cors from 'cors';
 import express, { RequestHandler } from 'express';
 import promBundle from 'express-prom-bundle';
-import { CHECKPOINT_DURATION_SEC, PORT } from './stats_utils/constants';
+import {
+  VOLUME_CHECKPOINT_DURATION_SEC,
+  DATABASE_CHECKPOINT_DURATION_SEC,
+  PORT,
+} from './stats_utils/constants';
 import { CompleteFillsQueryOptions } from './stats_utils/types';
 import { ManifestStatsServer } from './stats_utils/manifestStatsServer';
 
@@ -269,7 +273,7 @@ const run = async () => {
         try {
           await Promise.all([
             statsServer.advanceCheckpoints(),
-            sleep(CHECKPOINT_DURATION_SEC * 1_000),
+            sleep(VOLUME_CHECKPOINT_DURATION_SEC * 1_000),
           ]);
         } catch (error) {
           console.error('Error in advancing checkpoints:', error);
@@ -282,10 +286,9 @@ const run = async () => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
-          // Run depth probe and wait for next checkpoint
           await Promise.all([
+            sleep(DATABASE_CHECKPOINT_DURATION_SEC * 1_000),
             statsServer.depthProbe(),
-            sleep(CHECKPOINT_DURATION_SEC * 1_000),
             DATABASE_URL && !IS_READ_ONLY
               ? statsServer.saveState()
               : Promise.resolve(),

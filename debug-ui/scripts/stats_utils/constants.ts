@@ -1,8 +1,9 @@
 import { PublicKey } from '@solana/web3.js';
 import { genAccDiscriminator } from '@cks-systems/manifest-sdk/utils';
 
-// Stores checkpoints every 5 minutes
-export const CHECKPOINT_DURATION_SEC: number = 5 * 60;
+// Stores volume checkpoints every 5 minutes
+export const VOLUME_CHECKPOINT_DURATION_SEC: number = 5 * 60;
+export const DATABASE_CHECKPOINT_DURATION_SEC: number = 60 * 60;
 export const ONE_DAY_SEC: number = 24 * 60 * 60;
 export const PORT: number = 3000;
 export const DEPTHS_BPS: number[] = [50, 100, 200];
