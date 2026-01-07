@@ -12,9 +12,9 @@ import {
   Market,
   RestingOrder,
 } from '@cks-systems/manifest-sdk';
-import { Pool } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
 import {
-  CHECKPOINT_DURATION_SEC,
+  VOLUME_CHECKPOINT_DURATION_SEC,
   ONE_DAY_SEC,
   DEPTHS_BPS,
   SOL_USDC_MARKET,
@@ -74,7 +74,9 @@ export class ManifestStatsServer {
 
   private lastFillSlot: number = 0;
 
-  // Recent fill log results
+  // Recent fill log results. This is not saved to database. So on a refresh,
+  // the recentFills is not complete. The completeFills query will be correct
+  // however.
   private fillLogResults: Map<string, FillLogResult[]> = new Map();
 
   // Mutex to guard all the recent fills, volume, ... Most important for recent
@@ -94,6 +96,8 @@ export class ManifestStatsServer {
   private volume: promClient.Gauge<'market' | 'mint' | 'side'>;
   private lastPrice: promClient.Gauge<'market'>;
   private depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'>;
+  private dbQueryCount: promClient.Counter<'query_type' | 'status'>;
+  private dbQueryDuration: promClient.Histogram<'query_type'>;
 
   // Discord alerting
   private discordWebhookUrl: string | undefined;
@@ -109,6 +113,8 @@ export class ManifestStatsServer {
       volume: promClient.Gauge<'market' | 'mint' | 'side'>;
       lastPrice: promClient.Gauge<'market'>;
       depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'>;
+      dbQueryCount: promClient.Counter<'query_type' | 'status'>;
+      dbQueryDuration: promClient.Histogram<'query_type'>;
     },
   ) {
     this.isReadOnly = isReadOnly;
@@ -119,6 +125,8 @@ export class ManifestStatsServer {
     this.volume = metrics.volume;
     this.lastPrice = metrics.lastPrice;
     this.depth = metrics.depth;
+    this.dbQueryCount = metrics.dbQueryCount;
+    this.dbQueryDuration = metrics.dbQueryDuration;
     this.discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     this.pool = new Pool({
@@ -207,6 +215,52 @@ export class ManifestStatsServer {
   }
 
   /**
+   * Execute database query with metrics collection
+   */
+  private async executeQueryWithMetrics<T = QueryResult>(
+    queryType: string,
+    queryFn: () => Promise<T>,
+  ): Promise<T> {
+    const timer: () => number = this.dbQueryDuration.startTimer({
+      query_type: queryType,
+    });
+
+    try {
+      const result: T = await queryFn();
+      this.dbQueryCount.inc({ query_type: queryType, status: 'success' });
+      return result;
+    } catch (error: any) {
+      this.dbQueryCount.inc({ query_type: queryType, status: 'error' });
+      throw error;
+    } finally {
+      timer();
+    }
+  }
+
+  /**
+   * Execute client query with metrics collection (for transactions)
+   */
+  private async executeClientQueryWithMetrics<T = QueryResult>(
+    client: PoolClient,
+    queryType: string,
+    query: string,
+    params?: any[],
+  ): Promise<T> {
+    const timer = this.dbQueryDuration.startTimer({ query_type: queryType });
+
+    try {
+      const result = await client.query(query, params);
+      this.dbQueryCount.inc({ query_type: queryType, status: 'success' });
+      return result as T;
+    } catch (error) {
+      this.dbQueryCount.inc({ query_type: queryType, status: 'error' });
+      throw error;
+    } finally {
+      timer();
+    }
+  }
+
+  /**
    * Save complete fill to database immediately (async, non-blocking)
    */
   private async saveCompleteFillToDatabase(fill: FillLogResult): Promise<void> {
@@ -216,16 +270,18 @@ export class ManifestStatsServer {
 
     try {
       await withRetry(async () => {
-        await this.pool.query(queries.INSERT_FILL_COMPLETE, [
-          fill.slot,
-          fill.market,
-          fill.signature,
-          fill.taker,
-          fill.maker,
-          fill.takerSequenceNumber,
-          fill.makerSequenceNumber,
-          JSON.stringify(fill),
-        ]);
+        await this.executeQueryWithMetrics('INSERT_FILL_COMPLETE', async () =>
+          this.pool.query(queries.INSERT_FILL_COMPLETE, [
+            fill.slot,
+            fill.market,
+            fill.signature,
+            fill.taker,
+            fill.maker,
+            fill.takerSequenceNumber,
+            fill.makerSequenceNumber,
+            JSON.stringify(fill),
+          ]),
+        );
       });
     } catch (error) {
       console.error('Error saving complete fill to database:', error);
@@ -309,15 +365,15 @@ export class ManifestStatsServer {
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
       this.baseVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
       this.quoteVolumeAtomsCheckpoints.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
       this.checkpointTimestamps.set(
         market,
-        new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
       );
 
       const marketPk = new PublicKey(market);
@@ -522,15 +578,21 @@ export class ManifestStatsServer {
           this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
           this.baseVolumeAtomsCheckpoints.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(
+              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+            ).fill(0),
           );
           this.quoteVolumeAtomsCheckpoints.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(
+              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+            ).fill(0),
           );
           this.checkpointTimestamps.set(
             marketPk,
-            new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0),
+            new Array<number>(
+              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+            ).fill(0),
           );
         }
       },
@@ -569,9 +631,9 @@ export class ManifestStatsServer {
   /**
    * Periodically save the volume so a 24 hour rolling volume can be calculated.
    */
-  async saveCheckpoints(): Promise<void> {
+  async advanceCheckpoints(): Promise<void> {
     this.fillMutex.runExclusive(async () => {
-      console.log('Saving checkpoints');
+      console.log('Advancing checkpoints');
 
       // Check websocket connection status - no need to reset every time
       if (this.wsManager && !this.wsManager.isConnected()) {
@@ -583,7 +645,7 @@ export class ManifestStatsServer {
 
       this.markets.forEach((value: Market, market: string) => {
         console.log(
-          'Saving checkpoints for market',
+          'Advancing checkpoints for market',
           market,
           'base since last',
           this.baseVolumeAtomsSinceLastCheckpoint.get(market),
@@ -789,7 +851,11 @@ export class ManifestStatsServer {
    *
    */
   getMetadata() {
-    console.log('getting metadata', this.tickers.size);
+    console.log(
+      'Getting metadata request. Returning',
+      this.tickers.size,
+      'tickers',
+    );
     return this.tickers;
   }
 
@@ -1217,7 +1283,10 @@ export class ManifestStatsServer {
   }
 
   async getAlts(): Promise<{ alt: string; market: string }[]> {
-    const response = await this.pool.query(queries.SELECT_ALT_MARKETS);
+    const response = await this.executeQueryWithMetrics(
+      'SELECT_ALT_MARKETS',
+      async () => this.pool.query(queries.SELECT_ALT_MARKETS),
+    );
     return response.rows.map((r) => ({ alt: r.alt, market: r.market }));
   }
 
@@ -1280,10 +1349,14 @@ export class ManifestStatsServer {
       const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-      // Get count
-      const countResult = await this.pool.query(
-        `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
-        params,
+      // Get complete fills count
+      const countResult = await this.executeQueryWithMetrics(
+        'SELECT_FILLS_COUNT',
+        async () =>
+          this.pool.query(
+            `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
+            params,
+          ),
       );
       const total = parseInt(countResult.rows[0].total);
 
@@ -1296,7 +1369,10 @@ export class ManifestStatsServer {
     `;
 
       params.push(limit, offset);
-      const dataResult = await this.pool.query(dataQuery, params);
+      const dataResult = await this.executeQueryWithMetrics(
+        'SELECT_FILLS_DATA',
+        async () => this.pool.query(dataQuery, params),
+      );
 
       const fills: FillLogResult[] = dataResult.rows.map(
         (row) => row.fill_data,
@@ -1319,18 +1395,48 @@ export class ManifestStatsServer {
   async initDatabase(): Promise<void> {
     try {
       // Create tables if they don't exist
-      await this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE);
-      await this.pool.query(queries.CREATE_MARKET_VOLUMES_TABLE);
-      await this.pool.query(queries.CREATE_MARKET_CHECKPOINTS_TABLE);
-      await this.pool.query(queries.CREATE_TRADER_STATS_TABLE);
-      await this.pool.query(queries.CREATE_FILL_LOG_RESULTS_TABLE);
-      await this.pool.query(queries.CREATE_TRADER_POSITIONS_TABLE);
-      await this.pool.query(queries.CREATE_FILLS_COMPLETE_TABLE);
-      await this.pool.query(queries.CREATE_FILLS_COMPLETE_INDEXES);
-      await this.pool.query(queries.CREATE_ALT_MARKETS_TABLE);
+      await this.executeQueryWithMetrics(
+        'CREATE_STATE_CHECKPOINTS_TABLE',
+        async () => this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_MARKET_VOLUMES_TABLE',
+        async () => this.pool.query(queries.CREATE_MARKET_VOLUMES_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_MARKET_CHECKPOINTS_TABLE',
+        async () => this.pool.query(queries.CREATE_MARKET_CHECKPOINTS_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_TRADER_STATS_TABLE',
+        async () => this.pool.query(queries.CREATE_TRADER_STATS_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_FILL_LOG_RESULTS_TABLE',
+        async () => this.pool.query(queries.CREATE_FILL_LOG_RESULTS_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_TRADER_POSITIONS_TABLE',
+        async () => this.pool.query(queries.CREATE_TRADER_POSITIONS_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_FILLS_COMPLETE_TABLE',
+        async () => this.pool.query(queries.CREATE_FILLS_COMPLETE_TABLE),
+      );
+      await this.executeQueryWithMetrics(
+        'CREATE_FILLS_COMPLETE_INDEXES',
+        async () => this.pool.query(queries.CREATE_FILLS_COMPLETE_INDEXES),
+      );
+      await this.executeQueryWithMetrics('CREATE_ALT_MARKETS_TABLE', async () =>
+        this.pool.query(queries.CREATE_ALT_MARKETS_TABLE),
+      );
 
       // Run migrations for existing tables
-      await this.pool.query(queries.ALTER_MARKET_CHECKPOINTS_ADD_TIMESTAMPS);
+      await this.executeQueryWithMetrics(
+        'ALTER_MARKET_CHECKPOINTS_ADD_TIMESTAMPS',
+        async () =>
+          this.pool.query(queries.ALTER_MARKET_CHECKPOINTS_ADD_TIMESTAMPS),
+      );
 
       console.log('Database schema initialized');
     } catch (error) {
@@ -1340,46 +1446,106 @@ export class ManifestStatsServer {
   }
 
   /**
-   * Save current state to database
+   * Save checkpoint and return checkpoint ID
    */
-  async saveState(): Promise<void> {
+  private async saveCheckpoint(): Promise<number> {
     if (this.isReadOnly) {
-      console.log('Skipping state save (read-only mode)');
-      return;
+      throw new Error('Cannot save checkpoint in read-only mode');
     }
 
-    console.log('Saving state to database...');
+    console.log('Saving checkpoint to database...');
+    let client: PoolClient | undefined;
 
-    let client;
     try {
-      console.log('Getting db client');
       client = await this.pool.connect();
-
-      // Add error handler to prevent unhandled errors from crashing the server
-      client.on('error', (err) => {
-        console.error('Database client error:', err);
+      client.on('error', (err: Error) => {
+        console.error('Database client error during checkpoint save:', err);
       });
 
-      // Start a transaction
-      console.log('Querying begin');
-      await client.query(queries.BEGIN_TRANSACTION);
-
-      // Insert a new checkpoint
-      console.log('Inserting checkpoint');
-      const checkpointResult = await client.query(
-        queries.INSERT_STATE_CHECKPOINT,
-        [this.lastFillSlot],
+      await this.executeClientQueryWithMetrics(
+        client,
+        'BEGIN_TRANSACTION',
+        queries.BEGIN_TRANSACTION,
       );
 
-      const checkpointId = checkpointResult.rows[0].id;
+      const checkpointResult: QueryResult =
+        await this.executeClientQueryWithMetrics(
+          client,
+          'INSERT_STATE_CHECKPOINT',
+          queries.INSERT_STATE_CHECKPOINT,
+          [this.lastFillSlot],
+        );
+
+      const checkpointId: number = checkpointResult.rows[0].id;
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'COMMIT_TRANSACTION',
+        queries.COMMIT_TRANSACTION,
+      );
+      console.log(`Checkpoint saved with ID: ${checkpointId}`);
+
+      return checkpointId;
+    } catch (error: any) {
+      console.error('Error saving checkpoint:', error);
+      await this.sendDatabaseErrorAlert(error);
+
+      if (client) {
+        try {
+          await this.executeClientQueryWithMetrics(
+            client,
+            'ROLLBACK_TRANSACTION',
+            queries.ROLLBACK_TRANSACTION,
+          );
+        } catch (rollbackError: any) {
+          console.error('Error during checkpoint rollback:', rollbackError);
+        }
+      }
+      throw error;
+    } finally {
+      if (client) {
+        try {
+          client.release();
+        } catch (releaseError: any) {
+          console.error(
+            'Error releasing client after checkpoint save:',
+            releaseError,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Save volume and market data for a checkpoint
+   */
+  private async saveVolumeAndMarketData(checkpointId: number): Promise<void> {
+    if (this.isReadOnly) {
+      return; // Skip in read-only mode
+    }
+
+    console.log('Saving volume and market data to database...');
+    let client: PoolClient | undefined;
+
+    try {
+      client = await this.pool.connect();
+      client.on('error', (err: Error) => {
+        console.error('Database client error during volume save:', err);
+      });
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'BEGIN_TRANSACTION',
+        queries.BEGIN_TRANSACTION,
+      );
 
       // Save market volumes
-      const volumePromises = [];
+      const volumePromises: Promise<QueryResult>[] = [];
       for (const [
         market,
         baseVolume,
       ] of this.baseVolumeAtomsSinceLastCheckpoint.entries()) {
-        const quoteVolume =
+        const quoteVolume: number =
           this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
 
         volumePromises.push(
@@ -1393,16 +1559,16 @@ export class ManifestStatsServer {
       }
 
       // Save market checkpoints
-      const checkpointPromises = [];
+      const checkpointPromises: Promise<QueryResult>[] = [];
       for (const [
         market,
         baseCheckpoints,
       ] of this.baseVolumeAtomsCheckpoints.entries()) {
-        const quoteCheckpoints =
+        const quoteCheckpoints: number[] =
           this.quoteVolumeAtomsCheckpoints.get(market) || [];
-        const checkpointTimestamps =
+        const checkpointTimestamps: number[] =
           this.checkpointTimestamps.get(market) || [];
-        const lastPrice = this.lastPriceByMarket.get(market) || 0;
+        const lastPrice: number = this.lastPriceByMarket.get(market) || 0;
 
         checkpointPromises.push(
           client.query(queries.INSERT_MARKET_CHECKPOINT, [
@@ -1416,29 +1582,91 @@ export class ManifestStatsServer {
         );
       }
 
-      console.log('Awaiting all inserts to complete');
-      // Wait for all queries to complete
+      console.log('Awaiting volume and checkpoint inserts to complete');
       await Promise.all([...volumePromises, ...checkpointPromises]);
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'COMMIT_TRANSACTION',
+        queries.COMMIT_TRANSACTION,
+      );
+      console.log('Volume and market data saved successfully');
+    } catch (error: any) {
+      console.error('Error saving volume and market data:', error);
+      await this.sendDatabaseErrorAlert(error);
+
+      if (client) {
+        try {
+          await this.executeClientQueryWithMetrics(
+            client,
+            'ROLLBACK_TRANSACTION',
+            queries.ROLLBACK_TRANSACTION,
+          );
+        } catch (rollbackError: any) {
+          console.error('Error during volume data rollback:', rollbackError);
+        }
+      }
+      throw error;
+    } finally {
+      if (client) {
+        try {
+          client.release();
+        } catch (releaseError: any) {
+          console.error(
+            'Error releasing client after volume save:',
+            releaseError,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Save trader data for a checkpoint
+   */
+  private async saveTraderData(checkpointId: number): Promise<void> {
+    if (this.isReadOnly) {
+      return; // Skip in read-only mode
+    }
+
+    console.log('Saving trader data to database...');
+    let client: PoolClient | undefined;
+
+    try {
+      client = await this.pool.connect();
+      client.on('error', (err: Error) => {
+        console.error('Database client error during trader data save:', err);
+      });
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'BEGIN_TRANSACTION',
+        queries.BEGIN_TRANSACTION,
+      );
 
       // Save trader stats in batches
       console.log('Saving trader stats in batches');
-      const traderArray = Array.from(
+      const traderArray: string[] = Array.from(
         new Set([
           ...Array.from(this.traderNumTakerTrades.keys()),
           ...Array.from(this.traderNumMakerTrades.keys()),
         ]),
       );
-      const TRADER_BATCH_SIZE = 20; // Process 20 traders at a time
+      const TRADER_BATCH_SIZE: number = 20;
 
       for (let i = 0; i < traderArray.length; i += TRADER_BATCH_SIZE) {
-        const batch = traderArray.slice(i, i + TRADER_BATCH_SIZE);
-        const batchPromises = [];
+        const batch: string[] = traderArray.slice(i, i + TRADER_BATCH_SIZE);
+        const batchPromises: Promise<QueryResult>[] = [];
 
         for (const trader of batch) {
-          const numTakerTrades = this.traderNumTakerTrades.get(trader) || 0;
-          const numMakerTrades = this.traderNumMakerTrades.get(trader) || 0;
-          const takerVolume = this.traderTakerNotionalVolume.get(trader) || 0;
-          const makerVolume = this.traderMakerNotionalVolume.get(trader) || 0;
+          const numTakerTrades: number =
+            this.traderNumTakerTrades.get(trader) || 0;
+          const numMakerTrades: number =
+            this.traderNumMakerTrades.get(trader) || 0;
+          const takerVolume: number =
+            this.traderTakerNotionalVolume.get(trader) || 0;
+          const makerVolume: number =
+            this.traderMakerNotionalVolume.get(trader) || 0;
 
           batchPromises.push(
             client.query(queries.INSERT_TRADER_STATS, [
@@ -1457,25 +1685,22 @@ export class ManifestStatsServer {
 
       // Save trader positions with filtering and batching
       console.log('Saving trader positions with filtering');
-      const POSITION_THRESHOLD = 1; // Only save positions with significant value ($1+)
-      const BATCH_SIZE = 10; // Smaller batch size
-      const DELAY_BETWEEN_BATCHES = 50; // ms
+      const POSITION_THRESHOLD: number = 1;
+      const BATCH_SIZE: number = 10;
+      const DELAY_BETWEEN_BATCHES: number = 50;
 
-      // Helper function for delay
-      const delay = (ms: number | undefined) =>
+      const delay = (ms: number | undefined): Promise<void> =>
         new Promise((resolve) => setTimeout(resolve, ms));
 
-      // Process traders in smaller batches with delays
-      let traderCount = 0;
+      let traderCount: number = 0;
       for (const [trader, positions] of this.traderPositions.entries()) {
-        const acquisitionValues =
+        const acquisitionValues: Map<string, number> =
           this.traderAcquisitionValue.get(trader) || new Map();
-        const positionBatchPromises = [];
+        const positionBatchPromises: Promise<QueryResult>[] = [];
 
         for (const [mint, position] of positions.entries()) {
-          const acquisitionValue = acquisitionValues.get(mint) || 0;
+          const acquisitionValue: number = acquisitionValues.get(mint) || 0;
 
-          // Skip insignificant positions to reduce database load
           if (
             Math.abs(position) === 0 ||
             Math.abs(acquisitionValue) < POSITION_THRESHOLD
@@ -1494,105 +1719,146 @@ export class ManifestStatsServer {
           );
         }
 
-        // Execute all position queries for this trader in parallel
         if (positionBatchPromises.length > 0) {
           await Promise.all(positionBatchPromises);
+        }
 
-          // Add throttling delay every BATCH_SIZE traders
-          traderCount++;
-          if (traderCount % BATCH_SIZE === 0) {
-            await delay(DELAY_BETWEEN_BATCHES);
-          }
+        traderCount++;
+        if (traderCount % BATCH_SIZE === 0) {
+          await delay(DELAY_BETWEEN_BATCHES);
         }
       }
 
-      // Save fill logs using bulk insertion
-      console.log('Saving fill log results with bulk insertion');
-
-      const markets = Array.from(this.fillLogResults.keys());
-      const BULK_INSERT_SIZE = 100; // Can be increased for better performance
-
-      for (let i = 0; i < markets.length; i += BULK_INSERT_SIZE) {
-        const batchMarkets = markets.slice(i, i + BULK_INSERT_SIZE);
-        const bulkData = [];
-
-        // Prepare bulk data
-        for (const market of batchMarkets) {
-          const fills = this.fillLogResults.get(market);
-          if (fills && fills.length > 0) {
-            bulkData.push({
-              checkpoint_id: checkpointId,
-              market: market,
-              fill_data: JSON.stringify(fills),
-            });
-          }
-        }
-
-        // Skip if nothing to insert
-        if (bulkData.length === 0) continue;
-
-        // Execute bulk insertion
-        if (bulkData.length > 0) {
-          console.log(`Bulk inserting ${bulkData.length} fill records`);
-
-          // Generate a parameterized query for the bulk insertion
-          const columns = ['checkpoint_id', 'market', 'fill_data'];
-          const columnStr = columns.join(', ');
-          const placeholders = bulkData
-            .map((_, index) => {
-              const offset = index * columns.length;
-              return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
-            })
-            .join(', ');
-
-          const values = bulkData.flatMap((row) => [
-            row.checkpoint_id,
-            row.market,
-            row.fill_data,
-          ]);
-
-          const query = `
-            INSERT INTO fill_log_results (${columnStr})
-            VALUES ${placeholders}
-          `;
-
-          await client.query(query, values);
-        }
-
-        // Add a small delay between batches
-        if (i + BULK_INSERT_SIZE < markets.length) {
-          await delay(100);
-        }
-      }
-
-      console.log('Cleaning up old checkpoints');
-      // Clean up old checkpoints - keep only the most recent one
-      await client.query(queries.DELETE_OLD_CHECKPOINTS, [checkpointId]);
-
-      console.log('Committing');
-      await client.query(queries.COMMIT_TRANSACTION);
-      console.log('State saved successfully to database');
-    } catch (error) {
-      console.error('Error saving state to database:', error);
+      await this.executeClientQueryWithMetrics(
+        client,
+        'COMMIT_TRANSACTION',
+        queries.COMMIT_TRANSACTION,
+      );
+      console.log('Trader data saved successfully');
+    } catch (error: any) {
+      console.error('Error saving trader data:', error);
       await this.sendDatabaseErrorAlert(error);
+
       if (client) {
         try {
-          await client.query(queries.ROLLBACK_TRANSACTION);
-        } catch (rollbackError) {
-          console.error('Error during rollback:', rollbackError);
-          // Continue execution even if rollback fails
+          await this.executeClientQueryWithMetrics(
+            client,
+            'ROLLBACK_TRANSACTION',
+            queries.ROLLBACK_TRANSACTION,
+          );
+        } catch (rollbackError: any) {
+          console.error('Error during trader data rollback:', rollbackError);
         }
       }
-      // Don't re-throw - we want to continue operation even after errors
+      throw error;
     } finally {
       if (client) {
         try {
           client.release();
-        } catch (releaseError) {
-          console.error('Error releasing client:', releaseError);
-          // Don't throw release errors, just log them
+        } catch (releaseError: any) {
+          console.error(
+            'Error releasing client after trader data save:',
+            releaseError,
+          );
         }
       }
+    }
+  }
+
+  /**
+   * Clean up old checkpoints
+   */
+  private async cleanupOldCheckpoints(
+    currentCheckpointId: number,
+  ): Promise<void> {
+    if (this.isReadOnly) {
+      return; // Skip in read-only mode
+    }
+
+    console.log('Cleaning up old checkpoints...');
+    let client: PoolClient | undefined;
+
+    try {
+      client = await this.pool.connect();
+      client.on('error', (err: Error) => {
+        console.error('Database client error during cleanup:', err);
+      });
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'BEGIN_TRANSACTION',
+        queries.BEGIN_TRANSACTION,
+      );
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'DELETE_OLD_CHECKPOINTS',
+        queries.DELETE_OLD_CHECKPOINTS,
+        [currentCheckpointId],
+      );
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'COMMIT_TRANSACTION',
+        queries.COMMIT_TRANSACTION,
+      );
+      console.log('Old checkpoints cleaned up successfully');
+    } catch (error: any) {
+      console.error('Error cleaning up old checkpoints:', error);
+      await this.sendDatabaseErrorAlert(error);
+
+      if (client) {
+        try {
+          await this.executeClientQueryWithMetrics(
+            client,
+            'ROLLBACK_TRANSACTION',
+            queries.ROLLBACK_TRANSACTION,
+          );
+        } catch (rollbackError: any) {
+          console.error('Error during cleanup rollback:', rollbackError);
+        }
+      }
+      throw error;
+    } finally {
+      if (client) {
+        try {
+          client.release();
+        } catch (releaseError: any) {
+          console.error('Error releasing client after cleanup:', releaseError);
+        }
+      }
+    }
+  }
+
+  /**
+   * Save current state to database
+   */
+  async saveState(): Promise<void> {
+    if (this.isReadOnly) {
+      console.log('Skipping state save (read-only mode)');
+      return;
+    }
+
+    console.log('Saving state to database...');
+
+    try {
+      // Save checkpoint first and get the ID. This is a different checkpoint from the volume checkpoints.
+      const checkpointId: number = await this.saveCheckpoint();
+
+      // Save volume and market data in separate transaction
+      await this.saveVolumeAndMarketData(checkpointId);
+
+      // Save trader data in separate transaction
+      await this.saveTraderData(checkpointId);
+
+      // Clean up old checkpoints - this gets its own transaction
+      await this.cleanupOldCheckpoints(checkpointId);
+
+      console.log('All state saved successfully to database');
+    } catch (error: any) {
+      console.error('Error saving state to database:', error);
+      await this.sendDatabaseErrorAlert(error);
+      // Don't re-throw - we want to continue operation even after errors
     }
   }
 
@@ -1604,8 +1870,9 @@ export class ManifestStatsServer {
 
     try {
       // Get the most recent checkpoint
-      const checkpointResultRecent = await this.pool.query(
-        queries.SELECT_RECENT_CHECKPOINT,
+      const checkpointResultRecent = await this.executeQueryWithMetrics(
+        'SELECT_RECENT_CHECKPOINT',
+        async () => this.pool.query(queries.SELECT_RECENT_CHECKPOINT),
       );
 
       if (checkpointResultRecent.rowCount === 0) {
@@ -1613,13 +1880,14 @@ export class ManifestStatsServer {
         return false;
       }
 
-      const checkpointId = checkpointResultRecent.rows[0].id;
+      const checkpointId: number = checkpointResultRecent.rows[0].id;
       this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
 
       // Load market volumes
-      const volumeResult = await this.pool.query(
-        queries.SELECT_MARKET_VOLUMES,
-        [checkpointId],
+      const volumeResult = await this.executeQueryWithMetrics(
+        'SELECT_MARKET_VOLUMES',
+        async () =>
+          this.pool.query(queries.SELECT_MARKET_VOLUMES, [checkpointId]),
       );
 
       for (const row of volumeResult.rows) {
@@ -1633,99 +1901,9 @@ export class ManifestStatsServer {
         );
       }
 
-      // Load market checkpoints
-      const checkpointResult = await this.pool.query(
-        queries.SELECT_MARKET_CHECKPOINTS,
-        [checkpointId],
-      );
-
-      for (const row of checkpointResult.rows) {
-        let baseCheckpoints = JSON.parse(row.base_volume_checkpoints_text);
-        let quoteCheckpoints = JSON.parse(row.quote_volume_checkpoints_text);
-        let checkpointTimestamps = row.checkpoint_timestamps_text
-          ? JSON.parse(row.checkpoint_timestamps_text)
-          : new Array<number>(ONE_DAY_SEC / CHECKPOINT_DURATION_SEC).fill(0);
-
-        if (!Array.isArray(baseCheckpoints)) {
-          console.log(
-            `Base checkpoints for market ${row.market} is not an array, converting`,
-          );
-          baseCheckpoints = Object.values(baseCheckpoints);
-        }
-
-        if (!Array.isArray(quoteCheckpoints)) {
-          console.log(
-            `Quote checkpoints for market ${row.market} is not an array, converting`,
-          );
-          quoteCheckpoints = Object.values(quoteCheckpoints);
-        }
-
-        if (!Array.isArray(checkpointTimestamps)) {
-          console.log(
-            `Checkpoint timestamps for market ${row.market} is not an array, converting`,
-          );
-          checkpointTimestamps = Object.values(checkpointTimestamps);
-        }
-
-        this.baseVolumeAtomsCheckpoints.set(row.market, baseCheckpoints);
-        this.quoteVolumeAtomsCheckpoints.set(row.market, quoteCheckpoints);
-        this.checkpointTimestamps.set(row.market, checkpointTimestamps);
-        this.lastPriceByMarket.set(row.market, Number(row.last_price));
-      }
-
-      // Load trader stats
-      const traderResult = await this.pool.query(queries.SELECT_TRADER_STATS, [
-        checkpointId,
-      ]);
-
-      for (const row of traderResult.rows) {
-        this.traderNumTakerTrades.set(row.trader, Number(row.num_taker_trades));
-        this.traderNumMakerTrades.set(row.trader, Number(row.num_maker_trades));
-        this.traderTakerNotionalVolume.set(
-          row.trader,
-          Number(row.taker_notional_volume),
-        );
-        this.traderMakerNotionalVolume.set(
-          row.trader,
-          Number(row.maker_notional_volume),
-        );
-      }
-
-      // Load trader positions
-      const positionResult = await this.pool.query(
-        queries.SELECT_TRADER_POSITIONS,
-        [checkpointId],
-      );
-
-      for (const row of positionResult.rows) {
-        if (!this.traderPositions.has(row.trader)) {
-          this.traderPositions.set(row.trader, new Map());
-        }
-        if (!this.traderAcquisitionValue.has(row.trader)) {
-          this.traderAcquisitionValue.set(row.trader, new Map());
-        }
-
-        this.traderPositions
-          .get(row.trader)!
-          .set(row.mint, Number(row.position));
-        this.traderAcquisitionValue
-          .get(row.trader)!
-          .set(row.mint, Number(row.acquisition_value));
-      }
-
-      // Load fill logs
-      const fillResult = await this.pool.query(
-        queries.SELECT_FILL_LOG_RESULTS,
-        [checkpointId],
-      );
-
-      for (const row of fillResult.rows) {
-        this.fillLogResults.set(row.market, row.fill_data);
-      }
-
       console.log('State loaded successfully from database');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading state from database:', error);
       return false;
     }
@@ -1734,10 +1912,10 @@ export class ManifestStatsServer {
   /**
    * Clean shutdown of the server
    */
-  public async shutdown(): Promise<void> {
+  async shutdown(): Promise<void> {
     console.log('Shutting down ManifestStatsServer...');
 
-    // Close WebSocket connection
+    // Close WebSocket manager
     if (this.wsManager) {
       this.wsManager.close();
       this.wsManager = null;
