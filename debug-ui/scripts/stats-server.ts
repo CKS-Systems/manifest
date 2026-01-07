@@ -46,6 +46,21 @@ const depth: promClient.Gauge<'depth_bps' | 'market' | 'trader'> =
     labelNames: ['depth_bps', 'market', 'trader'] as const,
   });
 
+const dbQueryCount: promClient.Counter<'query_type' | 'status'> =
+  new promClient.Counter({
+    name: 'db_query_count',
+    help: 'Number of database queries executed',
+    labelNames: ['query_type', 'status'] as const,
+  });
+
+const dbQueryDuration: promClient.Histogram<'query_type'> =
+  new promClient.Histogram({
+    name: 'db_query_duration_seconds',
+    help: 'Duration of database queries in seconds',
+    labelNames: ['query_type'] as const,
+    buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+  });
+
 /**
  * Server for serving stats according to this spec:
  * https://docs.google.com/document/d/1v27QFoQq1SKT3Priq3aqPgB70Xd_PnDzbOCiuoCyixw/edit?tab=t.0
@@ -127,6 +142,8 @@ const run = async () => {
       volume,
       lastPrice,
       depth,
+      dbQueryCount,
+      dbQueryDuration,
     },
   );
 
@@ -242,25 +259,45 @@ const run = async () => {
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-  // Main loop with periodic state saving and checkpointing
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    try {
-      // Run depth probe and wait for next checkpoint
-      await Promise.all([
-        statsServer.saveCheckpoints(),
-        statsServer.depthProbe(),
-        sleep(CHECKPOINT_DURATION_SEC * 1_000),
-        DATABASE_URL && !IS_READ_ONLY
-          ? statsServer.saveState()
-          : Promise.resolve(),
-      ]);
-    } catch (error) {
-      console.error('Error in main loop:', error);
-      // Continue the loop instead of crashing
-      await sleep(5000); // Add a short delay before retrying
-    }
-  }
+  await Promise.all([
+    // Isolate advancing checkpoints so that it is more reliable. The most
+    // important feature of stats server is accurate volume reporting, so dont
+    // let the database cause issues with live serving of volume.
+    () => {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        try {
+          await Promise.all([
+            statsServer.advanceCheckpoints(),
+            sleep(CHECKPOINT_DURATION_SEC * 1_000),
+          ]);
+        } catch (error) {
+          console.error('Error in advancing checkpoints:', error);
+          // Continue the loop instead of crashing
+          await sleep(5_000); // Add a short delay before retrying
+        }
+      }
+    },
+    () => {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        try {
+          // Run depth probe and wait for next checkpoint
+          await Promise.all([
+            statsServer.depthProbe(),
+            sleep(CHECKPOINT_DURATION_SEC * 1_000),
+            DATABASE_URL && !IS_READ_ONLY
+              ? statsServer.saveState()
+              : Promise.resolve(),
+          ]);
+        } catch (error) {
+          console.error('Error in saving loop:', error);
+          // Continue the loop instead of crashing
+          await sleep(5_000); // Add a short delay before retrying
+        }
+      }
+    },
+  ]);
 };
 
 run().catch((e) => {

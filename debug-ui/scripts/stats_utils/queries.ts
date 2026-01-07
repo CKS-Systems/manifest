@@ -46,9 +46,6 @@ export const SELECT_TRADER_STATS =
 export const SELECT_TRADER_POSITIONS =
   'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1';
 
-export const SELECT_FILL_LOG_RESULTS =
-  'SELECT market, fill_data FROM fill_log_results WHERE checkpoint_id = $1';
-
 export const SELECT_FILLS_COMPLETE_COUNT =
   'SELECT COUNT(*) as total FROM fills_complete';
 
@@ -110,6 +107,7 @@ export const CREATE_TRADER_STATS_TABLE = `
   )
 `;
 
+// TODO: Remove. No longer used.
 export const CREATE_FILL_LOG_RESULTS_TABLE = `
   CREATE TABLE IF NOT EXISTS fill_log_results (
     checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,
