@@ -251,7 +251,7 @@ export class ManifestStatsServer {
     try {
       const result = await client.query(query, params);
       this.dbQueryCount.inc({ query_type: queryType, status: 'success' });
-      return result;
+      return result as T;
     } catch (error) {
       this.dbQueryCount.inc({ query_type: queryType, status: 'error' });
       throw error;
