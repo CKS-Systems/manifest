@@ -263,7 +263,7 @@ export const ORIGINATING_PROTOCOL_IDS = {
   HFqp6ErWHY6Uzhj8rFyjYuDya2mXUpYEk8VW75K9PSiY: 'jupiter', // JUP 16
   '9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf': 'phantom',
   '8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf': 'phantom',
-  'B3111yJCeHBcA1bizdJjUFPALfhAfSRnAbJzGUtnt56A': 'binance',
+  B3111yJCeHBcA1bizdJjUFPALfhAfSRnAbJzGUtnt56A: 'binance',
 } as const;
 
 // Helper function to detect aggregator from account keys
