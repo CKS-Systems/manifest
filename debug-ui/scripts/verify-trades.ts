@@ -84,8 +84,9 @@ const parseTransactionForFills = async (
   signature: string,
   slot: number,
   blockTime: number | null,
-): Promise<FillLogResult[]> => {
+): Promise<{ fills: FillLogResult[]; hasTruncatedLogs: boolean }> => {
   const fills: FillLogResult[] = [];
+  let hasTruncatedLogs = false;
   
   try {
     const tx = await connection.getTransaction(signature, {
@@ -93,12 +94,17 @@ const parseTransactionForFills = async (
     });
     
     if (!tx?.meta?.logMessages) {
-      return fills;
+      return { fills, hasTruncatedLogs };
     }
     
     if (tx.meta.err != null) {
-      return fills;
+      return { fills, hasTruncatedLogs };
     }
+    
+    // Check for truncated logs
+    hasTruncatedLogs = tx.meta.logMessages.some(log => 
+      log.toLowerCase().includes('truncated')
+    );
     
     // Extract signers
     let originalSigner: string | undefined;
@@ -152,10 +158,11 @@ const parseTransactionForFills = async (
     const programDatas = messages.filter(message => message.includes('Program data:'));
     
     if (programDatas.length === 0) {
-      return fills; // No program data logs
+      return { fills, hasTruncatedLogs }; // No program data logs
     }
     
-    for (const programDataEntry of programDatas) {
+    for (let i = 0; i < programDatas.length; i++) {
+      const programDataEntry = programDatas[i];
       const programData = programDataEntry.split(' ')[2];
       const byteArray = Uint8Array.from(atob(programData), c => c.charCodeAt(0));
       const buffer = Buffer.from(byteArray);
@@ -186,19 +193,19 @@ const parseTransactionForFills = async (
     console.error(`Error parsing transaction ${signature}:`, error);
   }
   
-  return fills;
+  return { fills, hasTruncatedLogs };
 };
 
 const fetchDatabaseFills = async (
   connection: Connection,
   statsServerUrl: string,
   market: string,
-  hoursBack: number = 24,
+  startTime: number,
+  endTime: number,
 ): Promise<FillLogResult[]> => {
   const fills: FillLogResult[] = [];
   let offset = 0;
   const limit = 1000;
-  const targetTime = Date.now() - hoursBack * 60 * 60 * 1000;
   
   console.log(`Fetching fills for market ${market} from database...`);
   
@@ -261,17 +268,19 @@ const fetchDatabaseFills = async (
           }
         }
         
-        if (fillTime >= targetTime) {
+        // Only include fills within our time window
+        if (fillTime >= startTime && fillTime <= endTime) {
           // Update the fill with the block time if it was missing
           if (!fill.blockTime && blockTimeCache.has(fill.slot)) {
             fill.blockTime = blockTimeCache.get(fill.slot);
           }
           fills.push(fill);
-        } else {
-          // Once we hit fills older than our target, we're done
-          console.log(`Reached fills older than ${hoursBack} hours, stopping at slot ${fill.slot}`);
+        } else if (fillTime < startTime) {
+          // Once we hit fills older than our time window, we're done
+          console.log(`Reached fills older than time window, stopping at slot ${fill.slot}`);
           return fills;
         }
+        // If fillTime > endTime, skip this fill but continue (it's newer than our window)
       }
       
       if (!hasMore) {
@@ -292,17 +301,18 @@ const fetchOnchainFills = async (
   connection: Connection,
   marketPubkey: PublicKey,
   baseMint: PublicKey,
-  hoursBack: number = 24,
-): Promise<FillLogResult[]> => {
+  startTime: number,
+  endTime: number,
+): Promise<{ fills: FillLogResult[]; truncatedSignatures: Set<string> }> => {
   const fills: FillLogResult[] = [];
   const baseVault = getVaultAddress(marketPubkey, baseMint);
-  const targetTime = Date.now() - hoursBack * 60 * 60 * 1000;
   
   console.log(`Fetching onchain fills for market ${marketPubkey.toString()}, base vault: ${baseVault.toString()}`);
   
   let lastSignature: string | undefined;
   let done = false;
   let totalSignatures = 0;
+  const truncatedSignatures = new Set<string>();
   
   while (!done) {
     try {
@@ -323,22 +333,32 @@ const fetchOnchainFills = async (
       // Process signatures sequentially 
       const fillBatches: FillLogResult[][] = [];
       for (const sig of signatures) {
-        const sigFills = await parseTransactionForFills(connection, sig.signature, sig.slot, sig.blockTime!);
+        const { fills: sigFills, hasTruncatedLogs } = await parseTransactionForFills(connection, sig.signature, sig.slot, sig.blockTime!);
         fillBatches.push(sigFills);
+        
+        // Track truncated signatures
+        if (hasTruncatedLogs) {
+          truncatedSignatures.add(sig.signature);
+        }
       }
       
       for (let i = 0; i < signatures.length; i++) {
         const sig = signatures[i];
         const sigTime = (sig.blockTime ?? 0) * 1000;
         
-        if (sigTime < targetTime) {
+        if (sigTime < startTime) {
           done = true;
           break;
         }
         
         const sigFills = fillBatches[i];
-        // Only add fills for this specific market
-        const marketFills = sigFills.filter(f => f.market === marketPubkey.toString());
+        // Only add fills for this specific market and within our time window
+        const marketFills = sigFills.filter(f => {
+          const fillMarketMatches = f.market === marketPubkey.toString();
+          const fillTime = (f.blockTime ?? 0) * 1000;
+          const fillInTimeWindow = fillTime >= startTime && fillTime <= endTime;
+          return fillMarketMatches && fillInTimeWindow;
+        });
         fills.push(...marketFills);
       }
       
@@ -349,12 +369,17 @@ const fetchOnchainFills = async (
     }
   }
   
-  return fills;
+  if (truncatedSignatures.size > 0) {
+    console.log(`Found ${truncatedSignatures.size} truncated signatures that will be excluded from mismatch detection`);
+  }
+  
+  return { fills, truncatedSignatures };
 };
 
 const compareFills = (
   dbFills: FillLogResult[],
   onchainFills: FillLogResult[],
+  truncatedSignatures: Set<string>,
   market: string,
 ): TradeMismatch[] => {
   const mismatches: TradeMismatch[] = [];
@@ -378,6 +403,11 @@ const compareFills = (
   
   // Check for fills in database but not onchain
   for (const [signature, fills] of Array.from(dbFillsMap)) {
+    // Skip checking fills with truncated signatures - we can't verify them reliably
+    if (truncatedSignatures.has(signature)) {
+      continue;
+    }
+    
     const onchainFills = onchainFillsMap.get(signature);
     
     if (!onchainFills) {
@@ -508,19 +538,24 @@ const run = async () => {
       console.log(`\nVerifying market ${market.ticker_id}`);
       
       try {
+        // Set fixed time window for this market analysis
+        const endTime = Date.now();
+        const startTime = endTime - 24 * 60 * 60 * 1000; // 24 hours ago
+        
+        console.log(`Time window: ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`);
+        
         // Fetch fills from database
-        const dbFills = await fetchDatabaseFills(connection, statsServerUrl, market.ticker_id, 24);
+        const dbFills = await fetchDatabaseFills(connection, statsServerUrl, market.ticker_id, startTime, endTime);
         console.log(`Found ${dbFills.length} fills in database`);
         
-
         // Fetch fills from onchain
         const marketPubkey = new PublicKey(market.ticker_id);
         const baseMint = new PublicKey(market.base_currency);
-        const onchainFills = await fetchOnchainFills(connection, marketPubkey, baseMint, 24);
+        const { fills: onchainFills, truncatedSignatures } = await fetchOnchainFills(connection, marketPubkey, baseMint, startTime, endTime);
         console.log(`Found ${onchainFills.length} fills onchain`);
         
         // Compare fills
-        const mismatches = compareFills(dbFills, onchainFills, market.ticker_id);
+        const mismatches = compareFills(dbFills, onchainFills, truncatedSignatures, market.ticker_id);
         
         if (mismatches.length > 0) {
           console.log(`⚠️  Found ${mismatches.length} mismatches for market ${market.ticker_id}`);
