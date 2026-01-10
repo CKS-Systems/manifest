@@ -9,9 +9,50 @@ import {
   detectAggregatorFromKeys,
   detectOriginatingProtocolFromKeys
 } from '@/../../client/ts/src/fillFeed';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 // Helper function to sleep
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to check if a transaction has token program transfers
+const hasTokenTransfer = async (connection: Connection, signature: string): Promise<boolean> => {
+  try {
+    const tx = await connection.getTransaction(signature, {
+      maxSupportedTransactionVersion: 0,
+    });
+    
+    if (!tx) {
+      return false;
+    }
+    
+    // Check transaction message for token program instructions
+    const message = tx.transaction.message;
+    
+    // Get all account keys (handling both legacy and versioned transactions)
+    let accountKeys: PublicKey[];
+    if ('accountKeys' in message) {
+      // Legacy transaction
+      accountKeys = message.accountKeys;
+    } else {
+      // Versioned transaction (v0)
+      accountKeys = message.staticAccountKeys;
+    }
+    
+    // Check if any instruction involves token programs
+    for (const instruction of message.instructions) {
+      const programId = accountKeys[instruction.programIdIndex];
+      if (programId.equals(TOKEN_PROGRAM_ID) || programId.equals(TOKEN_2022_PROGRAM_ID)) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.warn(`Error checking token transfers for ${signature}:`, error);
+    // If we can't check, assume it has transfers to be safe
+    return true;
+  }
+};
 
 // FillLog discriminant from the fills feed
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
@@ -376,12 +417,14 @@ const fetchOnchainFills = async (
   return { fills, truncatedSignatures };
 };
 
-const compareFills = (
+const compareFills = async (
+  connection: Connection,
   dbFills: FillLogResult[],
   onchainFills: FillLogResult[],
   truncatedSignatures: Set<string>,
   market: string,
-): TradeMismatch[] => {
+  dbBufferTime: number,
+): Promise<TradeMismatch[]> => {
   const mismatches: TradeMismatch[] = [];
   
   // Create maps keyed by signature for easy lookup
@@ -411,13 +454,20 @@ const compareFills = (
     const onchainFills = onchainFillsMap.get(signature);
     
     if (!onchainFills) {
-      // Entire transaction missing from onchain
-      for (const fill of fills) {
-        mismatches.push({
-          market,
-          type: 'missing_onchain',
-          fill,
-        });
+      // Entire transaction missing from onchain - check if it has token transfers
+      const hasTransfers = await hasTokenTransfer(connection, signature);
+      
+      if (hasTransfers) {
+        // Only report as missing if the transaction actually has token transfers
+        for (const fill of fills) {
+          mismatches.push({
+            market,
+            type: 'missing_onchain',
+            fill,
+          });
+        }
+      } else {
+        console.log(`Ignoring missing onchain fill for ${signature} - no token transfers detected`);
       }
     } else {
       // Check if specific fills within the transaction match
@@ -433,11 +483,18 @@ const compareFills = (
         );
         
         if (!matchingFill) {
-          mismatches.push({
-            market,
-            type: 'missing_onchain',
-            fill: dbFill,
-          });
+          // Check if this specific transaction has token transfers before reporting
+          const hasTransfers = await hasTokenTransfer(connection, dbFill.signature);
+          
+          if (hasTransfers) {
+            mismatches.push({
+              market,
+              type: 'missing_onchain',
+              fill: dbFill,
+            });
+          } else {
+            console.log(`Ignoring missing onchain fill for ${dbFill.signature} - no token transfers detected`);
+          }
         }
       }
     }
@@ -448,13 +505,21 @@ const compareFills = (
     const dbFills = dbFillsMap.get(signature);
     
     if (!dbFills) {
-      // Entire transaction missing from database
+      // Entire transaction missing from database - check if it's within buffer time
       for (const fill of fills) {
-        mismatches.push({
-          market,
-          type: 'missing_in_db',
-          fill,
-        });
+        const fillTime = (fill.blockTime ?? 0) * 1000;
+        
+        if (fillTime > dbBufferTime) {
+          // Fill is too recent, might not be in DB yet - ignore
+          console.log(`Ignoring missing DB fill for ${signature} - within buffer time (${new Date(fillTime).toISOString()})`);
+        } else {
+          // Fill is old enough that it should be in DB
+          mismatches.push({
+            market,
+            type: 'missing_in_db',
+            fill,
+          });
+        }
       }
     } else {
       // Check if specific fills within the transaction match
@@ -470,11 +535,19 @@ const compareFills = (
         );
         
         if (!matchingFill) {
-          mismatches.push({
-            market,
-            type: 'missing_in_db',
-            fill: onchainFill,
-          });
+          const fillTime = (onchainFill.blockTime ?? 0) * 1000;
+          
+          if (fillTime > dbBufferTime) {
+            // Fill is too recent, might not be in DB yet - ignore
+            console.log(`Ignoring missing DB fill for ${onchainFill.signature} - within buffer time (${new Date(fillTime).toISOString()})`);
+          } else {
+            // Fill is old enough that it should be in DB
+            mismatches.push({
+              market,
+              type: 'missing_in_db',
+              fill: onchainFill,
+            });
+          }
         }
       }
     }
@@ -541,6 +614,7 @@ const run = async () => {
         // Set fixed time window for this market analysis
         const endTime = Date.now();
         const startTime = endTime - 24 * 60 * 60 * 1000; // 24 hours ago
+        const dbFetchStartTime = Date.now(); // When we start fetching from DB
         
         console.log(`Time window: ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`);
         
@@ -554,8 +628,9 @@ const run = async () => {
         const { fills: onchainFills, truncatedSignatures } = await fetchOnchainFills(connection, marketPubkey, baseMint, startTime, endTime);
         console.log(`Found ${onchainFills.length} fills onchain`);
         
-        // Compare fills
-        const mismatches = compareFills(dbFills, onchainFills, truncatedSignatures, market.ticker_id);
+        // Compare fills with DB fetch buffer
+        const dbBufferTime = dbFetchStartTime - 60 * 1000; // 60 seconds before we started fetching from DB
+        const mismatches = await compareFills(connection, dbFills, onchainFills, truncatedSignatures, market.ticker_id, dbBufferTime);
         
         if (mismatches.length > 0) {
           console.log(`⚠️  Found ${mismatches.length} mismatches for market ${market.ticker_id}`);
