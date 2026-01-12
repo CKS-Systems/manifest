@@ -19,7 +19,8 @@
     "lint": "tsc --noEmit && next lint",
     "lint:fix": "tsc --noEmit && next lint --fix",
     "run:rando-bot": "tsx scripts/run-rando-bot.ts",
-    "view-market": "tsx scripts/view-market.ts"
+    "view-market": "tsx scripts/view-market.ts",
+    "verify-trades": "tsx scripts/verify-trades.ts"
   },
   "dependencies": {
     "@cks-systems/manifest-sdk": "file:../dist/cjs",
