@@ -1,0 +1,31 @@
+name: Trade Verification
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  trade-verification:
+    name: Trade Verification
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./debug-ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run the trade verification. Crashes on failure
+        run: yarn tsx scripts/verify-trades.ts
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          STATS_SERVER_URL: https://mfx-stats-mainnet.fly.dev
