@@ -1349,6 +1349,17 @@ export class ManifestStatsServer {
       const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+      // Get complete fills count
+      const countResult = await this.executeQueryWithMetrics(
+        'SELECT_FILLS_COUNT',
+        async () =>
+          this.pool.query(
+            `${queries.SELECT_FILLS_COMPLETE_COUNT_BASE} ${whereClause}`,
+            params,
+          ),
+      );
+      const total = parseInt(countResult.rows[0].total);
+
       // Get data
       const dataQuery = `
       ${queries.SELECT_FILLS_COMPLETE_DATA_BASE}
@@ -1369,7 +1380,8 @@ export class ManifestStatsServer {
 
       return {
         fills,
-        hasMore: fills.length === limit,
+        total,
+        hasMore: offset + limit < total,
       };
     } catch (error) {
       console.error('Error querying complete fills:', error);

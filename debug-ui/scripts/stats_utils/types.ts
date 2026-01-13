@@ -28,6 +28,8 @@ export interface CompleteFillsQueryOptions {
 export interface CompleteFillsQueryResult {
   /** Array of fill log results */
   fills: FillLogResult[];
+  /** Total number of results matching the query */
+  total: number;
   /** Whether there are more results available */
   hasMore: boolean;
 }

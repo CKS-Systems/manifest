@@ -37,6 +37,9 @@ export const SELECT_RECENT_CHECKPOINT =
 export const SELECT_MARKET_VOLUMES =
   'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1';
 
+export const SELECT_FILLS_COMPLETE_COUNT_BASE =
+  'SELECT COUNT(*) as total FROM fills_complete';
+
 export const SELECT_FILLS_COMPLETE_DATA_BASE =
   'SELECT fill_data FROM fills_complete';
 
