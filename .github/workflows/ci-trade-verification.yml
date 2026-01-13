@@ -54,4 +54,4 @@ jobs:
           echo "🎯 Action completed - trade verification is informational only"
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
-          STATS_SERVER_URL: https://mfx-stats-mainnet.fly.dev
+          STATS_SERVER_URL: ${{ secrets.STATS_SERVER_URL }}

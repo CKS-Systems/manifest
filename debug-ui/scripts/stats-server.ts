@@ -220,6 +220,17 @@ const run = async () => {
 
   const app = express();
   app.use(cors());
+
+  // Global timeout middleware - 30 second timeout for all requests
+  app.use((_req, res, next) => {
+    res.setTimeout(30_000, () => {
+      if (!res.headersSent) {
+        res.status(503).send({ error: 'Request timeout' });
+      }
+    });
+    next();
+  });
+
   app.get('/tickers', tickersHandler);
   app.get('/metadata', metadataHandler);
   app.get('/orderbook', orderbookHandler);
