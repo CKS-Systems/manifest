@@ -1354,7 +1354,7 @@ export class ManifestStatsServer {
         'SELECT_FILLS_COUNT',
         async () =>
           this.pool.query(
-            `SELECT COUNT(*) as total FROM fills_complete ${whereClause}`,
+            `${queries.SELECT_FILLS_COMPLETE_COUNT_BASE} ${whereClause}`,
             params,
           ),
       );
@@ -1362,7 +1362,7 @@ export class ManifestStatsServer {
 
       // Get data
       const dataQuery = `
-      SELECT fill_data FROM fills_complete
+      ${queries.SELECT_FILLS_COMPLETE_DATA_BASE}
       ${whereClause}
       ORDER BY slot DESC, timestamp DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}

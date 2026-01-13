@@ -37,19 +37,10 @@ export const SELECT_RECENT_CHECKPOINT =
 export const SELECT_MARKET_VOLUMES =
   'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1';
 
-export const SELECT_MARKET_CHECKPOINTS =
-  'SELECT market, base_volume_checkpoints::text AS base_volume_checkpoints_text, quote_volume_checkpoints::text AS quote_volume_checkpoints_text, checkpoint_timestamps::text AS checkpoint_timestamps_text, last_price FROM market_checkpoints WHERE checkpoint_id = $1';
-
-export const SELECT_TRADER_STATS =
-  'SELECT trader, num_taker_trades, num_maker_trades, taker_notional_volume, maker_notional_volume FROM trader_stats WHERE checkpoint_id = $1';
-
-export const SELECT_TRADER_POSITIONS =
-  'SELECT trader, mint, position, acquisition_value FROM trader_positions WHERE checkpoint_id = $1';
-
-export const SELECT_FILLS_COMPLETE_COUNT =
+export const SELECT_FILLS_COMPLETE_COUNT_BASE =
   'SELECT COUNT(*) as total FROM fills_complete';
 
-export const SELECT_FILLS_COMPLETE_DATA =
+export const SELECT_FILLS_COMPLETE_DATA_BASE =
   'SELECT fill_data FROM fills_complete';
 
 // ========== DELETE QUERIES ==========
