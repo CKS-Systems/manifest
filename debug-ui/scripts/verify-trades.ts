@@ -794,6 +794,7 @@ const run = async () => {
 
       console.log(`\nTotal mismatches: ${allMismatches.length}`);
       console.log(`Unique transactions: ${allMismatchSignatures.size}`);
+      process.exit(1);
     } else {
       console.log(
         '\n✅ All trades verified successfully! No mismatches found.',
