@@ -15,9 +15,6 @@ export const INSERT_FILL_COMPLETE = `
 export const INSERT_STATE_CHECKPOINT =
   'INSERT INTO state_checkpoints (last_fill_slot) VALUES ($1) RETURNING id';
 
-export const INSERT_MARKET_VOLUME =
-  'INSERT INTO market_volumes (checkpoint_id, market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint) VALUES ($1, $2, $3, $4)';
-
 export const INSERT_MARKET_CHECKPOINT =
   'INSERT INTO market_checkpoints (checkpoint_id, market, base_volume_checkpoints, quote_volume_checkpoints, checkpoint_timestamps, last_price) VALUES ($1, $2, $3, $4, $5, $6)';
 
@@ -34,8 +31,8 @@ export const SELECT_ALT_MARKETS = 'SELECT alt, market FROM alt_markets';
 export const SELECT_RECENT_CHECKPOINT =
   'SELECT id, last_fill_slot FROM state_checkpoints ORDER BY created_at DESC LIMIT 1';
 
-export const SELECT_MARKET_VOLUMES =
-  'SELECT market, base_volume_since_last_checkpoint, quote_volume_since_last_checkpoint FROM market_volumes WHERE checkpoint_id = $1';
+export const SELECT_MARKET_CHECKPOINTS =
+  'SELECT market, base_volume_checkpoints, quote_volume_checkpoints, checkpoint_timestamps, last_price FROM market_checkpoints WHERE checkpoint_id = $1';
 
 export const SELECT_FILLS_COMPLETE_COUNT_BASE =
   'SELECT COUNT(*) as total FROM fills_complete';
@@ -47,6 +44,9 @@ export const SELECT_FILLS_COMPLETE_DATA_BASE =
 
 export const DELETE_OLD_CHECKPOINTS =
   'DELETE FROM state_checkpoints WHERE id != $1';
+
+export const DELETE_OLD_MARKET_VOLUMES =
+  'DELETE FROM market_volumes WHERE checkpoint_id != $1';
 
 // ========== TRANSACTION QUERIES ==========
 
@@ -64,6 +64,7 @@ export const CREATE_STATE_CHECKPOINTS_TABLE = `
   )
 `;
 
+// Deprecated: volume since last checkpoint is now handled by market_checkpoints table
 export const CREATE_MARKET_VOLUMES_TABLE = `
   CREATE TABLE IF NOT EXISTS market_volumes (
     checkpoint_id INTEGER REFERENCES state_checkpoints(id) ON DELETE CASCADE,

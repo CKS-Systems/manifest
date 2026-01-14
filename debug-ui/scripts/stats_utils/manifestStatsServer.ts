@@ -1395,13 +1395,13 @@ export class ManifestStatsServer {
   async initDatabase(): Promise<void> {
     try {
       // Create tables if they don't exist
+
+      // Market_volumes table is deprecated, volume data is now in market_checkpoints
+      // Fill_log_result table is deprecated. fill_log_complete is now used.
+
       await this.executeQueryWithMetrics(
         'CREATE_STATE_CHECKPOINTS_TABLE',
         async () => this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE),
-      );
-      await this.executeQueryWithMetrics(
-        'CREATE_MARKET_VOLUMES_TABLE',
-        async () => this.pool.query(queries.CREATE_MARKET_VOLUMES_TABLE),
       );
       await this.executeQueryWithMetrics(
         'CREATE_MARKET_CHECKPOINTS_TABLE',
@@ -1410,10 +1410,6 @@ export class ManifestStatsServer {
       await this.executeQueryWithMetrics(
         'CREATE_TRADER_STATS_TABLE',
         async () => this.pool.query(queries.CREATE_TRADER_STATS_TABLE),
-      );
-      await this.executeQueryWithMetrics(
-        'CREATE_FILL_LOG_RESULTS_TABLE',
-        async () => this.pool.query(queries.CREATE_FILL_LOG_RESULTS_TABLE),
       );
       await this.executeQueryWithMetrics(
         'CREATE_TRADER_POSITIONS_TABLE',
@@ -1448,7 +1444,7 @@ export class ManifestStatsServer {
   /**
    * Save checkpoint and return checkpoint ID
    */
-  private async saveCheckpoint(): Promise<number> {
+  private async saveLastFillSlot(): Promise<number> {
     if (this.isReadOnly) {
       throw new Error('Cannot save checkpoint in read-only mode');
     }
@@ -1539,25 +1535,6 @@ export class ManifestStatsServer {
         queries.BEGIN_TRANSACTION,
       );
 
-      // Save market volumes
-      const volumePromises: Promise<QueryResult>[] = [];
-      for (const [
-        market,
-        baseVolume,
-      ] of this.baseVolumeAtomsSinceLastCheckpoint.entries()) {
-        const quoteVolume: number =
-          this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
-
-        volumePromises.push(
-          client.query(queries.INSERT_MARKET_VOLUME, [
-            checkpointId,
-            market,
-            baseVolume,
-            quoteVolume,
-          ]),
-        );
-      }
-
       // Save market checkpoints
       const checkpointPromises: Promise<QueryResult>[] = [];
       for (const [
@@ -1582,8 +1559,8 @@ export class ManifestStatsServer {
         );
       }
 
-      console.log('Awaiting volume and checkpoint inserts to complete');
-      await Promise.all([...volumePromises, ...checkpointPromises]);
+      console.log('Awaiting checkpoint inserts to complete');
+      await Promise.all(checkpointPromises);
 
       await this.executeClientQueryWithMetrics(
         client,
@@ -1766,10 +1743,13 @@ export class ManifestStatsServer {
   }
 
   /**
-   * Clean up old checkpoints
+   * Clean up old checkpoints. This deletes the state_checkpoint with the id as
+   * well as the market checkpoints with the base and volume. This ensures that
+   * these tables only have 1 save of data in them and are just acting as a
+   * disk, not as a database.
    */
   private async cleanupOldCheckpoints(
-    currentCheckpointId: number,
+    previousCheckpointId: number,
   ): Promise<void> {
     if (this.isReadOnly) {
       return; // Skip in read-only mode
@@ -1794,7 +1774,14 @@ export class ManifestStatsServer {
         client,
         'DELETE_OLD_CHECKPOINTS',
         queries.DELETE_OLD_CHECKPOINTS,
-        [currentCheckpointId],
+        [previousCheckpointId],
+      );
+
+      await this.executeClientQueryWithMetrics(
+        client,
+        'DELETE_OLD_MARKET_VOLUMES',
+        queries.DELETE_OLD_MARKET_VOLUMES,
+        [previousCheckpointId],
       );
 
       await this.executeClientQueryWithMetrics(
@@ -1843,7 +1830,7 @@ export class ManifestStatsServer {
 
     try {
       // Save checkpoint first and get the ID. This is a different checkpoint from the volume checkpoints.
-      const checkpointId: number = await this.saveCheckpoint();
+      const checkpointId: number = await this.saveLastFillSlot();
 
       // Save volume and market data in separate transaction
       await this.saveVolumeAndMarketData(checkpointId);
@@ -1870,40 +1857,45 @@ export class ManifestStatsServer {
 
     try {
       // Get the most recent checkpoint
-      const checkpointResultRecent = await this.executeQueryWithMetrics(
-        'SELECT_RECENT_CHECKPOINT',
-        async () => this.pool.query(queries.SELECT_RECENT_CHECKPOINT),
-      );
+      const checkpointResultRecent: QueryResult =
+        await this.executeQueryWithMetrics(
+          'SELECT_RECENT_CHECKPOINT',
+          async () => this.pool.query(queries.SELECT_RECENT_CHECKPOINT),
+        );
 
       if (checkpointResultRecent.rowCount === 0) {
-        console.log('No saved state found in database');
+        console.log('No saved lastFillSlot found in database');
         return false;
       }
 
       const checkpointId: number = checkpointResultRecent.rows[0].id;
       this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
 
-      // Load market volumes
-      const volumeResult = await this.executeQueryWithMetrics(
-        'SELECT_MARKET_VOLUMES',
-        async () =>
-          this.pool.query(queries.SELECT_MARKET_VOLUMES, [checkpointId]),
-      );
+      // Load market checkpoints
+      const marketCheckpointsResult: QueryResult =
+        await this.executeQueryWithMetrics(
+          'SELECT_MARKET_CHECKPOINTS',
+          async () =>
+            this.pool.query(queries.SELECT_MARKET_CHECKPOINTS, [checkpointId]),
+        );
 
-      for (const row of volumeResult.rows) {
-        this.baseVolumeAtomsSinceLastCheckpoint.set(
-          row.market,
-          Number(row.base_volume_since_last_checkpoint),
-        );
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(
-          row.market,
-          Number(row.quote_volume_since_last_checkpoint),
-        );
+      for (const row of marketCheckpointsResult.rows) {
+        const market: string = row.market;
+        const baseCheckpoints: number[] = row.base_volume_checkpoints || [];
+        const quoteCheckpoints: number[] = row.quote_volume_checkpoints || [];
+        const timestamps: number[] = row.checkpoint_timestamps || [];
+
+        this.baseVolumeAtomsCheckpoints.set(market, baseCheckpoints);
+        this.quoteVolumeAtomsCheckpoints.set(market, quoteCheckpoints);
+        this.checkpointTimestamps.set(market, timestamps);
+        if (row.last_price) {
+          this.lastPriceByMarket.set(market, Number(row.last_price));
+        }
       }
 
       console.log('State loaded successfully from database');
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading state from database:', error);
       return false;
     }
