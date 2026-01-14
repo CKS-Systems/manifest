@@ -1395,11 +1395,14 @@ export class ManifestStatsServer {
   async initDatabase(): Promise<void> {
     try {
       // Create tables if they don't exist
+
+      // Market_volumes table is deprecated, volume data is now in market_checkpoints
+      // Fill_log_result table is deprecated. fill_log_complete is now used.
+
       await this.executeQueryWithMetrics(
         'CREATE_STATE_CHECKPOINTS_TABLE',
         async () => this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE),
       );
-      // Note: market_volumes table is deprecated, volume data is now in market_checkpoints
       await this.executeQueryWithMetrics(
         'CREATE_MARKET_CHECKPOINTS_TABLE',
         async () => this.pool.query(queries.CREATE_MARKET_CHECKPOINTS_TABLE),
@@ -1407,10 +1410,6 @@ export class ManifestStatsServer {
       await this.executeQueryWithMetrics(
         'CREATE_TRADER_STATS_TABLE',
         async () => this.pool.query(queries.CREATE_TRADER_STATS_TABLE),
-      );
-      await this.executeQueryWithMetrics(
-        'CREATE_FILL_LOG_RESULTS_TABLE',
-        async () => this.pool.query(queries.CREATE_FILL_LOG_RESULTS_TABLE),
       );
       await this.executeQueryWithMetrics(
         'CREATE_TRADER_POSITIONS_TABLE',
