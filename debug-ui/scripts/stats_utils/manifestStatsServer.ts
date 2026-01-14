@@ -1399,10 +1399,7 @@ export class ManifestStatsServer {
         'CREATE_STATE_CHECKPOINTS_TABLE',
         async () => this.pool.query(queries.CREATE_STATE_CHECKPOINTS_TABLE),
       );
-      await this.executeQueryWithMetrics(
-        'CREATE_MARKET_VOLUMES_TABLE',
-        async () => this.pool.query(queries.CREATE_MARKET_VOLUMES_TABLE),
-      );
+      // Note: market_volumes table is deprecated, volume data is now in market_checkpoints
       await this.executeQueryWithMetrics(
         'CREATE_MARKET_CHECKPOINTS_TABLE',
         async () => this.pool.query(queries.CREATE_MARKET_CHECKPOINTS_TABLE),
@@ -1539,25 +1536,6 @@ export class ManifestStatsServer {
         queries.BEGIN_TRANSACTION,
       );
 
-      // Save market volumes
-      const volumePromises: Promise<QueryResult>[] = [];
-      for (const [
-        market,
-        baseVolume,
-      ] of this.baseVolumeAtomsSinceLastCheckpoint.entries()) {
-        const quoteVolume: number =
-          this.quoteVolumeAtomsSinceLastCheckpoint.get(market) || 0;
-
-        volumePromises.push(
-          client.query(queries.INSERT_MARKET_VOLUME, [
-            checkpointId,
-            market,
-            baseVolume,
-            quoteVolume,
-          ]),
-        );
-      }
-
       // Save market checkpoints
       const checkpointPromises: Promise<QueryResult>[] = [];
       for (const [
@@ -1582,8 +1560,8 @@ export class ManifestStatsServer {
         );
       }
 
-      console.log('Awaiting volume and checkpoint inserts to complete');
-      await Promise.all([...volumePromises, ...checkpointPromises]);
+      console.log('Awaiting checkpoint inserts to complete');
+      await Promise.all(checkpointPromises);
 
       await this.executeClientQueryWithMetrics(
         client,
@@ -1883,22 +1861,27 @@ export class ManifestStatsServer {
       const checkpointId: number = checkpointResultRecent.rows[0].id;
       this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
 
-      // Load market volumes
-      const volumeResult = await this.executeQueryWithMetrics(
-        'SELECT_MARKET_VOLUMES',
+      // Load market checkpoints
+      const checkpointsResult = await this.executeQueryWithMetrics(
+        'SELECT_MARKET_CHECKPOINTS',
         async () =>
-          this.pool.query(queries.SELECT_MARKET_VOLUMES, [checkpointId]),
+          this.pool.query(queries.SELECT_MARKET_CHECKPOINTS, [checkpointId]),
       );
 
-      for (const row of volumeResult.rows) {
-        this.baseVolumeAtomsSinceLastCheckpoint.set(
-          row.market,
-          Number(row.base_volume_since_last_checkpoint),
+      for (const row of checkpointsResult.rows) {
+        const market = row.market;
+        this.baseVolumeAtomsCheckpoints.set(
+          market,
+          row.base_volume_checkpoints || [],
         );
-        this.quoteVolumeAtomsSinceLastCheckpoint.set(
-          row.market,
-          Number(row.quote_volume_since_last_checkpoint),
+        this.quoteVolumeAtomsCheckpoints.set(
+          market,
+          row.quote_volume_checkpoints || [],
         );
+        this.checkpointTimestamps.set(market, row.checkpoint_timestamps || []);
+        if (row.last_price) {
+          this.lastPriceByMarket.set(market, Number(row.last_price));
+        }
       }
 
       console.log('State loaded successfully from database');
