@@ -45,6 +45,9 @@ export const SELECT_FILLS_COMPLETE_DATA_BASE =
 export const DELETE_OLD_CHECKPOINTS =
   'DELETE FROM state_checkpoints WHERE id != $1';
 
+export const DELETE_OLD_MARKET_VOLUMES =
+  'DELETE FROM market_volumes WHERE checkpoint_id != $1';
+
 // ========== TRANSACTION QUERIES ==========
 
 export const BEGIN_TRANSACTION = 'BEGIN';
