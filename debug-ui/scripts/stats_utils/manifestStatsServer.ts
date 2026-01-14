@@ -1857,10 +1857,11 @@ export class ManifestStatsServer {
 
     try {
       // Get the most recent checkpoint
-      const checkpointResultRecent: QueryResult = await this.executeQueryWithMetrics(
-        'SELECT_RECENT_CHECKPOINT',
-        async () => this.pool.query(queries.SELECT_RECENT_CHECKPOINT),
-      );
+      const checkpointResultRecent: QueryResult =
+        await this.executeQueryWithMetrics(
+          'SELECT_RECENT_CHECKPOINT',
+          async () => this.pool.query(queries.SELECT_RECENT_CHECKPOINT),
+        );
 
       if (checkpointResultRecent.rowCount === 0) {
         console.log('No saved lastFillSlot found in database');
@@ -1871,11 +1872,12 @@ export class ManifestStatsServer {
       this.lastFillSlot = checkpointResultRecent.rows[0].last_fill_slot;
 
       // Load market checkpoints
-      const marketCheckpointsResult: QueryResult = await this.executeQueryWithMetrics(
-        'SELECT_MARKET_CHECKPOINTS',
-        async () =>
-          this.pool.query(queries.SELECT_MARKET_CHECKPOINTS, [checkpointId]),
-      );
+      const marketCheckpointsResult: QueryResult =
+        await this.executeQueryWithMetrics(
+          'SELECT_MARKET_CHECKPOINTS',
+          async () =>
+            this.pool.query(queries.SELECT_MARKET_CHECKPOINTS, [checkpointId]),
+        );
 
       for (const row of marketCheckpointsResult.rows) {
         const market: string = row.market;
