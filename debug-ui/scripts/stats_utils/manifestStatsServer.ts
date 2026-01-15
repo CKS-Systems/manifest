@@ -40,6 +40,7 @@ import { calculateTraderPnL } from './pnl';
 import { CompleteFillsQueryOptions, CompleteFillsQueryResult } from './types';
 import { withRetry } from './utils';
 import { WebSocketManager } from './websocketManager';
+import { HARDCODED_CHECKPOINTS } from './hardcodedCheckpoints';
 
 export class ManifestStatsServer {
   private connection: Connection;
@@ -363,18 +364,27 @@ export class ManifestStatsServer {
     try {
       this.baseVolumeAtomsSinceLastCheckpoint.set(market, 0);
       this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
-      this.baseVolumeAtomsCheckpoints.set(
-        market,
-        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
-      );
-      this.quoteVolumeAtomsCheckpoints.set(
-        market,
-        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
-      );
-      this.checkpointTimestamps.set(
-        market,
-        new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
-      );
+
+      // Use hardcoded checkpoints if available, otherwise initialize with zeros
+      const hardcodedData = HARDCODED_CHECKPOINTS[market];
+      if (hardcodedData) {
+        this.baseVolumeAtomsCheckpoints.set(market, [...hardcodedData.baseCheckpoints]);
+        this.quoteVolumeAtomsCheckpoints.set(market, [...hardcodedData.quoteCheckpoints]);
+        this.checkpointTimestamps.set(market, [...hardcodedData.timestamps]);
+      } else {
+        this.baseVolumeAtomsCheckpoints.set(
+          market,
+          new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
+        );
+        this.quoteVolumeAtomsCheckpoints.set(
+          market,
+          new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
+        );
+        this.checkpointTimestamps.set(
+          market,
+          new Array<number>(ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC).fill(0),
+        );
+      }
 
       const marketPk = new PublicKey(market);
       const marketObject = await Market.loadFromAddress({
@@ -576,24 +586,33 @@ export class ManifestStatsServer {
         if (!this.baseVolumeAtomsCheckpoints.has(marketPk)) {
           this.baseVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
           this.quoteVolumeAtomsSinceLastCheckpoint.set(marketPk, 0);
-          this.baseVolumeAtomsCheckpoints.set(
-            marketPk,
-            new Array<number>(
-              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
-            ).fill(0),
-          );
-          this.quoteVolumeAtomsCheckpoints.set(
-            marketPk,
-            new Array<number>(
-              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
-            ).fill(0),
-          );
-          this.checkpointTimestamps.set(
-            marketPk,
-            new Array<number>(
-              ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
-            ).fill(0),
-          );
+
+          // Use hardcoded checkpoints if available, otherwise initialize with zeros
+          const hardcodedData = HARDCODED_CHECKPOINTS[marketPk];
+          if (hardcodedData) {
+            this.baseVolumeAtomsCheckpoints.set(marketPk, [...hardcodedData.baseCheckpoints]);
+            this.quoteVolumeAtomsCheckpoints.set(marketPk, [...hardcodedData.quoteCheckpoints]);
+            this.checkpointTimestamps.set(marketPk, [...hardcodedData.timestamps]);
+          } else {
+            this.baseVolumeAtomsCheckpoints.set(
+              marketPk,
+              new Array<number>(
+                ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+              ).fill(0),
+            );
+            this.quoteVolumeAtomsCheckpoints.set(
+              marketPk,
+              new Array<number>(
+                ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+              ).fill(0),
+            );
+            this.checkpointTimestamps.set(
+              marketPk,
+              new Array<number>(
+                ONE_DAY_SEC / VOLUME_CHECKPOINT_DURATION_SEC,
+              ).fill(0),
+            );
+          }
         }
       },
     );
