@@ -662,6 +662,16 @@ export class ManifestStatsServer {
         ]);
         this.quoteVolumeAtomsSinceLastCheckpoint.set(market, 0);
 
+        // Replace any null values with 0 in the checkpoint arrays
+        this.baseVolumeAtomsCheckpoints.set(
+          market,
+          this.baseVolumeAtomsCheckpoints.get(market)!.map((v) => v ?? 0),
+        );
+        this.quoteVolumeAtomsCheckpoints.set(
+          market,
+          this.quoteVolumeAtomsCheckpoints.get(market)!.map((v) => v ?? 0),
+        );
+
         // Update checkpoint timestamps
         this.checkpointTimestamps.set(market, [
           ...this.checkpointTimestamps.get(market)!.slice(1),
