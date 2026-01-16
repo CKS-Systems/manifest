@@ -41,6 +41,10 @@ import { CompleteFillsQueryOptions, CompleteFillsQueryResult } from './types';
 import { withRetry } from './utils';
 import { WebSocketManager } from './websocketManager';
 
+// Memory management constants
+const MAX_TRADERS = 50000; // Maximum number of traders to track in memory
+const MAX_FILL_LOG_MARKETS = 500; // Maximum number of markets to track fills for
+
 export class ManifestStatsServer {
   private connection: Connection;
   private wsManager: WebSocketManager | null = null;
@@ -634,6 +638,9 @@ export class ManifestStatsServer {
   async advanceCheckpoints(): Promise<void> {
     this.fillMutex.runExclusive(async () => {
       console.log('Advancing checkpoints');
+
+      // Run memory cleanup to prevent unbounded growth
+      this.runMemoryCleanup();
 
       // Check websocket connection status - no need to reset every time
       if (this.wsManager && !this.wsManager.isConnected()) {
@@ -1909,6 +1916,121 @@ export class ManifestStatsServer {
       console.error('Error loading state from database:', error);
       return false;
     }
+  }
+
+  /**
+   * Prune inactive traders to prevent memory leaks.
+   * Keeps only the top traders by volume when the limit is exceeded.
+   */
+  private pruneInactiveTraders(): void {
+    const allTraders = new Set<string>([
+      ...Array.from(this.traderNumTakerTrades.keys()),
+      ...Array.from(this.traderNumMakerTrades.keys()),
+    ]);
+
+    const traderCount = allTraders.size;
+    if (traderCount <= MAX_TRADERS) {
+      return;
+    }
+
+    console.log(
+      `Pruning traders: ${traderCount} traders exceeds limit of ${MAX_TRADERS}`,
+    );
+
+    // Sort traders by total volume and keep top MAX_TRADERS
+    const tradersByVolume = Array.from(allTraders)
+      .map((trader) => ({
+        trader,
+        totalVolume:
+          (this.traderTakerNotionalVolume.get(trader) || 0) +
+          (this.traderMakerNotionalVolume.get(trader) || 0),
+      }))
+      .sort((a, b) => b.totalVolume - a.totalVolume);
+
+    // Keep top MAX_TRADERS traders
+    const tradersToKeep = new Set(
+      tradersByVolume.slice(0, MAX_TRADERS).map((t) => t.trader),
+    );
+
+    // Remove traders not in the keep set
+    let removedCount = 0;
+    for (const trader of allTraders) {
+      if (!tradersToKeep.has(trader)) {
+        this.traderNumTakerTrades.delete(trader);
+        this.traderNumMakerTrades.delete(trader);
+        this.traderTakerNotionalVolume.delete(trader);
+        this.traderMakerNotionalVolume.delete(trader);
+        this.traderPositions.delete(trader);
+        this.traderAcquisitionValue.delete(trader);
+        removedCount++;
+      }
+    }
+
+    console.log(`Pruned ${removedCount} inactive traders`);
+  }
+
+  /**
+   * Prune old fill log results to prevent memory leaks.
+   * Keeps only the most recent markets.
+   */
+  private pruneFillLogResults(): void {
+    if (this.fillLogResults.size <= MAX_FILL_LOG_MARKETS) {
+      return;
+    }
+
+    console.log(
+      `Pruning fill log results: ${this.fillLogResults.size} markets exceeds limit of ${MAX_FILL_LOG_MARKETS}`,
+    );
+
+    // Get markets sorted by most recent fill (based on array length as proxy)
+    const marketsByActivity = Array.from(this.fillLogResults.entries())
+      .map(([market, fills]) => ({
+        market,
+        fillCount: fills.length,
+      }))
+      .sort((a, b) => b.fillCount - a.fillCount);
+
+    // Keep top MAX_FILL_LOG_MARKETS markets
+    const marketsToKeep = new Set(
+      marketsByActivity.slice(0, MAX_FILL_LOG_MARKETS).map((m) => m.market),
+    );
+
+    // Remove markets not in the keep set
+    let removedCount = 0;
+    for (const market of this.fillLogResults.keys()) {
+      if (!marketsToKeep.has(market)) {
+        this.fillLogResults.delete(market);
+        removedCount++;
+      }
+    }
+
+    console.log(`Pruned ${removedCount} inactive fill log markets`);
+  }
+
+  /**
+   * Log memory usage for debugging
+   */
+  private logMemoryUsage(): void {
+    const used = process.memoryUsage();
+    console.log('Memory usage:', {
+      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
+      rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
+      external: `${Math.round(used.external / 1024 / 1024)}MB`,
+      traders: this.traderNumTakerTrades.size,
+      markets: this.markets.size,
+      fillLogMarkets: this.fillLogResults.size,
+    });
+  }
+
+  /**
+   * Run all memory cleanup tasks
+   */
+  runMemoryCleanup(): void {
+    this.logMemoryUsage();
+    this.pruneInactiveTraders();
+    this.pruneFillLogResults();
+    this.logMemoryUsage();
   }
 
   /**
