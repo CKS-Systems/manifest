@@ -508,7 +508,6 @@ export class ManifestStatsServer {
           this.fillLogResults.set(market, prevFills);
 
           this.fills.inc({ market });
-          console.log('Got fill', fill);
 
           await this.processFillAsync(fill);
 
