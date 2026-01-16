@@ -12,6 +12,19 @@ import {
 import { CompleteFillsQueryOptions } from './stats_utils/types';
 import { ManifestStatsServer } from './stats_utils/manifestStatsServer';
 
+// Global error handlers to catch unhandled errors and log them before exit
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('Stack:', reason instanceof Error ? reason.stack : 'No stack');
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Give time for logs to flush before exit
+  setTimeout(() => process.exit(1), 1000);
+});
+
 const { READ_ONLY } = process.env;
 
 const IS_READ_ONLY = READ_ONLY === 'true';
