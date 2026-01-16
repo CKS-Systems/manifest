@@ -237,7 +237,7 @@ const run = async () => {
   // Global timeout middleware - 30 second timeout for all requests
   app.use((req, res, next) => {
     res.setTimeout(30_000, () => {
-      console.error(`Request timeout: ${req.method} ${req.path}`);
+      console.error(`Request timeout: ${req.method} ${req.path} ${req.query}`);
       if (!res.headersSent) {
         res.status(503).send({ error: 'Request timeout' });
       }
