@@ -1,6 +1,6 @@
 {
   "name": "@cks-systems/manifest-sdk",
-  "version": "0.2.37",
+  "version": "0.2.38",
   "files": [
     "dist/",
     "README.md",
@@ -39,7 +39,6 @@
     "test": "TS_NODE_PROJECT='./tsconfig.cjs.json' nyc  --reporter=lcov ts-mocha client/ts/tests/*.ts --parallel --jobs 64 --timeout 1200000"
   },
   "dependencies": {
-    "@cks-systems/manifest-sdk-old": "npm:@cks-systems/manifest-sdk@^0.2.25",
     "@metaplex-foundation/beet": "^0.7.1",
     "@metaplex-foundation/rustbin": "^0.3.1",
     "@metaplex-foundation/solita": "^0.12.2",
@@ -66,6 +65,7 @@
     "tabWidth": 2
   },
   "devDependencies": {
+    "@cks-systems/manifest-sdk-old": "npm:@cks-systems/manifest-sdk@0.2.25",
     "@types/bn.js": "^5.1.1",
     "@types/chai": "^4.3.4",
     "@types/mocha": "^10.0.1",
