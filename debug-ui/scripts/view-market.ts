@@ -3,6 +3,10 @@ import 'dotenv/config';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Market, RestingOrder, ClaimedSeat } from '@cks-systems/manifest-sdk';
 import { OrderType } from '@cks-systems/manifest-sdk/manifest/types';
+import {
+  FIXED_MANIFEST_HEADER_SIZE,
+  NIL,
+} from '@cks-systems/manifest-sdk/constants';
 
 const { RPC_URL } = process.env;
 
@@ -94,6 +98,59 @@ const formatVolume = (atoms: number, decimals: number): string => {
     });
   } else {
     return tokens.toFixed(6);
+  }
+};
+
+const printFreeList = (buffer: Buffer): void => {
+  // Read freeListHeadIndex from market header (offset 176)
+  const freeListHeadIndex = buffer.readUInt32LE(176);
+
+  console.log('\n\x1b[35m=== FREE LIST ===\x1b[0m');
+
+  if (freeListHeadIndex === NIL) {
+    console.log('  (empty)');
+    return;
+  }
+
+  const indices: number[] = [];
+  let currentIndex = freeListHeadIndex;
+  const maxIterations = 10000; // Safety limit
+  let iterations = 0;
+
+  while (currentIndex !== NIL && iterations < maxIterations) {
+    indices.push(currentIndex);
+    // Read next_index from the first 4 bytes of the node in the dynamic section
+    const nodeOffset = FIXED_MANIFEST_HEADER_SIZE + currentIndex;
+    if (nodeOffset + 4 > buffer.length) {
+      console.log(`  Error: Node offset ${nodeOffset} exceeds buffer length`);
+      break;
+    }
+    currentIndex = buffer.readUInt32LE(nodeOffset);
+    iterations++;
+  }
+
+  if (iterations >= maxIterations) {
+    console.log(`  Warning: Reached max iterations (${maxIterations})`);
+  }
+
+  console.log(`Free list length: ${indices.length}`);
+  console.log(`Head index: ${freeListHeadIndex}`);
+  console.log('');
+  console.log('Linked list traversal:');
+
+  // Print as a linked list
+  const parts: string[] = [];
+  for (let i = 0; i < indices.length; i++) {
+    parts.push(indices[i].toString());
+  }
+  parts.push('NIL');
+
+  // Print in chunks to avoid very long lines
+  const chunkSize = 10;
+  for (let i = 0; i < parts.length; i += chunkSize) {
+    const chunk = parts.slice(i, Math.min(i + chunkSize, parts.length));
+    const prefix = i === 0 ? '  ' : '    -> ';
+    console.log(prefix + chunk.join(' -> '));
   }
 };
 
@@ -232,17 +289,21 @@ const printOrderTable = (orders: RestingOrder[], side: 'BID' | 'ASK'): void => {
 const run = async () => {
   const args = process.argv.slice(2);
   const showSeats = args.includes('--seats');
+  const showFreeList = args.includes('--freelist');
   const marketPkArg = args.find((arg) => !arg.startsWith('--'));
 
   if (!marketPkArg) {
     console.error(
-      'Usage: tsx scripts/view-market.ts <market_pubkey> [--seats]',
+      'Usage: tsx scripts/view-market.ts <market_pubkey> [--seats] [--freelist]',
     );
     console.error(
       'Example: tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1',
     );
     console.error(
       '         tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1 --seats',
+    );
+    console.error(
+      '         tsx scripts/view-market.ts HyLPjWF8HQxF9iHCBpYPkVpR43SUNusoX4eZ5u2HYPt1 --freelist',
     );
     process.exit(1);
   }
@@ -259,9 +320,17 @@ const run = async () => {
 
   console.log(`\nLoading market ${marketPk.toBase58()}...`);
 
-  const market = await Market.loadFromAddress({
-    connection,
+  // Fetch raw account info to access the buffer for free list
+  const accountInfo = await connection.getAccountInfo(marketPk);
+  if (!accountInfo) {
+    console.error(`Failed to load market account: ${marketPkArg}`);
+    process.exit(1);
+  }
+  const buffer = accountInfo.data;
+
+  const market = Market.loadFromBuffer({
     address: marketPk,
+    buffer,
   });
 
   const currentSlot = await connection.getSlot();
@@ -312,6 +381,11 @@ const run = async () => {
   // Print seats if flag is set
   if (showSeats) {
     printSeatsTable(market);
+  }
+
+  // Print free list if flag is set
+  if (showFreeList) {
+    printFreeList(buffer);
   }
 
   console.log('\n');
