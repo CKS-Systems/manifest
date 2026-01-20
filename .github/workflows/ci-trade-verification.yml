@@ -30,28 +30,7 @@ jobs:
           }
 
       - name: Run the trade verification
-        run: |
-          echo "=== Trade Verification Script ==="
-          
-          # Check if the verify-trades.ts file exists
-          if [ ! -f "scripts/verify-trades.ts" ]; then
-            echo "ℹ️  verify-trades.ts not found, skipping trade verification"
-            echo "This is expected if the script hasn't been merged yet"
-            exit 0
-          fi
-          
-          echo "📁 Found verify-trades.ts, attempting to run..."
-          
-          # Try to run the script, but don't fail the action if it errors
-          if yarn tsx scripts/verify-trades.ts; then
-            echo "✅ Trade verification completed successfully"
-          else
-            echo "⚠️  Trade verification encountered issues but this is non-critical"
-            echo "The script ran but may have found mismatches or had other issues"
-            echo "Check the logs above for details"
-          fi
-          
-          echo "🎯 Action completed - trade verification is informational only"
+        run: yarn tsx scripts/verify-trades.ts
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
           STATS_SERVER_URL: ${{ secrets.STATS_SERVER_URL }}
