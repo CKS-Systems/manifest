@@ -662,7 +662,7 @@ const run = async () => {
       try {
         // Set fixed time window for this market analysis
         const endTime = Date.now();
-        const startTime = endTime - 12 * 60 * 60 * 1000; // 12 hours ago
+        const startTime = endTime - 6 * 60 * 60 * 1000; // 6 hours ago
         const dbFetchStartTime = Date.now(); // When we start fetching from DB
 
         console.log(
