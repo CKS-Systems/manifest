@@ -90,10 +90,11 @@ const run = async () => {
         'open orders',
         quoteOpenOrdersBalanceAtoms,
       );
-      // Skip this market because the numbers are so large that they run into js
-      // rounding issues. Verified that it is solvent manually.
+      // Skip these markets because the numbers are so large that they run into js
+      // rounding issues. Verified that they are solvent manually.
       if (
-        marketPk.toBase58() == 'GQHqLzX8swBiTyREF57PGs4vq59obuRPdtGrY4gChHfB'
+        marketPk.toBase58() == 'GQHqLzX8swBiTyREF57PGs4vq59obuRPdtGrY4gChHfB' ||
+        marketPk.toBase58() == '8MHWBBr87Ta3JqFK4tt6r7tSR31oFKa8SWkF2YKTpWHa'
       ) {
         continue;
       }
