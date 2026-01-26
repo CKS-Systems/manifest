@@ -759,7 +759,9 @@ const run = async () => {
                 backfilledSignatures.add(signature);
               }
             } else {
-              console.log(`❌ Failed to backfill ${signature}: ${response.status}`);
+              console.log(
+                `❌ Failed to backfill ${signature}: ${response.status}`,
+              );
             }
           } catch (error) {
             console.log(`❌ Error backfilling ${signature}:`, error);
