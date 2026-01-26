@@ -40,6 +40,7 @@ import { calculateTraderPnL } from './pnl';
 import { CompleteFillsQueryOptions, CompleteFillsQueryResult } from './types';
 import { withRetry } from './utils';
 import { WebSocketManager } from './websocketManager';
+import { parseTransactionForFills } from './backfill';
 
 // Memory management constants
 const MAX_TRADERS = 50000; // Maximum number of traders to track in memory
@@ -1403,6 +1404,66 @@ export class ManifestStatsServer {
       console.error('Error querying complete fills:', error);
       throw error;
     }
+  }
+
+  /**
+   * Backfill fills from a transaction signature.
+   * Fetches the transaction from RPC, parses fills, and inserts any missing ones.
+   * Returns the number of fills backfilled.
+   */
+  async backfillTransaction(
+    signature: string,
+  ): Promise<{ backfilled: number; alreadyExisted: number }> {
+    if (this.isReadOnly) {
+      throw new Error('Cannot backfill in read-only mode');
+    }
+
+    // Parse fills from the transaction
+    const fills: FillLogResult[] = await parseTransactionForFills(
+      this.connection,
+      signature,
+    );
+
+    if (fills.length === 0) {
+      return { backfilled: 0, alreadyExisted: 0 };
+    }
+
+    let backfilled = 0;
+    let alreadyExisted = 0;
+
+    for (const fill of fills) {
+      try {
+        const result: QueryResult = await this.pool.query(
+          queries.INSERT_FILL_COMPLETE,
+          [
+            fill.slot,
+            fill.market,
+            fill.signature,
+            fill.taker,
+            fill.maker,
+            fill.takerSequenceNumber,
+            fill.makerSequenceNumber,
+            JSON.stringify(fill),
+          ],
+        );
+
+        // INSERT with ON CONFLICT DO NOTHING returns rowCount 0 if it already existed
+        if (result.rowCount === 0) {
+          alreadyExisted++;
+        } else {
+          backfilled++;
+        }
+      } catch (error) {
+        console.error(`Error backfilling fill from ${signature}:`, error);
+        throw error;
+      }
+    }
+
+    console.log(
+      `Backfill for ${signature}: ${backfilled} new, ${alreadyExisted} already existed`,
+    );
+
+    return { backfilled, alreadyExisted };
   }
 
   /**
