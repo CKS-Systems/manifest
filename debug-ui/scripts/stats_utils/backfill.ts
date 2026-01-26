@@ -1,59 +1,13 @@
 import { Connection } from '@solana/web3.js';
 import { FillLogResult, FillLog } from '@cks-systems/manifest-sdk';
-import {
-  convertU128,
-  genAccDiscriminator,
-} from '@cks-systems/manifest-sdk/utils';
+import { genAccDiscriminator } from '@cks-systems/manifest-sdk/utils';
 import {
   detectAggregatorFromKeys,
   detectOriginatingProtocolFromKeys,
+  toFillLogResult,
 } from '@cks-systems/manifest-sdk/fillFeed';
 
 const fillDiscriminant = genAccDiscriminator('manifest::logs::FillLog');
-
-const toFillLogResult = (
-  fillLog: FillLog,
-  slot: number,
-  signature: string,
-  originalSigner?: string,
-  aggregator?: string,
-  originatingProtocol?: string,
-  signers?: string[],
-  blockTime?: number,
-): FillLogResult => {
-  const result: FillLogResult = {
-    market: fillLog.market.toBase58(),
-    maker: fillLog.maker.toBase58(),
-    taker: fillLog.taker.toBase58(),
-    baseAtoms: fillLog.baseAtoms.inner.toString(),
-    quoteAtoms: fillLog.quoteAtoms.inner.toString(),
-    priceAtoms: convertU128(fillLog.price.inner),
-    takerIsBuy: fillLog.takerIsBuy,
-    isMakerGlobal: fillLog.isMakerGlobal,
-    makerSequenceNumber: fillLog.makerSequenceNumber.toString(),
-    takerSequenceNumber: fillLog.takerSequenceNumber.toString(),
-    signature,
-    slot,
-  };
-
-  if (originalSigner) {
-    result.originalSigner = originalSigner;
-  }
-  if (aggregator) {
-    result.aggregator = aggregator;
-  }
-  if (originatingProtocol) {
-    result.originatingProtocol = originatingProtocol;
-  }
-  if (signers && signers.length > 0) {
-    result.signers = signers;
-  }
-  if (blockTime !== undefined) {
-    result.blockTime = blockTime;
-  }
-
-  return result;
-};
 
 export const parseTransactionForFills = async (
   connection: Connection,
