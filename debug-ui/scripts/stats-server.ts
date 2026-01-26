@@ -231,6 +231,27 @@ const run = async () => {
     res.send(statsServer.getCheckpoints());
   };
 
+  const backfillHandler: RequestHandler = async (req, res) => {
+    try {
+      const signature = req.query.signature as string;
+      if (!signature) {
+        res.status(400).send({ error: 'signature parameter is required' });
+        return;
+      }
+
+      const result = await statsServer.backfillTransaction(signature);
+      res.send({
+        success: true,
+        signature,
+        backfilled: result.backfilled,
+        alreadyExisted: result.alreadyExisted,
+      });
+    } catch (error) {
+      console.error('Error in backfill handler:', error);
+      res.status(500).send({ error: 'Internal server error' });
+    }
+  };
+
   const app = express();
   app.use(cors());
 
@@ -259,6 +280,7 @@ const run = async () => {
   app.get('/alts', altsHandler);
   app.get('/notional', notionalHandler);
   app.get('/checkpoints', checkpointsHandler);
+  app.get('/backfill', backfillHandler);
 
   // Add health check endpoint for Fly.io
   app.get('/health', (_req, res) => {
