@@ -729,6 +729,59 @@ const run = async () => {
       await sleep(1000);
     }
 
+    // Attempt to backfill any missing_in_db mismatches
+    if (allMismatches.length > 0) {
+      const missingInDbMismatches = allMismatches.filter(
+        (m) => m.type === 'missing_in_db',
+      );
+      const uniqueSignaturesToBackfill = new Set<string>();
+      for (const mismatch of missingInDbMismatches) {
+        uniqueSignaturesToBackfill.add(mismatch.fill.signature);
+      }
+
+      if (uniqueSignaturesToBackfill.size > 0) {
+        console.log(
+          `\n🔄 Attempting to backfill ${uniqueSignaturesToBackfill.size} missing transactions...`,
+        );
+
+        const backfilledSignatures = new Set<string>();
+        for (const signature of uniqueSignaturesToBackfill) {
+          try {
+            const response = await fetch(
+              `${statsServerUrl}/backfill?signature=${signature}`,
+            );
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success) {
+                console.log(
+                  `✅ Backfilled ${signature}: ${result.backfilled} new, ${result.alreadyExisted} existed`,
+                );
+                backfilledSignatures.add(signature);
+              }
+            } else {
+              console.log(`❌ Failed to backfill ${signature}: ${response.status}`);
+            }
+          } catch (error) {
+            console.log(`❌ Error backfilling ${signature}:`, error);
+          }
+        }
+
+        // Remove successfully backfilled mismatches from the list
+        if (backfilledSignatures.size > 0) {
+          const remainingMismatches = allMismatches.filter(
+            (m) =>
+              m.type !== 'missing_in_db' ||
+              !backfilledSignatures.has(m.fill.signature),
+          );
+          console.log(
+            `\n📊 After backfill: ${allMismatches.length - remainingMismatches.length} mismatches resolved`,
+          );
+          allMismatches.length = 0;
+          allMismatches.push(...remainingMismatches);
+        }
+      }
+    }
+
     // Log all mismatches
     if (allMismatches.length > 0) {
       console.log('\n🚨 MISMATCHES FOUND 🚨\n');
