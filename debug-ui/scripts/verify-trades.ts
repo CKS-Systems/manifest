@@ -42,7 +42,12 @@ const hasTokenTransfer = async (
     }
 
     // Check if any instruction involves token programs
-    for (const instruction of message.instructions) {
+    // Legacy transactions use 'instructions', versioned use 'compiledInstructions'
+    const instructions =
+      'instructions' in message
+        ? message.instructions
+        : message.compiledInstructions;
+    for (const instruction of instructions) {
       const programId = accountKeys[instruction.programIdIndex];
       if (
         programId.equals(TOKEN_PROGRAM_ID) ||
