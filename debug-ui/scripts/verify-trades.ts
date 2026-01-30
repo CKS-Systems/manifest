@@ -751,13 +751,22 @@ const run = async () => {
       }
     };
 
-    // Process markets in parallel batches
+    // Process markets with a concurrency pool
     const allMismatches: TradeMismatch[] = [];
-    for (let i = 0; i < validMarkets.length; i += MARKET_VERIFY_CONCURRENCY) {
-      const batch = validMarkets.slice(i, i + MARKET_VERIFY_CONCURRENCY);
-      const batchResults = await Promise.all(batch.map(verifyMarket));
-      for (const mismatches of batchResults) {
-        allMismatches.push(...mismatches);
+    const pending = new Set<Promise<void>>();
+    const marketQueue = [...validMarkets];
+
+    while (marketQueue.length > 0 || pending.size > 0) {
+      while (marketQueue.length > 0 && pending.size < MARKET_VERIFY_CONCURRENCY) {
+        const market = marketQueue.shift()!;
+        const p = verifyMarket(market).then((mismatches) => {
+          allMismatches.push(...mismatches);
+          pending.delete(p);
+        });
+        pending.add(p);
+      }
+      if (pending.size > 0) {
+        await Promise.race(pending);
       }
     }
 
