@@ -119,7 +119,11 @@ export class FillFeed {
         return sig.signature !== lastSignature && sig.slot >= lastSlot;
       });
 
-      for (let i = 0; i < filteredSignatures.length; i += SIGNATURE_BATCH_SIZE) {
+      for (
+        let i = 0;
+        i < filteredSignatures.length;
+        i += SIGNATURE_BATCH_SIZE
+      ) {
         const batch = filteredSignatures.slice(i, i + SIGNATURE_BATCH_SIZE);
         await Promise.all(batch.map((sig) => this.handleSignature(sig)));
       }
