@@ -757,7 +757,10 @@ const run = async () => {
     const marketQueue = [...validMarkets];
 
     while (marketQueue.length > 0 || pending.size > 0) {
-      while (marketQueue.length > 0 && pending.size < MARKET_VERIFY_CONCURRENCY) {
+      while (
+        marketQueue.length > 0 &&
+        pending.size < MARKET_VERIFY_CONCURRENCY
+      ) {
         const market = marketQueue.shift()!;
         const p = verifyMarket(market).then((mismatches) => {
           allMismatches.push(...mismatches);
