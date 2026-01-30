@@ -11,6 +11,8 @@ import {
 } from '@/../../client/ts/src/fillFeed';
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
+const MARKET_VERIFY_CONCURRENCY = 10;
+
 // Helper function to sleep
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -136,6 +138,7 @@ const parseTransactionForFills = async (
   signature: string,
   slot: number,
   blockTime: number | null,
+  logPrefix: string,
 ): Promise<{ fills: FillLogResult[]; hasTruncatedLogs: boolean }> => {
   const fills: FillLogResult[] = [];
   let hasTruncatedLogs = false;
@@ -181,7 +184,7 @@ const parseTransactionForFills = async (
           .map(({ key }) => key.toBase58());
       }
     } catch (error) {
-      console.error('Error extracting signers:', error);
+      console.error(logPrefix, 'Error extracting signers:', error);
     }
 
     // Detect aggregator and originating protocol
@@ -205,7 +208,7 @@ const parseTransactionForFills = async (
         originatingProtocol = detectOriginatingProtocolFromKeys(accountKeysStr);
       }
     } catch (error) {
-      console.warn('Error detecting aggregator/protocol:', error);
+      console.warn(logPrefix, 'Error detecting aggregator/protocol:', error);
     }
 
     const messages = tx.meta.logMessages;
@@ -244,11 +247,11 @@ const parseTransactionForFills = async (
 
         fills.push(fillResult);
       } catch (error) {
-        console.error(`Error deserializing FillLog:`, error);
+        console.error(logPrefix, `Error deserializing FillLog:`, error);
       }
     }
   } catch (error) {
-    console.error(`Error parsing transaction ${signature}:`, error);
+    console.error(logPrefix, `Error parsing transaction ${signature}:`, error);
   }
 
   return { fills, hasTruncatedLogs };
@@ -260,12 +263,13 @@ const fetchDatabaseFills = async (
   market: string,
   startTime: number,
   endTime: number,
+  logPrefix: string,
 ): Promise<FillLogResult[]> => {
   const fills: FillLogResult[] = [];
   let offset = 0;
   const limit = 1000;
 
-  console.log(`Fetching fills for market ${market} from database...`);
+  console.log(logPrefix, `Fetching fills from database...`);
 
   // Cache for block times to avoid repeated RPC calls
   const blockTimeCache = new Map<number, number>();
@@ -324,6 +328,7 @@ const fetchDatabaseFills = async (
               } else {
                 // Other error, log it
                 console.warn(
+                  logPrefix,
                   `Error fetching block time for slot ${fill.slot}:`,
                   error,
                 );
@@ -345,6 +350,7 @@ const fetchDatabaseFills = async (
         } else if (fillTime < startTime) {
           // Once we hit fills older than our time window, we're done
           console.log(
+            logPrefix,
             `Reached fills older than time window, stopping at slot ${fill.slot}`,
           );
           return fills;
@@ -358,7 +364,7 @@ const fetchDatabaseFills = async (
 
       offset += limit;
     } catch (error) {
-      console.error('Error fetching fills from database:', error);
+      console.error(logPrefix, 'Error fetching fills from database:', error);
       throw error;
     }
   }
@@ -372,12 +378,14 @@ const fetchOnchainFills = async (
   baseMint: PublicKey,
   startTime: number,
   endTime: number,
+  logPrefix: string,
 ): Promise<{ fills: FillLogResult[]; truncatedSignatures: Set<string> }> => {
   const fills: FillLogResult[] = [];
   const baseVault = getVaultAddress(marketPubkey, baseMint);
 
   console.log(
-    `Fetching onchain fills for market ${marketPubkey.toString()}, base vault: ${baseVault.toString()}`,
+    logPrefix,
+    `Fetching onchain fills, base vault: ${baseVault.toString()}`,
   );
 
   let lastSignature: string | undefined;
@@ -407,6 +415,7 @@ const fetchOnchainFills = async (
             sig.signature,
             sig.slot,
             sig.blockTime!,
+            logPrefix,
           );
         fillBatches.push(sigFills);
 
@@ -438,13 +447,14 @@ const fetchOnchainFills = async (
 
       lastSignature = signatures[signatures.length - 1].signature;
     } catch (error) {
-      console.error('Error fetching onchain signatures:', error);
+      console.error(logPrefix, 'Error fetching onchain signatures:', error);
       throw error;
     }
   }
 
   if (truncatedSignatures.size > 0) {
     console.log(
+      logPrefix,
       `Found ${truncatedSignatures.size} truncated signatures that will be excluded from mismatch detection`,
     );
   }
@@ -459,6 +469,7 @@ const compareFills = async (
   truncatedSignatures: Set<string>,
   market: string,
   dbBufferTime: number,
+  logPrefix: string,
 ): Promise<TradeMismatch[]> => {
   const mismatches: TradeMismatch[] = [];
 
@@ -503,6 +514,7 @@ const compareFills = async (
         }
       } else {
         console.log(
+          logPrefix,
           `Ignoring missing onchain fill for ${signature} - no token transfers detected`,
         );
       }
@@ -534,6 +546,7 @@ const compareFills = async (
             });
           } else {
             console.log(
+              logPrefix,
               `Ignoring missing onchain fill for ${dbFill.signature} - no token transfers detected`,
             );
           }
@@ -554,6 +567,7 @@ const compareFills = async (
         if (fillTime > dbBufferTime) {
           // Fill is too recent, might not be in DB yet - ignore
           console.log(
+            logPrefix,
             `Ignoring missing DB fill for ${signature} - within buffer time (${new Date(fillTime).toISOString()})`,
           );
         } else {
@@ -584,6 +598,7 @@ const compareFills = async (
           if (fillTime > dbBufferTime) {
             // Fill is too recent, might not be in DB yet - ignore
             console.log(
+              logPrefix,
               `Ignoring missing DB fill for ${onchainFill.signature} - within buffer time (${new Date(fillTime).toISOString()})`,
             );
           } else {
@@ -653,16 +668,17 @@ const run = async () => {
 
     console.log(`Found ${markets.length} markets to verify`);
 
-    const allMismatches: TradeMismatch[] = [];
-
-    // Process each market
-    for (const market of markets) {
+    const validMarkets = markets.filter((market) => {
       if (!market.ticker_id || !market.base_currency) {
         console.log('Skipping invalid market:', market);
-        continue;
+        return false;
       }
+      return true;
+    });
 
-      console.log(`\nVerifying market ${market.ticker_id}`);
+    const verifyMarket = async (market: Market): Promise<TradeMismatch[]> => {
+      const logPrefix = `[${market.ticker_id}]`;
+      console.log(logPrefix, 'Verifying market');
 
       try {
         // Set fixed time window for this market analysis
@@ -671,6 +687,7 @@ const run = async () => {
         const dbFetchStartTime = Date.now(); // When we start fetching from DB
 
         console.log(
+          logPrefix,
           `Time window: ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`,
         );
 
@@ -681,8 +698,9 @@ const run = async () => {
           market.ticker_id,
           startTime,
           endTime,
+          logPrefix,
         );
-        console.log(`Found ${dbFills.length} fills in database`);
+        console.log(logPrefix, `Found ${dbFills.length} fills in database`);
 
         // Fetch fills from onchain
         const marketPubkey = new PublicKey(market.ticker_id);
@@ -694,8 +712,9 @@ const run = async () => {
             baseMint,
             startTime,
             endTime,
+            logPrefix,
           );
-        console.log(`Found ${onchainFills.length} fills onchain`);
+        console.log(logPrefix, `Found ${onchainFills.length} fills onchain`);
 
         // Compare fills with DB fetch buffer
         const dbBufferTime = dbFetchStartTime - 60 * 1000; // 60 seconds before we started fetching from DB
@@ -706,12 +725,11 @@ const run = async () => {
           truncatedSignatures,
           market.ticker_id,
           dbBufferTime,
+          logPrefix,
         );
 
         if (mismatches.length > 0) {
-          console.log(
-            `⚠️  Found ${mismatches.length} mismatches for market ${market.ticker_id}`,
-          );
+          console.log(logPrefix, `Found ${mismatches.length} mismatches`);
 
           // Log unique transaction signatures for this market
           const uniqueSignatures = new Set<string>();
@@ -719,19 +737,28 @@ const run = async () => {
             uniqueSignatures.add(mismatch.fill.signature);
           }
           console.log(
+            logPrefix,
             `Mismatch transaction IDs: ${Array.from(uniqueSignatures).join(', ')}`,
           );
-
-          allMismatches.push(...mismatches);
         } else {
-          console.log(`✅ All fills match for market ${market.ticker_id}`);
+          console.log(logPrefix, 'All fills match');
         }
-      } catch (error) {
-        console.error(`Error processing market ${market.ticker_id}:`, error);
-      }
 
-      // Sleep for 1 second between markets
-      await sleep(1000);
+        return mismatches;
+      } catch (error) {
+        console.error(logPrefix, 'Error processing market:', error);
+        return [];
+      }
+    };
+
+    // Process markets in parallel batches
+    const allMismatches: TradeMismatch[] = [];
+    for (let i = 0; i < validMarkets.length; i += MARKET_VERIFY_CONCURRENCY) {
+      const batch = validMarkets.slice(i, i + MARKET_VERIFY_CONCURRENCY);
+      const batchResults = await Promise.all(batch.map(verifyMarket));
+      for (const mismatches of batchResults) {
+        allMismatches.push(...mismatches);
+      }
     }
 
     // Attempt to backfill any missing_in_db mismatches
