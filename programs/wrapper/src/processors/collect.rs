@@ -1,6 +1,6 @@
 use manifest::validation::{next_account_info, AccountViewExt, Program, Signer};
 use pinocchio::{account::AccountView, error::ProgramError, sysvars::Sysvar, ProgramResult};
-use solana_program::{pubkey, pubkey::Pubkey};
+use solana_program::pubkey::Pubkey;
 use solana_sdk_ids::system_program;
 
 use crate::loader::WrapperStateAccountInfo;
@@ -24,11 +24,7 @@ pub(crate) fn process_collect(
     let lamports_diff: u64 = current_balance.saturating_sub(minimum_balance);
 
     // Program deployer of the wrapper is allowed to collect the extra rent.
-    #[cfg(not(feature = "test"))]
-    const COLLECTOR: Pubkey = pubkey!("B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6");
-    #[cfg(feature = "test")]
-    const COLLECTOR: Pubkey = pubkey!("2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ");
-    if *collector.pubkey() != COLLECTOR {
+    if *collector.pubkey() != crate::COLLECTOR {
         return Err(ProgramError::InvalidArgument);
     }
 

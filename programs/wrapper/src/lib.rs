@@ -14,9 +14,10 @@ use instruction::ManifestWrapperInstruction;
 use pinocchio::{account::AccountView, error::ProgramError, ProgramResult};
 use processors::{
     batch_upate::process_batch_update, claim_seat::process_claim_seat, collect::process_collect,
-    create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
+    create_wrapper::process_create_wrapper, defrag::process_defrag, deposit::process_deposit,
+    withdraw::process_withdraw,
 };
-use solana_program::{declare_id, pubkey::Pubkey};
+use solana_program::{declare_id, pubkey, pubkey::Pubkey};
 
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
@@ -42,6 +43,13 @@ declare_id!("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL");
 /// core program's gas prepayment and refund for a global order. The two are
 /// independent knobs, so the wrapper fee gets its own.
 pub const WRAPPER_FEE_LAMPORTS: u64 = 10_000;
+
+/// Program deployer, allowed to collect excess wrapper lamports and to run
+/// maintenance such as defrag. The same hardcoded collector as the core's.
+#[cfg(not(feature = "test"))]
+pub const COLLECTOR: Pubkey = pubkey!("B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6");
+#[cfg(feature = "test")]
+pub const COLLECTOR: Pubkey = pubkey!("2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ");
 
 #[cfg(not(feature = "no-entrypoint"))]
 pinocchio::program_entrypoint!(process_instruction, {
@@ -93,6 +101,9 @@ pub fn process_instruction(
         }
         ManifestWrapperInstruction::BatchUpdateQuoteGlobal => {
             process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::Defrag => {
+            process_defrag(program_id, accounts, data)?;
         }
     }
 
