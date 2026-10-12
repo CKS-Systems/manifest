@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791818909361,
+  "lastUpdate": 1791828279299,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -14945,6 +14945,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 2350,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "553590006f5d7c8e3d9caabbd501866be01c54b8",
+          "message": "Charge a flat 5000-lamport market fee on batches placing advanced orders (#755)\n\nA batch update that places any global or reverse order pays\nADVANCED_ORDER_FEE_LAMPORTS (5000) from the payer to the market account,\nonce per batch. These order types cost the market maintenance work\nbeyond their own placement: globals get cleaned and evicted by third\nparties and reverses re-rest on every fill. The fee accumulates above\nthe market's rent minimum, where a defrag run already sweeps everything\nto the collector, so collection needs no new mechanism.\n\nPlain batches, cancel-only batches and swaps pay nothing. The certora\nbuild models the fee like expansion rent, as a no-op outside what the\nprover tracks.\n\nAlso adds the missing Defrag case to generateIdl.js, whose instruction\nswitch throws on unknown instructions and has crashed on every run since\nDefrag landed.",
+          "timestamp": "2026-10-12T14:00:23-04:00",
+          "tree_id": "8dc2b23bcd5bf83eb88cadeeac9f94e85e9ef679",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/553590006f5d7c8e3d9caabbd501866be01c54b8"
+        },
+        "date": 1791828276334,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1117,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1559,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2349,
             "range": "",
             "unit": "CU",
             "extra": ""
