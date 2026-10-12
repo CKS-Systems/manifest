@@ -1519,6 +1519,9 @@ export class ManifestClient {
    * @param params WrapperCancelOrderParams[] includes the clientOrderId of the
    * order to cancel.
    *
+   * A batch that places any global or reverse order pays a flat 5000-lamport
+   * fee to the market on top of rent and gas prepayments.
+   *
    * @returns TransactionInstruction
    */
   public batchUpdateIx(
