@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791480628477,
+  "lastUpdate": 1791818909361,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -14879,6 +14879,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 1819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a145525c0396c523b5d39ce9b60aeda4b2c22af9",
+          "message": "Add collector-only market defragmentation and rent recovery (#743)\n\n* Add collector-only market defragmentation and rent recovery\n\nHarvest empty seats, preserve order priority while compacting nodes, retain two spare nodes, and reclaim market and vault rent with empty-market closure. Maintain a cached free-list count and replenish five spare nodes after batch updates.\n\nRefresh wrapper seat and order hints after compaction, recreate harvested seats, update SDK builders and layouts, and include integration tests and the mainnet rent assessment.\n\n* Remove local assessment scripts from review branch\n\n* Keep deposits explicit and remove free-list header accounting\n\n* Bound stale order lookups by price and fix Certora build\n\n* Bound defrag work with an optional relocation budget\n\nDefrag was all or nothing: a market too large to compact within one\ninstruction's compute budget could never be compacted at all, and seats\naccumulate monotonically, so the markets with the most reclaimable rent are\nthe ones most likely to outgrow it.\n\nTake an optional little endian u32 after the discriminator capping how many\nnodes a run relocates. Each run reclaims every eligible seat, relocates at\nmost that many survivors into the holes beneath them working from the top of\nthe account down, and leaves the market fully consistent and no larger than\nit started. Repeating until the size settles converges on the byte-identical\nlayout one unbounded run produces. There is no resume cursor; each run\nrecomputes from the account.\n\nReclaiming stays uncapped because it costs no tree work. The seat tree is\nrebuilt from the survivors either way, so a run that drops thousands of seats\ncosts no more than one that drops none. Relocation patches order links in\nplace; a seat's stale links are never followed, because the block a link\nnames may already have been handed out as a destination.\n\nReject markets over MAX_DEFRAG_BLOCKS with a clear error rather than\nexhausting the 32 KiB heap or the compute budget partway through, and\nvalidate a resting order's owner index during the scan instead of indexing\nthe bitmap with it unchecked.\n\nLibrary tests cover the bounded path: budget-one runs converge byte for byte\non the unbounded layout, no bounded run grows the account or invalidates\nintermediate state, the hardcoded node offsets match the typed accessors, and\nan oversized market is rejected. An integration case walks a 120 seat market\ndown with a budget of ten.\n\nThe SBF toolchain in this environment cannot build (getrandom 0.3.3 rejects\nthe target), so the integration cases and the compute figures are unverified.\nThe doc's 954,000 CU number is marked as predating this change and needing\nre-measurement.\n\n* Bring bounded defrag back under the compute ceiling\n\nThe previous commit made the large seat population case exceed 1.4M CU. The\nscan and the seat tree rebuild were not the problem; three separate passes\nover every allocated block were. On the shape that failed, 13,002 blocks hold\n1,000 survivors, so walking all of them to find the survivors costs far more\nthan the work being done.\n\nStep over the runs of zeroes in the bitmap a word at a time instead of testing\nevery block, in both the owner index fixup and the seat tree rebuild, and find\nthe frontier by word rather than by bit. The walk goes down the account, so\nthe moved seat list is already sorted on the old index and can be searched\nrather than scanned once per order. Drop the blanking of a vacated block: it\nis below the frontier, where the free list rebuild zeroes it, or above it,\nwhere it is truncated away.\n\nThat is 1,121,156 CU, measured, against 954,000 before budgeting was added.\nThe rest is inherent: a bounded run relocates node by node and patches links\nas it goes, where an all or nothing run computed one bulk mapping. The test\nnow asserts the figure stays under 1,250,000, so the remaining headroom cannot\nerode unnoticed.\n\nRebuild the wrapper hint recovery fixture. Compaction pulls the highest\nsurviving node into the lowest hole, so the wrapper's seat only moves when the\nreclaimable seats beneath it outnumber the orders above it. With one seat\nagainst two orders the seat stayed put and the assertion passed on a market\nthat never moved; three against two restores what the test is named for.\n\nVerified locally against the CI recipe: rustfmt, clippy, sBPF v3, the full\nworkspace SBF suite, prettier and eslint.\n\n* Limit batch reserve replenishment and refresh SDK seats after defrag\n\n* Skip unsupported classic vault withdrawals during defrag\n\n* Bound defrag heap use and reject out-of-range index hints cleanly\n\nThe moved-seat mapping is now pre-allocated to MAX_MOVED_SEATS_PER_RUN\n(1,024 entries) and never grows, since Vec growth strands the old\nallocation in the SBF bump allocator and an unbounded run over a\nseat-heavy market could run off the end of the 32 KiB heap: at 2,500\nrelocating seats the previous code died with an access violation at\n0x300008004, four bytes past the heap. A run that fills the mapping now\nstops relocating like an exhausted budget, stays fully consistent, and\nrepeated runs converge on the same packed layout. Validated against a\nlocalnet: a 6,402-block market with 1,400 funded seats above 5,000\nreclaimable ones converged in two unbounded runs (1,333,419 then\n815,568 CU) to the exact rent floor, recovering 3.28 SOL.\n\nSeparately, verify_trader_index_hint and the batch-update cancel hint\npath now bounds-check the hinted index before dereferencing it. Defrag\ncan shrink a market, so a hint cached before maintenance can point past\nthe new end of the account; it now fails with WrongIndexHintParams\ninstead of panicking on the slice.\n\nNew coverage: a unit test that runs past the cap and converges, an SBF\ntest doing the same through the instruction under the real heap, and an\nSBF test that stale out-of-bounds trader and cancel hints return the\nhint error while fresh hints keep working. All 95 unit and 155 SBF\nintegration tests pass.\n\n* Make the fuzz harness IDL gate pass with the Defrag instruction\n\ngen-idl.py reads the dispatch match for bare process_* calls, so the\nDefrag arm's qualified program::defrag::process_defrag read as a variant\nwith no dispatch arm and failed the fuzzcorp workflow's IDL check. The\narm now calls process_defrag like every other instruction, through a\ncertora-gated import since the module does not exist under that feature.\nidls/manifest.json is regenerated with Defrag as instruction 14 and its\nseven accounts, which gen-idl.py reconciles against the processor.\n\nVerified the workflow's pull-request gates locally against this merge:\ngen-idl.py --check, harness rustfmt, the pinned v1.57/v3 program build\nwith DWARF kept and no stack-frame diagnostics, and all nine harness\ninvariant_test cases against that staged build. Core, wrapper and\nui-wrapper SBF suites all pass on the merged tree.\n\n* Keep cancel-only wrapper batches from restoring harvested seats\n\nA harvested seat held no balance and no orders, so a batch that places\nnothing has nothing on the core to cancel: skip the seat restoration and\nthe core CPI instead of re-claiming the seat out of the spare blocks\ndefrag just established. When a placement batch does restore the seat,\nrequire three free blocks before the claim so the owner funds the block\nthe seat re-occupies and the two-spare reserve survives.\n\n* Fix stale-index liveness regressions and the zero-budget defrag trap\n\nDefrag relocating or shrinking state exposed three paths that mishandled\nwhat it leaves behind:\n\n- Wrapper deposit forwarded the cached trader index to the core CPI\n  without a sync, so after defrag moved a funded seat every deposit\n  failed with WrongIndexHintParams until another instruction repaired\n  the view. Sync before reading the hint, the way withdraw already does.\n\n- GlobalClean checked a caller-supplied order index for alignment and\n  payload type but not bounds, so an index cached before a shrink\n  panicked on the slice instead of returning the documented hint error\n  like the other two hint validators.\n\n- An explicit u32 budget of zero was the unbounded sentinel, so an\n  operator whose computed relocation budget rounded down to zero ran an\n  unbounded compaction on exactly the markets the budget protects.\n  Defragment now takes Option<u32>: absent is unbounded, an explicit\n  zero relocates nothing and only reclaims. Instruction data longer\n  than the four budget bytes is rejected instead of silently truncated.",
+          "timestamp": "2026-10-12T11:25:05-04:00",
+          "tree_id": "ed08af6e2056d421243125aa88d48097d1ec6ede",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/a145525c0396c523b5d39ce9b60aeda4b2c22af9"
+        },
+        "date": 1791818907226,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1108,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1562,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2350,
             "range": "",
             "unit": "CU",
             "extra": ""
