@@ -17,7 +17,7 @@ use processors::{
     create_wrapper::process_create_wrapper, defrag::process_defrag, deposit::process_deposit,
     withdraw::process_withdraw,
 };
-use solana_program::{declare_id, pubkey, pubkey::Pubkey};
+use solana_program::{declare_id, pubkey::Pubkey};
 
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
@@ -45,11 +45,10 @@ declare_id!("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL");
 pub const WRAPPER_FEE_LAMPORTS: u64 = 10_000;
 
 /// Program deployer, allowed to collect excess wrapper lamports and to run
-/// maintenance such as defrag. The same hardcoded collector as the core's.
-#[cfg(not(feature = "test"))]
-pub const COLLECTOR: Pubkey = pubkey!("B6dmr2UAn2wgjdm3T4N1Vjd8oPYRRTguByW7AEngkeL6");
-#[cfg(feature = "test")]
-pub const COLLECTOR: Pubkey = pubkey!("2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ");
+/// maintenance such as defrag. The same hardcoded collector as the core's,
+/// re-exported so the key (and its `test` feature twin, which the wrapper's
+/// `test` feature forwards to) exists in exactly one place.
+pub use manifest::program::processor::defrag::DEFRAG_COLLECTOR as COLLECTOR;
 
 #[cfg(not(feature = "no-entrypoint"))]
 pinocchio::program_entrypoint!(process_instruction, {

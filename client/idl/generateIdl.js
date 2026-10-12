@@ -348,6 +348,11 @@ function modifyIdlCore(programName) {
         case 'Collect': {
           break;
         }
+        case 'Defrag': {
+          // The optional u32 relocation budget is raw trailing bytes, not a
+          // Borsh arg; callers append it to the built instruction's data.
+          break;
+        }
         default: {
           console.log(instruction);
           throw new Error('Unexpected instruction');
