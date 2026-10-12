@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791828279299,
+  "lastUpdate": 1791841976032,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -15011,6 +15011,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 2349,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5960fa1b3356bcb4222da3d7781055d83d02169d",
+          "message": "Add wrapper defrag: collector-callable compaction and shrink (#756)\n\n* Add wrapper defrag: collector-callable compaction and shrink\n\nCompacts a wrapper account in place and truncates it to what its market\ninfos and open orders need, converting legacy tree-layout orders to the\nlist on the way. Every entry survives byte for byte; only node addresses\ninside the account change, so a collector-initiated run cannot cost the\nowner anything. Freed rent stays on the account as excess for the\nexisting Collect instruction; the authority is the wrapper owner or the\nhardcoded collector. Relocation rejects nodes whose neighbour links\ndisagree, and wrappers beyond 65,536 blocks are rejected.\n\nCovered by six unit tests (compaction with interleaved holes across two\nmarkets, idempotence, legacy tree conversion, corrupt-link rejection,\nempty wrapper, oversize rejection) and an SBF integration test that\ndefrags with the collector, rejects a third party, cancels and places\nthrough the compacted wrapper, and sweeps the freed rent with Collect.\n\nA mainnet scan at the live rent schedule estimates 5.445 SOL of excess\nalready sweepable by Collect and 4.683 SOL more unlocked by defrag\nacross 1,992 wrapper accounts; see docs/wrapper-defrag.md.\n\n* Bound wrapper defrag runs and fix scale, validation, and client gaps\n\nRelocation now takes an optional little endian u32 budget in the\ninstruction data, clamped to 1,024 blocks per run: a bounded run slides\nthe highest survivors into the lowest holes, truncates everything above\nthe highest survivor, and rebuilds the free list over the holes that\nremain, so any wrapper converges over repeated calls and every call\nshrinks the account.\n\nThe market-infos Vec is gone. A validating in-order walk over the tree's\nparent links marks the bitmaps directly, and a relocated list head's\nowning market info is repointed in one indexed pass after the sweep, so\nrelocation is constant work per moved block, heap use is fixed-size and\nreserved up front, and compaction is linear instead of quadratic in\nmarket count.\n\nEvery index read out of the account is bounds checked and cross checked\nbefore it is followed or rewritten: tree edges must agree on both sides,\na parentless market info must be the named root, an orders root must be\na real list head, and relocation neighbours must be survivors, so a\ncorrupt account fails cleanly instead of panicking, looping, or being\nsilently rearranged. The authority comment and docs now state the real\neconomics: defrag converts owner-prepaid free blocks into sweepable\nexcess.\n\nThe hardcoded collector is now a re-export of the core program's\nDEFRAG_COLLECTOR, and the wrapper IDL and generated TypeScript client\ngain Defrag plus the previously missing Collect.",
+          "timestamp": "2026-10-12T17:48:49-04:00",
+          "tree_id": "30aa97cdc038e142b2d333b9f02018ecb091eba9",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/5960fa1b3356bcb4222da3d7781055d83d02169d"
+        },
+        "date": 1791841974107,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1121,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1582,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2386,
             "range": "",
             "unit": "CU",
             "extra": ""
