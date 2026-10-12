@@ -561,7 +561,10 @@
         "value": 6
       },
       "docs": [
-        "Batch update with multiple place orders and cancels."
+        "Batch update with multiple place orders and cancels.",
+        "",
+        "A batch that places any global or reverse order pays a flat",
+        "ADVANCED_ORDER_FEE_LAMPORTS to the market, collected later by Defrag."
       ]
     },
     {

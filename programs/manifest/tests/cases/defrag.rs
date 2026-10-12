@@ -5,7 +5,10 @@ use manifest::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
         defrag_instruction, get_dynamic_value_or, global_clean_instruction,
     },
-    state::{OrderType, RestingOrder, MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
+    state::{
+        OrderType, RestingOrder, ADVANCED_ORDER_FEE_LAMPORTS, MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
 };
 use solana_account::{Account, AccountSharedData};
 use solana_keypair::Keypair;
@@ -701,6 +704,94 @@ async fn bounded_defrag_makes_monotone_progress_and_converges() -> anyhow::Resul
     assert_eq!(
         previous,
         MARKET_FIXED_SIZE + MARKET_BLOCK_SIZE * (FUNDED as usize + 2)
+    );
+    Ok(())
+}
+
+async fn market_lamports(f: &TestFixture) -> u64 {
+    f.try_load(&f.market_fixture.key)
+        .await
+        .unwrap()
+        .unwrap()
+        .lamports
+}
+
+/// A batch that places any global or reverse order pays one flat fee to the
+/// market, where it accumulates above the rent minimum until defrag sweeps it
+/// to the collector. Plain batches and cancels pay nothing.
+#[tokio::test]
+async fn advanced_order_batches_pay_a_flat_fee_that_defrag_collects() -> anyhow::Result<()> {
+    let mut f = TestFixture::new().await;
+    f.claim_seat().await?;
+    f.deposit(Token::USDC, 1_000_000).await?;
+    f.global_add_trader().await?;
+    f.global_deposit(1_000_000).await?;
+
+    // Plenty of free blocks so no placement below triggers an expansion and
+    // the fee is the only lamport transfer to the market.
+    let mut expand: Instruction =
+        manifest::program::expand_market_instruction(&f.market_fixture.key, &f.payer());
+    expand.data.extend_from_slice(&20u32.to_le_bytes());
+    send_tx_with_retry(
+        Rc::clone(&f.context),
+        &[expand],
+        Some(&f.payer()),
+        &[&f.payer_keypair()],
+    )
+    .await?;
+    let rent_minimum: u64 = market_lamports(&f).await;
+
+    let payer = f.payer_keypair().insecure_clone();
+    let bid = |order_type: OrderType| {
+        PlaceOrderParams::new(100, 1, 0, true, order_type, NO_EXPIRATION_LAST_VALID_SLOT)
+    };
+
+    // A plain limit batch pays nothing.
+    f.batch_update_for_keypair(None, vec![], vec![bid(OrderType::Limit)], &payer)
+        .await?;
+    assert_eq!(market_lamports(&f).await, rent_minimum);
+
+    // One flat fee per batch that places a reverse, a global, or both.
+    f.batch_update_for_keypair(None, vec![], vec![bid(OrderType::Reverse)], &payer)
+        .await?;
+    assert_eq!(
+        market_lamports(&f).await,
+        rent_minimum + ADVANCED_ORDER_FEE_LAMPORTS
+    );
+    f.batch_update_with_global_for_keypair(None, vec![], vec![bid(OrderType::Global)], &payer)
+        .await?;
+    assert_eq!(
+        market_lamports(&f).await,
+        rent_minimum + 2 * ADVANCED_ORDER_FEE_LAMPORTS
+    );
+    f.batch_update_with_global_for_keypair(
+        None,
+        vec![],
+        vec![bid(OrderType::Reverse), bid(OrderType::Global)],
+        &payer,
+    )
+    .await?;
+    assert_eq!(
+        market_lamports(&f).await,
+        rent_minimum + 3 * ADVANCED_ORDER_FEE_LAMPORTS
+    );
+
+    // A cancel-only batch pays nothing, whatever it cancels.
+    f.batch_update_for_keypair(None, vec![CancelOrderParams::new(0)], vec![], &payer)
+        .await?;
+    assert_eq!(
+        market_lamports(&f).await,
+        rent_minimum + 3 * ADVANCED_ORDER_FEE_LAMPORTS
+    );
+
+    // Defrag sweeps the fees: the market is left at the rent minimum of its
+    // compacted size.
+    let key = collector(&f);
+    run(&f, &key).await?;
+    let market = f.try_load(&f.market_fixture.key).await?.unwrap();
+    assert_eq!(
+        market.lamports,
+        Rent::default().minimum_balance(market.data.len())
     );
     Ok(())
 }

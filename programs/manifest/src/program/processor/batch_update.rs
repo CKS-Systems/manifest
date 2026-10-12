@@ -21,7 +21,10 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use hypertree::{get_helper, trace, DataIndex, RBNode};
 use solana_program::pubkey::Pubkey;
 
-use super::{batch_expand_market, shared::get_mut_dynamic_account};
+use super::{
+    batch_expand_market,
+    shared::{get_mut_dynamic_account, pay_advanced_order_fee},
+};
 
 use crate::validation::loaders::GlobalTradeAccounts;
 #[cfg(feature = "certora")]
@@ -363,14 +366,23 @@ pub(crate) fn process_batch_update_core(
         return Ok(());
     }
 
-    if orders
-        .iter()
-        .any(|order| order.order_type() == OrderType::Global)
-    {
-        // A global prepayment can invoke another program. Local batches keep
-        // the market borrow and the fixed/dynamic split across both loops.
+    let mut has_global: bool = false;
+    let mut has_advanced: bool = false;
+    for order in orders.iter() {
+        let order_type: OrderType = order.order_type();
+        has_global |= order_type == OrderType::Global;
+        has_advanced |= order_type == OrderType::Global || order_type.is_reversible();
+    }
+    if has_advanced {
+        // Both payments can invoke another program. Local batches keep the
+        // market borrow and the fixed/dynamic split across both loops.
         drop(market_data);
-        try_to_pay_all_global_gas_prepayment(&orders, &global_trade_accounts_opts)?;
+        // One flat fee per batch that places any global or reverse order,
+        // held on the market account for defrag to collect.
+        pay_advanced_order_fee(&payer, &market)?;
+        if has_global {
+            try_to_pay_all_global_gas_prepayment(&orders, &global_trade_accounts_opts)?;
+        }
         market_data = market.try_borrow_mut()?;
         dynamic_account = get_mut_dynamic_account(&mut market_data);
     }

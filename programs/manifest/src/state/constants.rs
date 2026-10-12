@@ -38,6 +38,13 @@ pub const GLOBAL_FIXED_DISCRIMINANT: u64 = 10787423733276977665;
 // capital on the exchange to prevent that.
 pub const GAS_DEPOSIT_LAMPORTS: u64 = 5_000;
 
+// Flat fee a batch update pays to the market when it places any global or
+// reverse order. These order types cost the market maintenance work beyond
+// their own placement: globals get cleaned and evicted by third parties and
+// reverses re-rest on every fill. The fee sits on the market account above
+// the rent minimum until a defrag run sweeps it to the collector.
+pub const ADVANCED_ORDER_FEE_LAMPORTS: u64 = 5_000;
+
 /// Limit on the number of global seats available. Set so that this is hit
 /// before the global account starts running into account size limits, but is
 /// generous enough that it really should only matter in deterring spam.  Sized

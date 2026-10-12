@@ -70,6 +70,9 @@ pub enum ManifestInstruction {
     Expand = 5,
 
     /// Batch update with multiple place orders and cancels.
+    ///
+    /// A batch that places any global or reverse order pays a flat
+    /// ADVANCED_ORDER_FEE_LAMPORTS to the market, collected later by Defrag.
     #[account(0, writable, signer, name = "payer", desc = "Payer")]
     #[account(1, writable, name = "market", desc = "Account holding all market state")]
     #[account(2, name = "system_program", desc = "System program")]

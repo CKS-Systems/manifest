@@ -130,6 +130,33 @@ fn expand_dynamic<'a, T: ManifestAccount + Pod + Clone>(
     Ok(())
 }
 
+/// One flat fee per batch update that places a global or reverse order, paid
+/// by the batch's payer to the market account, where it sits above the rent
+/// minimum until a defrag run sweeps it to the collector.
+#[cfg(not(feature = "certora"))]
+pub(crate) fn pay_advanced_order_fee<'a, T: ManifestAccount + Pod + Clone>(
+    payer: &Signer<'a>,
+    market: &ManifestAccountInfo<'a, T>,
+) -> ProgramResult {
+    invoke(
+        &solana_system_interface::instruction::transfer(
+            payer.info.pubkey(),
+            market.info.pubkey(),
+            crate::state::ADVANCED_ORDER_FEE_LAMPORTS,
+        ),
+        &[payer.info, market.info],
+    )
+}
+
+// Like expansion rent, the fee transfer is not part of what the prover tracks.
+#[cfg(feature = "certora")]
+pub(crate) fn pay_advanced_order_fee<'a, T: ManifestAccount + Pod + Clone>(
+    _payer: &Signer<'a>,
+    _market: &ManifestAccountInfo<'a, T>,
+) -> ProgramResult {
+    Ok(())
+}
+
 fn expand_market_fixed(expandable_account: &AccountView) -> ProgramResult {
     let market_data: &mut RefMut<[u8]> = &mut expandable_account.try_borrow_mut()?;
     let mut dynamic_account: DynamicAccount<&mut MarketFixed, &mut [u8]> =
