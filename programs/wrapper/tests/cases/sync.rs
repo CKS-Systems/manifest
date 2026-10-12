@@ -13,13 +13,14 @@ use hypertree::{
 use manifest::{
     program::{
         batch_update::CancelOrderParams,
+        get_dynamic_value_or,
         instruction_builders::{
             batch_update_instruction as manifest_batch_update_instruction,
             withdraw_instruction as manifest_withdraw_instruction,
         },
     },
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
-    state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, MarketFixed, OrderType},
+    state::{constants::NO_EXPIRATION_LAST_VALID_SLOT, MarketFixed, MarketValue, OrderType},
 };
 use solana_account::{Account, AccountSharedData};
 use solana_compute_budget_interface::ComputeBudgetInstruction;
@@ -1003,5 +1004,66 @@ async fn defrag_wrapper_claim_and_deposit_share_one_transaction_without_duplicat
             1
         );
     }
+    Ok(())
+}
+
+async fn market_data(test_fixture: &TestFixture) -> Vec<u8> {
+    test_fixture
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_account(test_fixture.market.key)
+        .await
+        .unwrap()
+        .unwrap()
+        .data
+}
+
+/// A harvested seat held no balance and no orders, so a batch that places
+/// nothing has nothing on the core: it must neither restore the seat nor eat
+/// the two spare blocks defrag leaves. A placement batch is what restores the
+/// seat, and the owner funds the block it re-occupies, so the reserve also
+/// survives the claim.
+#[tokio::test]
+async fn defrag_wrapper_cancel_only_batch_leaves_a_harvested_seat_unclaimed() -> anyhow::Result<()>
+{
+    let mut f = TestFixture::new().await;
+    // Unsolicited tokens keep the otherwise empty market open across defrag.
+    let vault: Pubkey = manifest::validation::get_vault_address(&f.market.key, &f.sol_mint.key).0;
+    f.sol_mint.mint_to(&vault, 1).await;
+
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+    wrapper_batch(&f, vec![], vec![ask(61, 5)]).await?;
+    wrapper_batch(&f, vec![WrapperCancelOrderParams::new(61)], vec![]).await?;
+    f.withdraw(Token::SOL, SOL_UNIT_SIZE).await?;
+    defrag_fixture(&f).await?;
+
+    let market_len: usize = market_data(&f).await.len();
+    wrapper_batch(&f, vec![WrapperCancelOrderParams::new(61)], vec![]).await?;
+    let (info, orders) = wrapper_view(&f).await;
+    assert_eq!(
+        info.trader_index, NIL,
+        "a cancel-only batch restored the seat"
+    );
+    assert!(orders.is_empty());
+    assert_eq!(
+        market_data(&f).await.len(),
+        market_len,
+        "a cancel-only batch paid to expand the market"
+    );
+
+    wrapper_batch(&f, vec![], vec![ask(62, 5)]).await?;
+    let (info, _) = wrapper_view(&f).await;
+    assert_ne!(
+        info.trader_index, NIL,
+        "a placement batch restores the seat"
+    );
+    let market: MarketValue = get_dynamic_value_or(market_data(&f).await.as_slice()).unwrap();
+    assert_eq!(
+        market.free_blocks_short_of_n(2),
+        Some(0),
+        "the seat claim ate the spare reserve"
+    );
     Ok(())
 }

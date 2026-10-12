@@ -578,8 +578,15 @@ pub(crate) fn ensure_market_seat<'a>(
         get_dynamic_account::<MarketFixed>(&data).get_trader_index(owner.pubkey()) == NIL
     };
     if missing {
+        // Require three free blocks before claiming: the claim consumes one,
+        // and two spares is the floor defrag compacts a market down to. The
+        // owner funds the block their seat re-occupies instead of the claim
+        // eating that reserve.
+        let mut expand: solana_program::instruction::Instruction =
+            manifest::program::expand_market_instruction(market.pubkey(), owner.pubkey());
+        expand.data.extend_from_slice(&3u32.to_le_bytes());
         manifest::program::invoke(
-            &manifest::program::expand_market_instruction(market.pubkey(), owner.pubkey()),
+            &expand,
             &[
                 owner.info,
                 market.info,

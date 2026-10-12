@@ -540,8 +540,6 @@ pub(crate) fn process_batch_update(
     let market_info_index: DataIndex =
         get_market_info_index_for_market(&wrapper_state, market.pubkey());
 
-    super::shared::ensure_market_seat(&market, &payer, &_manifest_program, &system_program)?;
-
     // One clock read for the whole instruction.
     let now_slot: u32 = get_now_slot();
 
@@ -554,6 +552,13 @@ pub(crate) fn process_batch_update(
         cancels,
     } = WrapperBatchUpdateParams::try_from_slice(data)
         .map_err(manifest::validation::io_to_program_error)?;
+
+    // Only a placement needs a seat. Defrag reclaims a seat only once it
+    // holds no balance and no orders, so a batch that places nothing has
+    // nothing on the core to cancel and no reason to pay to restore one.
+    if !orders.is_empty() {
+        super::shared::ensure_market_seat(&market, &payer, &_manifest_program, &system_program)?;
+    }
 
     // Only price the funds that cancels free up when a new order needs the
     // balance check.
@@ -585,6 +590,13 @@ pub(crate) fn process_batch_update(
         *get_helper::<RBNode<MarketInfo>>(wrapper_dynamic_data, market_info_index).get_value()
     };
     let trader_index_hint: Option<DataIndex> = Some(market_info.trader_index);
+    // No seat and no placement to restore it for. The trader has nothing on
+    // the core and the sync above dropped whatever this wrapper still cached,
+    // so there is no core call to make.
+    if market_info.trader_index == NIL {
+        collect_fee(&payer, &wrapper_state)?;
+        return Ok(());
+    }
     if cancel_all {
         prepare_cancel_all(&mut matcher, &market, market_info.trader_index);
     }
