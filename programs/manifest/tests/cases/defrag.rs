@@ -3,7 +3,7 @@ use hypertree::{HyperTreeValueIteratorTrait, NIL};
 use manifest::{
     program::{
         batch_update::{CancelOrderParams, PlaceOrderParams},
-        defrag_instruction, get_dynamic_value_or,
+        defrag_instruction, get_dynamic_value_or, global_clean_instruction,
     },
     state::{OrderType, RestingOrder, MARKET_BLOCK_SIZE, MARKET_FIXED_SIZE},
 };
@@ -355,8 +355,9 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
 }
 
 /// Defrag shrinks the account, so index hints cached before it can point past
-/// the new end. Both hint validators must answer with the documented hint
-/// error instead of panicking on the out-of-bounds slice.
+/// the new end. Every hint validator, the global clean index included, must
+/// answer with the documented hint error instead of panicking on the
+/// out-of-bounds slice.
 #[tokio::test]
 async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
     use manifest::program::ManifestError;
@@ -396,6 +397,27 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
         .unwrap();
     assert_eq!(
         cancel_hint_error,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
+        )
+    );
+    let clean_hint_error = send_tx_with_retry(
+        Rc::clone(&f.context),
+        &[global_clean_instruction(
+            &f.global_fixture.key,
+            &f.payer(),
+            &f.market_fixture.key,
+            stale,
+        )],
+        Some(&f.payer()),
+        &[&f.payer_keypair().insecure_clone()],
+    )
+    .await
+    .unwrap_err()
+    .unwrap();
+    assert_eq!(
+        clean_hint_error,
         TransactionError::InstructionError(
             0,
             InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),

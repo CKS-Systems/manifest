@@ -890,11 +890,12 @@ export class ManifestClient {
    * Collector-only atomic market compaction and rent recovery. May close an
    * empty market.
    *
-   * @param limit How many nodes this run relocates; omit for unbounded.
-   * Reclaiming empty seats is never capped. Every bounded run leaves a valid
-   * market no larger than the one it started from, so a market too big to
-   * compact in one transaction is compacted by repeating the call. Simulate
-   * against current state to pick a value that fits the compute budget.
+   * @param limit How many nodes this run relocates; omit for unbounded. An
+   * explicit 0 relocates nothing and only reclaims empty seats, which is
+   * never capped. Every bounded run leaves a valid market no larger than the
+   * one it started from, so a market too big to compact in one transaction is
+   * compacted by repeating the call. Simulate against current state to pick a
+   * value that fits the compute budget.
    */
   public defragIx(
     collector: PublicKey,

@@ -1067,3 +1067,25 @@ async fn defrag_wrapper_cancel_only_batch_leaves_a_harvested_seat_unclaimed() ->
     );
     Ok(())
 }
+
+/// Defrag moves a funded seat, leaving the wrapper's cached index stale. A
+/// deposit must repair the index before the CPI the way withdraw does, not
+/// forward it and fail the transaction on the core's hint check.
+#[tokio::test]
+async fn defrag_wrapper_deposit_follows_a_moved_seat() -> anyhow::Result<()> {
+    let mut f = TestFixture::new().await;
+    // Reclaimable holes beneath the funded seat force compaction to move it.
+    for seed in [0xb1u8, 0xb2, 0xb3] {
+        claim_empty_seat(&f, seed).await?;
+    }
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, 5 * SOL_UNIT_SIZE).await?;
+    let (before, _) = wrapper_view(&f).await;
+    defrag_fixture(&f).await?;
+
+    f.deposit(Token::SOL, SOL_UNIT_SIZE).await?;
+    let (after, _) = wrapper_view(&f).await;
+    assert_ne!(before.trader_index, after.trader_index, "the seat moved");
+    assert_eq!(after.base_balance, BaseAtoms::new(6 * SOL_UNIT_SIZE));
+    Ok(())
+}

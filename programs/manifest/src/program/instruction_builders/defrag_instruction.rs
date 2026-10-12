@@ -11,8 +11,9 @@ pub fn defrag_instruction(
     quote_mint: &Pubkey,
     base_token_program: Pubkey,
     quote_token_program: Pubkey,
-    // Nodes relocated in this run. `None` is unbounded. Reclaiming empty
-    // seats is never capped; it costs no tree work.
+    // Nodes relocated in this run. `None` is unbounded; `Some(0)` relocates
+    // nothing and only reclaims. Reclaiming empty seats is never capped; it
+    // costs no tree work.
     limit: Option<u32>,
 ) -> Instruction {
     let mut data: Vec<u8> = vec![ManifestInstruction::Defrag as u8];

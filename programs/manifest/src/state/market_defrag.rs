@@ -155,13 +155,14 @@ impl<
     /// Caller ensures at least two free blocks exist and truncates to the
     /// returned size after dropping all account-data borrows.
     ///
-    /// `limit` caps how many nodes this run relocates; zero is unbounded.
+    /// `limit` caps how many nodes this run relocates; `None` is unbounded
+    /// and `Some(0)` relocates nothing, so a run with it only reclaims seats.
     /// Reclaiming empty seats is not capped because it costs no tree work: the
     /// seat tree is rebuilt from the survivors whether one seat goes or all of
     /// them do. The other cost a budget cannot bound is the single pass over
     /// allocated blocks, which is what `MAX_DEFRAG_BLOCKS` exists to keep
     /// affordable. Simulate a market's first run to pick a budget that fits.
-    pub fn defragment(&mut self, limit: u32) -> Result<usize, ProgramError> {
+    pub fn defragment(&mut self, limit: Option<u32>) -> Result<usize, ProgramError> {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
         let allocated: usize = fixed.num_bytes_allocated as usize;
         require!(
@@ -224,7 +225,7 @@ impl<
         // lets the account shrink, sliding each survivor into the lowest hole
         // beneath it. `hole` only ever advances, so destinations are found in
         // one pass. Stop once the cursors meet: everything below is packed.
-        let mut budget: u32 = if limit == 0 { u32::MAX } else { limit };
+        let mut budget: u32 = limit.unwrap_or(u32::MAX);
         // One pair per relocated seat, pre-allocated to its cap and never
         // grown: Vec growth strands the old allocation in the SBF bump
         // allocator, and an unbounded run over a seat-heavy market could
@@ -453,7 +454,7 @@ mod tests {
         } else {
             write_index(&mut m.dynamic, parent + NODE_RIGHT, NIL);
         }
-        assert_eq!(m.defragment(0), Err(ProgramError::InvalidAccountData));
+        assert_eq!(m.defragment(None), Err(ProgramError::InvalidAccountData));
     }
 
     #[test]
@@ -462,13 +463,13 @@ mod tests {
         let (mut incremental, _) = populated(12, 9);
         let before = fifo(&all_at_once);
 
-        let target = all_at_once.defragment(0).unwrap();
+        let target = all_at_once.defragment(None).unwrap();
         all_at_once.dynamic.truncate(target - MARKET_FIXED_SIZE);
 
         // One op at a time, and never more than the budget allows.
         let mut runs = 0;
         loop {
-            let size = incremental.defragment(1).unwrap();
+            let size = incremental.defragment(Some(1)).unwrap();
             incremental.dynamic.truncate(size - MARKET_FIXED_SIZE);
             runs += 1;
             assert!(runs < 200, "bounded defrag failed to converge");
@@ -488,7 +489,7 @@ mod tests {
         assert_ne!(incremental.get_trader_index(&maker), NIL);
 
         // Converged, so further runs are inert apart from the sequence bump.
-        let again = incremental.defragment(0).unwrap();
+        let again = incremental.defragment(None).unwrap();
         assert_eq!(again, target);
     }
 
@@ -498,7 +499,7 @@ mod tests {
         let before = fifo(&m);
         let mut size = MARKET_FIXED_SIZE + m.fixed.num_bytes_allocated as usize;
         for _ in 0..40 {
-            let next = m.defragment(2).unwrap();
+            let next = m.defragment(Some(2)).unwrap();
             assert!(next <= size, "a bounded run grew the account");
             size = next;
             m.dynamic.truncate(size - MARKET_FIXED_SIZE);
@@ -520,10 +521,39 @@ mod tests {
     fn a_converged_market_needs_no_further_work() {
         // Nothing left to move: a budget of one still completes in one run.
         let (mut m, _) = populated(4, 0);
-        let first = m.defragment(0).unwrap();
+        let first = m.defragment(None).unwrap();
         m.dynamic.truncate(first - MARKET_FIXED_SIZE);
-        let second = m.defragment(1).unwrap();
+        let second = m.defragment(Some(1)).unwrap();
         assert_eq!(second, first);
+    }
+
+    /// An explicit zero budget is a reclaim-only run, not the unbounded
+    /// sentinel: an operator whose computed budget rounds down to zero must
+    /// not trigger a full compaction.
+    #[test]
+    fn an_explicit_zero_budget_reclaims_seats_but_relocates_nothing() {
+        let key = |n: u8| Pubkey::new_from_array([n; 32]);
+        let (mut m, maker) = populated(3, 2);
+        let before = fifo(&m);
+        let order_indices_before: Vec<DataIndex> = m
+            .get_bids()
+            .iter::<RestingOrder>()
+            .map(|(index, _)| index)
+            .collect();
+        let size = m.defragment(Some(0)).unwrap();
+        m.dynamic.truncate(size - MARKET_FIXED_SIZE);
+        // The empty seats are harvested regardless of the budget.
+        assert_eq!(m.get_trader_index(&key(16)), NIL);
+        assert_eq!(m.get_trader_index(&key(17)), NIL);
+        assert_ne!(m.get_trader_index(&maker), NIL);
+        // No node moved.
+        let order_indices_after: Vec<DataIndex> = m
+            .get_bids()
+            .iter::<RestingOrder>()
+            .map(|(index, _)| index)
+            .collect();
+        assert_eq!(order_indices_after, order_indices_before);
+        assert_eq!(fifo(&m), before);
     }
 
     /// More relocating seats than one run's moved-seat cap: the mapping is
@@ -554,14 +584,14 @@ mod tests {
         }
 
         let target: usize = MARKET_FIXED_SIZE + MARKET_BLOCK_SIZE * (FUNDED as usize + 2);
-        let first: usize = m.defragment(0).unwrap();
+        let first: usize = m.defragment(None).unwrap();
         m.dynamic.truncate(first - MARKET_FIXED_SIZE);
         assert!(first > target, "the first run must stop at the cap");
 
         let mut size: usize = first;
         let mut runs: usize = 1;
         while size != target {
-            let next: usize = m.defragment(0).unwrap();
+            let next: usize = m.defragment(None).unwrap();
             assert!(next < size, "a capped run must keep shrinking");
             m.dynamic.truncate(next - MARKET_FIXED_SIZE);
             size = next;
@@ -582,7 +612,7 @@ mod tests {
         m.dynamic
             .resize((MAX_DEFRAG_BLOCKS + 1) * MARKET_BLOCK_SIZE, 0);
         assert_eq!(
-            m.defragment(0).unwrap_err(),
+            m.defragment(None).unwrap_err(),
             ProgramError::InvalidAccountData
         );
     }
@@ -695,7 +725,7 @@ mod tests {
             .iter::<RestingOrder>()
             .map(|(_, o)| o.get_sequence_number())
             .collect();
-        let size = m.defragment(0).unwrap();
+        let size = m.defragment(None).unwrap();
         m.dynamic.truncate(size - MARKET_FIXED_SIZE);
         assert_eq!(size, MARKET_FIXED_SIZE + 80 * (2 + 12 + 2));
         assert_eq!(m.get_trader_index(&empty), NIL);
@@ -719,7 +749,7 @@ mod tests {
             );
         }
         assert_eq!(free_count(&m), 2);
-        let again = m.defragment(0).unwrap();
+        let again = m.defragment(None).unwrap();
         assert_eq!(size, again);
     }
 }

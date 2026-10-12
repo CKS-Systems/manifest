@@ -75,6 +75,17 @@ pub(crate) fn process_global_clean(
             "Invalid order index {}",
             order_index,
         )?;
+        // Defrag can shrink the market, so an index from before it can point
+        // past the end of the account. Reject it rather than panic on the
+        // slice.
+        require!(
+            (order_index as usize)
+                .checked_add(MARKET_BLOCK_SIZE)
+                .is_some_and(|end| end <= market_dynamic_account.dynamic.len()),
+            crate::program::ManifestError::WrongIndexHintParams,
+            "Invalid order index {} is out of bounds",
+            order_index,
+        )?;
         let resting_order_node: &RBNode<RestingOrder> =
             get_helper::<RBNode<RestingOrder>>(&market_dynamic_account.dynamic, order_index);
         require!(
