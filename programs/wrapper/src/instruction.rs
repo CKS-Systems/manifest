@@ -94,6 +94,16 @@ pub enum ManifestWrapperInstruction {
     #[account(1, name = "system_program", desc = "System program")]
     #[account(2, writable, signer, name = "collector", desc = "Fee collector")]
     Collect = 7,
+
+    /// Compact the wrapper account and shrink it to what its entries need.
+    /// Keeps every market info and open order; only node addresses inside the
+    /// account change. The freed rent stays on the account as excess for
+    /// Collect to sweep. Takes an optional little endian u32 relocation
+    /// budget; a bounded run truncates what it freed and leaves the rest on
+    /// the free list, so repeated runs converge on a packed account.
+    #[account(0, writable, name = "wrapper_state", desc = "Wrapper state")]
+    #[account(1, signer, name = "authority", desc = "Wrapper owner or the fee collector")]
+    Defrag = 8,
 }
 
 impl ManifestWrapperInstruction {

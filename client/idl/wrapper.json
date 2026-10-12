@@ -622,6 +622,32 @@
         "type": "u8",
         "value": 7
       }
+    },
+    {
+      "name": "Defrag",
+      "accounts": [
+        {
+          "name": "wrapperState",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Wrapper state"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "Wrapper owner or the fee collector"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 8
+      }
     }
   ],
   "types": [

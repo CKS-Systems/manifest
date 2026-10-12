@@ -44,7 +44,7 @@ use wrapper::{
 
 use crate::{send_tx_with_retry, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
 
-fn ask(client_order_id: u64, price_mantissa: u32) -> WrapperPlaceOrderParams {
+pub(super) fn ask(client_order_id: u64, price_mantissa: u32) -> WrapperPlaceOrderParams {
     WrapperPlaceOrderParams::new(
         client_order_id,
         SOL_UNIT_SIZE,
@@ -56,7 +56,7 @@ fn ask(client_order_id: u64, price_mantissa: u32) -> WrapperPlaceOrderParams {
     )
 }
 
-async fn wrapper_account(test_fixture: &TestFixture) -> Account {
+pub(super) async fn wrapper_account(test_fixture: &TestFixture) -> Account {
     test_fixture
         .context
         .borrow_mut()
@@ -172,7 +172,7 @@ async fn market_sequence_number(test_fixture: &TestFixture) -> u64 {
     get_helper::<MarketFixed>(&account.data, 0).get_order_sequence_number()
 }
 
-async fn wrapper_batch(
+pub(super) async fn wrapper_batch(
     test_fixture: &TestFixture,
     cancels: Vec<WrapperCancelOrderParams>,
     orders: Vec<WrapperPlaceOrderParams>,

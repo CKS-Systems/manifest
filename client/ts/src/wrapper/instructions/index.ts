@@ -2,6 +2,8 @@ export * from './BatchUpdate';
 export * from './BatchUpdateBaseGlobal';
 export * from './BatchUpdateQuoteGlobal';
 export * from './ClaimSeat';
+export * from './Collect';
 export * from './CreateWrapper';
+export * from './Defrag';
 export * from './Deposit';
 export * from './Withdraw';

@@ -14,7 +14,8 @@ use instruction::ManifestWrapperInstruction;
 use pinocchio::{account::AccountView, error::ProgramError, ProgramResult};
 use processors::{
     batch_upate::process_batch_update, claim_seat::process_claim_seat, collect::process_collect,
-    create_wrapper::process_create_wrapper, deposit::process_deposit, withdraw::process_withdraw,
+    create_wrapper::process_create_wrapper, defrag::process_defrag, deposit::process_deposit,
+    withdraw::process_withdraw,
 };
 use solana_program::{declare_id, pubkey::Pubkey};
 
@@ -42,6 +43,12 @@ declare_id!("wMNFSTkir3HgyZTsB7uqu3i7FA73grFCptPXgrZjksL");
 /// core program's gas prepayment and refund for a global order. The two are
 /// independent knobs, so the wrapper fee gets its own.
 pub const WRAPPER_FEE_LAMPORTS: u64 = 10_000;
+
+/// Program deployer, allowed to collect excess wrapper lamports and to run
+/// maintenance such as defrag. The same hardcoded collector as the core's,
+/// re-exported so the key (and its `test` feature twin, which the wrapper's
+/// `test` feature forwards to) exists in exactly one place.
+pub use manifest::program::processor::defrag::DEFRAG_COLLECTOR as COLLECTOR;
 
 #[cfg(not(feature = "no-entrypoint"))]
 pinocchio::program_entrypoint!(process_instruction, {
@@ -93,6 +100,9 @@ pub fn process_instruction(
         }
         ManifestWrapperInstruction::BatchUpdateQuoteGlobal => {
             process_batch_update(program_id, accounts, data)?;
+        }
+        ManifestWrapperInstruction::Defrag => {
+            process_defrag(program_id, accounts, data)?;
         }
     }
 
