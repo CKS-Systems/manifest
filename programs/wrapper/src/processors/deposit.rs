@@ -62,6 +62,10 @@ pub(crate) fn process_deposit(
     let WrapperDepositParams { amount_atoms } = WrapperDepositParams::try_from_slice(data)
         .map_err(manifest::validation::io_to_program_error)?;
 
+    // Defrag can move the seat, so the cached index below may be stale. Sync
+    // before reading it, the same way withdraw does: the core validates the
+    // hint and would fail the whole deposit on one that no longer matches.
+    sync(&wrapper_state, &market)?;
     let trader_index_hint: Option<DataIndex> =
         get_trader_index_hint_for_market(&wrapper_state, &market.info.pubkey())?;
 
