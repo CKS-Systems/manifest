@@ -29,6 +29,19 @@ const AUTHORIZED_COLLECTOR = new PublicKey(
 );
 const SYSTEM_PROGRAM = '11111111111111111111111111111111';
 const COLLECT_DISCRIMINANT = 7;
+const DEFRAG_DISCRIMINANT = 8;
+// Wrapper state layout: fixed header then 96-byte blocks. Free-list nodes
+// store their next index in the first four bytes of the block.
+const WRAPPER_FIXED_SIZE = 64;
+const WRAPPER_BLOCK_SIZE = 96;
+const NIL = 0xffffffff;
+// Full-defrag compute scales with account size (a mark walk over every block
+// plus bounded relocations). Measured against mainnet wrapper state on a
+// localnet: ~1 CU/byte for the largest accounts, higher per byte for small,
+// relocation-heavy ones. 2.5/byte keeps every observed case under the cap.
+const DEFRAG_CU_BASE = 60_000;
+const DEFRAG_CU_PER_BYTE = 2.5;
+const CU_BUDGET_PER_TRANSACTION = 1_300_000;
 // Wrapper state discriminator: little-endian u64 value 1.
 const WRAPPER_STATE_DISCRIMINATOR_BASE58 = 'Ahg1opVcGX';
 const SIZE_CHECK_BLOCKHASH = '11111111111111111111111111111111';
@@ -39,12 +52,21 @@ const V1_MAX_WRAPPERS = V1_MAX_ACCOUNT_ADDRESSES - 3;
 const MAX_COMPUTE_UNITS = 1_400_000;
 const MAX_LOADED_ACCOUNTS_DATA_SIZE = 64 * 1024 * 1024;
 const DEFAULT_DELAY_MS = 10_000;
+// How many fresh-blockhash attempts a batch gets when its transaction expires
+// without landing. Expiry means the transaction can never land, so resending
+// the batch is safe; a landed-check runs before each retry to catch the
+// last-valid-block race. No priority fee: landing is best effort, retried.
+const MAX_SEND_ATTEMPTS = 3;
 
 type CollectableWrapper = {
   pubkey: PublicKey;
   trader: PublicKey;
   amount: bigint;
   space: number;
+  // Set in --defrag mode: the size defrag packs the account down to
+  // (live blocks only), and the compute estimate for the defrag run.
+  predictedSpace?: number;
+  defragCu?: number;
 };
 
 type RpcResponse<T> = {
@@ -144,14 +166,82 @@ function createCollectInstruction(
   };
 }
 
+function createDefragInstruction(
+  wrapperState: PublicKey,
+  collector: PublicKey,
+): Instruction {
+  return {
+    accounts: [
+      {
+        address: address(wrapperState.toBase58()),
+        role: AccountRole.WRITABLE,
+      },
+      {
+        address: address(collector.toBase58()),
+        role: AccountRole.READONLY_SIGNER,
+      },
+    ],
+    programAddress: address(WRAPPER_PROGRAM_ID.toBase58()),
+    data: new Uint8Array([DEFRAG_DISCRIMINANT]),
+  };
+}
+
+/** Count the wrapper's free-list blocks; null if the list is malformed. */
+function freeListLength(data: Buffer): number | null {
+  if (data.length < WRAPPER_FIXED_SIZE) return null;
+  const allocated: number = data.readUInt32LE(40);
+  const blocks: number = Math.floor(allocated / WRAPPER_BLOCK_SIZE);
+  let next: number = data.readUInt32LE(44);
+  let count: number = 0;
+  while (next !== NIL) {
+    if (
+      next % WRAPPER_BLOCK_SIZE !== 0 ||
+      next + WRAPPER_BLOCK_SIZE > allocated ||
+      WRAPPER_FIXED_SIZE + next + 4 > data.length ||
+      count > blocks
+    ) {
+      return null;
+    }
+    count += 1;
+    next = data.readUInt32LE(WRAPPER_FIXED_SIZE + next);
+  }
+  return count;
+}
+
+/** The size a full defrag packs the wrapper down to, or null when the
+ *  free list cannot be walked (defrag itself validates and would reject
+ *  deeper corruption; a leaked block only makes this an overestimate). */
+function predictDefraggedSpace(data: Buffer): number | null {
+  const freeBlocks: number | null = freeListLength(data);
+  if (freeBlocks === null) return null;
+  const allocated: number = data.readUInt32LE(40);
+  const liveBlocks: number =
+    Math.floor(allocated / WRAPPER_BLOCK_SIZE) - freeBlocks;
+  if (liveBlocks < 0) return null;
+  return WRAPPER_FIXED_SIZE + liveBlocks * WRAPPER_BLOCK_SIZE;
+}
+
+function estimateDefragCu(space: number): number {
+  return Math.min(
+    CU_BUDGET_PER_TRANSACTION,
+    Math.ceil(DEFRAG_CU_BASE + DEFRAG_CU_PER_BYTE * space),
+  );
+}
+
 export function createCollectMessage(
   batch: CollectableWrapper[],
   collector: PublicKey,
   recentBlockhash: string,
   lastValidBlockHeight: bigint,
+  withDefrag: boolean = false,
 ) {
-  const instructions = batch.map(({ pubkey }) =>
-    createCollectInstruction(pubkey, collector),
+  const instructions = batch.flatMap(({ pubkey }) =>
+    withDefrag
+      ? [
+          createDefragInstruction(pubkey, collector),
+          createCollectInstruction(pubkey, collector),
+        ]
+      : [createCollectInstruction(pubkey, collector)],
   );
   return pipe(
     createTransactionMessage({ version: 1 }),
@@ -180,6 +270,7 @@ export function createCollectMessage(
 function serializedSize(
   batch: CollectableWrapper[],
   collector: PublicKey,
+  withDefrag: boolean = false,
 ): number | null {
   if (batch.length > V1_MAX_WRAPPERS) return null;
   try {
@@ -188,6 +279,7 @@ function serializedSize(
       collector,
       SIZE_CHECK_BLOCKHASH,
       0n,
+      withDefrag,
     );
     const transaction = compileTransaction(message);
     return Buffer.from(getBase64EncodedWireTransaction(transaction), 'base64')
@@ -209,6 +301,7 @@ export function packCollectTransactions(
   wrappers: CollectableWrapper[],
   collector: PublicKey,
   maxWrappersPerTransaction?: number,
+  withDefrag: boolean = false,
 ): CollectableWrapper[][] {
   if (
     maxWrappersPerTransaction !== undefined &&
@@ -224,15 +317,21 @@ export function packCollectTransactions(
   );
   const batches: CollectableWrapper[][] = [];
   let current: CollectableWrapper[] = [];
+  let currentCu = 0;
 
   for (const wrapper of wrappers) {
+    const wrapperCu: number = withDefrag
+      ? (wrapper.defragCu ?? estimateDefragCu(wrapper.space))
+      : 0;
     const candidate = [...current, wrapper];
     if (
       candidate.length <= configuredCap &&
-      (serializedSize(candidate, collector) ?? Infinity) <=
+      (!withDefrag || currentCu + wrapperCu <= CU_BUDGET_PER_TRANSACTION) &&
+      (serializedSize(candidate, collector, withDefrag) ?? Infinity) <=
         V1_MAX_TRANSACTION_SIZE
     ) {
       current = candidate;
+      currentCu += wrapperCu;
       continue;
     }
 
@@ -243,6 +342,7 @@ export function packCollectTransactions(
     }
     batches.push(current);
     current = [wrapper];
+    currentCu = wrapperCu;
   }
 
   if (current.length > 0) batches.push(current);
@@ -318,12 +418,14 @@ async function buildSignedTransaction(
   collector: { publicKey: PublicKey; signer: KeyPairSigner },
   recentBlockhash: string,
   lastValidBlockHeight: number,
+  withDefrag: boolean = false,
 ) {
   const unsignedMessage = createCollectMessage(
     batch,
     collector.publicKey,
     recentBlockhash,
     BigInt(lastValidBlockHeight),
+    withDefrag,
   );
   const message = setTransactionMessageFeePayerSigner(
     collector.signer,
@@ -363,9 +465,22 @@ async function run(): Promise<void> {
   yarn collect:wrapper-fees --all-public --execute
       Collect all public wrappers in v1 batches, stopping on the first error.
 
+  yarn collect:wrapper-fees --defrag --all-public
+      Dry-run defrag + collect: predicts each wrapper's packed size from its
+      free list and reports the cumulative SOL a full defrag + sweep recovers.
+
+  yarn collect:wrapper-fees --defrag --wrapper=ADDRESS --execute
+      Defrag then collect one wrapper in a single transaction.
+
+  yarn collect:wrapper-fees --defrag --all-public --execute
+      Defrag + collect every wrapper with anything to recover.
+
 Options:
   --wrapper=ADDRESS           Select exactly one test wrapper.
   --all-public               Explicitly select all fee-bearing public wrappers.
+  --defrag                   Prepend a Defrag to each Collect (same transaction),
+                             so freed rent is swept with the fees. Requires the
+                             wrapper program to be at v3.0.25 or later.
   --max-wrappers-per-tx=N    Safety cap below the v1 maximum of ${V1_MAX_WRAPPERS}.
   --delay-ms=N               Delay between transactions (default ${DEFAULT_DELAY_MS}ms).
   --execute                  Submit; without this flag the command is read-only.
@@ -386,6 +501,7 @@ Environment:
 
   const execute = process.argv.includes('--execute');
   const allPublic = process.argv.includes('--all-public');
+  const withDefrag = process.argv.includes('--defrag');
   const wrapperOption = optionValue('wrapper');
   if (allPublic === (wrapperOption !== undefined)) {
     throw new Error(
@@ -406,6 +522,7 @@ Environment:
   const connection = new Connection(RPC_URL, 'confirmed');
 
   console.log(`Mode: ${execute ? 'EXECUTE' : 'DRY RUN'}`);
+  console.log(`Operation: ${withDefrag ? 'defrag + collect' : 'collect only'}`);
   console.log('Transaction version: v1');
   console.log(
     `Target: ${selectedWrapper ? `single wrapper ${selectedWrapper.toBase58()}` : 'all public wrappers'}`,
@@ -428,7 +545,9 @@ Environment:
     {
       commitment: 'confirmed',
       encoding: 'base64',
-      dataSlice: { offset: 0, length: 40 },
+      // Defrag needs the whole account to walk the free list; plain collect
+      // only needs the header.
+      ...(withDefrag ? {} : { dataSlice: { offset: 0, length: 40 } }),
       filters: [
         {
           memcmp: { offset: 0, bytes: WRAPPER_STATE_DISCRIMINATOR_BASE58 },
@@ -451,21 +570,45 @@ Environment:
     `Found ${wrapperResult.value.length} initialized wrappers; selected ${wrapperAccounts.length}`,
   );
 
+  // In defrag mode the account keeps only the rent its packed size needs, so
+  // the collectible amount is measured against the predicted post-defrag
+  // size. Wrappers whose free list cannot be walked are excluded: the
+  // program's own validation would reject their defrag and fail the whole
+  // batch. Sweep those with plain collect mode instead.
+  const unpredictable: string[] = [];
+  const annotated = wrapperAccounts.flatMap(({ pubkey, account }) => {
+    const data = Buffer.from(account.data[0], 'base64');
+    if (data.length < 40) {
+      throw new Error(`RPC returned a short wrapper header for ${pubkey}`);
+    }
+    if (!withDefrag) {
+      return [{ pubkey, account, data, predictedSpace: account.space }];
+    }
+    const predictedSpace = predictDefraggedSpace(data);
+    if (predictedSpace === null) {
+      unpredictable.push(pubkey);
+      return [];
+    }
+    return [{ pubkey, account, data, predictedSpace }];
+  });
+  if (unpredictable.length > 0) {
+    console.warn(
+      `Excluding ${unpredictable.length} wrappers whose free list cannot be walked (defrag would reject them): ${unpredictable.join(', ')}`,
+    );
+  }
   const accountLengths = [
-    ...new Set(wrapperAccounts.map(({ account }) => account.space)),
+    ...new Set(annotated.map(({ predictedSpace }) => predictedSpace)),
   ];
   const rentByLength = await getRentExemptBalances(accountLengths);
-  const collectableWrappers: CollectableWrapper[] = wrapperAccounts
-    .map(({ pubkey, account }) => {
-      const header = Buffer.from(account.data[0], 'base64');
-      if (header.length !== 40) {
-        throw new Error(`RPC returned a short wrapper header for ${pubkey}`);
-      }
+  const collectableWrappers: CollectableWrapper[] = annotated
+    .map(({ pubkey, account, data, predictedSpace }) => {
       return {
         pubkey: new PublicKey(pubkey),
-        trader: new PublicKey(header.subarray(8, 40)),
-        amount: BigInt(account.lamports) - rentByLength.get(account.space)!,
+        trader: new PublicKey(data.subarray(8, 40)),
+        amount: BigInt(account.lamports) - rentByLength.get(predictedSpace)!,
         space: account.space,
+        predictedSpace,
+        defragCu: withDefrag ? estimateDefragCu(account.space) : undefined,
       };
     })
     .filter(({ amount }) => amount > 0n)
@@ -481,25 +624,47 @@ Environment:
     0n,
   );
   console.log(
-    `${collectableWrappers.length} wrappers have ${formatSOL(totalLamports)} SOL collectible`,
+    `${collectableWrappers.length} wrappers have ${formatSOL(totalLamports)} SOL ${withDefrag ? 'recoverable by defrag + collect' : 'collectible'}`,
   );
+  if (withDefrag) {
+    const bytesFreed = collectableWrappers.reduce(
+      (sum, { space, predictedSpace }) => sum + (space - (predictedSpace ?? space)),
+      0,
+    );
+    console.log(
+      `  defrag shrinks the selected wrappers by ${bytesFreed} bytes in total`,
+    );
+  }
+  const tableLimit = 25;
   console.table(
-    collectableWrappers.map(({ pubkey, trader, amount }) => ({
-      wrapper: pubkey.toBase58(),
-      trader: trader.toBase58(),
-      collectibleSOL: formatSOL(amount),
-    })),
+    collectableWrappers.slice(0, tableLimit).map(
+      ({ pubkey, trader, amount, space, predictedSpace }) => ({
+        wrapper: pubkey.toBase58(),
+        trader: trader.toBase58(),
+        ...(withDefrag
+          ? { bytes: space, defraggedBytes: predictedSpace }
+          : {}),
+        recoverableSOL: formatSOL(amount),
+      }),
+    ),
   );
+  if (collectableWrappers.length > tableLimit) {
+    console.log(
+      `  (table shows the ${tableLimit} largest; ${collectableWrappers.length - tableLimit} more omitted)`,
+    );
+  }
 
   const batches = packCollectTransactions(
     collectableWrappers,
     collectorPublicKey,
     maxWrappersPerTransaction,
+    withDefrag,
   );
   const batchSizes = batches.map((batch) => batch.length);
   const maximumWireSize = Math.max(
     ...batches.map(
-      (batch) => serializedSize(batch, collectorPublicKey) ?? Infinity,
+      (batch) =>
+        serializedSize(batch, collectorPublicKey, withDefrag) ?? Infinity,
     ),
   );
   console.log('\nCollection plan:');
@@ -521,6 +686,7 @@ Environment:
         collectorPublicKey,
         latestBlockhash.blockhash,
         BigInt(latestBlockhash.lastValidBlockHeight),
+        withDefrag,
       );
       const encodedTransaction = getBase64EncodedWireTransaction(
         compileTransaction(message),
@@ -538,7 +704,7 @@ Environment:
       );
     }
     console.log(
-      `\nDry run only. Re-run with ${selectedWrapper ? `--wrapper=${selectedWrapper.toBase58()}` : '--all-public'} --execute to submit this exact target class.`,
+      `\nDry run only. Re-run with ${withDefrag ? '--defrag ' : ''}${selectedWrapper ? `--wrapper=${selectedWrapper.toBase58()}` : '--all-public'} --execute to submit this exact target class.`,
     );
     return;
   }
@@ -566,54 +732,105 @@ Environment:
     for (const [index, batch] of batches.entries()) {
       if (stopRequested) break;
 
-      const latestBlockhash = await connection.getLatestBlockhash('confirmed');
-      const transaction = await buildSignedTransaction(
-        batch,
-        collector!,
-        latestBlockhash.blockhash,
-        latestBlockhash.lastValidBlockHeight,
-      );
-      const encodedTransaction = getBase64EncodedWireTransaction(transaction);
-      const wireSize = Buffer.from(encodedTransaction, 'base64').length;
-
-      console.log(
-        `\nTx ${index + 1}/${batches.length}: simulating ${batch.length} wrappers (${wireSize} bytes)...`,
-      );
-      const simulation = await simulateTransaction(encodedTransaction, true);
-      if (simulation.err !== null) {
-        failed = true;
-        console.error(`Simulation failed: ${JSON.stringify(simulation.err)}`);
-        for (const log of simulation.logs ?? []) console.error(`  ${log}`);
-        break;
-      }
-      console.log(
-        `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes`,
-      );
-      if (stopRequested) break;
-
-      let signature: string;
-      try {
-        signature = await rpc<string>('sendTransaction', [
-          encodedTransaction,
-          {
-            encoding: 'base64',
-            maxRetries: 3,
-            preflightCommitment: 'confirmed',
-            skipPreflight: false,
-          },
-        ]);
-        const confirmation = await connection.confirmTransaction(
-          { signature, ...latestBlockhash },
-          'confirmed',
+      let landed = false;
+      let landedSignature: string | undefined;
+      for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+        const latestBlockhash =
+          await connection.getLatestBlockhash('confirmed');
+        const transaction = await buildSignedTransaction(
+          batch,
+          collector!,
+          latestBlockhash.blockhash,
+          latestBlockhash.lastValidBlockHeight,
+          withDefrag,
         );
-        if (confirmation.value.err !== null) {
-          throw new Error(
-            `confirmation failed: ${JSON.stringify(confirmation.value.err)}`,
-          );
+        const encodedTransaction = getBase64EncodedWireTransaction(transaction);
+        const wireSize = Buffer.from(encodedTransaction, 'base64').length;
+
+        console.log(
+          `\nTx ${index + 1}/${batches.length}${attempt > 1 ? ` (attempt ${attempt}/${MAX_SEND_ATTEMPTS})` : ''}: simulating ${batch.length} wrappers (${wireSize} bytes)...`,
+        );
+        const simulation = await simulateTransaction(encodedTransaction, true);
+        if (simulation.err !== null) {
+          failed = true;
+          console.error(`Simulation failed: ${JSON.stringify(simulation.err)}`);
+          for (const log of simulation.logs ?? []) console.error(`  ${log}`);
+          break;
         }
-      } catch (error) {
-        failed = true;
-        console.error(`Tx ${index + 1}/${batches.length} failed:`, error);
+        console.log(
+          `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes`,
+        );
+        if (stopRequested) break;
+
+        let signature: string | undefined;
+        try {
+          signature = await rpc<string>('sendTransaction', [
+            encodedTransaction,
+            {
+              encoding: 'base64',
+              maxRetries: 3,
+              preflightCommitment: 'confirmed',
+              skipPreflight: false,
+            },
+          ]);
+          const confirmation = await connection.confirmTransaction(
+            { signature, ...latestBlockhash },
+            'confirmed',
+          );
+          if (confirmation.value.err !== null) {
+            throw new Error(
+              `confirmation failed: ${JSON.stringify(confirmation.value.err)}`,
+            );
+          }
+          landed = true;
+          landedSignature = signature;
+          break;
+        } catch (error) {
+          // An expired blockhash means the transaction can no longer land, so
+          // rebuilding the same batch on a fresh blockhash is safe. Check it
+          // really did not land first (last-valid-block race), and abort on
+          // every other failure.
+          const expired =
+            error instanceof Error &&
+            (error.name === 'TransactionExpiredBlockheightExceededError' ||
+              error.message.includes('block height exceeded'));
+          if (expired && signature !== undefined) {
+            const statuses = await rpc<{
+              value: ({ err: unknown } | null)[];
+            }>('getSignatureStatuses', [
+              [signature],
+              { searchTransactionHistory: true },
+            ]);
+            const status = statuses.value[0];
+            if (status !== null && status.err === null) {
+              console.log(
+                `Tx ${index + 1}/${batches.length} landed despite the expiry report (${signature}).`,
+              );
+              landed = true;
+              landedSignature = signature;
+              break;
+            }
+            if (status !== null) {
+              failed = true;
+              console.error(
+                `Tx ${index + 1}/${batches.length} landed WITH an error: ${JSON.stringify(status.err)} (${signature})`,
+              );
+              break;
+            }
+            if (attempt < MAX_SEND_ATTEMPTS) {
+              console.warn(
+                `Tx ${index + 1}/${batches.length} expired without landing; retrying with a fresh blockhash...`,
+              );
+              continue;
+            }
+          }
+          failed = true;
+          console.error(`Tx ${index + 1}/${batches.length} failed:`, error);
+          break;
+        }
+      }
+      if (!landed || failed || stopRequested) {
+        if (!landed && !failed && !stopRequested) failed = true;
         break;
       }
 
@@ -622,7 +839,7 @@ Environment:
       collectedLamports += batchLamports;
       successfulTransactions += 1;
       console.log(
-        `Confirmed tx ${index + 1}/${batches.length}: ${batch.length} wrappers, ${formatSOL(batchLamports)} SOL, ${signature}`,
+        `Confirmed tx ${index + 1}/${batches.length}: ${batch.length} wrappers, ${formatSOL(batchLamports)} SOL, ${landedSignature}`,
       );
 
       if (index + 1 < batches.length && !stopRequested) {
