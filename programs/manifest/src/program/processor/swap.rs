@@ -1,4 +1,4 @@
-#[cfg(feature = "certora-defrag")]
+#[cfg(feature = "certora")]
 use crate::program::ManifestError;
 use crate::validation::{io_to_program_error, to_program_error, AccountViewExt};
 use pinocchio::{account::RefMut, ProgramResult};

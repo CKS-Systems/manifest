@@ -12,11 +12,6 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/ci-certora.yml'
   workflow_dispatch:
-    inputs:
-      defrag_only:
-        description: 'Run only defrag remote proofs (still compile all configurations)'
-        type: boolean
-        default: false
 jobs:
  build_verification_program:
     name: Build and validate Certora v3 ELF
@@ -43,7 +38,7 @@ jobs:
         # verification compiler ceiling on PRs (including forks) without keys.
         working-directory: programs/manifest/src/certora/confs
         run: |
-          for conf in rules.conf rules-global.conf rules-reverse.conf rules-seat-integrity.conf rules-defrag.conf hypertree.conf; do
+          for conf in rules.conf rules-global.conf rules-reverse.conf rules-seat-integrity.conf hypertree.conf; do
             certoraSolanaProver "$conf" --compilation_steps_only
             ../../../../../scripts/assert-sbpf-v3.sh ../../../../../target/sbpfv3-solana-solana/release/manifest.so
           done
@@ -57,7 +52,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration: ${{ fromJSON(inputs.defrag_only && '["rules-defrag.conf"]' || '["rules.conf", "rules-global.conf", "rules-reverse.conf", "rules-seat-integrity.conf", "rules-defrag.conf", "hypertree.conf"]') }}
+        configuration:
+          - rules.conf
+          - rules-global.conf
+          - rules-reverse.conf
+          - rules-seat-integrity.conf
+          - hypertree.conf
     permissions:
       contents: read
     steps:

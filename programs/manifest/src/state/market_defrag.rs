@@ -12,7 +12,7 @@ use super::*;
 // matching proofs' fixed-index seat mocks cannot represent node relocation.
 use hypertree::{HyperTreeReadOperations, HyperTreeWriteOperations, RedBlackTree};
 
-#[cfg(feature = "certora-defrag")]
+#[cfg(feature = "certora")]
 #[path = "../certora/spec/defrag_checks.rs"]
 pub mod verification;
 

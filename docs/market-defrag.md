@@ -201,7 +201,8 @@ separate global analysis.
 
 ### Certora coverage
 
-`programs/manifest/src/certora/confs/rules-defrag.conf` compiles the real defrag
+`programs/manifest/src/certora/confs/rules.conf` includes defrag alongside the
+existing market rules in the normal `certora` build. It compiles the real defrag
 processor and account compactor. The compactor uses the real red-black tree,
 not the fixed-index seat/order mocks used by matching proofs. Defrag preservation
 is stated by trader pubkey and order sequence number because a byte index can
@@ -209,8 +210,8 @@ move or be reused after an empty seat is reclaimed.
 
 The whole-pass harness contains eight blocks, three seats and three orders with
 symbolic placements, keys, balances, amounts, resting order types, and relocation
-budgets. The `certora-defrag` feature keeps production `require!` branches
-(the matching abstraction turns them into assumptions), and `assert_on_panic`
+budgets. The shared `certora` build keeps production `require!` branches
+instead of turning validation into assumptions, and `assert_on_panic`
 makes panic paths fail verification instead of pruning them. Two orders share
 a price on one side; the third is on the other side.
 Both side assignments are checked. It asserts:
@@ -232,7 +233,7 @@ Separate rules check bitmap updates, individual seat/order relocation (including
 root, parent and child repair), malformed allocation/owner rejection, and the
 actual instruction dispatch's collector, signer, writability and data checks.
 `optimistic_loop` is false, so insufficient loop unwinding fails verification;
-the defrag configuration also disables the existing optimistic memory
+the shared base configuration also disables the existing optimistic memory
 assumptions and enables exact bitwise operations and 64-bit arithmetic masking.
 The authorization harness allocates a valid, empty wallet account header with
 symbolic keys, flags and lamports; these rejection paths never access its data.
@@ -254,19 +255,23 @@ backend's unsupported `sol_alloc_free_` path. Switching to the scalar memory
 model did not resolve the suite and produced vacuous authorization rules; that
 model is not enabled here. The backend also lacks general `memmove` support.
 These are proof/tooling blockers, not established counterexamples to defrag.
+With the unified build, the malformed-instruction rule passes locally with its
+non-vacuity check; the existing `rule_market_empty` also encounters a prover
+memory-analysis error (`3308`, unknown absolute-address provenance).
 Resolve them locally before spending another remote run. Compilation and native
 test success do not establish these obligations.
 
 Run from `programs/manifest/src/certora/confs`:
 
 ```sh
-certoraSolanaProver rules-defrag.conf --compilation_steps_only
-certoraSolanaProver rules-defrag.conf --wait_for_results all
+certoraSolanaProver rules.conf --compilation_steps_only
+certoraSolanaProver rules.conf --wait_for_results all
 ```
 
 CI compiles this configuration on PRs. On main pushes or a manual workflow run,
-`rules-defrag.conf` runs in the existing verification matrix alongside the other
-configurations. Each matrix entry waits for actual proof results. A successful
+the defrag rules run within the existing `rules.conf` matrix entry. There is no
+defrag-specific feature, build, configuration, job, or workflow input. Each
+matrix entry waits for actual proof results. A successful
 compile or job submission alone is not evidence that the rules have passed.
 
 The proof build retains v3 call relocations and names static syscalls for
