@@ -199,6 +199,60 @@ separate global analysis.
 
 ## Validation
 
+### Certora coverage
+
+`programs/manifest/src/certora/confs/rules-defrag.conf` compiles the real defrag
+processor and account compactor. The compactor uses the real red-black tree,
+not the fixed-index seat/order mocks used by matching proofs. Defrag preservation
+is stated by trader pubkey and order sequence number because a byte index can
+move or be reused after an empty seat is reclaimed.
+
+The whole-pass harness contains eight blocks, three seats and three orders with
+symbolic placements, keys, balances, amounts, resting order types, and relocation
+budgets. Two orders share a price on one side; the third is on the other side.
+Both side assignments are checked. It asserts:
+
+- successful completion, unchanged surviving seat payloads, and reclamation only
+  of seats with neither withdrawable funds nor orders;
+- unchanged order payloads after translating the owner index, including global
+  and reverse order metadata;
+- the same order-tree links, colors, roots and best nodes under the relocation
+  map, preserving price/FIFO priority;
+- unchanged fixed metadata/funds ghosts except allocation indices and the
+  checked sequence-number increment;
+- a complete, zeroed, acyclic free list with at least two spare blocks, a size
+  that never grows, and respect for the relocation budget;
+- preservation after a budget-one pass, truncation, and a second pass, plus
+  explicit zero-budget, empty-market and sequence-overflow cases.
+
+Separate rules check bitmap updates, individual seat/order relocation (including
+root, parent and child repair), malformed allocation/owner rejection, and the
+actual instruction dispatch's collector, signer, writability and data checks.
+`optimistic_loop` is false, so insufficient loop unwinding fails verification;
+the defrag configuration also disables the existing no-memmove assumption.
+
+These are **bounded whole-pass obligations**, not a proof for every market up to
+65,536 blocks. They do not prove the 1,024-moved-seat cap or an arbitrary number
+of repeated passes. Prices retain the existing Certora single-limb abstraction;
+the production global-address cache is replaced by the existing funds ghosts.
+Successful processor paths involving expansion, token CPIs, rent refunds and
+account/vault closure are not covered by these rules. The existing SBF tests
+below cover those behaviors. Do not infer global gas-deposit/CPI conservation
+from unchanged order metadata alone.
+
+Run from `programs/manifest/src/certora/confs`:
+
+```sh
+certoraSolanaProver rules-defrag.conf --compilation_steps_only
+certoraSolanaProver rules-defrag.conf --wait_for_results all
+```
+
+CI compiles this configuration on PRs. On main pushes or a manual workflow run,
+the `Prove defrag properties` job waits for actual proof results. A successful
+compile or job submission alone is not evidence that the rules have passed.
+
+### Runtime validation
+
 - SBF builds for core, regular wrapper and UI wrapper using the pinned v1.57 tools.
 - All 153 core, 40 regular-wrapper and 12 UI-wrapper SBF integration tests passed.
 - The classic-token compatibility correction also passes all eight defrag SBF

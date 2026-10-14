@@ -8,6 +8,13 @@
 //! to compact in one transaction is compacted by repeating the call. Repeated
 //! bounded runs converge on the layout one unbounded run would produce.
 use super::*;
+// Defrag must use the account-backed tree even in verification builds. The
+// matching proofs' fixed-index seat mocks cannot represent node relocation.
+use hypertree::{HyperTreeReadOperations, HyperTreeWriteOperations, RedBlackTree};
+
+#[cfg(feature = "certora")]
+#[path = "../certora/spec/defrag_checks.rs"]
+pub mod verification;
 
 /// Byte offsets inside an `RBNode<V>` header. Identical for every payload.
 const NODE_LEFT: usize = 0;
