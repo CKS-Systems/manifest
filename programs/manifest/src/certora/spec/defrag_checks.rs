@@ -438,17 +438,21 @@ pub fn rule_defrag_sequence_overflow_rejected() {
 #[rule]
 pub fn rule_defrag_bitmap_preserves_other_blocks() {
     // Symbolic word indices require heap storage in Certora's memory model.
-    let mut words: Vec<u64> = vec![nondet(), nondet()];
-    let before = words.clone();
+    // The before-image is kept in scalars: a heap-to-heap clone is havocked
+    // by the prover's memory model and cannot serve as a snapshot.
+    let (word0, word1): (u64, u64) = (nondet(), nondet());
+    let mut words: Vec<u64> = vec![word0, word1];
     let target: usize = nondet();
     let other: usize = nondet();
     cvt_assume!(target < 128 && other < 128 && target != other);
+    // Constant indices only: symbolic stack indexing is also unsupported.
+    let expected: bool = (if other < 64 { word0 } else { word1 }) >> (other % 64) & 1 == 1;
     set_bit(&mut words, target);
     cvt_assert!(bit(&words, target));
-    cvt_assert!(bit(&words, other) == bit(&before, other));
+    cvt_assert!(bit(&words, other) == expected);
     clear_bit(&mut words, target);
     cvt_assert!(!bit(&words, target));
-    cvt_assert!(bit(&words, other) == bit(&before, other));
+    cvt_assert!(bit(&words, other) == expected);
     cvt_vacuity_check!();
 }
 

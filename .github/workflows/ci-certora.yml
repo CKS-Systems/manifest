@@ -38,7 +38,7 @@ jobs:
         # verification compiler ceiling on PRs (including forks) without keys.
         working-directory: programs/manifest/src/certora/confs
         run: |
-          for conf in rules.conf rules-global.conf rules-reverse.conf rules-seat-integrity.conf hypertree.conf; do
+          for conf in rules.conf rules-defrag.conf rules-global.conf rules-reverse.conf rules-seat-integrity.conf hypertree.conf; do
             certoraSolanaProver "$conf" --compilation_steps_only
             ../../../../../scripts/assert-sbpf-v3.sh ../../../../../target/sbpfv3-solana-solana/release/manifest.so
           done
@@ -54,6 +54,7 @@ jobs:
       matrix:
         configuration:
           - rules.conf
+          - rules-defrag.conf
           - rules-global.conf
           - rules-reverse.conf
           - rules-seat-integrity.conf

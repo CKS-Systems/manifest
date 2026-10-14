@@ -93,7 +93,22 @@ def prepare(original):
             sym[0] = len(strdata)
             strdata.extend(string(section_names, sections[sym[3]][0]).encode() + b"\0")
             SYMBOL.pack_into(symdata, offset, *sym)
-        symnames[string(strdata, sym[0])] = offset // SYMBOL.size
+        name = string(strdata, sym[0])
+        # This std mangles the allocator shims (v0, crate `__rustc`), which
+        # hides them from Certora's built-in malloc/free interception. Without
+        # it every heap pointer loses its provenance. Restore the classic
+        # names the prover matches on.
+        classic = next((shim for shim in ("__rust_alloc_zeroed", "__rust_realloc",
+                                          "__rust_dealloc", "__rust_alloc")
+                        if name.endswith(shim)), None)
+        if sym[1] & 15 == 2 and classic is not None and name != classic:
+            if classic in symnames:
+                raise ValueError(f"both {name} and {classic} are defined")
+            name = classic
+            sym[0] = len(strdata)
+            strdata.extend(classic.encode() + b"\0")
+            SYMBOL.pack_into(symdata, offset, *sym)
+        symnames[name] = offset // SYMBOL.size
 
     relocations = {}
     for address, info in RELOCATION.iter_unpack(contents(rel)):

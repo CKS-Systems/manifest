@@ -16,6 +16,12 @@
 ^alloc::raw_vec::RawVec<T,A>::reserve_for_push(_[0-9][0-9]*)*$
 #[type((*i64)(r1+0):ptr_heap)]
 ^alloc::raw_vec::RawVec<T,A>::reserve::do_reserve_and_handle(_[0-9][0-9]*)*$
+;;; platform-tools v1.53's std moved the growth paths to RawVecInner and
+;;; renamed push growth to grow_one; same self-pointer postcondition.
+#[type((*i64)(r1+0):ptr_heap)]
+^alloc::raw_vec::RawVecInner<A>::reserve::do_reserve_and_handle(_[0-9][0-9]*)*$
+#[type((*i64)(r1+0):ptr_heap)]
+^alloc::raw_vec::RawVec<T,A>::grow_one(_[0-9][0-9]*)*$
 
 #[type((*i64)(r1+0):num)]
 #[type((*i64)(r1+8):num)]

@@ -4,7 +4,8 @@ import unittest
 from prepare_elf import ELF, RELOCATION, SECTION, SYMBOL, prepare, syscall_hash
 
 
-def fixture(syscall=0x434371F8, internal_call=False, section_symbol=False, abort_wrapper=False):
+def fixture(syscall=0x434371F8, internal_call=False, section_symbol=False, abort_wrapper=False,
+            alloc_symbol=None):
     # One static memmove, one unresolved verification primitive, and an lddw
     # whose immediate word looks like a call. Only real calls get relocations.
     text = (struct.pack("<BBhI", 0x85, 0, 0, syscall)
@@ -21,6 +22,9 @@ def fixture(syscall=0x434371F8, internal_call=False, section_symbol=False, abort
     if abort_wrapper:
         symbols += SYMBOL.pack(len(strings), 2, 0, 1, 0x100000000, 8)
         strings += b"abort\0"
+    if alloc_symbol:
+        symbols += SYMBOL.pack(len(strings), 0x12, 0, 1, 0x100000008, 8)
+        strings += alloc_symbol + b"\0"
     payloads = [b"", text, RELOCATION.pack(0x100000008, 1 << 32 | 10), symbols, strings, names]
     sections = [[0] * 10]
     data = bytearray(ELF.size)
@@ -87,6 +91,16 @@ class PrepareElfTests(unittest.TestCase):
         symbol = SYMBOL.unpack_from(prepared, symbols[4] + 2 * SYMBOL.size)
         self.assertEqual(symbol[1:], (3, 0, 1, 0x100000000, 0))
         self.assertEqual(prepared[strings[4] + symbol[0]:][:6], b".text\0")
+
+    def test_mangled_allocator_shims_get_classic_names(self):
+        original = fixture(alloc_symbol=b"_RNvCscR3e5J6VSLN_7___rustc12___rust_alloc")
+        prepared, _ = prepare(original)
+        header = ELF.unpack_from(prepared)
+        symbols = SECTION.unpack_from(prepared, header[6] + 3 * SECTION.size)
+        strings = SECTION.unpack_from(prepared, header[6] + 4 * SECTION.size)
+        symbol = SYMBOL.unpack_from(prepared, symbols[4] + 2 * SYMBOL.size)
+        self.assertEqual(prepared[strings[4] + symbol[0]:][:13], b"__rust_alloc\0")
+        self.assertEqual(symbol[1:], (0x12, 0, 1, 0x100000008, 8))
 
     def test_abort_wrapper_and_syscall_keep_distinct_symbols(self):
         prepared, _ = prepare(fixture(syscall_hash("abort"), abort_wrapper=True))
