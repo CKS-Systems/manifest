@@ -6,8 +6,7 @@
 //! and arbitrary relocation budgets. They are bounded proofs, not an induction
 //! over every market size. No matching mock or defrag summary is used.
 use super::*;
-use crate::cvt_vacuity_check;
-use crate::validation::AccountViewExt;
+use crate::{cvt_vacuity_check, validation::AccountViewExt};
 use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use hypertree::{Color, RedBlackTreeReadOnly};

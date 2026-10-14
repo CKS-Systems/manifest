@@ -18,10 +18,9 @@ pub mod certora;
 
 use hypertree::trace;
 use pinocchio::{account::AccountView, address::Address, error::ProgramError, ProgramResult};
-use program::defrag::process_defrag;
 use program::{
     batch_update::process_batch_update, claim_seat::process_claim_seat,
-    create_market::process_create_market, deposit::process_deposit,
+    create_market::process_create_market, defrag::process_defrag, deposit::process_deposit,
     expand_market::process_expand_market, global_add_trader::process_global_add_trader,
     global_clean::process_global_clean, global_create::process_global_create,
     global_deposit::process_global_deposit, global_evict::process_global_evict,
