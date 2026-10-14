@@ -56,13 +56,27 @@ impl From<ManifestError> for ProgramError {
     }
 }
 
-#[cfg(feature = "certora")]
+#[cfg(all(feature = "certora", not(feature = "certora-defrag")))]
 #[macro_export]
 macro_rules! require {
     ($test:expr, $err:expr, $($arg:tt)*) => {{
         ::cvt::cvt_assume!($test);
         Ok::<(), crate::ProgramError>(())
     }};
+}
+
+// Preserve validation failures for defrag's rejection/no-revert obligations.
+// Diagnostic formatting has no effect on the state properties being checked.
+#[cfg(feature = "certora-defrag")]
+#[macro_export]
+macro_rules! require {
+    ($test:expr, $err:expr, $($arg:tt)*) => {
+        if $test {
+            Ok::<(), $crate::ProgramError>(())
+        } else {
+            Err::<(), $crate::ProgramError>(($err).into())
+        }
+    };
 }
 
 #[cfg(not(feature = "certora"))]

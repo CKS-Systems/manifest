@@ -97,7 +97,7 @@ jobs:
         run: |
           rustup toolchain install 1.93.0
           cargo +1.93.0 install cargo-certora-sbf --version 0.3.5 --locked
-          python3 -m pip install certora-cli==8.13.0
+          python3 -m pip install certora-cli==8.19.2
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           shared-key: 'certora-v1.53-v3-${{ github.job }}'

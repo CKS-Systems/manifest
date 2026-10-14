@@ -26,6 +26,9 @@ no-clock = []
 certora = ["no-entrypoint", "dep:cvt", "dep:nondet", "dep:cvt-macros", "dep:early-panic", "dep:calltrace", "dep:solana_cvt", "dep:vectors", "dep:hook_macro",
            "hypertree/certora", "dep:cvlr"]
 certora_vacuity = ["cvt/vacuity"]
+# Defrag verifies rejection/no-panic paths, so its build must keep require!
+# branches instead of assuming they succeed as the matching abstraction does.
+certora-defrag = ["certora"]
 
 [dependencies]
 hypertree = { path = "../../lib" }

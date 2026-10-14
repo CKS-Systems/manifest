@@ -209,7 +209,10 @@ move or be reused after an empty seat is reclaimed.
 
 The whole-pass harness contains eight blocks, three seats and three orders with
 symbolic placements, keys, balances, amounts, resting order types, and relocation
-budgets. Two orders share a price on one side; the third is on the other side.
+budgets. The `certora-defrag` feature keeps production `require!` branches
+(the matching abstraction turns them into assumptions), and `assert_on_panic`
+makes panic paths fail verification instead of pruning them. Two orders share
+a price on one side; the third is on the other side.
 Both side assignments are checked. It asserts:
 
 - successful completion, unchanged surviving seat payloads, and reclamation only
