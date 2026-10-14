@@ -13,8 +13,8 @@
 #                                   the bundle. Off a linux/amd64 host this needs docker (the
 #                                   harness is a linux/amd64 binary). No upload.
 #   ./fuzz.sh doctor                check the setup: FUZZ_* env, the fuzz-up binary, then
-#                                   `fuzz-up version` (server reachable) and `fuzz-up user login`
-#                                   (key valid; lists the org/projects it grants)
+#                                   `fuzz-up version` (server reachable) and `fuzz-up whoami`
+#                                   (key valid; shows the user and the org/project it targets)
 #   ./fuzz.sh seed_corpus [dir]     upload ./corpus to the lineage (coverage needs a corpus)
 #   ./fuzz.sh local [seconds]       fuzz locally against the staged program, no server involved
 #   ./fuzz.sh coverage              replay ./corpus with coverage into ./coverage/coverage.lcov
@@ -72,11 +72,9 @@ require_env() {
 }
 
 # Preflight for every upload: the FUZZ_* env, a fuzz-up binary, then two server round trips --
-# `fuzz-up version` (the API server answers; prints cluster and version) and `fuzz-up user login`
-# (the key authenticates; prints the organizations and projects it grants, stores nothing on disk).
-# A FUZZ_PROJECT the key does not list is reported, because an upload aimed at the wrong project is
-# otherwise only noticed on the dashboard. API keys are per-cluster: a key for one cluster 401s
-# against another.
+# `fuzz-up version` (the API server answers; prints cluster and version) and `fuzz-up whoami`
+# (the key authenticates; prints the user and the organization and project from FUZZ_*, stores
+# nothing on disk). API keys are per-cluster: a key for one cluster 401s against another.
 doctor() {
     require_env
     UPLOADER="$(resolve_uploader)" \
@@ -84,12 +82,8 @@ doctor() {
     log "uploader: $UPLOADER  organization: $FUZZ_ORGANIZATION  project: $FUZZ_PROJECT${FUZZ_API_ORIGIN:+  origin: $FUZZ_API_ORIGIN}"
     "$UPLOADER" version \
       || die "fuzz-up cannot reach the API server (FUZZ_API_ORIGIN=${FUZZ_API_ORIGIN:-<default>})"
-    local login
-    login="$("$UPLOADER" user login 2>&1)" \
-      || { printf '%s\n' "$login" >&2; die "FUZZ_API_KEY does not authenticate against the API server"; }
-    printf '%s\n' "$login"
-    grep -qE "^[[:space:]]*-[[:space:]]*${FUZZ_PROJECT}[[:space:]]*$" <<<"$login" \
-        || log "warning: FUZZ_PROJECT='$FUZZ_PROJECT' is not among the projects this key grants (listed above)"
+    "$UPLOADER" whoami \
+      || die "FUZZ_API_KEY does not authenticate against the API server"
 }
 
 # A fresh lineage has no corpus, and the cover task fails on an empty one ("Found 0 input files"),
