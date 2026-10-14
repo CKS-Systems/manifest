@@ -277,15 +277,36 @@ the configuration as an exclusion naming its blocker:
 - The invalid-allocation rule exceeds practical solve time.
 
 The same backend limits break many **pre-existing** rules, on main's unchanged
-code as well (verified by running origin/main through the identical pipeline):
-the processor-level deposit/withdraw/claim/release and global-token rules fail
-memory-analysis encoding with errors 3006/3308 (stack pointers escaping in the
-pinocchio cross-program-invocation plumbing), and most hypertree rules report
-counterexamples whose symbolic tree state is havocked. None of this had been
-visible: the previous workflow submitted with `--wait_for_results none` and
-the prover could not even disassemble the unprepared sbpf-v3 ELF, so no proof
-had actually run since the v3 migration. Those exclusions are also inline in
-their configurations, to be restored as Certora support lands.
+code as well (verified by running origin/main through the identical pipeline).
+None of this had been visible: the previous workflow submitted with
+`--wait_for_results none` and the prover could not even disassemble the
+unprepared sbpf-v3 ELF, so no proof had actually run since the v3 migration.
+Those exclusions are inline in their configurations.
+
+The largest group is every rule that loads a processor account context
+(deposit, withdraw, batch update, claim/release seat, market state, global
+tokens): they fail memory-analysis encoding with error 3006, an escaping stack
+pointer. That was bisected to `ManifestAccountInfo::<T>::new`, with one
+single-rule prover job per candidate. Each construct inside it verifies on its
+own — the owner check, the borrow guard, `get_helper`'s cast, reading the
+header by value, and `verify_discriminant` on a stack copy — as do
+`Signer::new` and `TokenAccountInfo::new_with_owner`, and so does the entire
+rule harness without the loader. Only the whole function fails, so there is no
+local idiom to rewrite. The prover's own log gives the reason: its mod-ref
+analysis bails out on these regions ("contains 37 blocks, exceeding the
+maximum supported size of 8"), after which it answers every aliasing query
+conservatively and a legitimate stack store looks like an escape. That bound
+is hardcoded as `maxRegionSize = 8UL` in the prover
+(`src/main/kotlin/sbf/cfg/PromoteMemcpy/MemcpyPatternRewriter.kt`), not
+exposed as an option. `-solanaMaxSilencedPTAErrors` does get past the
+encoding failure, but it inserts an assertion at the error site, and that site
+is reachable on these rules' own paths, so they become unprovable rather than
+proven. Raising the limit needs a prover change; these rules cannot be
+recovered from this repository.
+
+Most hypertree rules report counterexamples whose symbolic tree state is
+havocked. Rebuilding their node writes field by field, the change that fixed
+the defrag bitmap rule, does not help them.
 
 Run from `programs/manifest/src/certora/confs`:
 

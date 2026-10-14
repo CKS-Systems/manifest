@@ -71,9 +71,31 @@ fn zeroed_market_bytes(view: &AccountView) -> pinocchio::account::RefMut<'_, [u8
     let borrow = view.try_borrow_mut();
     cvt_assume!(borrow.is_ok());
     let mut data = borrow.unwrap();
-    cvt_assume!(data.len() == BLOCKS * MARKET_BLOCK_SIZE);
+    cvt_assume!(data.len() >= BLOCKS * MARKET_BLOCK_SIZE);
     data.fill(0);
     data
+}
+
+/// Take the model's blocks as a slice whose length is a constant the prover
+/// tracks. Assuming a symbolic `len()` equals the constant is not enough: the
+/// bound stays symbolic and in-bounds block copies still report slice panics.
+fn market_blocks(data: &mut [u8]) -> &mut [u8] {
+    let (blocks, _) = data.split_at_mut(BLOCKS * MARKET_BLOCK_SIZE);
+    blocks
+}
+
+/// Write a node into account bytes field by field. Whole-struct stores into
+/// account data are havocked by the prover's memory model, so a rule that
+/// reads the node back compares against havocked bytes.
+fn put_node<V: hypertree::Payload>(dynamic: &mut [u8], at: DataIndex, node: RBNode<V>) {
+    let slot: &mut RBNode<V> = get_mut_helper::<RBNode<V>>(dynamic, at);
+    slot.left = node.left;
+    slot.right = node.right;
+    slot.parent = node.parent;
+    slot.color = node.color;
+    slot.payload_type = node.payload_type;
+    slot._unused_padding = node._unused_padding;
+    slot.value = node.value;
 }
 
 fn index(block: usize) -> DataIndex {
@@ -528,7 +550,8 @@ pub fn rule_defrag_relocate_seat_payload() {
     let accounts: [AccountView; 16] = account_views_with_mem_layout!();
     let mut fixed = arbitrary_fixed();
     let before = fixed;
-    let mut dynamic = zeroed_market_bytes(&accounts[1]);
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic = market_blocks(&mut data);
     let positions = arbitrary_indices::<2>();
     cvt_assume!(positions[1] < positions[0]);
     let seat = arbitrary_seat();
@@ -541,11 +564,11 @@ pub fn rule_defrag_relocate_seat_payload() {
         _unused_padding: 0,
         value: seat,
     };
-    *get_mut_helper::<RBNode<ClaimedSeat>>(&mut dynamic, positions[0]) = node;
+    put_node::<ClaimedSeat>(dynamic, positions[0], node);
     let mut moved = Vec::with_capacity(1);
     let result = relocate(
         &mut fixed,
-        &mut dynamic,
+        dynamic,
         positions[0] as usize,
         positions[1] as usize,
         &mut moved,
@@ -554,7 +577,7 @@ pub fn rule_defrag_relocate_seat_payload() {
     cvt_assert!(bytemuck::bytes_of(&fixed) == bytemuck::bytes_of(&before));
     cvt_assert!(moved.len() == 1 && moved[0] == (positions[0], positions[1]));
     cvt_assert!(
-        bytemuck::bytes_of(get_helper::<RBNode<ClaimedSeat>>(&dynamic, positions[1]).get_value())
+        bytemuck::bytes_of(get_helper::<RBNode<ClaimedSeat>>(dynamic, positions[1]).get_value())
             == bytemuck::bytes_of(&seat)
     );
     cvt_vacuity_check!();
@@ -564,7 +587,8 @@ fn relocate_order<const IS_BID: bool>() {
     cvt_static_initializer!();
     let accounts: [AccountView; 16] = account_views_with_mem_layout!();
     let mut fixed = arbitrary_fixed();
-    let mut dynamic = zeroed_market_bytes(&accounts[1]);
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic = market_blocks(&mut data);
     let p = arbitrary_indices::<5>();
     let (old, new) = (p[0], p[1]);
     cvt_assume!(new < old);
@@ -580,22 +604,22 @@ fn relocate_order<const IS_BID: bool>() {
         _unused_padding: 0,
         value: arbitrary_order(index(7), IS_BID),
     };
-    *get_mut_helper::<RBNode<RestingOrder>>(&mut dynamic, old) = node;
+    put_node::<RestingOrder>(dynamic, old, node);
     let side = if nondet::<bool>() {
         NODE_LEFT
     } else {
         NODE_RIGHT
     };
     if parent != NIL {
-        write_index(&mut dynamic, parent as usize + NODE_LEFT, NIL);
-        write_index(&mut dynamic, parent as usize + NODE_RIGHT, NIL);
-        write_index(&mut dynamic, parent as usize + side, old);
+        write_index(dynamic, parent as usize + NODE_LEFT, NIL);
+        write_index(dynamic, parent as usize + NODE_RIGHT, NIL);
+        write_index(dynamic, parent as usize + side, old);
     }
     if left != NIL {
-        write_index(&mut dynamic, left as usize + NODE_PARENT, old);
+        write_index(dynamic, left as usize + NODE_PARENT, old);
     }
     if right != NIL {
-        write_index(&mut dynamic, right as usize + NODE_PARENT, old);
+        write_index(dynamic, right as usize + NODE_PARENT, old);
     }
     if IS_BID {
         fixed.bids_root_index = if parent == NIL { old } else { parent };
@@ -610,15 +634,8 @@ fn relocate_order<const IS_BID: bool>() {
     }
     let before = fixed;
     let mut moved = Vec::new();
-    cvt_assert!(relocate(
-        &mut fixed,
-        &mut dynamic,
-        old as usize,
-        new as usize,
-        &mut moved
-    )
-    .is_ok());
-    let actual = get_helper::<RBNode<RestingOrder>>(&dynamic, new);
+    cvt_assert!(relocate(&mut fixed, dynamic, old as usize, new as usize, &mut moved).is_ok());
+    let actual = get_helper::<RBNode<RestingOrder>>(dynamic, new);
     cvt_assert!(bytemuck::bytes_of(&actual.value) == bytemuck::bytes_of(&node.value));
     cvt_assert!(
         actual.color == node.color
@@ -628,13 +645,13 @@ fn relocate_order<const IS_BID: bool>() {
     );
     cvt_assert!(moved.is_empty());
     if left != NIL {
-        cvt_assert!(read_index(&dynamic, left as usize + NODE_PARENT) == new);
+        cvt_assert!(read_index(dynamic, left as usize + NODE_PARENT) == new);
     }
     if right != NIL {
-        cvt_assert!(read_index(&dynamic, right as usize + NODE_PARENT) == new);
+        cvt_assert!(read_index(dynamic, right as usize + NODE_PARENT) == new);
     }
     if parent != NIL {
-        cvt_assert!(read_index(&dynamic, parent as usize + side) == new);
+        cvt_assert!(read_index(dynamic, parent as usize + side) == new);
     }
     let expected_root = if parent == NIL { new } else { parent };
     let expected_best = if best == old { new } else { best };
