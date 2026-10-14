@@ -91,5 +91,18 @@
 #[type((*i32)(r1+0):num)]
 ^solana_program::program::invoke_signed_unchecked$
 
+;;; The pinocchio migration moved cross-program invocation into these crate
+;;; wrappers. The prover must not descend into their stack-built instruction
+;;; structures (it fails with stack-escape errors), exactly like the
+;;; pre-migration solana_program entry above.
+#[type((*i32)(r1+0):num)]
+^manifest::program::processor::shared::invoke(_[0-9][0-9]*)*$
+#[type((*i32)(r1+0):num)]
+^manifest::program::processor::shared::invoke_signed(_[0-9][0-9]*)*$
+#[type((*i32)(r1+0):num)]
+^manifest::program::processor::shared::invoke_passthrough(_[0-9][0-9]*)*$
+#[type((*i32)(r1+0):num)]
+^manifest::program::processor::shared::invoke_passthrough_refs(_[0-9][0-9]*)*$
+
 ;; To silent Solana prover warning about memhavoc_c 
 ^memhavoc_c$

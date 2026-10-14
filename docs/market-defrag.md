@@ -201,18 +201,30 @@ separate global analysis.
 
 ### Certora coverage
 
-`programs/manifest/src/certora/confs/rules.conf` includes defrag alongside the
-existing market rules in the normal `certora` build. It compiles the real defrag
-processor and account compactor. The compactor uses the real red-black tree,
-not the fixed-index seat/order mocks used by matching proofs. Defrag preservation
-is stated by trader pubkey and order sequence number because a byte index can
-move or be reused after an empty seat is reclaimed.
+`programs/manifest/src/certora/confs/rules-defrag.conf` runs the defrag rules
+from the normal unified `certora` build (no defrag-specific feature). It
+compiles the real defrag processor and account compactor; the compactor uses
+the real red-black tree, not the fixed-index seat/order mocks used by matching
+proofs. Defrag preservation is stated by trader pubkey and order sequence
+number because a byte index can move or be reused after an empty seat is
+reclaimed.
+
+The verification `require!` stays an assumption, as the other rules were
+proven: returning real errors from every call site fails the prover's memory
+analysis with unknown-provenance errors across the legacy suite. Defrag's own
+validation — and `Signer::new_payer_rejecting`, used only by its processor —
+opts back into production branches with `require_rejecting!`, whose production
+expansion is identical, so the rejection rules observe the exact error codes.
+On top of the shared base configuration, `rules-defrag.conf` enables
+`assert_on_panic` (panics fail these rules instead of pruning), exact bitwise
+semantics and a deeper loop bound.
 
 The whole-pass harness contains eight blocks, three seats and three orders with
-symbolic placements, keys, balances, amounts, resting order types, and relocation
-budgets. The shared `certora` build keeps production `require!` branches
-instead of turning validation into assumptions, and `assert_on_panic`
-makes panic paths fail verification instead of pruning them. Two orders share
+symbolic placements, keys, balances, amounts, resting order types, and
+relocation budgets. The market bytes live in the prover's pinned input region
+(`account_views_with_mem_layout!`), like every verified rule's accounts, and
+the before-image lives in stack copies of the inserted values: the memory
+model havocks heap-to-heap snapshots, so there is no clone. Two orders share
 a price on one side; the third is on the other side.
 Both side assignments are checked. It asserts:
 
@@ -232,10 +244,11 @@ Both side assignments are checked. It asserts:
 Separate rules check bitmap updates, individual seat/order relocation (including
 root, parent and child repair), malformed allocation/owner rejection, and the
 actual instruction dispatch's collector, signer, writability and data checks.
-`optimistic_loop` is false, so insufficient loop unwinding fails verification;
-the shared base configuration also disables the existing optimistic memory
-assumptions and enables exact bitwise operations and 64-bit arithmetic masking.
-The authorization harness allocates a valid, empty wallet account header with
+`optimistic_loop` is false, so insufficient loop unwinding fails verification.
+The shared base configuration keeps the optimistic memory assumptions the rest
+of the suite was proven under (the prover's translation aborts without them);
+this configuration adds exact bitwise operations on top. The authorization
+harness takes its wallet account from the canonical pinned input region with
 symbolic keys, flags and lamports; these rejection paths never access its data.
 
 These are **bounded whole-pass obligations**, not a proof for every market up to
@@ -247,38 +260,57 @@ account/vault closure are not covered by these rules. The existing SBF tests
 below cover those behaviors. Do not infer global gas-deposit/CPI conservation
 from unchanged order metadata alone.
 
-**Proof status (2026-10-14): unresolved.** The rules compile, but the full local
-run with prover 8.19.2 fails during memory translation before completing the
-proofs. Reproductions include unknown pointer provenance and an inability to
-determine overlapping memory writes. A diagnostic run also reaches the
-backend's unsupported `sol_alloc_free_` path. Switching to the scalar memory
-model did not resolve the suite and produced vacuous authorization rules; that
-model is not enabled here. The backend also lacks general `memmove` support.
-These are proof/tooling blockers, not established counterexamples to defrag.
-With the unified build, the malformed-instruction rule passes locally with its
-non-vacuity check; the existing `rule_market_empty` also encounters a prover
-memory-analysis error (`3308`, unknown absolute-address provenance).
-Resolve them locally before spending another remote run. Compilation and native
-test success do not establish these obligations.
+**Proof status (2026-10-14).** The instruction-data rejection, writable-
+collector rejection and bitmap-preservation rules verify remotely, including
+their explicit non-vacuity checks, and are what `rules-defrag.conf` gates on.
+Every other defrag rule is blocked by the prover, not refuted, and is listed in
+the configuration as an exclusion naming its blocker:
+
+- Slicing any rule that inlines the shared whole-pass market builder crashes
+  the prover itself (`IllegalStateException: Unexpected setRegister on
+  bottom`, reproduced on single-rule jobs). Two global-order no-revert rules
+  crash the same way.
+- The relocate rules report a slice-bounds panic on indices that are in bounds
+  by construction, and the collector/signature rules report the account header
+  reading back differently inside the program than in the rule's own
+  assumption — memory-model imprecision, with concretely impossible witnesses.
+- The invalid-allocation rule exceeds practical solve time.
+
+The same backend limits break many **pre-existing** rules, on main's unchanged
+code as well (verified by running origin/main through the identical pipeline):
+the processor-level deposit/withdraw/claim/release and global-token rules fail
+memory-analysis encoding with errors 3006/3308 (stack pointers escaping in the
+pinocchio cross-program-invocation plumbing), and most hypertree rules report
+counterexamples whose symbolic tree state is havocked. None of this had been
+visible: the previous workflow submitted with `--wait_for_results none` and
+the prover could not even disassemble the unprepared sbpf-v3 ELF, so no proof
+had actually run since the v3 migration. Those exclusions are also inline in
+their configurations, to be restored as Certora support lands.
 
 Run from `programs/manifest/src/certora/confs`:
 
 ```sh
-certoraSolanaProver rules.conf --compilation_steps_only
-certoraSolanaProver rules.conf --wait_for_results all
+certoraSolanaProver rules-defrag.conf --compilation_steps_only
+certoraSolanaProver rules-defrag.conf --wait_for_results all
 ```
 
-CI compiles this configuration on PRs. On main pushes or a manual workflow run,
-the defrag rules run within the existing `rules.conf` matrix entry. There is no
-defrag-specific feature, build, configuration, job, or workflow input. Each
-matrix entry waits for actual proof results. A successful
-compile or job submission alone is not evidence that the rules have passed.
+CI compiles every configuration on PRs. On main pushes or a manual workflow
+run, the defrag rules run as their own `rules-defrag.conf` matrix entry in the
+same unified `certora` build (no defrag-specific feature or workflow input).
+Each matrix entry waits for actual proof results and fails on violations or
+errors. Batched vacuity sub-rules are disabled (`rule_sanity: none`): they
+starve into SANITY_FAILED in multi-rule jobs or hit encoding errors of their
+own, so they cannot gate; the defrag rules carry explicit satisfy checks
+instead.
 
 The proof build retains v3 call relocations and names static syscalls for
 Certora's disassembler, which otherwise mistakes their numeric identifiers for
-relative function addresses. `certora/prepare_elf.py` changes only non-loaded
-symbol/relocation tables and checks that every loaded byte is unchanged. Unknown
-syscalls fail preparation. Production builds do not use this preparation step.
+relative function addresses, and restores the classic `__rust_alloc` family
+names that platform-tools v1.53 mangles, so the prover's allocator
+interception keeps working. `certora/prepare_elf.py` changes only non-loaded
+symbol/relocation tables and checks that every loaded byte is unchanged.
+Unknown syscalls fail preparation. Production builds do not use this
+preparation step.
 
 ### Runtime validation
 

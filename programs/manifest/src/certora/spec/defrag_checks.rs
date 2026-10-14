@@ -6,12 +6,12 @@
 //! and arbitrary relocation budgets. They are bounded proofs, not an induction
 //! over every market size. No matching mock or defrag summary is used.
 use super::*;
-use crate::{cvt_vacuity_check, validation::AccountViewExt};
+use crate::{cvt_static_initializer, cvt_vacuity_check, validation::AccountViewExt};
 use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use hypertree::{Color, RedBlackTreeReadOnly};
-use nondet::nondet;
-use pinocchio::account::{AccountView, RuntimeAccount};
+use nondet::{account_views_with_mem_layout, nondet};
+use pinocchio::account::AccountView;
 
 const BLOCKS: usize = 8;
 const SEATS: usize = 3;
@@ -59,22 +59,21 @@ fn arbitrary_seat() -> ClaimedSeat {
     seat
 }
 
-fn collector_account() -> AccountView {
-    // A valid wallet account header with arbitrary keys, balances and flags.
-    // These rejection rules return before any account data is accessed.
-    let header = Box::new(RuntimeAccount {
-        borrow_state: u8::MAX,
-        is_signer: u8::from(nondet::<bool>()),
-        is_writable: u8::from(nondet::<bool>()),
-        executable: u8::from(nondet::<bool>()),
-        resize_delta: 0,
-        address: arbitrary_key().to_bytes().into(),
-        owner: arbitrary_key().to_bytes().into(),
-        lamports: nondet(),
-        data_len: 0,
-    });
-    // The allocation is deliberately retained for the lifetime of the rule.
-    unsafe { AccountView::new_unchecked(Box::into_raw(header)) }
+// Dispatch rules take their collector from `account_views_with_mem_layout!`:
+// a symbolic account pinned to the prover's input region, like every other
+// rule's accounts. A heap-built header is outside the memory model's account
+// layout and reads back havocked.
+
+/// The market's dynamic bytes, zeroed, in the prover's pinned input region.
+/// Heap-backed buffers are unusable here: block-sized copies into them are
+/// havocked by the memory model, while account data is tracked byte-precisely.
+fn zeroed_market_bytes(view: &AccountView) -> pinocchio::account::RefMut<'_, [u8]> {
+    let borrow = view.try_borrow_mut();
+    cvt_assume!(borrow.is_ok());
+    let mut data = borrow.unwrap();
+    cvt_assume!(data.len() == BLOCKS * MARKET_BLOCK_SIZE);
+    data.fill(0);
+    data
 }
 
 fn index(block: usize) -> DataIndex {
@@ -120,99 +119,105 @@ fn arbitrary_order(owner: DataIndex, is_bid: bool) -> RestingOrder {
     order
 }
 
-fn put_seat(market: &mut MarketValue, at: DataIndex, seat: ClaimedSeat) {
-    let mut tree = RedBlackTree::new(
-        &mut market.dynamic,
-        market.fixed.claimed_seats_root_index,
-        NIL,
-    );
+fn put_seat(fixed: &mut MarketFixed, dynamic: &mut [u8], at: DataIndex, seat: ClaimedSeat) {
+    let mut tree = RedBlackTree::new(dynamic, fixed.claimed_seats_root_index, NIL);
     tree.insert(at, seat);
-    market.fixed.claimed_seats_root_index = tree.get_root_index();
-    get_mut_helper::<RBNode<ClaimedSeat>>(&mut market.dynamic, at)
+    fixed.claimed_seats_root_index = tree.get_root_index();
+    get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, at)
         .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
 }
 
-fn put_order(market: &mut MarketValue, at: DataIndex, order: RestingOrder) {
+fn put_order(fixed: &mut MarketFixed, dynamic: &mut [u8], at: DataIndex, order: RestingOrder) {
     let bid = order.get_is_bid();
     let (root, best) = if bid {
-        (
-            &mut market.fixed.bids_root_index,
-            &mut market.fixed.bids_best_index,
-        )
+        (&mut fixed.bids_root_index, &mut fixed.bids_best_index)
     } else {
-        (
-            &mut market.fixed.asks_root_index,
-            &mut market.fixed.asks_best_index,
-        )
+        (&mut fixed.asks_root_index, &mut fixed.asks_best_index)
     };
-    let mut tree = RedBlackTree::new(&mut market.dynamic, *root, *best);
+    let mut tree = RedBlackTree::new(dynamic, *root, *best);
     tree.insert(at, order);
     *root = tree.get_root_index();
     *best = tree.get_max_index();
-    get_mut_helper::<RBNode<RestingOrder>>(&mut market.dynamic, at)
+    get_mut_helper::<RBNode<RestingOrder>>(dynamic, at)
         .set_payload_type(MarketDataTreeNodeType::RestingOrder as u8);
 }
 
-fn market<const IS_BID: bool>() -> (MarketValue, [DataIndex; SEATS + ORDERS]) {
-    let mut market = DynamicAccount {
-        fixed: arbitrary_fixed(),
-        dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
-    };
-    market.fixed.num_bytes_allocated = index(BLOCKS);
-    cvt_assume!(market.fixed.order_sequence_number < u64::MAX - 1);
+/// Build the symbolic market in `dynamic` (zeroed account bytes) and return
+/// its fixed header plus the inserted values. Those stack copies are the
+/// before-image the pass checks against: the prover's memory model havocks
+/// heap snapshots, so there is no clone.
+#[allow(clippy::type_complexity)]
+fn market<const IS_BID: bool>(
+    dynamic: &mut [u8],
+) -> (
+    MarketFixed,
+    [DataIndex; SEATS + ORDERS],
+    [ClaimedSeat; SEATS],
+    [RestingOrder; ORDERS],
+) {
+    let mut fixed = arbitrary_fixed();
+    fixed.num_bytes_allocated = index(BLOCKS);
+    cvt_assume!(fixed.order_sequence_number < u64::MAX - 1);
     let indices = arbitrary_indices::<{ SEATS + ORDERS }>();
-    let seats: [ClaimedSeat; SEATS] = [arbitrary_seat(), arbitrary_seat(), arbitrary_seat()];
+    let mut seats: [ClaimedSeat; SEATS] = [arbitrary_seat(), arbitrary_seat(), arbitrary_seat()];
     for i in 0..SEATS {
         for j in 0..i {
             cvt_assume!(seats[i].trader != seats[j].trader);
         }
-        let mut seat = seats[i];
         if i == 2 {
             // A seat with neither a balance nor an order must be reclaimed.
-            seat.base_withdrawable_balance = BaseAtoms::ZERO;
-            seat.quote_withdrawable_balance = QuoteAtoms::ZERO;
+            seats[i].base_withdrawable_balance = BaseAtoms::ZERO;
+            seats[i].quote_withdrawable_balance = QuoteAtoms::ZERO;
         }
-        put_seat(&mut market, indices[i], seat);
+        put_seat(&mut fixed, dynamic, indices[i], seats[i]);
     }
+    let mut orders: [RestingOrder; ORDERS] = [
+        arbitrary_order(indices[0], IS_BID),
+        arbitrary_order(indices[0], IS_BID),
+        arbitrary_order(indices[0], !IS_BID),
+    ];
     for i in 0..ORDERS {
         let owner = if nondet::<bool>() {
             indices[0]
         } else {
             indices[1]
         };
-        let mut order = arbitrary_order(owner, if i == 2 { !IS_BID } else { IS_BID });
-        cvt_assume!(order.get_sequence_number() < market.fixed.order_sequence_number);
+        write_index(
+            bytemuck::bytes_of_mut(&mut orders[i]),
+            ORDER_TRADER - NODE_VALUE,
+            owner,
+        );
+        cvt_assume!(orders[i].get_sequence_number() < fixed.order_sequence_number);
         for j in 0..i {
-            let previous = get_helper::<RBNode<RestingOrder>>(&market.dynamic, indices[SEATS + j]);
-            cvt_assume!(order.get_sequence_number() != previous.value.get_sequence_number());
+            cvt_assume!(orders[i].get_sequence_number() != orders[j].get_sequence_number());
         }
         if i == 1 {
             // Equal-price orders exercise FIFO, which reinsertion could break.
-            let previous = get_helper::<RBNode<RestingOrder>>(&market.dynamic, indices[SEATS]);
-            order = RestingOrder::new(
+            let mut order = RestingOrder::new(
                 owner,
-                order.get_num_base_atoms(),
-                previous.value.get_price(),
-                order.get_sequence_number(),
+                orders[1].get_num_base_atoms(),
+                orders[0].get_price(),
+                orders[1].get_sequence_number(),
                 0,
                 IS_BID,
-                order.get_order_type(),
+                orders[1].get_order_type(),
             )
             .unwrap();
             order.set_reverse_spread(nondet());
+            orders[1] = order;
         }
-        put_order(&mut market, indices[SEATS + i], order);
+        put_order(&mut fixed, dynamic, indices[SEATS + i], orders[i]);
     }
     // Construct the real free list; do not assume the desired postcondition.
     let mut head = NIL;
     for block in (0..BLOCKS).rev() {
-        if market.dynamic[block * MARKET_BLOCK_SIZE + NODE_TYPE] == 0 {
-            write_index(&mut market.dynamic, block * MARKET_BLOCK_SIZE, head);
+        if dynamic[block * MARKET_BLOCK_SIZE + NODE_TYPE] == 0 {
+            write_index(dynamic, block * MARKET_BLOCK_SIZE, head);
             head = index(block);
         }
     }
-    market.fixed.free_list_head_index = head;
-    (market, indices)
+    fixed.free_list_head_index = head;
+    (fixed, indices, seats, orders)
 }
 
 fn mapped(at: DataIndex, before: &[DataIndex], after: &[DataIndex]) -> DataIndex {
@@ -229,47 +234,66 @@ fn mapped(at: DataIndex, before: &[DataIndex], after: &[DataIndex]) -> DataIndex
 }
 
 /// Check every stored byte of a seat/order, the order-tree graph and cached
-/// roots/best nodes, and every free-list node. Identity is independent of index.
+/// roots/best nodes, and every free-list node. Identity is independent of
+/// index. The before-image lives in the callers' stack copies (`seats`,
+/// `orders`, the returned fixed header) plus stack snapshots of the order
+/// node headers taken here; `orders` is updated to the remapped owners so a
+/// later pass checks against the right before-state. Returns the new size so
+/// the caller can re-slice at the same truncation boundary the processor uses.
 fn check_pass(
-    market: &mut MarketValue,
+    fixed: &mut MarketFixed,
+    dynamic: &mut [u8],
     positions: &mut [DataIndex; SEATS + ORDERS],
+    seats: &[ClaimedSeat; SEATS],
+    orders: &mut [RestingOrder; ORDERS],
     limit: Option<u32>,
-) {
-    let before = market.clone();
+) -> usize {
+    let before = *fixed;
     let old_positions = *positions;
-    let size = market.defragment(limit);
+    let mut old_links: [(DataIndex, DataIndex, DataIndex); ORDERS] = [(NIL, NIL, NIL); ORDERS];
+    let mut old_colors: [Color; ORDERS] = [Color::Red; ORDERS];
+    let mut old_payload_types: [u8; ORDERS] = [0; ORDERS];
+    for i in 0..ORDERS {
+        let node = get_helper::<RBNode<RestingOrder>>(dynamic, old_positions[SEATS + i]);
+        old_links[i] = (node.left, node.right, node.parent);
+        old_colors[i] = node.color;
+        old_payload_types[i] = node.payload_type;
+    }
+    let mut account = DynamicAccount {
+        fixed: &mut *fixed,
+        dynamic: &mut *dynamic,
+    };
+    let size = account.defragment(limit);
     // Unlike unwrap(), this is an explicit no-revert obligation.
     cvt_assert!(size.is_ok());
     let size = size.unwrap();
-    cvt_assert!(size == MARKET_FIXED_SIZE + market.fixed.num_bytes_allocated as usize);
-    cvt_assert!(market.fixed.num_bytes_allocated <= before.fixed.num_bytes_allocated);
-    cvt_assert!(market.fixed.order_sequence_number == before.fixed.order_sequence_number + 1);
-    let blocks = market.fixed.num_bytes_allocated as usize / MARKET_BLOCK_SIZE;
+    cvt_assert!(size == MARKET_FIXED_SIZE + fixed.num_bytes_allocated as usize);
+    cvt_assert!(fixed.num_bytes_allocated <= before.num_bytes_allocated);
+    cvt_assert!(fixed.order_sequence_number == before.order_sequence_number + 1);
+    let blocks = fixed.num_bytes_allocated as usize / MARKET_BLOCK_SIZE;
     let mut live = 0;
     let mut moved = 0;
     for i in 0..SEATS {
         if old_positions[i] == NIL {
             continue;
         }
-        let old = get_helper::<RBNode<ClaimedSeat>>(&before.dynamic, old_positions[i]).value;
+        let old = &seats[i];
         let mut keep = old.base_withdrawable_balance != BaseAtoms::ZERO
             || old.quote_withdrawable_balance != QuoteAtoms::ZERO;
         for j in 0..ORDERS {
-            let order =
-                get_helper::<RBNode<RestingOrder>>(&before.dynamic, old_positions[SEATS + j]);
-            keep |= order.value.get_trader_index() == old_positions[i];
+            keep |= orders[j].get_trader_index() == old_positions[i];
         }
         let tree = RedBlackTreeReadOnly::<ClaimedSeat>::new(
-            &market.dynamic,
-            market.fixed.claimed_seats_root_index,
+            &*dynamic,
+            fixed.claimed_seats_root_index,
             NIL,
         );
-        let at = tree.lookup_index(&old);
+        let at = tree.lookup_index(old);
         positions[i] = at;
         if keep {
-            cvt_assert!(at != NIL && at < market.fixed.num_bytes_allocated);
-            let new = get_helper::<RBNode<ClaimedSeat>>(&market.dynamic, at).get_value();
-            cvt_assert!(bytemuck::bytes_of(&old) == bytemuck::bytes_of(new));
+            cvt_assert!(at != NIL && at < fixed.num_bytes_allocated);
+            let new = get_helper::<RBNode<ClaimedSeat>>(dynamic, at).get_value();
+            cvt_assert!(bytemuck::bytes_of(old) == bytemuck::bytes_of(new));
             live += 1;
             moved += u32::from(at != old_positions[i]);
         } else {
@@ -277,14 +301,14 @@ fn check_pass(
         }
     }
     for i in 0..ORDERS {
-        let old = get_helper::<RBNode<RestingOrder>>(&before.dynamic, old_positions[SEATS + i]);
+        let old = orders[i];
         let mut found = NIL;
         for block in 0..blocks {
-            if market.dynamic[block * MARKET_BLOCK_SIZE + NODE_TYPE]
+            if dynamic[block * MARKET_BLOCK_SIZE + NODE_TYPE]
                 == MarketDataTreeNodeType::RestingOrder as u8
             {
-                let order = get_helper::<RBNode<RestingOrder>>(&market.dynamic, index(block));
-                if order.value.get_sequence_number() == old.value.get_sequence_number() {
+                let order = get_helper::<RBNode<RestingOrder>>(dynamic, index(block));
+                if order.value.get_sequence_number() == old.get_sequence_number() {
                     cvt_assert!(found == NIL);
                     found = index(block);
                 }
@@ -292,60 +316,48 @@ fn check_pass(
         }
         cvt_assert!(found != NIL);
         positions[SEATS + i] = found;
-        let new = get_helper::<RBNode<RestingOrder>>(&market.dynamic, found);
+        let new = get_helper::<RBNode<RestingOrder>>(dynamic, found);
         let owner = mapped(
-            old.value.get_trader_index(),
+            old.get_trader_index(),
             &old_positions[..SEATS],
             &positions[..SEATS],
         );
         cvt_assert!(owner != NIL && new.value.get_trader_index() == owner);
         // Compare the full payload after normalizing its one relocated field.
-        let mut expected = old.value;
+        let mut expected = old;
         write_index(
             bytemuck::bytes_of_mut(&mut expected),
             ORDER_TRADER - NODE_VALUE,
             owner,
         );
         cvt_assert!(bytemuck::bytes_of(&expected) == bytemuck::bytes_of(&new.value));
-        cvt_assert!(new.color == old.color && new.payload_type == old.payload_type);
+        cvt_assert!(new.color == old_colors[i] && new.payload_type == old_payload_types[i]);
         live += 1;
         moved += u32::from(found != old_positions[SEATS + i]);
+        orders[i] = expected;
     }
     for i in 0..ORDERS {
-        let old = get_helper::<RBNode<RestingOrder>>(&before.dynamic, old_positions[SEATS + i]);
-        let new = get_helper::<RBNode<RestingOrder>>(&market.dynamic, positions[SEATS + i]);
-        cvt_assert!(new.left == mapped(old.left, &old_positions, positions));
-        cvt_assert!(new.right == mapped(old.right, &old_positions, positions));
-        cvt_assert!(new.parent == mapped(old.parent, &old_positions, positions));
+        let new = get_helper::<RBNode<RestingOrder>>(dynamic, positions[SEATS + i]);
+        cvt_assert!(new.left == mapped(old_links[i].0, &old_positions, positions));
+        cvt_assert!(new.right == mapped(old_links[i].1, &old_positions, positions));
+        cvt_assert!(new.parent == mapped(old_links[i].2, &old_positions, positions));
     }
-    cvt_assert!(
-        market.fixed.bids_root_index
-            == mapped(before.fixed.bids_root_index, &old_positions, positions)
-    );
-    cvt_assert!(
-        market.fixed.asks_root_index
-            == mapped(before.fixed.asks_root_index, &old_positions, positions)
-    );
-    cvt_assert!(
-        market.fixed.bids_best_index
-            == mapped(before.fixed.bids_best_index, &old_positions, positions)
-    );
-    cvt_assert!(
-        market.fixed.asks_best_index
-            == mapped(before.fixed.asks_best_index, &old_positions, positions)
-    );
+    cvt_assert!(fixed.bids_root_index == mapped(before.bids_root_index, &old_positions, positions));
+    cvt_assert!(fixed.asks_root_index == mapped(before.asks_root_index, &old_positions, positions));
+    cvt_assert!(fixed.bids_best_index == mapped(before.bids_best_index, &old_positions, positions));
+    cvt_assert!(fixed.asks_best_index == mapped(before.asks_best_index, &old_positions, positions));
     // Every other fixed field (including the existing funds ghosts) is intact.
-    let mut normalized = market.fixed;
-    normalized.num_bytes_allocated = before.fixed.num_bytes_allocated;
-    normalized.order_sequence_number = before.fixed.order_sequence_number;
-    normalized.claimed_seats_root_index = before.fixed.claimed_seats_root_index;
-    normalized.free_list_head_index = before.fixed.free_list_head_index;
-    normalized.bids_root_index = before.fixed.bids_root_index;
-    normalized.asks_root_index = before.fixed.asks_root_index;
-    normalized.bids_best_index = before.fixed.bids_best_index;
-    normalized.asks_best_index = before.fixed.asks_best_index;
-    cvt_assert!(bytemuck::bytes_of(&normalized) == bytemuck::bytes_of(&before.fixed));
-    let mut next = market.fixed.free_list_head_index;
+    let mut normalized = *fixed;
+    normalized.num_bytes_allocated = before.num_bytes_allocated;
+    normalized.order_sequence_number = before.order_sequence_number;
+    normalized.claimed_seats_root_index = before.claimed_seats_root_index;
+    normalized.free_list_head_index = before.free_list_head_index;
+    normalized.bids_root_index = before.bids_root_index;
+    normalized.asks_root_index = before.asks_root_index;
+    normalized.bids_best_index = before.bids_best_index;
+    normalized.asks_best_index = before.asks_best_index;
+    cvt_assert!(bytemuck::bytes_of(&normalized) == bytemuck::bytes_of(&before));
+    let mut next = fixed.free_list_head_index;
     let mut free = 0;
     // Walking in address order proves uniqueness, completeness and termination.
     for block in 0..blocks {
@@ -353,9 +365,9 @@ fn check_pass(
         let occupied = positions.iter().any(|p| *p == at);
         if !occupied {
             cvt_assert!(next == at);
-            next = read_index(&market.dynamic, at as usize);
+            next = read_index(dynamic, at as usize);
             cvt_assert!(
-                market.dynamic[at as usize + 4..at as usize + MARKET_BLOCK_SIZE]
+                dynamic[at as usize + 4..at as usize + MARKET_BLOCK_SIZE]
                     == [0; MARKET_BLOCK_SIZE - 4]
             );
             free += 1;
@@ -367,18 +379,28 @@ fn check_pass(
     } else {
         cvt_assert!(free == 2);
     }
-    // Exercise the same truncation boundary the processor uses.
-    market.dynamic.truncate(size - MARKET_FIXED_SIZE);
+    size
 }
 
 fn preserves_market<const IS_BID: bool>() {
-    let (mut market, mut positions) = market::<IS_BID>();
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let (mut fixed, mut positions, seats, mut orders) = market::<IS_BID>(dynamic);
     let limit = if nondet::<bool>() {
         Some(nondet())
     } else {
         None
     };
-    check_pass(&mut market, &mut positions, limit);
+    check_pass(
+        &mut fixed,
+        dynamic,
+        &mut positions,
+        &seats,
+        &mut orders,
+        limit,
+    );
     cvt_vacuity_check!();
 }
 
@@ -393,43 +415,87 @@ pub fn rule_defrag_preserves_market_ask() {
 
 #[rule]
 pub fn rule_defrag_zero_budget() {
-    let (mut market, mut positions) = market::<true>();
-    check_pass(&mut market, &mut positions, Some(0));
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let (mut fixed, mut positions, seats, mut orders) = market::<true>(dynamic);
+    check_pass(
+        &mut fixed,
+        dynamic,
+        &mut positions,
+        &seats,
+        &mut orders,
+        Some(0),
+    );
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_repeated_passes() {
-    let (mut market, mut positions) = market::<true>();
-    check_pass(&mut market, &mut positions, Some(1));
-    check_pass(&mut market, &mut positions, None);
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let (mut fixed, mut positions, seats, mut orders) = market::<true>(dynamic);
+    let size = check_pass(
+        &mut fixed,
+        dynamic,
+        &mut positions,
+        &seats,
+        &mut orders,
+        Some(1),
+    );
+    // Exercise the same truncation boundary the processor uses.
+    let (dynamic, _) = dynamic.split_at_mut(size - MARKET_FIXED_SIZE);
+    check_pass(
+        &mut fixed,
+        dynamic,
+        &mut positions,
+        &seats,
+        &mut orders,
+        None,
+    );
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_empty_market() {
-    let mut market = DynamicAccount {
-        fixed: arbitrary_fixed(),
-        dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
-    };
-    market.fixed.num_bytes_allocated = index(BLOCKS);
-    cvt_assume!(market.fixed.order_sequence_number < u64::MAX);
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let mut fixed = arbitrary_fixed();
+    fixed.num_bytes_allocated = index(BLOCKS);
+    cvt_assume!(fixed.order_sequence_number < u64::MAX);
     let seat = ClaimedSeat::new_empty(arbitrary_key());
-    put_seat(&mut market, index(5), seat);
-    let result = market.defragment(None);
+    put_seat(&mut fixed, dynamic, index(5), seat);
+    let mut account = DynamicAccount {
+        fixed: &mut fixed,
+        dynamic: &mut *dynamic,
+    };
+    let result = account.defragment(None);
     cvt_assert!(result == Ok(MARKET_FIXED_SIZE + 2 * MARKET_BLOCK_SIZE));
-    cvt_assert!(market.fixed.claimed_seats_root_index == NIL);
-    cvt_assert!(market.fixed.free_list_head_index == 0);
-    cvt_assert!(read_index(&market.dynamic, 0) == index(1));
-    cvt_assert!(read_index(&market.dynamic, MARKET_BLOCK_SIZE) == NIL);
+    cvt_assert!(fixed.claimed_seats_root_index == NIL);
+    cvt_assert!(fixed.free_list_head_index == 0);
+    cvt_assert!(read_index(dynamic, 0) == index(1));
+    cvt_assert!(read_index(dynamic, MARKET_BLOCK_SIZE) == NIL);
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_sequence_overflow_rejected() {
-    let (mut market, _) = market::<true>();
-    market.fixed.order_sequence_number = u64::MAX;
-    cvt_assert!(market.defragment(None) == Err(ProgramError::ArithmeticOverflow));
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let (mut fixed, _, _, _) = market::<true>(dynamic);
+    fixed.order_sequence_number = u64::MAX;
+    let mut account = DynamicAccount {
+        fixed: &mut fixed,
+        dynamic,
+    };
+    cvt_assert!(account.defragment(None) == Err(ProgramError::ArithmeticOverflow));
     // Transaction rollback belongs to the runtime; do not claim that an Err
     // restores the in-memory state of this internal method.
     cvt_vacuity_check!();
@@ -458,9 +524,11 @@ pub fn rule_defrag_bitmap_preserves_other_blocks() {
 
 #[rule]
 pub fn rule_defrag_relocate_seat_payload() {
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
     let mut fixed = arbitrary_fixed();
     let before = fixed;
-    let mut dynamic = vec![0; BLOCKS * MARKET_BLOCK_SIZE];
+    let mut dynamic = zeroed_market_bytes(&accounts[1]);
     let positions = arbitrary_indices::<2>();
     cvt_assume!(positions[1] < positions[0]);
     let seat = arbitrary_seat();
@@ -493,8 +561,10 @@ pub fn rule_defrag_relocate_seat_payload() {
 }
 
 fn relocate_order<const IS_BID: bool>() {
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
     let mut fixed = arbitrary_fixed();
-    let mut dynamic = vec![0; BLOCKS * MARKET_BLOCK_SIZE];
+    let mut dynamic = zeroed_market_bytes(&accounts[1]);
     let p = arbitrary_indices::<5>();
     let (old, new) = (p[0], p[1]);
     cvt_assume!(new < old);
@@ -599,29 +669,38 @@ pub fn rule_defrag_relocate_order_ask() {
 
 #[rule]
 pub fn rule_defrag_invalid_allocation_rejected() {
-    let mut market = DynamicAccount {
-        fixed: arbitrary_fixed(),
-        dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
-    };
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let mut fixed = arbitrary_fixed();
     cvt_assume!(
-        market.fixed.num_bytes_allocated as usize > market.dynamic.len()
-            || market.fixed.num_bytes_allocated as usize % MARKET_BLOCK_SIZE != 0
+        fixed.num_bytes_allocated as usize > dynamic.len()
+            || fixed.num_bytes_allocated as usize % MARKET_BLOCK_SIZE != 0
     );
-    cvt_assert!(market.defragment(None) == Err(ProgramError::InvalidAccountData));
+    let mut account = DynamicAccount {
+        fixed: &mut fixed,
+        dynamic,
+    };
+    cvt_assert!(account.defragment(None) == Err(ProgramError::InvalidAccountData));
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_invalid_order_owner_rejected() {
-    let (mut market, positions) = market::<true>();
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let mut data = zeroed_market_bytes(&accounts[1]);
+    let dynamic: &mut [u8] = &mut data;
+    let (mut fixed, positions, _, _) = market::<true>(dynamic);
     let owner: DataIndex = nondet();
     cvt_assume!(owner == NIL || owner >= index(BLOCKS) || owner as usize % MARKET_BLOCK_SIZE != 0);
-    write_index(
-        &mut market.dynamic,
-        positions[SEATS] as usize + ORDER_TRADER,
-        owner,
-    );
-    cvt_assert!(market.defragment(None) == Err(ProgramError::InvalidAccountData));
+    write_index(dynamic, positions[SEATS] as usize + ORDER_TRADER, owner);
+    let mut account = DynamicAccount {
+        fixed: &mut fixed,
+        dynamic,
+    };
+    cvt_assert!(account.defragment(None) == Err(ProgramError::InvalidAccountData));
     cvt_vacuity_check!();
 }
 
@@ -645,31 +724,37 @@ fn dispatch(collector: &AccountView) -> Result<(), ProgramError> {
 
 #[rule]
 pub fn rule_defrag_requires_collector() {
-    let collector = collector_account();
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let collector: &AccountView = &accounts[0];
     cvt_assume!(collector.is_writable() && collector.is_signer());
     cvt_assume!(*collector.pubkey() != crate::program::defrag::DEFRAG_COLLECTOR);
     let balance = collector.lamports();
-    cvt_assert!(dispatch(&collector) == Err(ProgramError::InvalidArgument));
+    cvt_assert!(dispatch(collector) == Err(ProgramError::InvalidArgument));
     cvt_assert!(collector.lamports() == balance);
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_requires_signature() {
-    let collector = collector_account();
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let collector: &AccountView = &accounts[0];
     cvt_assume!(collector.is_writable() && !collector.is_signer());
     cvt_assume!(*collector.pubkey() == crate::program::defrag::DEFRAG_COLLECTOR);
-    cvt_assert!(dispatch(&collector) == Err(ProgramError::MissingRequiredSignature));
+    cvt_assert!(dispatch(collector) == Err(ProgramError::MissingRequiredSignature));
     cvt_vacuity_check!();
 }
 
 #[rule]
 pub fn rule_defrag_requires_writable_collector() {
-    let collector = collector_account();
+    cvt_static_initializer!();
+    let accounts: [AccountView; 16] = account_views_with_mem_layout!();
+    let collector: &AccountView = &accounts[0];
     cvt_assume!(!collector.is_writable());
     cvt_assume!(collector.is_signer());
     cvt_assume!(*collector.pubkey() == crate::program::defrag::DEFRAG_COLLECTOR);
-    cvt_assert!(dispatch(&collector) == Err(ProgramError::InvalidInstructionData));
+    cvt_assert!(dispatch(collector) == Err(ProgramError::InvalidInstructionData));
     cvt_vacuity_check!();
 }
 
