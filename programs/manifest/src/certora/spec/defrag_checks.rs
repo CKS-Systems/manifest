@@ -12,11 +12,71 @@ use cvt::{cvt_assert, cvt_assume};
 use cvt_macros::rule;
 use hypertree::{Color, RedBlackTreeReadOnly};
 use nondet::nondet;
-use pinocchio::account::AccountView;
+use pinocchio::account::{AccountView, RuntimeAccount};
 
 const BLOCKS: usize = 8;
 const SEATS: usize = 3;
 const ORDERS: usize = 3;
+
+fn arbitrary_key() -> Pubkey {
+    // Scalar nondet primitives are modeled directly by the prover. The legacy
+    // 32-byte aggregate primitive has no memory-write summary in this version.
+    let words: [u64; 4] = [nondet(), nondet(), nondet(), nondet()];
+    Pubkey::new_from_array(bytemuck::cast(words))
+}
+
+fn arbitrary_fixed() -> MarketFixed {
+    MarketFixed {
+        discriminant: MARKET_FIXED_DISCRIMINANT,
+        base_mint_decimals: nondet(),
+        quote_mint_decimals: nondet(),
+        base_vault_bump: nondet(),
+        quote_vault_bump: nondet(),
+        base_mint: arbitrary_key(),
+        quote_mint: arbitrary_key(),
+        base_vault: arbitrary_key(),
+        quote_vault: arbitrary_key(),
+        order_sequence_number: nondet(),
+        num_bytes_allocated: nondet(),
+        bids_root_index: NIL,
+        bids_best_index: NIL,
+        asks_root_index: NIL,
+        asks_best_index: NIL,
+        claimed_seats_root_index: NIL,
+        quote_volume: QuoteAtoms::new(nondet()),
+        withdrawable_base_atoms: BaseAtoms::new(nondet()),
+        withdrawable_quote_atoms: QuoteAtoms::new(nondet()),
+        orderbook_base_atoms: BaseAtoms::new(nondet()),
+        orderbook_quote_atoms: QuoteAtoms::new(nondet()),
+        ..MarketFixed::default()
+    }
+}
+
+fn arbitrary_seat() -> ClaimedSeat {
+    let mut seat = ClaimedSeat::new_empty(arbitrary_key());
+    seat.base_withdrawable_balance = BaseAtoms::new(nondet());
+    seat.quote_withdrawable_balance = QuoteAtoms::new(nondet());
+    seat.quote_volume = QuoteAtoms::new(nondet());
+    seat
+}
+
+fn collector_account() -> AccountView {
+    // A valid wallet account header with arbitrary keys, balances and flags.
+    // These rejection rules return before any account data is accessed.
+    let header = Box::new(RuntimeAccount {
+        borrow_state: u8::MAX,
+        is_signer: u8::from(nondet::<bool>()),
+        is_writable: u8::from(nondet::<bool>()),
+        executable: u8::from(nondet::<bool>()),
+        resize_delta: 0,
+        address: arbitrary_key().to_bytes().into(),
+        owner: arbitrary_key().to_bytes().into(),
+        lamports: nondet(),
+        data_len: 0,
+    });
+    // The allocation is deliberately retained for the lifetime of the rule.
+    unsafe { AccountView::new_unchecked(Box::into_raw(header)) }
+}
 
 fn index(block: usize) -> DataIndex {
     (block * MARKET_BLOCK_SIZE) as DataIndex
@@ -96,13 +156,13 @@ fn put_order(market: &mut MarketValue, at: DataIndex, order: RestingOrder) {
 
 fn market<const IS_BID: bool>() -> (MarketValue, [DataIndex; SEATS + ORDERS]) {
     let mut market = DynamicAccount {
-        fixed: MarketFixed::new_nondet(),
+        fixed: arbitrary_fixed(),
         dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
     };
     market.fixed.num_bytes_allocated = index(BLOCKS);
     cvt_assume!(market.fixed.order_sequence_number < u64::MAX - 1);
     let indices = arbitrary_indices::<{ SEATS + ORDERS }>();
-    let seats: [ClaimedSeat; SEATS] = [nondet(), nondet(), nondet()];
+    let seats: [ClaimedSeat; SEATS] = [arbitrary_seat(), arbitrary_seat(), arbitrary_seat()];
     for i in 0..SEATS {
         for j in 0..i {
             cvt_assume!(seats[i].trader != seats[j].trader);
@@ -350,12 +410,12 @@ pub fn rule_defrag_repeated_passes() {
 #[rule]
 pub fn rule_defrag_empty_market() {
     let mut market = DynamicAccount {
-        fixed: MarketFixed::new_nondet(),
+        fixed: arbitrary_fixed(),
         dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
     };
     market.fixed.num_bytes_allocated = index(BLOCKS);
     cvt_assume!(market.fixed.order_sequence_number < u64::MAX);
-    let seat = ClaimedSeat::new_empty(Pubkey::new_from_array(nondet()));
+    let seat = ClaimedSeat::new_empty(arbitrary_key());
     put_seat(&mut market, index(5), seat);
     let result = market.defragment(None);
     cvt_assert!(result == Ok(MARKET_FIXED_SIZE + 2 * MARKET_BLOCK_SIZE));
@@ -378,8 +438,9 @@ pub fn rule_defrag_sequence_overflow_rejected() {
 
 #[rule]
 pub fn rule_defrag_bitmap_preserves_other_blocks() {
-    let mut words: [u64; 2] = [nondet(), nondet()];
-    let before = words;
+    // Symbolic word indices require heap storage in Certora's memory model.
+    let mut words: Vec<u64> = vec![nondet(), nondet()];
+    let before = words.clone();
     let target: usize = nondet();
     let other: usize = nondet();
     cvt_assume!(target < 128 && other < 128 && target != other);
@@ -394,12 +455,12 @@ pub fn rule_defrag_bitmap_preserves_other_blocks() {
 
 #[rule]
 pub fn rule_defrag_relocate_seat_payload() {
-    let mut fixed = MarketFixed::new_nondet();
+    let mut fixed = arbitrary_fixed();
     let before = fixed;
     let mut dynamic = vec![0; BLOCKS * MARKET_BLOCK_SIZE];
     let positions = arbitrary_indices::<2>();
     cvt_assume!(positions[1] < positions[0]);
-    let seat: ClaimedSeat = nondet();
+    let seat = arbitrary_seat();
     let node = RBNode {
         left: nondet(),
         right: nondet(),
@@ -429,7 +490,7 @@ pub fn rule_defrag_relocate_seat_payload() {
 }
 
 fn relocate_order<const IS_BID: bool>() {
-    let mut fixed = MarketFixed::new_nondet();
+    let mut fixed = arbitrary_fixed();
     let mut dynamic = vec![0; BLOCKS * MARKET_BLOCK_SIZE];
     let p = arbitrary_indices::<5>();
     let (old, new) = (p[0], p[1]);
@@ -536,7 +597,7 @@ pub fn rule_defrag_relocate_order_ask() {
 #[rule]
 pub fn rule_defrag_invalid_allocation_rejected() {
     let mut market = DynamicAccount {
-        fixed: MarketFixed::new_nondet(),
+        fixed: arbitrary_fixed(),
         dynamic: vec![0; BLOCKS * MARKET_BLOCK_SIZE],
     };
     cvt_assume!(
@@ -581,7 +642,7 @@ fn dispatch(collector: &AccountView) -> Result<(), ProgramError> {
 
 #[rule]
 pub fn rule_defrag_requires_collector() {
-    let collector: AccountView = nondet();
+    let collector = collector_account();
     cvt_assume!(collector.is_writable() && collector.is_signer());
     cvt_assume!(*collector.pubkey() != crate::program::defrag::DEFRAG_COLLECTOR);
     let balance = collector.lamports();
@@ -592,7 +653,7 @@ pub fn rule_defrag_requires_collector() {
 
 #[rule]
 pub fn rule_defrag_requires_signature() {
-    let collector: AccountView = nondet();
+    let collector = collector_account();
     cvt_assume!(collector.is_writable() && !collector.is_signer());
     cvt_assume!(*collector.pubkey() == crate::program::defrag::DEFRAG_COLLECTOR);
     cvt_assert!(dispatch(&collector) == Err(ProgramError::MissingRequiredSignature));
@@ -601,7 +662,7 @@ pub fn rule_defrag_requires_signature() {
 
 #[rule]
 pub fn rule_defrag_requires_writable_collector() {
-    let collector: AccountView = nondet();
+    let collector = collector_account();
     cvt_assume!(!collector.is_writable());
     cvt_assume!(collector.is_signer());
     cvt_assume!(*collector.pubkey() == crate::program::defrag::DEFRAG_COLLECTOR);

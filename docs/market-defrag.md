@@ -232,7 +232,10 @@ Separate rules check bitmap updates, individual seat/order relocation (including
 root, parent and child repair), malformed allocation/owner rejection, and the
 actual instruction dispatch's collector, signer, writability and data checks.
 `optimistic_loop` is false, so insufficient loop unwinding fails verification;
-the defrag configuration also disables the existing no-memmove assumption.
+the defrag configuration also disables the existing optimistic memory
+assumptions and enables exact bitwise operations and 64-bit arithmetic masking.
+The authorization harness allocates a valid, empty wallet account header with
+symbolic keys, flags and lamports; these rejection paths never access its data.
 
 These are **bounded whole-pass obligations**, not a proof for every market up to
 65,536 blocks. They do not prove the 1,024-moved-seat cap or an arbitrary number
@@ -243,6 +246,17 @@ account/vault closure are not covered by these rules. The existing SBF tests
 below cover those behaviors. Do not infer global gas-deposit/CPI conservation
 from unchanged order metadata alone.
 
+**Proof status (2026-10-14): unresolved.** The rules compile, but the full local
+run with prover 8.19.2 fails during memory translation before completing the
+proofs. Reproductions include unknown pointer provenance and an inability to
+determine overlapping memory writes. A diagnostic run also reaches the
+backend's unsupported `sol_alloc_free_` path. Switching to the scalar memory
+model did not resolve the suite and produced vacuous authorization rules; that
+model is not enabled here. The backend also lacks general `memmove` support.
+These are proof/tooling blockers, not established counterexamples to defrag.
+Resolve them locally before spending another remote run. Compilation and native
+test success do not establish these obligations.
+
 Run from `programs/manifest/src/certora/confs`:
 
 ```sh
@@ -251,8 +265,15 @@ certoraSolanaProver rules-defrag.conf --wait_for_results all
 ```
 
 CI compiles this configuration on PRs. On main pushes or a manual workflow run,
-the `Prove defrag properties` job waits for actual proof results. A successful
+`rules-defrag.conf` runs in the existing verification matrix alongside the other
+configurations. Each matrix entry waits for actual proof results. A successful
 compile or job submission alone is not evidence that the rules have passed.
+
+The proof build retains v3 call relocations and names static syscalls for
+Certora's disassembler, which otherwise mistakes their numeric identifiers for
+relative function addresses. `certora/prepare_elf.py` changes only non-loaded
+symbol/relocation tables and checks that every loaded byte is unchanged. Unknown
+syscalls fail preparation. Production builds do not use this preparation step.
 
 ### Runtime validation
 

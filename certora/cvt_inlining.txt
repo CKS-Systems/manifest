@@ -31,6 +31,8 @@
 ;; We want to inline these wrappers that call the global allocator
 #[inline] ^alloc::alloc::exchange_malloc$
 #[inline] ^alloc::fmt::format::format_inner$
+; Capacity changes write to the Vec header and must not be return-only havocs.
+#[inline] ^alloc::raw_vec::.*$
 
 ; memcpy/memmove/memset/memcmp
 ; These functions are wrappers to sol_memcpy_, sol_memmove_,
