@@ -7,19 +7,22 @@ mod fixtures;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use anyhow::{ensure, Context};
+use anyhow::Context;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use fixtures::{send_tx_with_retry, MarketFixture, MintFixture, TokenAccountFixture};
+use fixtures::{
+    send_tx_with_retry, GlobalFixture, MarketFixture, MintFixture, TokenAccountFixture,
+};
 use manifest::{
     program::{
         batch_update::PlaceOrderParams, batch_update_instruction,
-        claim_seat_instruction::claim_seat_instruction, deposit_instruction, swap_instruction,
+        claim_seat_instruction::claim_seat_instruction, deposit_instruction,
+        global_add_trader_instruction, global_deposit_instruction, swap_instruction,
     },
     quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{OrderType, NO_EXPIRATION_LAST_VALID_SLOT},
-    validation::get_vault_address,
+    validation::{get_global_address, get_vault_address},
 };
-use manifest_okx::{mfx::Manifest, Dex, PoolMetadataValue, SwapDirection};
+use manifest_okx::{mfx::Manifest, Dex, PoolMetadataValue, QuoteSnapshot, SwapDirection};
 use solana_account::Account;
 use solana_client::{rpc_client::RpcClient, rpc_request::RpcRequest};
 use solana_keypair::Keypair;
@@ -32,6 +35,7 @@ fn manifest_program_test() -> ProgramTest {
 }
 
 struct Case {
+    global: bool,
     bid: bool,
     decimals: (u8, u8),
     orders: Vec<(u64, u32, i8)>,
@@ -54,6 +58,13 @@ async fn check(case: Case) -> anyhow::Result<()> {
     let mut base = MintFixture::new(Rc::clone(&context), Some(case.decimals.0)).await;
     let mut quote = MintFixture::new(Rc::clone(&context), Some(case.decimals.1)).await;
     let market = MarketFixture::new(Rc::clone(&context), &base.key, &quote.key).await;
+    if case.global {
+        GlobalFixture::new(
+            Rc::clone(&context),
+            &if case.bid { quote.key } else { base.key },
+        )
+        .await;
+    }
     let trader_base =
         TokenAccountFixture::new(Rc::clone(&context), &base.key, &payer.pubkey()).await;
     let trader_quote =
@@ -90,21 +101,43 @@ async fn check(case: Case) -> anyhow::Result<()> {
         base.mint_to(&maker_base.key, funding).await;
         (base.key, maker_base.key)
     };
-    send_tx_with_retry(
-        Rc::clone(&context),
-        &[deposit_instruction(
-            &market.key,
-            &maker.pubkey(),
-            &funding_mint,
-            funding,
-            &funding_account,
-            spl_token::id(),
-            None,
-        )],
-        Some(&maker.pubkey()),
-        &[&maker],
-    )
-    .await?;
+    if case.global {
+        send_tx_with_retry(
+            Rc::clone(&context),
+            &[
+                global_add_trader_instruction(
+                    &get_global_address(&funding_mint).0,
+                    &maker.pubkey(),
+                ),
+                global_deposit_instruction(
+                    &funding_mint,
+                    &maker.pubkey(),
+                    &funding_account,
+                    &spl_token::id(),
+                    funding,
+                ),
+            ],
+            Some(&maker.pubkey()),
+            &[&maker],
+        )
+        .await?;
+    } else {
+        send_tx_with_retry(
+            Rc::clone(&context),
+            &[deposit_instruction(
+                &market.key,
+                &maker.pubkey(),
+                &funding_mint,
+                funding,
+                &funding_account,
+                spl_token::id(),
+                None,
+            )],
+            Some(&maker.pubkey()),
+            &[&maker],
+        )
+        .await?;
+    }
     let orders = case
         .orders
         .iter()
@@ -114,7 +147,11 @@ async fn check(case: Case) -> anyhow::Result<()> {
                 mantissa,
                 exponent,
                 case.bid,
-                OrderType::Limit,
+                if case.global {
+                    OrderType::Global
+                } else {
+                    OrderType::Limit
+                },
                 NO_EXPIRATION_LAST_VALID_SLOT,
             )
         })
@@ -127,9 +164,9 @@ async fn check(case: Case) -> anyhow::Result<()> {
             None,
             vec![],
             orders,
+            (case.global && !case.bid).then_some(base.key),
             None,
-            None,
-            None,
+            (case.global && case.bid).then_some(quote.key),
             None,
         )],
         Some(&maker.pubkey()),
@@ -177,6 +214,26 @@ async fn check(case: Case) -> anyhow::Result<()> {
     } else {
         SwapDirection::QuoteToBase
     };
+    let mut accounts = HashMap::from([
+        (market.key, market_account),
+        (base.key, banks.get_account(base.key).await?.unwrap()),
+        (quote.key, banks.get_account(quote.key).await?.unwrap()),
+    ]);
+    let global_key = get_global_address(&if case.bid { quote.key } else { base.key }).0;
+    if case.global {
+        let missing = QuoteSnapshot::from_accounts(market.key, 1, &accounts)?;
+        assert!(Manifest
+            .quote_atoms(case.input, &missing, direction)
+            .is_err());
+        accounts.insert(global_key, banks.get_account(global_key).await?.unwrap());
+    }
+    let snapshot = QuoteSnapshot::from_accounts(
+        market.key,
+        banks.get_sysvar::<solana_clock::Clock>().await?.slot,
+        &accounts,
+    )?;
+    let integer_output = Manifest.quote_atoms(case.input, &snapshot, direction)?;
+    assert_eq!(integer_output, case.output);
     let output = Manifest.quote(case.input as f64 / input_scale as f64, &metadata, direction);
     assert_eq!(output, case.quote_atoms as f64 / output_scale as f64);
     let Some(PoolMetadataValue::Array(levels)) =
@@ -188,17 +245,7 @@ async fn check(case: Case) -> anyhow::Result<()> {
     assert!(levels
         .iter()
         .all(|level| matches!(level, PoolMetadataValue::Array(fields) if fields.len()==4)));
-    // Keep the f64 adapter's execution bound below u64::MAX for huge outputs.
-    // This 50 bps test policy is not an execution guarantee from the adapter.
-    let estimate = output * output_scale as f64;
-    let bound = (estimate
-        * if estimate > (1_u64 << 53) as f64 {
-            0.995
-        } else {
-            1.0
-        })
-    .floor();
-    ensure!(bound >= 0.0 && bound < u64::MAX as f64);
+    // Use the exact integer quote directly as the execution bound.
     let instruction = swap_instruction(
         &market.key,
         &payer.pubkey(),
@@ -207,12 +254,12 @@ async fn check(case: Case) -> anyhow::Result<()> {
         &trader_base.key,
         &trader_quote.key,
         case.input,
-        bound as u64,
+        integer_output,
         case.bid,
         true,
         spl_token::id(),
         spl_token::id(),
-        false,
+        case.global,
     );
     let hash = banks.get_latest_blockhash().await?;
     let tx =
@@ -296,6 +343,7 @@ async fn fetched_quotes_match_sbf_regressions() -> anyhow::Result<()> {
         ),
     ] {
         check(Case {
+            global: false,
             bid,
             decimals,
             orders,
@@ -312,6 +360,7 @@ async fn fetched_quotes_match_sbf_regressions() -> anyhow::Result<()> {
 #[tokio::test]
 async fn indicative_quote_retains_documented_rounding_difference() -> anyhow::Result<()> {
     check(Case {
+        global: false,
         bid: false,
         decimals: (0, 0),
         orders: vec![(3, 15, -1)],
@@ -321,4 +370,37 @@ async fn indicative_quote_retains_documented_rounding_difference() -> anyhow::Re
         spent: 3,
     })
     .await
+}
+
+#[tokio::test]
+async fn integer_quote_and_sbf_swap_preserve_u64_maximum() -> anyhow::Result<()> {
+    check(Case {
+        global: false,
+        bid: true,
+        decimals: (0, 0),
+        orders: vec![(u64::MAX, 1, 0)],
+        input: u64::MAX,
+        output: u64::MAX,
+        quote_atoms: 0,
+        spent: u64::MAX,
+    })
+    .await
+}
+
+#[tokio::test]
+async fn integer_quotes_read_backed_global_liquidity() -> anyhow::Result<()> {
+    for bid in [false, true] {
+        check(Case {
+            global: true,
+            bid,
+            decimals: (0, 0),
+            orders: vec![(8, 2, 0)],
+            input: if bid { 4 } else { 8 },
+            output: if bid { 8 } else { 4 },
+            quote_atoms: if bid { 8 } else { 4 },
+            spent: if bid { 4 } else { 8 },
+        })
+        .await?;
+    }
+    Ok(())
 }

@@ -4,7 +4,9 @@ use solana_program::pubkey::Pubkey;
 use std::{collections::HashMap, error::Error};
 use tokio::sync::mpsc::Sender;
 
+pub mod core_quote;
 pub mod mfx;
+pub use core_quote::QuoteSnapshot;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SwapDirection {

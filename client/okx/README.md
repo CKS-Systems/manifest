@@ -2,6 +2,46 @@
 
 This module implements the `Dex` trait defined [here](https://web3.okx.com/build/docs/waas/dex-integration).
 
+## Integer Core quotes
+
+For atom amounts, use the additive snapshot API instead of converting through
+`f64` or the rounded order-total metadata:
+
+```rust
+use manifest_okx::{mfx::Manifest, SwapDirection};
+
+let snapshot = Manifest.fetch_quote_snapshot(client, &market)?;
+let output_atoms = Manifest.quote_atoms(1_000_000, &snapshot, SwapDirection::BaseToQuote)?;
+println!("{} output atoms at slot {}", output_atoms, snapshot.slot());
+```
+
+Input and output are `u64` atom counts. This preserves every supported integer,
+including `u64::MAX`. Core's impact methods use original order prices,
+snapshot-slot expiration and Global backing checks. For example, buying from
+an ask of 3 base atoms at price 1.5 with 3 quote atoms produces a Core quote of
+2 base atoms; the legacy rounded-total estimate is 1.
+
+`fetch_quote_snapshot` first discovers the market's immutable mint addresses,
+then reads the market, mints and optional Globals together. Only that final
+common-slot response is retained. For an existing account cache, construct a
+`QuoteSnapshot::from_accounts(market, slot, &accounts)` from a coherent
+`HashMap<Pubkey, Account>`. The snapshot validates account owners, discriminants,
+tree links, trader references, mint decimals and Global mint relationships.
+Its state is private and immutable; refresh it by constructing a new snapshot.
+
+This API returns a **Core impact estimate**, not a transaction simulation or a
+guaranteed minimum output. A partial book can leave input unspent. Shared
+Global funding across several fills, changes after the snapshot, market
+expansion and transaction checks can change or reject execution. Simulate the
+constructed transaction before relying on an execution bound.
+
+Transfer-fee mint configurations and active transfer hooks are explicitly
+rejected. Supporting them needs a fee/hook-aware quote path. The supported
+Token-2022 case is a mint without these transfer effects. A zero atom output is
+valid; malformed data, unsupported mints and missing required Global state are
+errors. The `Dex::quote(f64, ...)` API and its metadata format remain available
+with their existing indicative behavior.
+
 ## Quote units and metadata compatibility
 
 `Dex::quote` takes input token units and returns output token units through an
