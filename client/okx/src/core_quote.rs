@@ -8,7 +8,8 @@ use std::{
 
 use anyhow::{bail, ensure, Context, Result};
 use hypertree::{
-    validate_red_black_tree, GetRedBlackTreeReadOnlyData, HyperTreeValueIteratorTrait,
+    validate_red_black_tree, validate_red_black_tree_with, GetRedBlackTreeReadOnlyData,
+    HyperTreeValueIteratorTrait,
 };
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, WrapperU64},
@@ -27,7 +28,7 @@ use solana_client::{rpc_client::RpcClient, rpc_config::RpcAccountInfoConfig};
 use solana_program::pubkey::Pubkey;
 use spl_token_2022::{
     extension::{
-        transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+        transfer_hook::TransferHook, AccountType, BaseStateWithExtensions, ExtensionType,
         StateWithExtensions,
     },
     state::Mint,
@@ -71,20 +72,25 @@ fn market_value(account: &Account) -> Result<MarketValue> {
         .iter::<ClaimedSeat>()
         .map(|(index, _)| index)
         .collect();
-    for book in [market.get_bids(), market.get_asks()] {
-        validate_red_black_tree::<RestingOrder>(
+    for (book, is_bid) in [(market.get_bids(), true), (market.get_asks(), false)] {
+        validate_red_black_tree_with::<RestingOrder>(
             &market.dynamic,
             book.root_index(),
             book.max_index(),
+            |order| {
+                if !order.has_valid_order_type() {
+                    return Err("invalid order type");
+                }
+                if !order.has_valid_side(is_bid) {
+                    return Err("invalid order side");
+                }
+                if !seat_indices.contains(&order.get_trader_index()) {
+                    return Err("order references an invalid trader");
+                }
+                Ok(())
+            },
         )
         .map_err(anyhow::Error::msg)?;
-        for (_, order) in book.iter::<RestingOrder>() {
-            ensure!(order.has_valid_order_type(), "invalid order type");
-            ensure!(
-                seat_indices.contains(&order.get_trader_index()),
-                "order references an invalid trader"
-            );
-        }
     }
     market
         .fixed
@@ -104,18 +110,38 @@ fn validate_mint(account: &Account, decimals: u8) -> Result<()> {
         mint.base.decimals == decimals,
         "mint decimals differ from the market"
     );
+    // Walk all TLV entries first: a failed lookup alone cannot distinguish a
+    // missing extension from a malformed entry. Do not hide decode failures.
+    let extension_types = mint
+        .get_extension_types()
+        .map_err(|error| anyhow::anyhow!("invalid mint extensions: {error}"))?;
+    for (index, extension_type) in extension_types.iter().enumerate() {
+        ensure!(
+            extension_type.get_account_type() == AccountType::Mint,
+            "non-mint extension in mint account"
+        );
+        ensure!(
+            !extension_types[..index].contains(extension_type),
+            "duplicate mint extension"
+        );
+    }
+    ExtensionType::check_for_invalid_mint_extension_combinations(&extension_types)
+        .map_err(|error| anyhow::anyhow!("invalid mint extension combination: {error}"))?;
     // Fee/hook-aware wallet quotes need additional epoch and account handling.
     // Reject them rather than silently returning a gross amount as a net quote.
     ensure!(
-        mint.get_extension::<TransferFeeConfig>().is_err(),
+        !extension_types.contains(&ExtensionType::TransferFeeConfig),
         "transfer-fee mints are not supported by quote_atoms"
     );
-    ensure!(
-        !mint
+    if extension_types.contains(&ExtensionType::TransferHook) {
+        let hook = mint
             .get_extension::<TransferHook>()
-            .is_ok_and(|hook| hook.program_id.get().is_some()),
-        "active transfer hooks are not supported by quote_atoms"
-    );
+            .map_err(|error| anyhow::anyhow!("invalid transfer hook: {error}"))?;
+        ensure!(
+            hook.program_id.get().is_none(),
+            "active transfer hooks are not supported by quote_atoms"
+        );
+    }
     Ok(())
 }
 

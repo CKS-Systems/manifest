@@ -47,11 +47,20 @@ struct Case {
 
 async fn check(case: Case) -> anyhow::Result<()> {
     let maker = Keypair::new();
+    let empty_global_traders: Vec<_> = (0..if case.global { 3 } else { 0 })
+        .map(|_| Keypair::new())
+        .collect();
     let mut program = manifest_program_test();
     program.add_account(
         maker.pubkey(),
         Account::new(1_000_000_000, 0, &solana_sdk_ids::system_program::id()),
     );
+    for trader in &empty_global_traders {
+        program.add_account(
+            trader.pubkey(),
+            Account::new(1_000_000_000, 0, &solana_sdk_ids::system_program::id()),
+        );
+    }
     let context = Rc::new(RefCell::new(program.start_with_context().await));
     let payer = context.borrow().payer.insecure_clone();
     let banks = context.borrow().banks_client.clone();
@@ -59,11 +68,21 @@ async fn check(case: Case) -> anyhow::Result<()> {
     let mut quote = MintFixture::new(Rc::clone(&context), Some(case.decimals.1)).await;
     let market = MarketFixture::new(Rc::clone(&context), &base.key, &quote.key).await;
     if case.global {
-        GlobalFixture::new(
-            Rc::clone(&context),
-            &if case.bid { quote.key } else { base.key },
-        )
-        .await;
+        let mint = if case.bid { quote.key } else { base.key };
+        GlobalFixture::new(Rc::clone(&context), &mint).await;
+        // Equal zero balances exercise the deposit tree's duplicate-key rotations.
+        for trader in &empty_global_traders {
+            send_tx_with_retry(
+                Rc::clone(&context),
+                &[global_add_trader_instruction(
+                    &get_global_address(&mint).0,
+                    &trader.pubkey(),
+                )],
+                Some(&trader.pubkey()),
+                &[trader],
+            )
+            .await?;
+        }
     }
     let trader_base =
         TokenAccountFixture::new(Rc::clone(&context), &base.key, &payer.pubkey()).await;
@@ -399,6 +418,24 @@ async fn integer_quotes_read_backed_global_liquidity() -> anyhow::Result<()> {
             output: if bid { 8 } else { 4 },
             quote_atoms: if bid { 8 } else { 4 },
             spent: if bid { 4 } else { 8 },
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn equal_price_books_match_sbf_execution_in_both_directions() -> anyhow::Result<()> {
+    for bid in [false, true] {
+        check(Case {
+            global: false,
+            bid,
+            decimals: (0, 0),
+            orders: vec![(10, 2, 0); 3],
+            input: if bid { 30 } else { 60 },
+            output: if bid { 60 } else { 30 },
+            quote_atoms: if bid { 60 } else { 30 },
+            spent: if bid { 30 } else { 60 },
         })
         .await?;
     }

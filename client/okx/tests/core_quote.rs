@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
+use hypertree::{HyperTreeValueIteratorTrait, RBTREE_OVERHEAD_BYTES};
 use manifest::{
-    quantities::{BaseAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
+    quantities::{BaseAtoms, GlobalAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
     state::{
-        AddOrderToMarketArgs, MarketFixed, MarketValue, OrderType, MARKET_BLOCK_SIZE,
-        NO_EXPIRATION_LAST_VALID_SLOT,
+        AddOrderToMarketArgs, GlobalFixed, GlobalValue, MarketFixed, MarketValue, OrderType,
+        RestingOrder, GLOBAL_BLOCK_SIZE, MARKET_BLOCK_SIZE, NO_EXPIRATION_LAST_VALID_SLOT,
     },
     validation::get_global_address,
 };
-use manifest_okx::{mfx::Manifest, QuoteSnapshot, SwapDirection};
+use manifest_okx::{mfx::Manifest, Dex, QuoteSnapshot, SwapDirection};
 use solana_account::Account;
 use solana_client::{rpc_client::RpcClient, rpc_request::RpcRequest};
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
@@ -55,6 +56,7 @@ fn book(bid: bool, orders: &[(u64, u32, i8, u32)]) -> (Pubkey, Accounts, Account
     let key = Pubkey::new_unique();
     let base = Pubkey::new_unique();
     let quote = Pubkey::new_unique();
+    let blocks = 2 * orders.len() + 8;
     let mut market = MarketValue {
         fixed: MarketFixed::new_empty_from_mint_parts(
             &base,
@@ -66,14 +68,14 @@ fn book(bid: bool, orders: &[(u64, u32, i8, u32)]) -> (Pubkey, Accounts, Account
             Pubkey::new_unique(),
             0,
         ),
-        dynamic: vec![0; MARKET_BLOCK_SIZE * 8],
+        dynamic: vec![0; MARKET_BLOCK_SIZE * blocks],
     };
-    market.market_expand_n(8).unwrap();
+    market.market_expand_n(blocks as u32).unwrap();
     let empty = encoded(&market);
-    let maker = Pubkey::new_unique();
-    market.claim_seat(&maker).unwrap();
-    let trader_index = market.get_trader_index(&maker);
     for &(amount, mantissa, exponent, last_valid_slot) in orders {
+        let maker = Pubkey::new_unique();
+        market.claim_seat(&maker).unwrap();
+        let trader_index = market.get_trader_index(&maker);
         let price =
             QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(mantissa, exponent).unwrap();
         let funding = if bid {
@@ -104,6 +106,191 @@ fn book(bid: bool, orders: &[(u64, u32, i8, u32)]) -> (Pubkey, Accounts, Account
         HashMap::from([(key, encoded(&market)), (base, mint(0)), (quote, mint(0))]),
         empty,
     )
+}
+
+#[test]
+fn rotated_equal_price_books_are_accepted_in_both_directions() {
+    for bid in [false, true] {
+        for prices in [vec![2; 3], vec![2; 8], vec![3, 2, 2, 1, 2, 3, 1]] {
+            let orders: Vec<_> = prices.iter().map(|&price| (2, price, 0, 0)).collect();
+            let (key, accounts, _) = book(bid, &orders);
+            let snapshot = QuoteSnapshot::from_accounts(key, 10, &accounts).unwrap();
+            let output = Manifest
+                .quote_atoms(
+                    100,
+                    &snapshot,
+                    if bid {
+                        SwapDirection::BaseToQuote
+                    } else {
+                        SwapDirection::QuoteToBase
+                    },
+                )
+                .unwrap();
+            assert_eq!(
+                output,
+                if bid {
+                    2 * prices.iter().map(|&p| u64::from(p)).sum::<u64>()
+                } else {
+                    2 * prices.len() as u64
+                }
+            );
+            let client = RpcClient::new_mock_with_mocks(
+                "succeeds",
+                HashMap::from([(
+                    RpcRequest::GetAccountInfo,
+                    serde_json::json!({"context":{"slot":10},"value":rpc_account(&accounts[&key])}),
+                )]),
+            );
+            assert!(Manifest
+                .fetch_pool_metadata(&client, &key.to_string())
+                .is_some());
+        }
+    }
+}
+
+#[test]
+fn equal_global_balances_do_not_block_local_quotes() {
+    for bid in [false, true] {
+        for balance in [0, 5] {
+            let (key, mut accounts, _) = book(bid, &[(8, 2, 0, 0)]);
+            let market =
+                manifest::program::get_dynamic_value_or::<MarketFixed>(&accounts[&key].data)
+                    .unwrap();
+            let mints = [*market.get_base_mint(), *market.get_quote_mint()];
+            for mint in mints {
+                let mut global = GlobalValue {
+                    fixed: GlobalFixed::new_empty(&mint),
+                    dynamic: vec![0; GLOBAL_BLOCK_SIZE * 10],
+                };
+                for _ in 0..5 {
+                    let maker = Pubkey::new_unique();
+                    global.global_expand().unwrap();
+                    global.add_trader(&maker).unwrap();
+                    global
+                        .deposit_global(&maker, GlobalAtoms::new(balance))
+                        .unwrap();
+                }
+                let mut data = bytemuck::bytes_of(&global.fixed).to_vec();
+                data.extend_from_slice(&global.dynamic);
+                accounts.insert(
+                    get_global_address(&mint).0,
+                    Account {
+                        owner: manifest::ID,
+                        data,
+                        ..Account::default()
+                    },
+                );
+            }
+            let snapshot = QuoteSnapshot::from_accounts(key, 10, &accounts).unwrap();
+            assert_eq!(
+                Manifest
+                    .quote_atoms(
+                        4,
+                        &snapshot,
+                        if bid {
+                            SwapDirection::BaseToQuote
+                        } else {
+                            SwapDirection::QuoteToBase
+                        }
+                    )
+                    .unwrap(),
+                if bid { 8 } else { 2 }
+            );
+        }
+    }
+}
+
+#[test]
+fn malformed_order_flags_return_errors_without_panicking() {
+    for bid in [false, true] {
+        let (key, accounts, _) = book(bid, &[(2, 2, 0, 0), (2, 3, 0, 0), (2, 1, 0, 0)]);
+        let market =
+            manifest::program::get_dynamic_value_or::<MarketFixed>(&accounts[&key].data).unwrap();
+        let book = if bid {
+            market.get_bids()
+        } else {
+            market.get_asks()
+        };
+        let indices: Vec<_> = book
+            .iter::<RestingOrder>()
+            .map(|(index, _)| index)
+            .collect();
+        for index in indices {
+            // RestingOrder's wire layout stores side/type after its first 40 bytes.
+            let order_start =
+                std::mem::size_of::<MarketFixed>() + index as usize + RBTREE_OVERHEAD_BYTES;
+            for (field, value) in [(40, u8::from(!bid)), (40, 2), (40, 255), (41, 255)] {
+                let mut invalid = accounts.clone();
+                invalid.get_mut(&key).unwrap().data[order_start + field] = value;
+                let result =
+                    std::panic::catch_unwind(|| QuoteSnapshot::from_accounts(key, 10, &invalid));
+                assert!(result.is_ok(), "side/type validation must not panic");
+                assert!(result.unwrap().is_err());
+            }
+        }
+    }
+}
+
+#[test]
+fn malformed_mint_tlv_is_rejected_and_inactive_hooks_are_supported() {
+    use spl_token_2022::extension::{transfer_hook::TransferHook, AccountType};
+    let (key, accounts, _) = book(true, &[(8, 2, 0, 0)]);
+    let mint_key = *accounts
+        .keys()
+        .find(|&&candidate| candidate != key)
+        .unwrap();
+    for fee in [false, true] {
+        let kind = if fee {
+            ExtensionType::TransferFeeConfig
+        } else {
+            ExtensionType::TransferHook
+        };
+        let mut data = vec![0; ExtensionType::try_calculate_account_len::<Mint>(&[kind]).unwrap()];
+        let mut state = StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut data).unwrap();
+        if fee {
+            state.init_extension::<TransferFeeConfig>(true).unwrap();
+        } else {
+            state.init_extension::<TransferHook>(true).unwrap();
+        }
+        state.base = Mint {
+            is_initialized: true,
+            ..Mint::default()
+        };
+        state.pack_base();
+        state.init_account_type().unwrap();
+        let tlv_start = spl_token_2022::state::Account::LEN + std::mem::size_of::<AccountType>();
+        let valid = Account {
+            data: data.clone(),
+            owner: spl_token_2022::id(),
+            ..Account::default()
+        };
+        let mut with_extension = accounts.clone();
+        with_extension.insert(mint_key, valid);
+        assert_eq!(
+            QuoteSnapshot::from_accounts(key, 10, &with_extension).is_ok(),
+            !fee
+        );
+        let mut truncated = data.clone();
+        truncated.truncate(tlv_start + 4);
+        let mut wrong_length = data.clone();
+        wrong_length[tlv_start + 2..tlv_start + 4].copy_from_slice(&1_u16.to_le_bytes());
+        let mut unknown = data.clone();
+        unknown[tlv_start..tlv_start + 2].copy_from_slice(&u16::MAX.to_le_bytes());
+        let mut duplicate = data.clone();
+        duplicate.extend_from_slice(&data[tlv_start..]);
+        for malformed in [truncated, wrong_length, unknown, duplicate] {
+            let mut invalid = accounts.clone();
+            invalid.insert(
+                mint_key,
+                Account {
+                    data: malformed,
+                    owner: spl_token_2022::id(),
+                    ..Account::default()
+                },
+            );
+            assert!(QuoteSnapshot::from_accounts(key, 10, &invalid).is_err());
+        }
+    }
 }
 
 #[test]
