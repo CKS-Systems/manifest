@@ -32,13 +32,17 @@ impl Dex for Manifest {
         manifest::ID
     }
 
+    /// Indicative exact-input quote in token units, rounded down to output atoms.
+    /// Input is rounded down to whole input atoms. Invalid or out-of-range
+    /// amounts return zero.
+    /// Metadata contains rounded order totals rather than original prices, so
+    /// this does not reproduce all of Core's per-fill rounding rules. Re-quote
+    /// against Core or simulate before using the result as an execution bound.
+    /// The f64 interface and metadata can also lose precision for large amounts.
     fn quote(&self, amount_in: f64, metadata: &PoolMetadata, direction: SwapDirection) -> f64 {
         if amount_in <= 0.0 {
             return 0.0;
         }
-
-        let mut remaining_in: f64 = amount_in;
-        let mut total_out: f64 = 0.0;
 
         let book_key: &str = match direction {
             SwapDirection::BaseToQuote => "bids",
@@ -52,20 +56,47 @@ impl Dex for Manifest {
             get_extra!(metadata, "quote_decimals", PoolMetadataValue::Number).unwrap_or(6.0_f64);
         // Metadata is untrusted: bound exponents before integer pow and reject
         // NaN/fractional values that would otherwise truncate during casting.
-        let decimal_scale = |decimals: f64| -> Option<f64> {
+        let decimal_scale = |decimals: f64| -> Option<u64> {
             if !decimals.is_finite() || decimals.fract() != 0.0 || !(0.0..=19.0).contains(&decimals)
             {
                 return None;
             }
-            Some(10_u64.checked_pow(decimals as u32)? as f64)
+            10_u64.checked_pow(decimals as u32)
         };
-        let base_scale_opt: Option<f64> = decimal_scale(base_decimals);
-        let Some(base_scale): Option<f64> = base_scale_opt else {
+        let Some(base_scale) = decimal_scale(base_decimals) else {
             return 0.0;
         };
-        let quote_scale_opt: Option<f64> = decimal_scale(quote_decimals);
-        let Some(quote_scale): Option<f64> = quote_scale_opt else {
+        let Some(quote_scale) = decimal_scale(quote_decimals) else {
             return 0.0;
+        };
+        let (input_decimals, output_scale) = match direction {
+            SwapDirection::BaseToQuote => (base_decimals, quote_scale),
+            SwapDirection::QuoteToBase => (quote_decimals, base_scale),
+        };
+        // Parse the decimal representation instead of multiplying f64 tokens:
+        // e.g. 0.29 * 100 is slightly below 29 and would truncate to 28 atoms.
+        let mut input_amount = amount_in.to_string();
+        if let Some(point) = input_amount.find('.') {
+            input_amount.truncate(point + 1 + input_decimals as usize);
+        }
+        let Ok(mut remaining_in_atoms) =
+            spl_token::try_ui_amount_into_amount(input_amount, input_decimals as u8)
+        else {
+            return 0.0;
+        };
+        let mut total_out_atoms: u64 = 0;
+        let atom_count = |value: &PoolMetadataValue| -> Option<u64> {
+            match value {
+                PoolMetadataValue::Number(atoms)
+                    if atoms.is_finite()
+                        && *atoms >= 0.0
+                        && atoms.fract() == 0.0
+                        && *atoms < u64::MAX as f64 =>
+                {
+                    Some(*atoms as u64)
+                }
+                _ => None,
+            }
         };
 
         for level in levels.into_iter() {
@@ -74,46 +105,44 @@ impl Dex for Manifest {
                     if level_values.len() < 2 {
                         continue;
                     }
-                    let base_atoms: f64 = match level_values[0] {
-                        PoolMetadataValue::Number(base_atoms) => base_atoms,
-                        _ => 0.0_f64,
+                    let (Some(base_atoms), Some(quote_atoms)) =
+                        (atom_count(&level_values[0]), atom_count(&level_values[1]))
+                    else {
+                        continue;
                     };
-                    let quote_atoms: f64 = match level_values[1] {
-                        PoolMetadataValue::Number(quote_atoms) => quote_atoms,
-                        _ => 0.0_f64,
-                    };
-                    let base_tokens: f64 = base_atoms / base_scale;
-                    let quote_tokens: f64 = quote_atoms / quote_scale;
-                    if !base_tokens.is_finite()
-                        || !quote_tokens.is_finite()
-                        || base_tokens <= 0.0
-                        || quote_tokens < 0.0
-                    {
+                    if base_atoms == 0 {
                         continue;
                     }
 
-                    let (level_input, level_output): (f64, f64) = match direction {
-                        SwapDirection::BaseToQuote => (base_tokens, quote_tokens),
-                        SwapDirection::QuoteToBase => (quote_tokens, base_tokens),
+                    let (level_input_atoms, level_output_atoms) = match direction {
+                        SwapDirection::BaseToQuote => (base_atoms, quote_atoms),
+                        SwapDirection::QuoteToBase => (quote_atoms, base_atoms),
                     };
-                    if level_input <= 0.0 || level_output < 0.0 {
+                    if level_input_atoms == 0 {
                         continue;
                     }
 
-                    if level_input <= remaining_in {
-                        total_out += level_output;
-                        remaining_in -= level_input;
-                        continue;
+                    let filled_input_atoms = remaining_in_atoms.min(level_input_atoms);
+                    // A u64-by-u64 product fits in u128. The quotient cannot
+                    // exceed level_output_atoms, so narrowing back to u64 is safe.
+                    let filled_output_atoms =
+                        (u128::from(filled_input_atoms) * u128::from(level_output_atoms)
+                            / u128::from(level_input_atoms)) as u64;
+                    let Some(next_total) = total_out_atoms.checked_add(filled_output_atoms) else {
+                        return 0.0;
+                    };
+                    total_out_atoms = next_total;
+                    remaining_in_atoms -= filled_input_atoms;
+                    if remaining_in_atoms == 0 {
+                        break;
                     }
-                    total_out += remaining_in / level_input * level_output;
-                    return total_out;
                 }
                 _ => {}
             }
         }
 
         // Fall through in case we exhaust the book and do not fully fill.
-        total_out
+        total_out_atoms as f64 / output_scale as f64
     }
 
     fn fetch_pool_addresses(&self, client: &RpcClient) -> Vec<String> {
@@ -308,5 +337,255 @@ mod tests {
     fn quote_uses_asks_for_quote_input() {
         let output: f64 = Manifest.quote(4.0_f64, &metadata(), SwapDirection::QuoteToBase);
         assert_eq!(output, 1.0_f64);
+    }
+
+    #[test]
+    fn quote_rounds_partial_base_output_to_atoms() {
+        use manifest::quantities::{QuoteAtoms, QuoteAtomsPerBaseAtom};
+
+        let price = QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(4, 0).unwrap();
+        for input_atoms in [1, 4, 8] {
+            let expected = price
+                .checked_base_for_quote(QuoteAtoms::new(input_atoms), false)
+                .unwrap()
+                .as_u64();
+            assert_eq!(
+                Manifest.quote(input_atoms as f64, &metadata(), SwapDirection::QuoteToBase),
+                expected as f64,
+            );
+        }
+    }
+
+    #[test]
+    fn quote_rounds_partial_quote_output_to_atoms() {
+        let mut metadata = metadata();
+        metadata.extra.insert(
+            "bids".to_string(),
+            PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                PoolMetadataValue::Number(8.0),
+                PoolMetadataValue::Number(2.0),
+            ])]),
+        );
+
+        for (input, expected) in [(1.0, 0.0), (4.0, 1.0), (8.0, 2.0)] {
+            assert_eq!(
+                Manifest.quote(input, &metadata, SwapDirection::BaseToQuote),
+                expected,
+            );
+        }
+    }
+
+    #[test]
+    fn quote_uses_output_mint_decimals_for_rounding() {
+        let mut metadata = metadata();
+        metadata
+            .extra
+            .insert("base_decimals".to_string(), PoolMetadataValue::Number(2.0));
+        metadata
+            .extra
+            .insert("quote_decimals".to_string(), PoolMetadataValue::Number(3.0));
+
+        for (input, expected) in [(0.001, 0.0), (0.004, 0.01), (0.008, 0.02)] {
+            assert_eq!(
+                Manifest.quote(input, &metadata, SwapDirection::QuoteToBase),
+                expected,
+            );
+        }
+
+        metadata.extra.insert(
+            "bids".to_string(),
+            PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                PoolMetadataValue::Number(8.0),
+                PoolMetadataValue::Number(2.0),
+            ])]),
+        );
+        for (input, expected) in [(0.01, 0.0), (0.04, 0.001), (0.08, 0.002)] {
+            assert_eq!(
+                Manifest.quote(input, &metadata, SwapDirection::BaseToQuote),
+                expected,
+            );
+        }
+    }
+
+    #[test]
+    fn quote_preserves_full_levels_before_rounding_partial_output() {
+        let mut metadata = metadata();
+        let Some(PoolMetadataValue::Array(asks)) = metadata.extra.get_mut("asks") else {
+            panic!("missing asks");
+        };
+        asks.push(PoolMetadataValue::Array(vec![
+            PoolMetadataValue::Number(3.0),
+            PoolMetadataValue::Number(15.0),
+        ]));
+
+        for (input, expected) in [(9.0, 2.0), (13.0, 3.0), (30.0, 5.0)] {
+            assert_eq!(
+                Manifest.quote(input, &metadata, SwapDirection::QuoteToBase),
+                expected,
+            );
+        }
+    }
+
+    #[test]
+    fn quote_preserves_full_fills_with_fractional_token_amounts() {
+        let mut metadata = metadata();
+        for key in ["base_decimals", "quote_decimals"] {
+            metadata
+                .extra
+                .insert(key.to_string(), PoolMetadataValue::Number(2.0));
+        }
+        metadata.extra.insert(
+            "bids".to_string(),
+            PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                PoolMetadataValue::Number(29.0),
+                PoolMetadataValue::Number(87.0),
+            ])]),
+        );
+
+        assert_eq!(
+            Manifest.quote(0.29, &metadata, SwapDirection::BaseToQuote),
+            0.87,
+        );
+    }
+
+    #[test]
+    fn quote_preserves_integer_partial_fills() {
+        let mut metadata = metadata();
+        for key in ["bids", "asks"] {
+            metadata.extra.insert(
+                key.to_string(),
+                PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                    PoolMetadataValue::Number(22.0),
+                    PoolMetadataValue::Number(22.0),
+                ])]),
+            );
+        }
+
+        for direction in [SwapDirection::BaseToQuote, SwapDirection::QuoteToBase] {
+            assert_eq!(Manifest.quote(15.0, &metadata, direction), 15.0);
+        }
+    }
+
+    #[test]
+    fn quote_preserves_decimal_input_across_levels() {
+        let mut metadata = metadata();
+        metadata
+            .extra
+            .insert("quote_decimals".to_string(), PoolMetadataValue::Number(2.0));
+        let level = PoolMetadataValue::Array(vec![
+            PoolMetadataValue::Number(1.0),
+            PoolMetadataValue::Number(29.0),
+        ]);
+        metadata.extra.insert(
+            "asks".to_string(),
+            PoolMetadataValue::Array(vec![level.clone(), level]),
+        );
+
+        assert_eq!(
+            Manifest.quote(0.58, &metadata, SwapDirection::QuoteToBase),
+            2.0,
+        );
+    }
+
+    #[test]
+    fn quote_handles_products_larger_than_u64() {
+        let mut metadata = metadata();
+        for key in ["bids", "asks"] {
+            metadata.extra.insert(
+                key.to_string(),
+                PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                    PoolMetadataValue::Number(1_000_000_000_000.0),
+                    PoolMetadataValue::Number(1_000_000_000_000.0),
+                ])]),
+            );
+        }
+
+        for direction in [SwapDirection::BaseToQuote, SwapDirection::QuoteToBase] {
+            assert_eq!(
+                Manifest.quote(500_000_000_000.0, &metadata, direction),
+                500_000_000_000.0,
+            );
+        }
+    }
+
+    #[test]
+    fn quote_rejects_inputs_that_cannot_represent_atomic_amounts() {
+        for input in [0.5, f64::NAN, f64::INFINITY, -1.0, u64::MAX as f64] {
+            for direction in [SwapDirection::BaseToQuote, SwapDirection::QuoteToBase] {
+                assert_eq!(Manifest.quote(input, &metadata(), direction), 0.0);
+            }
+        }
+    }
+
+    #[test]
+    fn quote_rounds_input_down_to_whole_atoms() {
+        assert_eq!(
+            Manifest.quote(1.5, &metadata(), SwapDirection::BaseToQuote),
+            3.0,
+        );
+        assert_eq!(
+            Manifest.quote(4.5, &metadata(), SwapDirection::QuoteToBase),
+            1.0,
+        );
+    }
+
+    #[test]
+    fn quote_accepts_atomic_inputs_at_each_supported_decimal_scale() {
+        for decimals in 0..=19 {
+            let mut metadata = metadata();
+            metadata.extra.insert(
+                "quote_decimals".to_string(),
+                PoolMetadataValue::Number(decimals as f64),
+            );
+            assert_eq!(
+                Manifest.quote(
+                    4.0 / 10_u64.pow(decimals) as f64,
+                    &metadata,
+                    SwapDirection::QuoteToBase,
+                ),
+                1.0,
+                "quote decimals: {decimals}",
+            );
+        }
+    }
+
+    #[test]
+    fn quote_skips_invalid_metadata_atom_counts() {
+        for invalid in [0.5, f64::NAN, f64::INFINITY, -1.0, u64::MAX as f64] {
+            for index in [0, 1] {
+                let mut metadata = metadata();
+                let mut level = vec![
+                    PoolMetadataValue::Number(2.0),
+                    PoolMetadataValue::Number(6.0),
+                ];
+                level[index] = PoolMetadataValue::Number(invalid);
+                metadata.extra.insert(
+                    "bids".to_string(),
+                    PoolMetadataValue::Array(vec![PoolMetadataValue::Array(level)]),
+                );
+                assert_eq!(
+                    Manifest.quote(1.0, &metadata, SwapDirection::BaseToQuote),
+                    0.0,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn quote_rejects_output_atom_overflow() {
+        let mut metadata = metadata();
+        let level = PoolMetadataValue::Array(vec![
+            PoolMetadataValue::Number(1.0),
+            PoolMetadataValue::Number(10_000_000_000_000_000_000.0),
+        ]);
+        metadata.extra.insert(
+            "bids".to_string(),
+            PoolMetadataValue::Array(vec![level.clone(), level]),
+        );
+
+        assert_eq!(
+            Manifest.quote(2.0, &metadata, SwapDirection::BaseToQuote),
+            0.0,
+        );
     }
 }
