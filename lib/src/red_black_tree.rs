@@ -169,6 +169,18 @@ pub fn validate_red_black_tree<V: Payload>(
     root_index: DataIndex,
     max_index: DataIndex,
 ) -> Result<(), &'static str> {
+    validate_red_black_tree_with::<V>(data, root_index, max_index, |_| Ok(()))
+}
+
+/// Validate a tree and check each payload before invoking its ordering methods.
+/// Use this when a payload's comparator assumes a valid type or book side.
+/// Every bound has already passed `validate_value` before it is compared.
+pub fn validate_red_black_tree_with<V: Payload>(
+    data: &[u8],
+    root_index: DataIndex,
+    max_index: DataIndex,
+    validate_value: impl Fn(&V) -> Result<(), &'static str>,
+) -> Result<(), &'static str> {
     if root_index == NIL {
         return if max_index == NIL {
             Ok(())
@@ -207,11 +219,16 @@ pub fn validate_red_black_tree<V: Payload>(
         if node.color != Color::Black && node.color != Color::Red {
             return Err("tree node has invalid color");
         }
+        if index == root_index && node.color != Color::Black {
+            return Err("tree root is not black");
+        }
         if node.parent != expected_parent {
             return Err("tree node has inconsistent parent");
         }
-        // Equal values are deliberately inserted on the left to preserve FIFO.
-        if lower_bound.is_some_and(|lower| node.value <= lower)
+        validate_value(&node.value)?;
+        // Equal values are inserted on the left, but rotations can move them
+        // to either subtree without changing their in-order priority.
+        if lower_bound.is_some_and(|lower| node.value < lower)
             || upper_bound.is_some_and(|upper| node.value > upper)
         {
             return Err("tree violates binary-search ordering");
@@ -1960,6 +1977,75 @@ pub(crate) mod test {
         get_mut_helper::<RBNode<TestOrderBid>>(&mut data, left_index).value =
             TestOrderBid::new(root_value.order_id + 1);
         assert!(validate_red_black_tree::<TestOrderBid>(&data, root, max).is_err());
+    }
+
+    #[test]
+    fn test_validate_equal_keys_after_rotations_and_removals() {
+        for values in [vec![2; 12], vec![3, 2, 2, 1, 2, 3, 1, 4, 4, 2]] {
+            let mut data = [0_u8; 4096];
+            let mut tree = RedBlackTree::<TestOrderBid>::new(&mut data, NIL, NIL);
+            for (slot, &value) in values.iter().enumerate() {
+                tree.insert(
+                    (slot as u32 + 1) * TEST_BLOCK_WIDTH,
+                    TestOrderBid::new(value),
+                );
+                assert_eq!(
+                    validate_red_black_tree::<TestOrderBid>(
+                        tree.data,
+                        tree.root_index,
+                        tree.max_index
+                    ),
+                    Ok(())
+                );
+            }
+            let mut expected = values.clone();
+            expected.sort_unstable_by(|a, b| b.cmp(a));
+            assert_eq!(
+                tree.iter::<TestOrderBid>()
+                    .map(|(_, value)| value.order_id)
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            for slot in (0..values.len())
+                .step_by(2)
+                .chain((1..values.len()).step_by(2))
+            {
+                tree.remove_by_index((slot as u32 + 1) * TEST_BLOCK_WIDTH);
+                assert_eq!(
+                    validate_red_black_tree::<TestOrderBid>(
+                        tree.data,
+                        tree.root_index,
+                        tree.max_index
+                    ),
+                    Ok(())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_rejects_red_roots() {
+        for values in [vec![2], vec![4, 2, 6, 1, 3, 5, 7]] {
+            let mut data = [0_u8; 4096];
+            let (root, max) = {
+                let mut tree = RedBlackTree::<TestOrderBid>::new(&mut data, NIL, NIL);
+                for (slot, value) in values.into_iter().enumerate() {
+                    tree.insert(
+                        (slot as u32 + 1) * TEST_BLOCK_WIDTH,
+                        TestOrderBid::new(value),
+                    );
+                }
+                (tree.root_index, tree.max_index)
+            };
+            assert_eq!(
+                validate_red_black_tree::<TestOrderBid>(&data, root, max),
+                Ok(())
+            );
+            get_mut_helper::<RBNode<TestOrderBid>>(&mut data, root).color = Color::Red;
+            for cached_max in [max, NIL] {
+                assert!(validate_red_black_tree::<TestOrderBid>(&data, root, cached_max).is_err());
+            }
+        }
     }
 
     #[test]

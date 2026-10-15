@@ -4,7 +4,9 @@ use solana_program::pubkey::Pubkey;
 use std::{collections::HashMap, error::Error};
 use tokio::sync::mpsc::Sender;
 
+pub mod core_quote;
 pub mod mfx;
+pub use core_quote::QuoteSnapshot;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SwapDirection {
@@ -21,7 +23,9 @@ pub trait Dex: Send + Sync {
     // Return DEX Program ID
     fn dex_program_id(&self) -> Pubkey;
 
-    // Quote function
+    /// Quote an exact-input amount in input tokens, returning output tokens.
+    /// This is an indicative quote from metadata, not an execution guarantee;
+    /// implementations can differ from on-chain fill rounding.
     fn quote(&self, amount_in: f64, metadata: &PoolMetadata, direction: SwapDirection) -> f64;
 
     // fetch all the pool address

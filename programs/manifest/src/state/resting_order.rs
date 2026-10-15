@@ -188,6 +188,11 @@ impl RestingOrder {
         self.order_type.is_valid()
     }
 
+    /// Check the encoded boolean as well as the side before comparing orders.
+    pub fn has_valid_side(&self, is_bid: bool) -> bool {
+        self.is_bid == PodBool::from_bool(is_bid)
+    }
+
     pub fn is_global(&self) -> bool {
         self.order_type == OrderType::Global
     }
