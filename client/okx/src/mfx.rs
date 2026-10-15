@@ -85,13 +85,16 @@ impl Dex for Manifest {
             return 0.0;
         };
         let mut total_out_atoms: u64 = 0;
+        // Canonical numeric metadata rounds the highest valid u64 counts to
+        // 2^64. Accept that rounded boundary; the cast saturates it to u64::MAX.
+        // Values above it cannot come from a u64 count and remain invalid.
         let atom_count = |value: &PoolMetadataValue| -> Option<u64> {
             match value {
                 PoolMetadataValue::Number(atoms)
                     if atoms.is_finite()
                         && *atoms >= 0.0
                         && atoms.fract() == 0.0
-                        && *atoms < u64::MAX as f64 =>
+                        && *atoms <= u64::MAX as f64 =>
                 {
                     Some(*atoms as u64)
                 }
@@ -551,7 +554,8 @@ mod tests {
 
     #[test]
     fn quote_skips_invalid_metadata_atom_counts() {
-        for invalid in [0.5, f64::NAN, f64::INFINITY, -1.0, u64::MAX as f64] {
+        let above_rounded_max = f64::from_bits((u64::MAX as f64).to_bits() + 1);
+        for invalid in [0.5, f64::NAN, f64::INFINITY, -1.0, above_rounded_max] {
             for index in [0, 1] {
                 let mut metadata = metadata();
                 let mut level = vec![
@@ -569,6 +573,131 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn quote_keeps_orders_at_the_rounded_u64_metadata_boundary() {
+        for amount in [u64::MAX - 2047, u64::MAX - 1024, u64::MAX - 1023, u64::MAX] {
+            let mut metadata = metadata();
+            for key in ["bids", "asks"] {
+                metadata.extra.insert(
+                    key.to_string(),
+                    PoolMetadataValue::Array(vec![PoolMetadataValue::Array(vec![
+                        PoolMetadataValue::Number(amount as f64),
+                        PoolMetadataValue::Number(amount as f64),
+                    ])]),
+                );
+            }
+            for direction in [SwapDirection::BaseToQuote, SwapDirection::QuoteToBase] {
+                assert_eq!(Manifest.quote(1.0, &metadata, direction), 1.0);
+            }
+        }
+    }
+
+    #[test]
+    fn quote_keeps_a_valid_maximum_size_bid_from_core_metadata() {
+        use manifest::{
+            quantities::{BaseAtoms, QuoteAtomsPerBaseAtom},
+            state::{
+                AddOrderToMarketArgs, MarketFixed, OrderType, MARKET_BLOCK_SIZE,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            },
+        };
+
+        let market_key = Pubkey::new_unique();
+        let mut market = MarketValue {
+            fixed: MarketFixed::new_empty_from_mint_parts(
+                &Pubkey::new_unique(),
+                18,
+                &Pubkey::new_unique(),
+                0,
+                Pubkey::new_unique(),
+                0,
+                Pubkey::new_unique(),
+                0,
+            ),
+            dynamic: vec![0; MARKET_BLOCK_SIZE * 4],
+        };
+        market.market_expand_n(4).unwrap();
+        let maker = Pubkey::new_unique();
+        let taker = Pubkey::new_unique();
+        market.claim_seat(&maker).unwrap();
+        market.claim_seat(&taker).unwrap();
+        let maker_index = market.get_trader_index(&maker);
+        let taker_index = market.get_trader_index(&taker);
+        market.deposit(maker_index, 19, false).unwrap();
+        market
+            .deposit(taker_index, 1_000_000_000_000_000_000, true)
+            .unwrap();
+        market
+            .place_order(AddOrderToMarketArgs {
+                market: &market_key,
+                trader_index: maker_index,
+                num_base_atoms: BaseAtoms::new(u64::MAX),
+                price: QuoteAtomsPerBaseAtom::try_from_mantissa_and_exponent(1, -18).unwrap(),
+                is_bid: true,
+                last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
+                order_type: OrderType::Limit,
+                global_trade_accounts_opts: &[None, None],
+                current_slot: Some(100),
+            })
+            .unwrap();
+
+        // Use the same rounded numeric metadata that fetch_pool_metadata emits.
+        let mut metadata = metadata();
+        metadata
+            .extra
+            .insert("base_decimals".to_string(), PoolMetadataValue::Number(18.0));
+        metadata.extra.insert(
+            "bids".to_string(),
+            PoolMetadataValue::Array(
+                market
+                    .get_bids()
+                    .iter::<RestingOrder>()
+                    .map(|(_, order)| {
+                        PoolMetadataValue::Array(vec![
+                            PoolMetadataValue::Number(order.get_num_base_atoms().as_u64() as f64),
+                            PoolMetadataValue::Number(
+                                order
+                                    .get_price()
+                                    .checked_quote_for_base(order.get_num_base_atoms(), true)
+                                    .unwrap()
+                                    .as_u64() as f64,
+                            ),
+                        ])
+                    })
+                    .collect(),
+            ),
+        );
+        let core_output = market
+            .impact_quote_atoms_with_slot(
+                false,
+                BaseAtoms::new(1_000_000_000_000_000_000),
+                &[None, None],
+                100,
+            )
+            .unwrap()
+            .as_u64();
+        assert_eq!(core_output, 1);
+        assert_eq!(
+            Manifest.quote(1.0, &metadata, SwapDirection::BaseToQuote),
+            core_output as f64,
+        );
+
+        let fill = market
+            .place_order(AddOrderToMarketArgs {
+                market: &market_key,
+                trader_index: taker_index,
+                num_base_atoms: BaseAtoms::new(1_000_000_000_000_000_000),
+                price: QuoteAtomsPerBaseAtom::ZERO,
+                is_bid: false,
+                last_valid_slot: NO_EXPIRATION_LAST_VALID_SLOT,
+                order_type: OrderType::ImmediateOrCancel,
+                global_trade_accounts_opts: &[None, None],
+                current_slot: Some(100),
+            })
+            .unwrap();
+        assert_eq!(fill.quote_atoms_traded.as_u64(), core_output);
     }
 
     #[test]
