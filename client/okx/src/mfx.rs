@@ -48,7 +48,10 @@ fn level_atoms(values: &[PoolMetadataValue]) -> Option<(u128, u128, bool)> {
         return None;
     };
     // Extra decimal strings retain the exact counts without changing the first
-    // two numeric fields used by older consumers. Ignore stale/unknown extras.
+    // two numeric fields used by older consumers. Use them only when their f64
+    // values match the numeric fields. This cannot detect stale counts within
+    // the same f64 rounding interval; update or discard both strings together
+    // whenever the numeric fields change.
     if let (
         Some(PoolMetadataValue::String(base_exact)),
         Some(PoolMetadataValue::String(quote_exact)),
@@ -104,7 +107,10 @@ impl Dex for Manifest {
     /// against Core or simulate before using the result as an execution bound.
     /// The f64 interface and legacy metadata can lose precision for large amounts.
     /// Fetched levels include exact atom strings after the two legacy numbers.
-    /// Numeric-only totals remain approximate and may round beyond u64::MAX.
+    /// Keep all four fields from the same snapshot. When changing the numeric
+    /// fields, update or discard both strings, even if the f64 values stay equal.
+    /// If any filled level uses numeric fallback, including in mixed metadata,
+    /// the total is approximate and is not limited to u64::MAX.
     fn quote(&self, amount_in: f64, metadata: &PoolMetadata, direction: SwapDirection) -> f64 {
         if amount_in <= 0.0 {
             return 0.0;
@@ -191,7 +197,8 @@ impl Dex for Manifest {
             return 0.0;
         }
         // Fall through in case we exhaust the book and do not fully fill.
-        // Do not reject a legacy numeric sum merely for rounding above u64::MAX.
+        // Legacy and mixed numeric totals retain their approximate range without
+        // a u64 cap; this does not guarantee an executable output amount.
         total_out_atoms as f64 / output_scale as f64
     }
 
