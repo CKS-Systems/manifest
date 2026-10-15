@@ -22,6 +22,70 @@ use super::{get_extra, Dex, PoolMetadata, PoolMetadataValue, SwapDirection};
 
 pub struct Manifest;
 
+fn input_atoms(amount: f64, decimals: u8, scale: u64) -> Option<u64> {
+    if !amount.is_finite() || amount < 0.0 {
+        return None;
+    }
+    // Large integral f64 values can be exact even when their shortest decimal
+    // display names a different integer. Preserve the actual integral value.
+    if amount.fract() == 0.0 {
+        return (amount < u64::MAX as f64)
+            .then(|| amount as u64)?
+            .checked_mul(scale);
+    }
+    // Fractional UI amounts use decimal notation so 0.29 is 29 atoms at scale 100.
+    let mut decimal = amount.to_string();
+    if let Some(point) = decimal.find('.') {
+        decimal.truncate(point + 1 + decimals as usize);
+    }
+    spl_token::try_ui_amount_into_amount(decimal, decimals).ok()
+}
+
+fn level_atoms(values: &[PoolMetadataValue]) -> Option<(u128, u128, bool)> {
+    let (PoolMetadataValue::Number(base), PoolMetadataValue::Number(quote)) =
+        (values.first()?, values.get(1)?)
+    else {
+        return None;
+    };
+    // Extra decimal strings retain the exact counts without changing the first
+    // two numeric fields used by older consumers. Ignore stale/unknown extras.
+    if let (
+        Some(PoolMetadataValue::String(base_exact)),
+        Some(PoolMetadataValue::String(quote_exact)),
+    ) = (values.get(2), values.get(3))
+    {
+        if let (Ok(base_exact), Ok(quote_exact)) =
+            (base_exact.parse::<u64>(), quote_exact.parse::<u64>())
+        {
+            if *base == base_exact as f64 && *quote == quote_exact as f64 {
+                return Some((u128::from(base_exact), u128::from(quote_exact), true));
+            }
+        }
+    }
+    let numeric = |atoms: f64| {
+        (atoms.is_finite() && atoms >= 0.0 && atoms.fract() == 0.0 && atoms <= u64::MAX as f64)
+            .then_some(atoms as u128)
+    };
+    // Preserve the encoded 2^64 boundary in legacy metadata: clamping only one
+    // side to u64::MAX would change a 2:1 ratio before the integer division.
+    Some((numeric(*base)?, numeric(*quote)?, false))
+}
+
+fn order_metadata(order: &RestingOrder) -> PoolMetadataValue {
+    let base = order.get_num_base_atoms().as_u64();
+    let quote = order
+        .get_price()
+        .checked_quote_for_base(order.get_num_base_atoms(), true)
+        .unwrap_or_default()
+        .as_u64();
+    PoolMetadataValue::Array(vec![
+        PoolMetadataValue::Number(base as f64),
+        PoolMetadataValue::Number(quote as f64),
+        PoolMetadataValue::String(base.to_string()),
+        PoolMetadataValue::String(quote.to_string()),
+    ])
+}
+
 #[async_trait]
 impl Dex for Manifest {
     fn dex_name(&self) -> String {
@@ -38,7 +102,9 @@ impl Dex for Manifest {
     /// Metadata contains rounded order totals rather than original prices, so
     /// this does not reproduce all of Core's per-fill rounding rules. Re-quote
     /// against Core or simulate before using the result as an execution bound.
-    /// The f64 interface and metadata can also lose precision for large amounts.
+    /// The f64 interface and legacy metadata can lose precision for large amounts.
+    /// Fetched levels include exact atom strings after the two legacy numbers.
+    /// Numeric-only totals remain approximate and may round beyond u64::MAX.
     fn quote(&self, amount_in: f64, metadata: &PoolMetadata, direction: SwapDirection) -> f64 {
         if amount_in <= 0.0 {
             return 0.0;
@@ -48,8 +114,9 @@ impl Dex for Manifest {
             SwapDirection::BaseToQuote => "bids",
             SwapDirection::QuoteToBase => "asks",
         };
-        let levels: Vec<PoolMetadataValue> =
-            get_extra!(metadata, book_key, PoolMetadataValue::Array).unwrap_or_default();
+        let Some(PoolMetadataValue::Array(levels)) = metadata.extra.get(book_key) else {
+            return 0.0;
+        };
         let base_decimals: f64 =
             get_extra!(metadata, "base_decimals", PoolMetadataValue::Number).unwrap_or(6.0_f64);
         let quote_decimals: f64 =
@@ -69,48 +136,24 @@ impl Dex for Manifest {
         let Some(quote_scale) = decimal_scale(quote_decimals) else {
             return 0.0;
         };
-        let (input_decimals, output_scale) = match direction {
-            SwapDirection::BaseToQuote => (base_decimals, quote_scale),
-            SwapDirection::QuoteToBase => (quote_decimals, base_scale),
+        let (input_decimals, input_scale, output_scale) = match direction {
+            SwapDirection::BaseToQuote => (base_decimals, base_scale, quote_scale),
+            SwapDirection::QuoteToBase => (quote_decimals, quote_scale, base_scale),
         };
-        // Parse the decimal representation instead of multiplying f64 tokens:
-        // e.g. 0.29 * 100 is slightly below 29 and would truncate to 28 atoms.
-        let mut input_amount = amount_in.to_string();
-        if let Some(point) = input_amount.find('.') {
-            input_amount.truncate(point + 1 + input_decimals as usize);
-        }
-        let Ok(mut remaining_in_atoms) =
-            spl_token::try_ui_amount_into_amount(input_amount, input_decimals as u8)
-        else {
+        let Some(input) = input_atoms(amount_in, input_decimals as u8, input_scale) else {
             return 0.0;
         };
-        let mut total_out_atoms: u64 = 0;
-        // Canonical numeric metadata rounds the highest valid u64 counts to
-        // 2^64. Accept that rounded boundary; the cast saturates it to u64::MAX.
-        // Values above it cannot come from a u64 count and remain invalid.
-        let atom_count = |value: &PoolMetadataValue| -> Option<u64> {
-            match value {
-                PoolMetadataValue::Number(atoms)
-                    if atoms.is_finite()
-                        && *atoms >= 0.0
-                        && atoms.fract() == 0.0
-                        && *atoms <= u64::MAX as f64 =>
-                {
-                    Some(*atoms as u64)
-                }
-                _ => None,
-            }
-        };
+        let mut remaining_in_atoms = u128::from(input);
+        let mut total_out_atoms: u128 = 0;
+        let mut all_exact = true;
 
-        for level in levels.into_iter() {
+        for level in levels {
             match level {
                 PoolMetadataValue::Array(level_values) => {
                     if level_values.len() < 2 {
                         continue;
                     }
-                    let (Some(base_atoms), Some(quote_atoms)) =
-                        (atom_count(&level_values[0]), atom_count(&level_values[1]))
-                    else {
+                    let Some((base_atoms, quote_atoms, exact)) = level_atoms(level_values) else {
                         continue;
                     };
                     if base_atoms == 0 {
@@ -126,15 +169,15 @@ impl Dex for Manifest {
                     }
 
                     let filled_input_atoms = remaining_in_atoms.min(level_input_atoms);
-                    // A u64-by-u64 product fits in u128. The quotient cannot
-                    // exceed level_output_atoms, so narrowing back to u64 is safe.
+                    // Input is at most u64::MAX and an encoded level count is
+                    // at most 2^64, so their product fits in u128.
                     let filled_output_atoms =
-                        (u128::from(filled_input_atoms) * u128::from(level_output_atoms)
-                            / u128::from(level_input_atoms)) as u64;
+                        filled_input_atoms * level_output_atoms / level_input_atoms;
                     let Some(next_total) = total_out_atoms.checked_add(filled_output_atoms) else {
                         return 0.0;
                     };
                     total_out_atoms = next_total;
+                    all_exact &= exact;
                     remaining_in_atoms -= filled_input_atoms;
                     if remaining_in_atoms == 0 {
                         break;
@@ -144,7 +187,11 @@ impl Dex for Manifest {
             }
         }
 
+        if all_exact && total_out_atoms > u128::from(u64::MAX) {
+            return 0.0;
+        }
         // Fall through in case we exhaust the book and do not fully fill.
+        // Do not reject a legacy numeric sum merely for rounding above u64::MAX.
         total_out_atoms as f64 / output_scale as f64
     }
 
@@ -244,38 +291,17 @@ impl Dex for Manifest {
         );
 
         // Bids is an array of arrays. Top of book is first. Similar for asks.
-        // [ [baseAtoms1, quoteAtoms1], [baseAtoms2, quoteAtoms2], [baseAtoms3, quoteAtoms3], ...]
+        // Each level retains [baseAtoms, quoteAtoms] for old consumers and adds
+        // [baseAtomsString, quoteAtomsString] to preserve the full u64 counts.
         let bids_vec: Vec<PoolMetadataValue> = bids
             .iter::<RestingOrder>()
-            .map(|(_ind, resting_order)| {
-                let bid = resting_order;
-                PoolMetadataValue::Array(vec![
-                    PoolMetadataValue::Number(bid.get_num_base_atoms().as_u64() as f64),
-                    PoolMetadataValue::Number(
-                        bid.get_price()
-                            .checked_quote_for_base(bid.get_num_base_atoms(), true)
-                            .unwrap_or_default()
-                            .as_u64() as f64,
-                    ),
-                ])
-            })
+            .map(|(_ind, resting_order)| order_metadata(&resting_order))
             .collect::<Vec<PoolMetadataValue>>();
         extra.insert("bids".to_string(), PoolMetadataValue::Array(bids_vec));
 
         let asks_vec: Vec<PoolMetadataValue> = asks
             .iter::<RestingOrder>()
-            .map(|(_ind, resting_order)| {
-                let ask = resting_order;
-                PoolMetadataValue::Array(vec![
-                    PoolMetadataValue::Number(ask.get_num_base_atoms().as_u64() as f64),
-                    PoolMetadataValue::Number(
-                        ask.get_price()
-                            .checked_quote_for_base(ask.get_num_base_atoms(), true)
-                            .unwrap_or_default()
-                            .as_u64() as f64,
-                    ),
-                ])
-            })
+            .map(|(_ind, resting_order)| order_metadata(&resting_order))
             .collect::<Vec<PoolMetadataValue>>();
         extra.insert("asks".to_string(), PoolMetadataValue::Array(asks_vec));
 
@@ -654,18 +680,7 @@ mod tests {
                 market
                     .get_bids()
                     .iter::<RestingOrder>()
-                    .map(|(_, order)| {
-                        PoolMetadataValue::Array(vec![
-                            PoolMetadataValue::Number(order.get_num_base_atoms().as_u64() as f64),
-                            PoolMetadataValue::Number(
-                                order
-                                    .get_price()
-                                    .checked_quote_for_base(order.get_num_base_atoms(), true)
-                                    .unwrap()
-                                    .as_u64() as f64,
-                            ),
-                        ])
-                    })
+                    .map(|(_, order)| order_metadata(&order))
                     .collect(),
             ),
         );
@@ -706,6 +721,8 @@ mod tests {
         let level = PoolMetadataValue::Array(vec![
             PoolMetadataValue::Number(1.0),
             PoolMetadataValue::Number(10_000_000_000_000_000_000.0),
+            PoolMetadataValue::String("1".to_string()),
+            PoolMetadataValue::String("10000000000000000000".to_string()),
         ]);
         metadata.extra.insert(
             "bids".to_string(),
@@ -716,5 +733,35 @@ mod tests {
             Manifest.quote(2.0, &metadata, SwapDirection::BaseToQuote),
             0.0,
         );
+    }
+
+    #[test]
+    fn quote_ignores_unknown_or_stale_precision_fields() {
+        for extra in [
+            vec![PoolMetadataValue::Bool(true)],
+            vec![
+                PoolMetadataValue::String("invalid".to_string()),
+                PoolMetadataValue::String("6".to_string()),
+            ],
+            vec![
+                PoolMetadataValue::String("1".to_string()),
+                PoolMetadataValue::String("1".to_string()),
+            ],
+        ] {
+            let mut metadata = metadata();
+            let mut level = vec![
+                PoolMetadataValue::Number(2.0),
+                PoolMetadataValue::Number(6.0),
+            ];
+            level.extend(extra);
+            metadata.extra.insert(
+                "bids".to_string(),
+                PoolMetadataValue::Array(vec![PoolMetadataValue::Array(level)]),
+            );
+            assert_eq!(
+                Manifest.quote(1.0, &metadata, SwapDirection::BaseToQuote),
+                3.0
+            );
+        }
     }
 }
