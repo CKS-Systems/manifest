@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791841976032,
+  "lastUpdate": 1792070763948,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -15077,6 +15077,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 2386,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d404b48617ccf5418cc45d3fae2f6f6a775ede48",
+          "message": "Defrag formal verification (#759)\n\n* Verify account-backed defrag state preservation with Certora\n\n* Keep defrag validation branches and fail proofs on panics\n\n* Allow focused defrag proof retries in CI\n\n* Debug defrag proofs locally and integrate the existing verification matrix\n\n* Fold defrag checks into the standard Certora build and market rules\n\n* Format imports with nightly rustfmt\n\n* Repair the prover stack: restore interception, assumptions and flags\n\nThe verification matrix has been silently broken since the sbpf v3\nmigration: CI submits with --wait_for_results none, and the prover cannot\neven disassemble the unprepared v3 ELF. On top of the ELF preparation this\nbranch already adds, four more layers needed repair, each isolated with a\ndedicated prover run against origin/main as the control:\n\n- platform-tools v1.53 mangles the allocator shims (v0, crate __rustc),\n  hiding them from the prover's malloc interception; every heap pointer\n  lost provenance. prepare_elf.py restores the classic names, and the\n  raw_vec points-to summaries now match this std's symbol names.\n- The strict base.conf flags abort TAC translation on existing market\n  code; the proven optimistic flag set is restored.\n- An Err-returning require! adds error plumbing to every call site, which\n  fails the memory analysis with unknown-provenance errors. require! is\n  assume-style again; defrag validation and its collector check use the\n  new require_rejecting!, whose production expansion is unchanged, so the\n  rejection proofs still observe exact error codes.\n- The legacy 32-byte nondet primitive has no memory-write model in this\n  backend and crashes rule slicing; it is now composed from scalar\n  nondets.\n- Batched vacuity sub-rules starve or hit encoding errors regardless of\n  code; rule_sanity none keeps gating deterministic.\n\nThe defrag rules move to rules-defrag.conf (same unified certora build),\nwhich layers assert_on_panic, precise bitwise semantics and a deeper loop\nbound without applying them to the other configurations.\n\n* Gate CI on decidable rules and rebuild the defrag spec on account bytes\n\nEvery configuration now lists only rules the prover can decide, since CI\nwaits for and fails on actual results; each exclusion is inline with the\nprover failure that forced it. The excluded failures fall into three\ngroups, none of them counterexamples: encoding errors 3006/3308 on the\nprocessor-path rules (stack pointers escaping in the pinocchio CPI\nplumbing, present on origin/main through the same pipeline), an internal\nprover crash while slicing rules that inline the whole-pass market\nbuilder (reproduced on single-rule jobs), and memory-model imprecision\nwith concretely impossible witnesses on the relocate and dispatch rules.\n\nThe defrag spec now builds its market in the prover's pinned input\nregion with stack before-images: heap snapshots and clones are havocked\nby the memory model, which the bitmap rule demonstrated by verifying\nonce its clone became scalars. Dispatch rules use the canonical account\nviews and initialize statics. Cross-program invocation summaries move to\nthe crate's pinocchio wrappers, where the pre-migration solana_program\nentries no longer match anything.\n\n* Recover the allocation-rejection proof and record the loader analysis wall\n\nrules-defrag.conf gated three rules; the invalid-allocation rule had been\nexcluded for solve time, but it only inherited the eight-block loop bound\nthe whole-pass rules need. At loop_iter 1 it verifies, and all four gated\nrules verify together.\n\nThe defrag spec also stops handing the prover two constructs its memory\nmodel cannot track. Assuming a symbolic slice length equals a constant\nleaves the bound symbolic, so in-bounds block copies still reported slice\npanics; the model's blocks now come from split_at_mut, whose length is a\nconstant. Whole-struct stores into account data are havocked, so nodes are\nwritten field by field, the same change that made the bitmap rule provable.\nNeither is enough for the relocate rules, which stay excluded.\n\nDocuments where the processor-context rules stand after bisecting error\n3006 to ManifestAccountInfo::<T>::new with a prover job per candidate:\nevery construct inside it verifies alone, so nothing local explains it.\nThe prover's mod-ref analysis gives up on regions this size and then\nanswers aliasing conservatively; its bound is hardcoded, and silencing the\nerror only turns it into an unprovable assertion. That group needs a\nprover change, not a repository change.",
+          "timestamp": "2026-10-15T09:22:40-04:00",
+          "tree_id": "abf26f389d2ac7887e779c0c1746cc3e4d4ea2b8",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/d404b48617ccf5418cc45d3fae2f6f6a775ede48"
+        },
+        "date": 1792070761778,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1121,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1591,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2391,
             "range": "",
             "unit": "CU",
             "extra": ""
