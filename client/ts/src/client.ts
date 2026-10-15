@@ -1467,7 +1467,7 @@ export class ManifestClient {
     pks.add(baseGlobalVault.toString());
 
     const quoteGlobalVault: PublicKey = getGlobalVaultAddress(
-      this.baseMint.address,
+      this.quoteMint.address,
     );
     pks.add(quoteGlobalVault.toString());
 

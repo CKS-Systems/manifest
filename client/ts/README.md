@@ -519,6 +519,64 @@ const hasSeat = global.hasSeat(trader.publicKey);
 
 ## Advanced Patterns
 
+### Swap address lookup tables
+
+`getSwapAltPks()` returns addresses for a swap lookup table, including both
+Global vaults. Compile each swap with `TransactionMessage.compileToV0Message`
+and pass the fetched `AddressLookupTableAccount`. The output Global vault must
+be a writable lookup. The regression test covers both directions, exact-in/out,
+and all four Token/Token-2022 program pairs without a validator:
+
+```sh
+TS_NODE_PROJECT=./tsconfig.cjs.json yarn ts-mocha client/ts/tests/swapAltAccounts.ts --timeout 30000
+```
+
+Updating the SDK does not update existing onchain lookup tables. Tables made
+with the old list may lack the quote Global vault. A base-to-quote swap can
+still carry it as a static account, but loses 31 bytes of compression. The
+current `scripts/update-alts.ts` discovery step selects markets without a
+mapping; it does not repair tables for already mapped markets.
+
+To prepare a repair, compare the existing table with the current SDK list:
+
+```typescript
+import { AddressLookupTableProgram, PublicKey } from '@solana/web3.js';
+
+const response = await connection.getAddressLookupTable(lookupTableAddress, {
+  commitment: 'confirmed',
+});
+const table = response.value;
+if (!table || !table.isActive()) throw new Error('Lookup table is unavailable');
+if (!table.state.authority?.equals(authority)) {
+  throw new Error('The lookup table authority is required');
+}
+const existing = new Set(table.state.addresses.map(String));
+const missing = [...client.getSwapAltPks()]
+  .filter((address) => !existing.has(address))
+  .map((address) => new PublicKey(address));
+if (table.state.addresses.length + missing.length > 256) {
+  throw new Error('Use another table and update the market mapping');
+}
+const extension =
+  missing.length === 0
+    ? null
+    : AddressLookupTableProgram.extendLookupTable({
+        lookupTable: lookupTableAddress,
+        authority,
+        payer,
+        addresses: missing,
+      });
+// Return `extension` to the transaction owner for signing and submission.
+```
+
+This adds missing addresses without changing existing indexes. After the
+extension confirms, fetch the table again at the same commitment. Use its new
+addresses only when the response context slot is greater than
+`table.state.lastExtendedSlot`; new addresses are not usable in the extension
+slot. Compile the v0 message with that refreshed table and simulate the swap.
+If the table is full or its authority is unavailable, create/use another table
+and update the application's market-to-table mapping.
+
 ### Batch Order Updates
 
 ```typescript
