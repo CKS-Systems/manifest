@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use base64::{engine::general_purpose::STANDARD, Engine};
 use hypertree::hypertree::HyperTreeValueIteratorTrait;
 use manifest::{
     quantities::{BaseAtoms, QuoteAtoms, QuoteAtomsPerBaseAtom, WrapperU64},
@@ -8,7 +9,8 @@ use manifest::{
         NO_EXPIRATION_LAST_VALID_SLOT,
     },
 };
-use manifest_okx::{mfx::Manifest, Dex, PoolMetadata, PoolMetadataValue as Value, SwapDirection};
+use manifest_okx::{mfx::Manifest, Dex, PoolMetadataValue as Value, SwapDirection};
+use solana_client::{rpc_client::RpcClient, rpc_request::RpcRequest};
 use solana_program::pubkey::Pubkey;
 
 fn check_quote(
@@ -101,39 +103,52 @@ fn check_quote(
     } else {
         (decimals.1, decimals.0, SwapDirection::QuoteToBase, "asks")
     };
-    for exact in [false, true] {
-        let levels = counts
-            .iter()
-            .map(|&(base, quote)| {
-                let mut fields = vec![Value::Number(base as f64), Value::Number(quote as f64)];
-                if exact {
-                    fields.extend([
-                        Value::String(base.to_string()),
-                        Value::String(quote.to_string()),
-                    ]);
-                }
-                Value::Array(fields)
-            })
-            .collect();
-        let metadata = PoolMetadata {
-            pool_address: key.to_string(),
-            base_mint: String::new(),
-            quote_mint: String::new(),
-            base_reserve: None,
-            quote_reserve: None,
-            trade_fee: None,
-            extra: HashMap::from([
-                (
-                    "base_decimals".to_string(),
-                    Value::Number(decimals.0 as f64),
-                ),
-                (
-                    "quote_decimals".to_string(),
-                    Value::Number(decimals.1 as f64),
-                ),
-                (book_key.to_string(), Value::Array(levels)),
-            ]),
+    // Exercise the production metadata encoder, not a duplicate test encoder.
+    let mut data = bytemuck::bytes_of(&market.fixed).to_vec();
+    data.extend_from_slice(&market.dynamic);
+    let mocks = HashMap::from([(
+        RpcRequest::GetAccountInfo,
+        serde_json::json!({
+            "context": {"slot": 100}, "value": {
+                "lamports": 10_000_000, "owner": manifest::ID.to_string(),
+                "executable": false, "rentEpoch": 0,
+                "data": [STANDARD.encode(&data), "base64"], "space": data.len()
+            }
+        }),
+    )]);
+    let metadata = Manifest
+        .fetch_pool_metadata(
+            &RpcClient::new_mock_with_mocks("succeeds", mocks),
+            &key.to_string(),
+        )
+        .unwrap();
+    let Some(Value::Array(levels)) = metadata.extra.get(book_key) else {
+        panic!("missing book")
+    };
+    assert_eq!(levels.len(), counts.len());
+    for (level, &(base, quote)) in levels.iter().zip(&counts) {
+        let Value::Array(fields) = level else {
+            panic!("invalid level")
         };
+        assert_eq!(fields.len(), 4);
+        assert!(matches!(fields[0], Value::Number(value) if value == base as f64));
+        assert!(matches!(fields[1], Value::Number(value) if value == quote as f64));
+        assert!(matches!(&fields[2], Value::String(value) if value == &base.to_string()));
+        assert!(matches!(&fields[3], Value::String(value) if value == &quote.to_string()));
+    }
+    for exact in [false, true] {
+        let mut metadata = metadata.clone();
+        if !exact {
+            let Some(Value::Array(levels)) = metadata.extra.get_mut(book_key) else {
+                unreachable!()
+            };
+            for level in levels {
+                let Value::Array(fields) = level else {
+                    unreachable!()
+                };
+                fields.truncate(2);
+            }
+        }
         assert_eq!(
             Manifest.quote(
                 input as f64 / 10_u64.pow(input_decimals as u32) as f64,
