@@ -8,6 +8,14 @@
 //! to compact in one transaction is compacted by repeating the call. Repeated
 //! bounded runs converge on the layout one unbounded run would produce.
 use super::*;
+// Defrag must use the account-backed tree even in verification builds. The
+// matching proofs' fixed-index seat mocks cannot represent node relocation.
+use crate::require_rejecting;
+use hypertree::{HyperTreeReadOperations, HyperTreeWriteOperations, RedBlackTree};
+
+#[cfg(feature = "certora")]
+#[path = "../certora/spec/defrag_checks.rs"]
+pub mod verification;
 
 /// Byte offsets inside an `RBNode<V>` header. Identical for every payload.
 const NODE_LEFT: usize = 0;
@@ -165,13 +173,13 @@ impl<
     pub fn defragment(&mut self, limit: Option<u32>) -> Result<usize, ProgramError> {
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
         let allocated: usize = fixed.num_bytes_allocated as usize;
-        require!(
+        require_rejecting!(
             allocated <= dynamic.len() && allocated % MARKET_BLOCK_SIZE == 0,
             ProgramError::InvalidAccountData,
             "Invalid allocation"
         )?;
         let blocks: usize = allocated / MARKET_BLOCK_SIZE;
-        require!(
+        require_rejecting!(
             blocks <= MAX_DEFRAG_BLOCKS,
             ProgramError::InvalidAccountData,
             "Market has {} blocks, more than the {} this can compact",
@@ -190,7 +198,7 @@ impl<
                 kind if kind == MarketDataTreeNodeType::RestingOrder as u8 => {
                     set_bit(&mut keep, block);
                     let owner: DataIndex = read_index(dynamic, index + ORDER_TRADER);
-                    require!(
+                    require_rejecting!(
                         owner != NIL
                             && (owner as usize) < allocated
                             && owner as usize % MARKET_BLOCK_SIZE == 0,
@@ -214,7 +222,7 @@ impl<
             }
         }
         let keep_count: usize = keep.iter().map(|word| word.count_ones() as usize).sum();
-        require!(
+        require_rejecting!(
             keep_count + 2 <= blocks,
             ProgramError::AccountDataTooSmall,
             "Defrag needs two spare nodes"

@@ -125,9 +125,19 @@ macro_rules! cvt_deterministic_usize {
 
 #[inline(never)]
 #[allow(non_snake_case)]
-/// Return an array of 32 bytes initialized non-deterministically
+/// Return an array of 32 bytes initialized non-deterministically.
+///
+/// Composed from scalar nondets: the prover's current backend has no
+/// memory-write model for the legacy 32-byte aggregate primitive, which
+/// leaves its result havocked and crashes rule slicing.
 pub fn CVT_nondet_array_of_32_bytes() -> [u8; 32] {
-    cvt_stubs::CVT_nondet_array_of_32_bytes_impl()
+    let words: [u64; 4] = [
+        CVT_nondet_u64(),
+        CVT_nondet_u64(),
+        CVT_nondet_u64(),
+        CVT_nondet_u64(),
+    ];
+    unsafe { core::mem::transmute(words) }
 }
 
 /// We redefine these macros to avoid including error conversion/formatting code

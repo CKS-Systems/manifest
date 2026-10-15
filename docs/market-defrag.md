@@ -199,6 +199,142 @@ separate global analysis.
 
 ## Validation
 
+### Certora coverage
+
+`programs/manifest/src/certora/confs/rules-defrag.conf` runs the defrag rules
+from the normal unified `certora` build (no defrag-specific feature). It
+compiles the real defrag processor and account compactor; the compactor uses
+the real red-black tree, not the fixed-index seat/order mocks used by matching
+proofs. Defrag preservation is stated by trader pubkey and order sequence
+number because a byte index can move or be reused after an empty seat is
+reclaimed.
+
+The verification `require!` stays an assumption, as the other rules were
+proven: returning real errors from every call site fails the prover's memory
+analysis with unknown-provenance errors across the legacy suite. Defrag's own
+validation — and `Signer::new_payer_rejecting`, used only by its processor —
+opts back into production branches with `require_rejecting!`, whose production
+expansion is identical, so the rejection rules observe the exact error codes.
+On top of the shared base configuration, `rules-defrag.conf` enables
+`assert_on_panic` (panics fail these rules instead of pruning), exact bitwise
+semantics and a deeper loop bound.
+
+The whole-pass harness contains eight blocks, three seats and three orders with
+symbolic placements, keys, balances, amounts, resting order types, and
+relocation budgets. The market bytes live in the prover's pinned input region
+(`account_views_with_mem_layout!`), like every verified rule's accounts, and
+the before-image lives in stack copies of the inserted values: the memory
+model havocks heap-to-heap snapshots, so there is no clone. Two orders share
+a price on one side; the third is on the other side.
+Both side assignments are checked. It asserts:
+
+- successful completion, unchanged surviving seat payloads, and reclamation only
+  of seats with neither withdrawable funds nor orders;
+- unchanged order payloads after translating the owner index, including global
+  and reverse order metadata;
+- the same order-tree links, colors, roots and best nodes under the relocation
+  map, preserving price/FIFO priority;
+- unchanged fixed metadata/funds ghosts except allocation indices and the
+  checked sequence-number increment;
+- a complete, zeroed, acyclic free list with at least two spare blocks, a size
+  that never grows, and respect for the relocation budget;
+- preservation after a budget-one pass, truncation, and a second pass, plus
+  explicit zero-budget, empty-market and sequence-overflow cases.
+
+Separate rules check bitmap updates, individual seat/order relocation (including
+root, parent and child repair), malformed allocation/owner rejection, and the
+actual instruction dispatch's collector, signer, writability and data checks.
+`optimistic_loop` is false, so insufficient loop unwinding fails verification.
+The shared base configuration keeps the optimistic memory assumptions the rest
+of the suite was proven under (the prover's translation aborts without them);
+this configuration adds exact bitwise operations on top. The authorization
+harness takes its wallet account from the canonical pinned input region with
+symbolic keys, flags and lamports; these rejection paths never access its data.
+
+These are **bounded whole-pass obligations**, not a proof for every market up to
+65,536 blocks. They do not prove the 1,024-moved-seat cap or an arbitrary number
+of repeated passes. Prices retain the existing Certora single-limb abstraction;
+the production global-address cache is replaced by the existing funds ghosts.
+Successful processor paths involving expansion, token CPIs, rent refunds and
+account/vault closure are not covered by these rules. The existing SBF tests
+below cover those behaviors. Do not infer global gas-deposit/CPI conservation
+from unchanged order metadata alone.
+
+**Proof status (2026-10-14).** The instruction-data rejection, writable-
+collector rejection and bitmap-preservation rules verify remotely, including
+their explicit non-vacuity checks, and are what `rules-defrag.conf` gates on.
+Every other defrag rule is blocked by the prover, not refuted, and is listed in
+the configuration as an exclusion naming its blocker:
+
+- Slicing any rule that inlines the shared whole-pass market builder crashes
+  the prover itself (`IllegalStateException: Unexpected setRegister on
+  bottom`, reproduced on single-rule jobs). Two global-order no-revert rules
+  crash the same way.
+- The relocate rules report a slice-bounds panic on indices that are in bounds
+  by construction, and the collector/signature rules report the account header
+  reading back differently inside the program than in the rule's own
+  assumption — memory-model imprecision, with concretely impossible witnesses.
+- The invalid-allocation rule exceeds practical solve time.
+
+The same backend limits break many **pre-existing** rules, on main's unchanged
+code as well (verified by running origin/main through the identical pipeline).
+None of this had been visible: the previous workflow submitted with
+`--wait_for_results none` and the prover could not even disassemble the
+unprepared sbpf-v3 ELF, so no proof had actually run since the v3 migration.
+Those exclusions are inline in their configurations.
+
+The largest group is every rule that loads a processor account context
+(deposit, withdraw, batch update, claim/release seat, market state, global
+tokens): they fail memory-analysis encoding with error 3006, an escaping stack
+pointer. That was bisected to `ManifestAccountInfo::<T>::new`, with one
+single-rule prover job per candidate. Each construct inside it verifies on its
+own — the owner check, the borrow guard, `get_helper`'s cast, reading the
+header by value, and `verify_discriminant` on a stack copy — as do
+`Signer::new` and `TokenAccountInfo::new_with_owner`, and so does the entire
+rule harness without the loader. Only the whole function fails, so there is no
+local idiom to rewrite. The prover's own log gives the reason: its mod-ref
+analysis bails out on these regions ("contains 37 blocks, exceeding the
+maximum supported size of 8"), after which it answers every aliasing query
+conservatively and a legitimate stack store looks like an escape. That bound
+is hardcoded as `maxRegionSize = 8UL` in the prover
+(`src/main/kotlin/sbf/cfg/PromoteMemcpy/MemcpyPatternRewriter.kt`), not
+exposed as an option. `-solanaMaxSilencedPTAErrors` does get past the
+encoding failure, but it inserts an assertion at the error site, and that site
+is reachable on these rules' own paths, so they become unprovable rather than
+proven. Raising the limit needs a prover change; these rules cannot be
+recovered from this repository.
+
+Most hypertree rules report counterexamples whose symbolic tree state is
+havocked. Rebuilding their node writes field by field, the change that fixed
+the defrag bitmap rule, does not help them.
+
+Run from `programs/manifest/src/certora/confs`:
+
+```sh
+certoraSolanaProver rules-defrag.conf --compilation_steps_only
+certoraSolanaProver rules-defrag.conf --wait_for_results all
+```
+
+CI compiles every configuration on PRs. On main pushes or a manual workflow
+run, the defrag rules run as their own `rules-defrag.conf` matrix entry in the
+same unified `certora` build (no defrag-specific feature or workflow input).
+Each matrix entry waits for actual proof results and fails on violations or
+errors. Batched vacuity sub-rules are disabled (`rule_sanity: none`): they
+starve into SANITY_FAILED in multi-rule jobs or hit encoding errors of their
+own, so they cannot gate; the defrag rules carry explicit satisfy checks
+instead.
+
+The proof build retains v3 call relocations and names static syscalls for
+Certora's disassembler, which otherwise mistakes their numeric identifiers for
+relative function addresses, and restores the classic `__rust_alloc` family
+names that platform-tools v1.53 mangles, so the prover's allocator
+interception keeps working. `certora/prepare_elf.py` changes only non-loaded
+symbol/relocation tables and checks that every loaded byte is unchanged.
+Unknown syscalls fail preparation. Production builds do not use this
+preparation step.
+
+### Runtime validation
+
 - SBF builds for core, regular wrapper and UI wrapper using the pinned v1.57 tools.
 - All 153 core, 40 regular-wrapper and 12 UI-wrapper SBF integration tests passed.
 - The classic-token compatibility correction also passes all eight defrag SBF

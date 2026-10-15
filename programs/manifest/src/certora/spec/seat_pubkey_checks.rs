@@ -13,6 +13,11 @@
 //! stated while the seat is held; releasing one seat must still not touch the
 //! other.
 //!
+//! The defrag rules in `rules.conf` check relocation of a held seat and
+//! reclamation of one with no balance/orders, so preservation follows the
+//! trader's key rather than the fixed indices in this matching model. Those
+//! whole-pass checks currently have an explicit eight-block bound.
+//!
 //! The matching, cancel, and rest-remaining rules come in two flavors: the
 //! plain ones are built with the non-global preconditions
 //! (`cvt_assume_market_preconditions` forces a non-global maker) and pass no

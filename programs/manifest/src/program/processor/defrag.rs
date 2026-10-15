@@ -1,7 +1,7 @@
 use crate::{
     market_vault_seeds_with_bump,
     program::{batch_expand_market, get_dynamic_account, get_mut_dynamic_account, invoke_signed},
-    require,
+    require_rejecting,
     state::MarketFixed,
     validation::{
         next_account_info, to_program_error, AccountViewExt, ManifestAccountInfo, Program, Signer,
@@ -39,7 +39,7 @@ pub(crate) fn process_defrag(
     // bounded run; each leaves a valid market no larger than it started.
     let limit: Option<u32> = match data.first_chunk::<4>() {
         Some(bytes) => {
-            require!(
+            require_rejecting!(
                 data.len() == 4,
                 ProgramError::InvalidInstructionData,
                 "Defrag takes an optional u32 budget"
@@ -47,7 +47,7 @@ pub(crate) fn process_defrag(
             Some(u32::from_le_bytes(*bytes))
         }
         None => {
-            require!(
+            require_rejecting!(
                 data.is_empty(),
                 ProgramError::InvalidInstructionData,
                 "Defrag takes an optional u32 budget"
@@ -56,8 +56,8 @@ pub(crate) fn process_defrag(
         }
     };
     let iter = &mut accounts.iter();
-    let collector = Signer::new_payer(next_account_info(iter)?)?;
-    require!(
+    let collector = Signer::new_payer_rejecting(next_account_info(iter)?)?;
+    require_rejecting!(
         *collector.pubkey() == DEFRAG_COLLECTOR,
         ProgramError::InvalidArgument,
         "Invalid collector"
@@ -71,7 +71,7 @@ pub(crate) fn process_defrag(
         next_account_info(iter)?,
         &solana_sdk_ids::system_program::id(),
     )?;
-    require!(
+    require_rejecting!(
         market.info.is_writable() && base_vault.is_writable() && quote_vault.is_writable(),
         ProgramError::InvalidAccountData,
         "Defrag accounts must be writable"
@@ -92,7 +92,7 @@ pub(crate) fn process_defrag(
         ),
     ] {
         TokenAccountInfo::new_with_owner_and_key(vault, mint, key, key)?;
-        require!(
+        require_rejecting!(
             vault.owner_pubkey() == *program.pubkey(),
             ProgramError::IncorrectProgramId,
             "Wrong vault token program"

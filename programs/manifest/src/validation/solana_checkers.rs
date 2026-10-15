@@ -1,4 +1,4 @@
-use crate::{require, validation::AccountViewExt};
+use crate::{require, require_rejecting, validation::AccountViewExt};
 use pinocchio::{account::AccountView, error::ProgramError};
 use solana_program::pubkey::Pubkey;
 use solana_sdk_ids::system_program;
@@ -86,6 +86,26 @@ impl<'a> Signer<'a> {
             info.pubkey()
         )?;
         require!(
+            info.is_signer(),
+            ProgramError::MissingRequiredSignature,
+            "Missing required signature for payer {:?}",
+            info.pubkey()
+        )?;
+        Ok(Self { info })
+    }
+
+    /// `new_payer` with the same checks and errors, but branch-preserving
+    /// under verification: the defrag authorization proofs assert these exact
+    /// rejection errors. Only defrag uses it, keeping the error plumbing out
+    /// of every other rule's memory analysis.
+    pub fn new_payer_rejecting(info: &'a AccountView) -> Result<Signer<'a>, ProgramError> {
+        require_rejecting!(
+            info.is_writable(),
+            ProgramError::InvalidInstructionData,
+            "Payer is not writable. Key {:?}",
+            info.pubkey()
+        )?;
+        require_rejecting!(
             info.is_signer(),
             ProgramError::MissingRequiredSignature,
             "Missing required signature for payer {:?}",

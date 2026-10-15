@@ -16,5 +16,4 @@ pub mod withdraw;
 pub use shared::*;
 pub use swap::*;
 
-#[cfg(not(feature = "certora"))]
 pub mod defrag;

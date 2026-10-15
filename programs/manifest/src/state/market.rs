@@ -2336,6 +2336,5 @@ pub fn create_empty_market(
     )
 }
 
-#[cfg(not(feature = "certora"))]
 #[path = "market_defrag.rs"]
 mod defrag;

@@ -56,6 +56,12 @@ impl From<ManifestError> for ProgramError {
     }
 }
 
+// Verification builds turn validation into assumptions: the market rules
+// quantify over inputs that already satisfy them, and the prover's memory
+// analysis cannot absorb the error plumbing real branches add to every call
+// site (rules fail with unknown-provenance errors when this returns Err).
+// Validation whose proofs assert the exact rejection error opts back into
+// production branches with require_rejecting! below.
 #[cfg(feature = "certora")]
 #[macro_export]
 macro_rules! require {
@@ -63,6 +69,29 @@ macro_rules! require {
         ::cvt::cvt_assume!($test);
         Ok::<(), crate::ProgramError>(())
     }};
+}
+
+// Keeps the production branch under verification so rejection proofs observe
+// the returned error. Diagnostic formatting is omitted: it has no effect on
+// the checked properties and drags fmt machinery into the proofs.
+#[cfg(feature = "certora")]
+#[macro_export]
+macro_rules! require_rejecting {
+    ($test:expr, $err:expr, $($arg:tt)*) => {
+        if $test {
+            Ok::<(), $crate::ProgramError>(())
+        } else {
+            Err::<(), $crate::ProgramError>(($err).into())
+        }
+    };
+}
+
+#[cfg(not(feature = "certora"))]
+#[macro_export]
+macro_rules! require_rejecting {
+    ($($args:tt)*) => {
+        $crate::require!($($args)*)
+    };
 }
 
 #[cfg(not(feature = "certora"))]
