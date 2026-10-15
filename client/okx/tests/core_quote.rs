@@ -150,6 +150,8 @@ fn rotated_equal_price_books_are_accepted_in_both_directions() {
 
 #[test]
 fn equal_global_balances_do_not_block_local_quotes() {
+    // Core's test feature reduces the Global seat limit to four.
+    let trader_count = 4;
     for bid in [false, true] {
         for balance in [0, 5] {
             let (key, mut accounts, _) = book(bid, &[(8, 2, 0, 0)]);
@@ -160,9 +162,9 @@ fn equal_global_balances_do_not_block_local_quotes() {
             for mint in mints {
                 let mut global = GlobalValue {
                     fixed: GlobalFixed::new_empty(&mint),
-                    dynamic: vec![0; GLOBAL_BLOCK_SIZE * 10],
+                    dynamic: vec![0; GLOBAL_BLOCK_SIZE * trader_count * 2],
                 };
-                for _ in 0..5 {
+                for _ in 0..trader_count {
                     let maker = Pubkey::new_unique();
                     global.global_expand().unwrap();
                     global.add_trader(&maker).unwrap();
