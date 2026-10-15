@@ -27,6 +27,9 @@ common-slot response is retained. For an existing account cache, construct a
 `QuoteSnapshot::from_accounts(market, slot, &accounts)` from a coherent
 `HashMap<Pubkey, Account>`. The snapshot validates account owners, discriminants,
 tree links, trader references, mint decimals and Global mint relationships.
+It checks order sides before comparison, requires the legacy SPL Token mint
+layout, and decodes Token-2022 extension payloads, including variable-size
+metadata. Duplicate or unrecognized extensions are rejected.
 Its state is private and immutable; refresh it by constructing a new snapshot.
 
 This API returns a **Core impact estimate**, not a transaction simulation or a

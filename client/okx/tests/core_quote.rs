@@ -16,8 +16,8 @@ use solana_client::{rpc_client::RpcClient, rpc_request::RpcRequest};
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use spl_token_2022::{
     extension::{
-        transfer_fee::TransferFeeConfig, BaseStateWithExtensionsMut, ExtensionType,
-        StateWithExtensionsMut,
+        transfer_fee::TransferFeeConfig, BaseStateWithExtensions, BaseStateWithExtensionsMut,
+        ExtensionType, StateWithExtensions, StateWithExtensionsMut,
     },
     state::Mint,
 };
@@ -226,6 +226,18 @@ fn malformed_order_flags_return_errors_without_panicking() {
                     std::panic::catch_unwind(|| QuoteSnapshot::from_accounts(key, 10, &invalid));
                 assert!(result.is_ok(), "side/type validation must not panic");
                 assert!(result.unwrap().is_err());
+                let legacy = std::panic::catch_unwind(|| {
+                    let client = RpcClient::new_mock_with_mocks(
+                        "succeeds",
+                        HashMap::from([(
+                            RpcRequest::GetAccountInfo,
+                            serde_json::json!({"context":{"slot":10},"value":rpc_account(&invalid[&key])}),
+                        )]),
+                    );
+                    Manifest.fetch_pool_metadata(&client, &key.to_string())
+                });
+                assert!(legacy.is_ok(), "legacy metadata must not panic either");
+                assert!(legacy.unwrap().is_none());
             }
         }
     }
@@ -291,6 +303,109 @@ fn malformed_mint_tlv_is_rejected_and_inactive_hooks_are_supported() {
             assert!(QuoteSnapshot::from_accounts(key, 10, &invalid).is_err());
         }
     }
+}
+
+#[test]
+fn fixed_extension_payloads_and_owner_layouts_are_checked() {
+    use spl_token_2022::extension::{mint_close_authority::MintCloseAuthority, AccountType};
+    let (key, mut accounts, _) = book(true, &[(8, 2, 0, 0)]);
+    let mint_key = *accounts
+        .keys()
+        .find(|&&candidate| candidate != key)
+        .unwrap();
+    let mut data =
+        vec![
+            0;
+            ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::MintCloseAuthority])
+                .unwrap()
+        ];
+    let mut state = StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut data).unwrap();
+    state.init_extension::<MintCloseAuthority>(true).unwrap();
+    state.base = Mint {
+        is_initialized: true,
+        ..Mint::default()
+    };
+    state.pack_base();
+    state.init_account_type().unwrap();
+    accounts.insert(
+        mint_key,
+        Account {
+            data: data.clone(),
+            owner: spl_token_2022::id(),
+            ..Account::default()
+        },
+    );
+    assert!(QuoteSnapshot::from_accounts(key, 10, &accounts).is_ok());
+    accounts.get_mut(&mint_key).unwrap().owner = spl_token::id();
+    assert!(QuoteSnapshot::from_accounts(key, 10, &accounts).is_err());
+    let tlv_start = spl_token_2022::state::Account::LEN + std::mem::size_of::<AccountType>();
+    for length in [0, 1, 31, 33] {
+        let mut malformed = data.clone();
+        malformed[tlv_start + 2..tlv_start + 4].copy_from_slice(&(length as u16).to_le_bytes());
+        malformed.resize(tlv_start + 4 + length, 0);
+        accounts.insert(
+            mint_key,
+            Account {
+                data: malformed,
+                owner: spl_token_2022::id(),
+                ..Account::default()
+            },
+        );
+        assert!(QuoteSnapshot::from_accounts(key, 10, &accounts).is_err());
+    }
+}
+
+#[test]
+fn variable_metadata_payloads_are_decoded_without_rejecting_valid_metadata() {
+    use spl_token_metadata_interface::state::TokenMetadata;
+    let (key, mut accounts, _) = book(true, &[(8, 2, 0, 0)]);
+    let mint_key = *accounts
+        .keys()
+        .find(|&&candidate| candidate != key)
+        .unwrap();
+    let metadata = TokenMetadata {
+        mint: mint_key,
+        name: "Test token".into(),
+        symbol: "TST".into(),
+        uri: "https://example.com/token.json".into(),
+        ..TokenMetadata::default()
+    };
+    let base = mint(0);
+    let base_state = StateWithExtensions::<Mint>::unpack(&base.data).unwrap();
+    let length = base_state
+        .try_get_new_account_len_for_variable_len_extension(&metadata)
+        .unwrap();
+    let mut data = vec![0; length];
+    let mut state = StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut data).unwrap();
+    state.init_variable_len_extension(&metadata, false).unwrap();
+    state.base = Mint {
+        is_initialized: true,
+        ..Mint::default()
+    };
+    state.pack_base();
+    state.init_account_type().unwrap();
+    accounts.insert(
+        mint_key,
+        Account {
+            data: data.clone(),
+            owner: spl_token_2022::id(),
+            ..Account::default()
+        },
+    );
+    let snapshot = QuoteSnapshot::from_accounts(key, 10, &accounts).unwrap();
+    assert_eq!(
+        Manifest
+            .quote_atoms(4, &snapshot, SwapDirection::BaseToQuote)
+            .unwrap(),
+        8
+    );
+    // Keep the TLV envelope valid but truncate the serialized metadata value.
+    data.pop();
+    let tlv_start = spl_token_2022::state::Account::LEN + 1;
+    let payload_len = data.len() - tlv_start - 4;
+    data[tlv_start + 2..tlv_start + 4].copy_from_slice(&(payload_len as u16).to_le_bytes());
+    accounts.get_mut(&mint_key).unwrap().data = data;
+    assert!(QuoteSnapshot::from_accounts(key, 10, &accounts).is_err());
 }
 
 #[test]

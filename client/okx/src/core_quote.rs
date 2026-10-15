@@ -25,10 +25,10 @@ use manifest::{
 use solana_account::Account;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcAccountInfoConfig};
-use solana_program::pubkey::Pubkey;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use spl_token_2022::{
     extension::{
-        transfer_hook::TransferHook, AccountType, BaseStateWithExtensions, ExtensionType,
+        self, transfer_hook::TransferHook, AccountType, BaseStateWithExtensions, ExtensionType,
         StateWithExtensions,
     },
     state::Mint,
@@ -104,6 +104,10 @@ fn validate_mint(account: &Account, decimals: u8) -> Result<()> {
         account.owner == spl_token::id() || account.owner == spl_token_2022::id(),
         "invalid mint owner"
     );
+    ensure!(
+        account.owner != spl_token::id() || account.data.len() == Mint::LEN,
+        "invalid SPL Token mint length"
+    );
     let mint = StateWithExtensions::<Mint>::unpack(&account.data)
         .map_err(|error| anyhow::anyhow!("invalid mint: {error}"))?;
     ensure!(
@@ -124,6 +128,7 @@ fn validate_mint(account: &Account, decimals: u8) -> Result<()> {
             !extension_types[..index].contains(extension_type),
             "duplicate mint extension"
         );
+        validate_mint_extension(&mint, *extension_type)?;
     }
     ExtensionType::check_for_invalid_mint_extension_combinations(&extension_types)
         .map_err(|error| anyhow::anyhow!("invalid mint extension combination: {error}"))?;
@@ -143,6 +148,64 @@ fn validate_mint(account: &Account, decimals: u8) -> Result<()> {
         );
     }
     Ok(())
+}
+
+fn validate_mint_extension(mint: &StateWithExtensions<Mint>, kind: ExtensionType) -> Result<()> {
+    // The type walk validates TLV bounds, not the payload's encoded size.
+    // Use the SPL decoders so malformed unrelated extensions cannot pass as a
+    // validated mint, while variable-size metadata remains supported.
+    macro_rules! fixed {
+        ($ty:ty) => {
+            mint.get_extension::<$ty>()
+                .map(|_| ())
+                .map_err(|error| anyhow::anyhow!("invalid {kind:?} payload: {error}"))
+        };
+    }
+    match kind {
+        ExtensionType::TransferFeeConfig => fixed!(extension::transfer_fee::TransferFeeConfig),
+        ExtensionType::MintCloseAuthority => {
+            fixed!(extension::mint_close_authority::MintCloseAuthority)
+        }
+        ExtensionType::ConfidentialTransferMint => {
+            fixed!(extension::confidential_transfer::ConfidentialTransferMint)
+        }
+        ExtensionType::DefaultAccountState => {
+            fixed!(extension::default_account_state::DefaultAccountState)
+        }
+        ExtensionType::NonTransferable => fixed!(extension::non_transferable::NonTransferable),
+        ExtensionType::InterestBearingConfig => {
+            fixed!(extension::interest_bearing_mint::InterestBearingConfig)
+        }
+        ExtensionType::PermanentDelegate => {
+            fixed!(extension::permanent_delegate::PermanentDelegate)
+        }
+        ExtensionType::TransferHook => fixed!(extension::transfer_hook::TransferHook),
+        ExtensionType::ConfidentialTransferFeeConfig => {
+            fixed!(extension::confidential_transfer_fee::ConfidentialTransferFeeConfig)
+        }
+        ExtensionType::MetadataPointer => fixed!(extension::metadata_pointer::MetadataPointer),
+        ExtensionType::GroupPointer => fixed!(extension::group_pointer::GroupPointer),
+        ExtensionType::GroupMemberPointer => {
+            fixed!(extension::group_member_pointer::GroupMemberPointer)
+        }
+        ExtensionType::TokenGroup => fixed!(spl_token_group_interface::state::TokenGroup),
+        ExtensionType::TokenGroupMember => {
+            fixed!(spl_token_group_interface::state::TokenGroupMember)
+        }
+        ExtensionType::ConfidentialMintBurn => {
+            fixed!(extension::confidential_mint_burn::ConfidentialMintBurn)
+        }
+        ExtensionType::ScaledUiAmount => fixed!(extension::scaled_ui_amount::ScaledUiAmountConfig),
+        ExtensionType::Pausable => fixed!(extension::pausable::PausableConfig),
+        ExtensionType::PermissionedBurn => {
+            fixed!(extension::permissioned_burn::PermissionedBurnConfig)
+        }
+        ExtensionType::TokenMetadata => mint
+            .get_variable_len_extension::<spl_token_metadata_interface::state::TokenMetadata>()
+            .map(|_| ())
+            .map_err(|error| anyhow::anyhow!("invalid token metadata payload: {error}")),
+        _ => bail!("invalid mint extension type"),
+    }
 }
 
 fn validate_global(account: &Account, mint: Pubkey) -> Result<()> {

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use hypertree::{
     hypertree::{HyperTreeReadOperations, HyperTreeValueIteratorTrait},
-    validate_red_black_tree,
+    validate_red_black_tree_with,
 };
 use log::error;
 use manifest::{
@@ -262,18 +262,20 @@ impl Dex for Manifest {
         let bids = market.get_bids();
         let asks = market.get_asks();
         // Validate RPC-sourced links before the zero-copy iterator follows them.
-        validate_red_black_tree::<RestingOrder>(
-            &market.dynamic,
-            bids.get_root_index(),
-            bids.get_max_index(),
-        )
-        .ok()?;
-        validate_red_black_tree::<RestingOrder>(
-            &market.dynamic,
-            asks.get_root_index(),
-            asks.get_max_index(),
-        )
-        .ok()?;
+        for (book, is_bid) in [(&bids, true), (&asks, false)] {
+            validate_red_black_tree_with::<RestingOrder>(
+                &market.dynamic,
+                book.get_root_index(),
+                book.get_max_index(),
+                |order| {
+                    if !order.has_valid_order_type() || !order.has_valid_side(is_bid) {
+                        return Err("invalid order flags");
+                    }
+                    Ok(())
+                },
+            )
+            .ok()?;
+        }
         let base_vault: &Pubkey = market.fixed.get_base_vault();
         let quote_vault: &Pubkey = market.fixed.get_quote_vault();
 

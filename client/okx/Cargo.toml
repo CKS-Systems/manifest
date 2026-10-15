@@ -21,6 +21,8 @@ hypertree = { path = "../../lib" }
 solana-program = { workspace = true }
 spl-token = { workspace = true }
 spl-token-2022 = { workspace = true }
+spl-token-group-interface = "=0.7.2"
+spl-token-metadata-interface = "=1.0.1"
 tokio = { workspace = true }
 solana-client = "4.2.2"
 solana-account-decoder = { version = "4.2.2", features = ["agave-unstable-api"] }

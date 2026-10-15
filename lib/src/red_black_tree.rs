@@ -219,6 +219,9 @@ pub fn validate_red_black_tree_with<V: Payload>(
         if node.color != Color::Black && node.color != Color::Red {
             return Err("tree node has invalid color");
         }
+        if index == root_index && node.color != Color::Black {
+            return Err("tree root is not black");
+        }
         if node.parent != expected_parent {
             return Err("tree node has inconsistent parent");
         }
@@ -2016,6 +2019,31 @@ pub(crate) mod test {
                     ),
                     Ok(())
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_rejects_red_roots() {
+        for values in [vec![2], vec![4, 2, 6, 1, 3, 5, 7]] {
+            let mut data = [0_u8; 4096];
+            let (root, max) = {
+                let mut tree = RedBlackTree::<TestOrderBid>::new(&mut data, NIL, NIL);
+                for (slot, value) in values.into_iter().enumerate() {
+                    tree.insert(
+                        (slot as u32 + 1) * TEST_BLOCK_WIDTH,
+                        TestOrderBid::new(value),
+                    );
+                }
+                (tree.root_index, tree.max_index)
+            };
+            assert_eq!(
+                validate_red_black_tree::<TestOrderBid>(&data, root, max),
+                Ok(())
+            );
+            get_mut_helper::<RBNode<TestOrderBid>>(&mut data, root).color = Color::Red;
+            for cached_max in [max, NIL] {
+                assert!(validate_red_black_tree::<TestOrderBid>(&data, root, cached_max).is_err());
             }
         }
     }
