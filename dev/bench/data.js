@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792070763948,
+  "lastUpdate": 1792086224270,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -15143,6 +15143,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 2391,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "62332131+snuff12@users.noreply.github.com",
+            "name": "snuff12",
+            "username": "snuff12"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3fca2708a2fcb3e6c924934b26bac7a83c9058b",
+          "message": "Fix OKX atom rounding and add integer Core quotes (#763)\n\n* Quantize OKX quotes using integer atom arithmetic\n\nRefs #761\n\n* Preserve rounded u64 maximum orders in OKX quotes\n\nRefs #761\n\n* Preserve exact quote counts and integral input amounts\n\nRefs #761\n\n* Document quote metadata snapshot and mixed range requirements\n\n* Promote metadata and SBF quote regressions into repository tests\n\n* Add integer Core impact quotes from validated account snapshots\n\n* Accept rotated equal keys and validate quote inputs before comparison\n\n* Check complete mint payloads and close remaining tree validation gaps\n\n* Respect Core test-feature Global seat limit in quote fixture",
+          "timestamp": "2026-10-15T13:38:22-04:00",
+          "tree_id": "6dede53a9331b9049cc028d1ce52cb03d5dcf49a",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/f3fca2708a2fcb3e6c924934b26bac7a83c9058b"
+        },
+        "date": 1792086221293,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1123,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1590,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2392,
             "range": "",
             "unit": "CU",
             "extra": ""
