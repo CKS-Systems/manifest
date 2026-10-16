@@ -25,6 +25,7 @@ pub fn defrag_instruction(
         quote_token_program,
         limit,
         None,
+        false,
     )
 }
 
@@ -32,6 +33,12 @@ pub fn defrag_instruction(
 /// caps empty seats reclaimed; `None` is unbounded and `Some(0)` disables that
 /// step, so `(Some(0), Some(0))` collects excess lamports and truncates the
 /// existing free tail without touching an entry or invalidating an index.
+///
+/// `may_close` permits the one irreversible step: retiring a market that
+/// compacts to nothing, closing its vaults and destroying its address. Leave
+/// it false unless that is the intent of this particular run; emptiness is a
+/// snapshot, and a live market whose maker has pulled every quote looks the
+/// same as an abandoned one.
 pub fn defrag_instruction_configured(
     market: &Pubkey,
     collector: &Pubkey,
@@ -41,11 +48,16 @@ pub fn defrag_instruction_configured(
     quote_token_program: Pubkey,
     relocations: Option<u32>,
     seat_limit: Option<u32>,
+    may_close: bool,
 ) -> Instruction {
     let mut data: Vec<u8> = vec![ManifestInstruction::Defrag as u8];
-    // A seat budget needs the relocation slot ahead of it, so an unbounded
-    // relocation paired with a seat cap is encoded as the explicit maximum.
-    if let Some(seat_limit) = seat_limit {
+    // Each field needs the ones ahead of it, so an unbounded budget paired
+    // with a later field is encoded as the explicit maximum.
+    if may_close {
+        data.extend_from_slice(&relocations.unwrap_or(u32::MAX).to_le_bytes());
+        data.extend_from_slice(&seat_limit.unwrap_or(u32::MAX).to_le_bytes());
+        data.push(1);
+    } else if let Some(seat_limit) = seat_limit {
         data.extend_from_slice(&relocations.unwrap_or(u32::MAX).to_le_bytes());
         data.extend_from_slice(&seat_limit.to_le_bytes());
     } else if let Some(relocations) = relocations {

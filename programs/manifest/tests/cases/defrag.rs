@@ -60,6 +60,16 @@ async fn run_configured(
     relocations: Option<u32>,
     seats: Option<u32>,
 ) -> anyhow::Result<()> {
+    run_configured_close(f, key, relocations, seats, false).await
+}
+/// As `run_configured`, but states whether this run may retire the market.
+async fn run_configured_close(
+    f: &TestFixture,
+    key: &Keypair,
+    relocations: Option<u32>,
+    seats: Option<u32>,
+    may_close: bool,
+) -> anyhow::Result<()> {
     let instruction = manifest::program::defrag_instruction_configured(
         &f.market_fixture.key,
         &key.pubkey(),
@@ -69,6 +79,7 @@ async fn run_configured(
         spl_token::id(),
         relocations,
         seats,
+        may_close,
     );
     send_tx_with_retry(
         Rc::clone(&f.context),
@@ -87,6 +98,13 @@ async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> an
     assert!(run(&f, &wrong).await.is_err());
     assert!(f.try_load(&f.market_fixture.key).await?.is_some());
     let key = collector(&f);
+    // Retiring the market is opt in, so an ordinary run leaves it standing
+    // even though it has compacted to nothing.
+    run(&f, &key).await?;
+    assert!(
+        f.try_load(&f.market_fixture.key).await?.is_some(),
+        "a run that did not ask to close retired the market"
+    );
     let base =
         manifest::validation::get_vault_address(&f.market_fixture.key, &f.sol_mint_fixture.key).0;
     let quote =
@@ -100,7 +118,8 @@ async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> an
     let total = f.try_load(&f.market_fixture.key).await?.unwrap().lamports
         + f.try_load(&base).await?.unwrap().lamports
         + f.try_load(&quote).await?.unwrap().lamports;
-    run(&f, &key).await?;
+    // Asking for it retires the market, its vaults and their lamports.
+    run_configured_close(&f, &key, None, None, true).await?;
     assert!(f.try_load(&f.market_fixture.key).await?.is_none());
     assert!(f.try_load(&base).await?.is_none());
     assert!(f.try_load(&quote).await?.is_none());
@@ -386,6 +405,7 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
                 spl_token::id(),
                 Some(0),
                 Some(1),
+                false,
             ),
         ],
         Some(&payer.pubkey()),
@@ -872,11 +892,24 @@ async fn defrag_large_free_list_fits_one_instruction() -> anyhow::Result<()> {
             rent_epoch: 0,
         }),
     );
+    // Nothing survives a market that is all free list, so permit the close:
+    // this test is about the pass fitting in one instruction, and retiring the
+    // market is the heaviest ending that pass can have.
     send_tx_with_retry(
         Rc::clone(&f.context),
         &[
             ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-            ix(&f, &key),
+            manifest::program::defrag_instruction_configured(
+                &f.market_fixture.key,
+                &key.pubkey(),
+                &f.sol_mint_fixture.key,
+                &f.usdc_mint_fixture.key,
+                spl_token::id(),
+                spl_token::id(),
+                None,
+                None,
+                true,
+            ),
         ],
         Some(&f.payer()),
         &[&f.payer_keypair(), &key],
