@@ -160,17 +160,38 @@ impl<
         Dynamic: DerefOrBorrowMut<[u8]> + DerefOrBorrow<[u8]>,
     > DynamicAccount<Fixed, Dynamic>
 {
+    /// Relocation budget only, reclaiming every empty seat. Equivalent to
+    /// `defragment_with(limit, None)`.
+    pub fn defragment(&mut self, limit: Option<u32>) -> Result<usize, ProgramError> {
+        self.defragment_with(limit, None)
+    }
+
     /// Caller ensures at least two free blocks exist and truncates to the
     /// returned size after dropping all account-data borrows.
     ///
-    /// `limit` caps how many nodes this run relocates; `None` is unbounded
-    /// and `Some(0)` relocates nothing, so a run with it only reclaims seats.
-    /// Reclaiming empty seats is not capped because it costs no tree work: the
-    /// seat tree is rebuilt from the survivors whether one seat goes or all of
-    /// them do. The other cost a budget cannot bound is the single pass over
-    /// allocated blocks, which is what `MAX_DEFRAG_BLOCKS` exists to keep
-    /// affordable. Simulate a market's first run to pick a budget that fits.
-    pub fn defragment(&mut self, limit: Option<u32>) -> Result<usize, ProgramError> {
+    /// The two steps are budgeted independently, so an operator can run each
+    /// on its own and keep any single transaction affordable:
+    ///
+    /// - `relocations` caps how many nodes this run moves. `None` is
+    ///   unbounded, `Some(0)` moves nothing.
+    /// - `seat_limit` caps how many empty seats this run reclaims. `None` is
+    ///   unbounded, `Some(0)` reclaims none.
+    ///
+    /// `(Some(0), Some(0))` therefore collects excess lamports and truncates
+    /// whatever free tail already exists without touching a single entry,
+    /// which also means it cannot relocate an index out from under a client's
+    /// cached hint. Capped seat reclamation takes the highest empty seats
+    /// first, because only vacating high blocks lets the account shrink.
+    ///
+    /// The cost no budget can bound is the single pass over allocated blocks,
+    /// which is what `MAX_DEFRAG_BLOCKS` exists to keep affordable. Simulate a
+    /// market's first run to pick budgets that fit.
+    pub fn defragment_with(
+        &mut self,
+        relocations: Option<u32>,
+        seat_limit: Option<u32>,
+    ) -> Result<usize, ProgramError> {
+        let limit = relocations;
         let DynamicAccount { fixed, dynamic } = self.borrow_mut();
         let allocated: usize = fixed.num_bytes_allocated as usize;
         require_rejecting!(
@@ -221,6 +242,30 @@ impl<
                 _ => {}
             }
         }
+
+        // Cap the reclaim. Walking down means the first unkept seats met are
+        // the highest, and those are the ones whose removal can shorten the
+        // account, so the budget is spent there and every empty seat below the
+        // cap is kept instead. Skipped entirely when unbounded, so the common
+        // run pays nothing for this.
+        if let Some(seat_limit) = seat_limit {
+            let mut reclaimable: u32 = seat_limit;
+            for block in (0..blocks).rev() {
+                let index: usize = block * MARKET_BLOCK_SIZE;
+                if dynamic[index + NODE_TYPE] != MarketDataTreeNodeType::ClaimedSeat as u8
+                    || bit(&keep, block)
+                {
+                    continue;
+                }
+                match reclaimable.checked_sub(1) {
+                    // Inside the budget: leave it unkept so it is reclaimed.
+                    Some(left) => reclaimable = left,
+                    // Past the budget: this run keeps the seat.
+                    None => set_bit(&mut keep, block),
+                }
+            }
+        }
+
         let keep_count: usize = keep.iter().map(|word| word.count_ones() as usize).sum();
         require_rejecting!(
             keep_count + 2 <= blocks,
@@ -499,6 +544,94 @@ mod tests {
         // Converged, so further runs are inert apart from the sequence bump.
         let again = incremental.defragment(None).unwrap();
         assert_eq!(again, target);
+    }
+
+    /// What occupies each block: the node type plus the field that names the
+    /// entry. Comparing this catches an entry that moved without tripping on
+    /// the tree and free-list links a rebuild legitimately rewrites in place.
+    fn occupancy(m: &super::super::super::MarketValue) -> Vec<(usize, u8, u64)> {
+        let blocks = m.fixed.num_bytes_allocated as usize / MARKET_BLOCK_SIZE;
+        (0..blocks)
+            .filter_map(|block| {
+                let index = block * MARKET_BLOCK_SIZE;
+                let kind = m.dynamic[index + NODE_TYPE];
+                if kind == MarketDataTreeNodeType::ClaimedSeat as u8 {
+                    let seat = get_helper::<RBNode<ClaimedSeat>>(&m.dynamic, index as DataIndex)
+                        .get_value();
+                    let mut name = [0u8; 8];
+                    name.copy_from_slice(&seat.trader.to_bytes()[..8]);
+                    Some((block, kind, u64::from_le_bytes(name)))
+                } else if kind == MarketDataTreeNodeType::RestingOrder as u8 {
+                    let order = get_helper::<RBNode<RestingOrder>>(&m.dynamic, index as DataIndex)
+                        .get_value();
+                    Some((block, kind, order.get_sequence_number()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Counts seats the market still holds, funded or not.
+    fn seat_count(m: &super::super::super::MarketValue) -> usize {
+        let blocks = m.fixed.num_bytes_allocated as usize / MARKET_BLOCK_SIZE;
+        (0..blocks)
+            .filter(|block| {
+                m.dynamic[block * MARKET_BLOCK_SIZE + NODE_TYPE]
+                    == MarketDataTreeNodeType::ClaimedSeat as u8
+            })
+            .count()
+    }
+
+    /// Both budgets at zero: no entry is touched and no index moves, so the
+    /// run exists purely to collect excess lamports and hand back whatever
+    /// free tail the market already had.
+    #[test]
+    fn zero_budgets_reclaim_nothing_and_move_nothing() {
+        let (mut m, maker) = populated(12, 9);
+        let before = fifo(&m);
+        let seats_before = seat_count(&m);
+        let trader_before = m.get_trader_index(&maker);
+        let occupancy_before = occupancy(&m);
+        let length_before = m.dynamic.len();
+
+        let size = m.defragment_with(Some(0), Some(0)).unwrap();
+        // The account may only lose a tail that was already free.
+        assert!(size <= MARKET_FIXED_SIZE + length_before);
+        m.dynamic.truncate(size - MARKET_FIXED_SIZE);
+        // Every entry is still in the block it started in, so every cached
+        // index still resolves.
+        assert_eq!(occupancy(&m), occupancy_before, "an entry moved");
+        assert_eq!(seat_count(&m), seats_before, "a seat was reclaimed");
+        assert_eq!(m.get_trader_index(&maker), trader_before);
+        assert_eq!(fifo(&m), before);
+    }
+
+    /// A seat budget reclaims at most that many empty seats, leaving the rest
+    /// for later runs, and repeating converges on the unbounded result.
+    #[test]
+    fn a_seat_budget_reclaims_at_most_its_share_and_converges() {
+        const EMPTY: usize = 9;
+        let (mut m, maker) = populated(12, EMPTY);
+        let before = fifo(&m);
+        // One funded seat from the fixture plus the maker's own.
+        let funded_seats = seat_count(&m) - EMPTY;
+
+        // Three at a time, relocating nothing, until the empty ones are gone.
+        for round in 1..=3 {
+            let size = m.defragment_with(Some(0), Some(3)).unwrap();
+            m.dynamic.truncate(size - MARKET_FIXED_SIZE);
+            let expected = funded_seats + EMPTY.saturating_sub(3 * round);
+            assert_eq!(seat_count(&m), expected, "round {round} reclaimed wrongly");
+            assert_eq!(fifo(&m), before, "round {round} disturbed the book");
+            assert_ne!(m.get_trader_index(&maker), NIL);
+        }
+        assert_eq!(seat_count(&m), funded_seats);
+        // A further capped run has nothing left to reclaim.
+        let size = m.defragment_with(Some(0), Some(3)).unwrap();
+        m.dynamic.truncate(size - MARKET_FIXED_SIZE);
+        assert_eq!(seat_count(&m), funded_seats);
+        assert_eq!(fifo(&m), before);
     }
 
     #[test]

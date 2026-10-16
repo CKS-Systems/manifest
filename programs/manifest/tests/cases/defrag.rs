@@ -53,6 +53,32 @@ async fn run(f: &TestFixture, key: &Keypair) -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+/// Budgets each step separately: nodes relocated, then empty seats reclaimed.
+async fn run_configured(
+    f: &TestFixture,
+    key: &Keypair,
+    relocations: Option<u32>,
+    seats: Option<u32>,
+) -> anyhow::Result<()> {
+    let instruction = manifest::program::defrag_instruction_configured(
+        &f.market_fixture.key,
+        &key.pubkey(),
+        &f.sol_mint_fixture.key,
+        &f.usdc_mint_fixture.key,
+        spl_token::id(),
+        spl_token::id(),
+        relocations,
+        seats,
+    );
+    send_tx_with_retry(
+        Rc::clone(&f.context),
+        &[instruction],
+        Some(&f.payer()),
+        &[&f.payer_keypair(), key],
+    )
+    .await?;
+    Ok(())
+}
 #[tokio::test]
 async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> anyhow::Result<()> {
     let f = TestFixture::new().await;
@@ -474,6 +500,91 @@ async fn stale_hints_past_a_shrunk_market_resolve_by_lookup() -> anyhow::Result<
         &f.payer_keypair(),
     )
     .await?;
+    Ok(())
+}
+
+/// Each step is budgeted on its own through the instruction itself: a run with
+/// both budgets at zero collects excess lamports and truncates the free tail
+/// while leaving every entry, and therefore every cached index, alone; a seat
+/// budget reclaims only its share.
+#[tokio::test]
+async fn instruction_budgets_each_step_independently() -> anyhow::Result<()> {
+    let mut f = TestFixture::new().await;
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, 1000).await?;
+    // Four empty seats to reclaim, and an order so the market is not closable.
+    for seat in 0..4u8 {
+        let keypair = Keypair::new_from_array([200 + seat; 32]);
+        f.context.borrow_mut().set_account(
+            &keypair.pubkey(),
+            &AccountSharedData::from(Account::new(
+                1_000_000_000,
+                0,
+                &solana_sdk_ids::system_program::id(),
+            )),
+        );
+        f.claim_seat_for_keypair(&keypair).await?;
+    }
+    f.place_order(Side::Ask, 300, 1, 0, 0, OrderType::Limit)
+        .await?;
+    let key = collector(&f);
+    f.market_fixture.reload().await;
+    // Seats counted from the raw account: node type sits at offset 13 of each
+    // block, and 1 is ClaimedSeat.
+    let seat_count = |data: &[u8]| -> usize {
+        let blocks = (data.len() - MARKET_FIXED_SIZE) / MARKET_BLOCK_SIZE;
+        (0..blocks)
+            .filter(|block| data[MARKET_FIXED_SIZE + block * MARKET_BLOCK_SIZE + 13] == 1)
+            .count()
+    };
+    let seats_before = seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data);
+    let order_index_before = f
+        .market_fixture
+        .market
+        .get_asks()
+        .iter::<RestingOrder>()
+        .next()
+        .unwrap()
+        .0;
+
+    // Collect-only: no seat reclaimed, the resting order right where it was.
+    run_configured(&f, &key, Some(0), Some(0)).await?;
+    f.market_fixture.reload().await;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before,
+        "a collect-only run took a seat"
+    );
+    assert_eq!(
+        f.market_fixture
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .next()
+            .unwrap()
+            .0,
+        order_index_before,
+        "a collect-only run moved an order"
+    );
+    assert_eq!(
+        f.try_load(&f.market_fixture.key).await?.unwrap().lamports,
+        Rent::default()
+            .minimum_balance(f.try_load(&f.market_fixture.key).await?.unwrap().data.len()),
+        "excess was not collected"
+    );
+
+    // Two seats at a time, still relocating nothing.
+    run_configured(&f, &key, Some(0), Some(2)).await?;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before - 2
+    );
+    run_configured(&f, &key, Some(0), Some(2)).await?;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before - 4,
+        "the rest should be reclaimable"
+    );
     Ok(())
 }
 

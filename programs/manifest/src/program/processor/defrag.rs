@@ -30,31 +30,31 @@ pub(crate) fn process_defrag(
     accounts: &[AccountView],
     data: &[u8],
 ) -> ProgramResult {
-    // Optional little endian u32 budget: how many nodes this run relocates.
-    // Absent means unbounded; an explicit zero relocates nothing, so an
-    // operator whose computed budget rounds down to zero gets a reclaim-only
-    // run instead of an unbounded one. Reclaiming empty seats is never capped
-    // because the seat tree is rebuilt from the survivors either way. A market
-    // too large to compact in one transaction is compacted by repeating a
-    // bounded run; each leaves a valid market no larger than it started.
-    let limit: Option<u32> = match data.first_chunk::<4>() {
-        Some(bytes) => {
-            require_rejecting!(
-                data.len() == 4,
-                ProgramError::InvalidInstructionData,
-                "Defrag takes an optional u32 budget"
-            )?;
-            Some(u32::from_le_bytes(*bytes))
-        }
-        None => {
-            require_rejecting!(
-                data.is_empty(),
-                ProgramError::InvalidInstructionData,
-                "Defrag takes an optional u32 budget"
-            )?;
-            None
-        }
+    // Up to two little endian u32 budgets, so each step can be run on its own
+    // and any single transaction kept affordable:
+    //
+    //   (empty)                     unbounded relocations, every empty seat
+    //   [relocations]               that many relocations, every empty seat
+    //   [relocations, seats]        that many relocations, that many seats
+    //
+    // An explicit zero disables its step rather than meaning unbounded, so an
+    // operator whose computed budget rounds down to zero gets less work than
+    // asked for, never more. `[0, 0]` collects excess lamports and truncates
+    // the existing free tail while touching no entry, which is also the run
+    // that cannot invalidate a client's cached index. A market too large to
+    // compact in one transaction is compacted by repeating a bounded run; each
+    // leaves a valid market no larger than it started.
+    require_rejecting!(
+        matches!(data.len(), 0 | 4 | 8),
+        ProgramError::InvalidInstructionData,
+        "Defrag takes an optional u32 relocation budget and an optional u32 seat budget"
+    )?;
+    let budget = |at: usize| -> Option<u32> {
+        data.get(at..at + 4)
+            .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
     };
+    let limit: Option<u32> = budget(0);
+    let seat_limit: Option<u32> = budget(4);
     let iter = &mut accounts.iter();
     let collector = Signer::new_payer_rejecting(next_account_info(iter)?)?;
     require_rejecting!(
@@ -152,7 +152,7 @@ pub(crate) fn process_defrag(
     }
     let size = {
         let mut data = market.try_borrow_mut()?;
-        get_mut_dynamic_account::<MarketFixed>(&mut data).defragment(limit)?
+        get_mut_dynamic_account::<MarketFixed>(&mut data).defragment_with(limit, seat_limit)?
     };
     // Empty vaults may be closed only when no token/extension claims remain.
     let empty = size == crate::state::MARKET_FIXED_SIZE + 2 * crate::state::MARKET_BLOCK_SIZE;
