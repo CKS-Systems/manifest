@@ -3036,12 +3036,9 @@ mod harness_tests {
         assert!(f.action_global_withdraw(0, true, 10_000_000), "withdrawing the backing failed");
         // The order's block index is not known a priori, so scan the aligned space, and try
         // every actor rather than one: none of them is the collector.
-        let cleaned = (0..N_ACTORS as u8)
-            .any(|actor| (0..12u32).any(|block| f.action_global_clean(actor, true, block)));
-        assert!(
-            !cleaned,
-            "global_clean accepted a non-collector signer; the authorization check is gone"
-        );
+        let cleaned =
+            (0..N_ACTORS as u8).any(|actor| (0..12u32).any(|block| f.action_global_clean(actor, true, block)));
+        assert!(!cleaned, "global_clean accepted a non-collector signer; the authorization check is gone");
         assert_eq!(check(&mut f), None, "a property fired while a clean was rejected");
     }
 
