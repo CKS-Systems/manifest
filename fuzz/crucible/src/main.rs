@@ -3007,17 +3007,24 @@ mod harness_tests {
         assert_eq!(check(&mut f), None, "a property fired on a fee-bearing deposit");
     }
 
-    /// `GlobalClean` must be reachable, and it is the keeper path the protocol's anti-spam
-    /// economics rest on: an unfillable global order can be removed by anyone, who collects its
-    /// 5000-lamport gas prepayment (`state/constants.rs` GAS_DEPOSIT_LAMPORTS, and the rationale
-    /// in the header comment of `programs/manifest/src/lib.rs`).
+    /// `GlobalClean` is collector only, so no actor here may clean: the bundle fuzzes the
+    /// production artifact, where `DEFRAG_COLLECTOR` is the mainnet key this harness cannot
+    /// sign for. That is the same reason `Defrag` has no action at all, and it means the
+    /// positive path -- that an unbacked global order really can be removed -- is asserted in
+    /// `programs/manifest/tests/cases/global.rs` (`global_clean`, `maintenance_clean`), which
+    /// runs the test-feature program and can sign as the collector.
     ///
-    /// It needs a sequence no single action can build -- a global order placed, then its backing
-    /// withdrawn so the order becomes unfillable, then the clean -- which is why the roster test
-    /// cannot reach it and a campaign can. Asserting it here keeps it from regressing into an
-    /// action that never succeeds while the roster test stays green.
+    /// What is still worth asserting here is the rejection, over the one sequence that makes a
+    /// clean legitimate: a global order placed, then its backing withdrawn so the order is
+    /// unfillable. If the authorization check were ever dropped, this would start passing a
+    /// clean through and the assertion would fire.
+    ///
+    /// Note what this costs: cleaning used to pay the order's 5000-lamport gas prepayment to
+    /// whoever ran it, which is what made unbacked global orders somebody's profit to remove.
+    /// With the clean restricted, that remedy is the collector's maintenance duty rather than a
+    /// third party's incentive.
     #[test]
-    fn global_clean_removes_an_unbacked_global_order() {
+    fn global_clean_rejects_every_non_collector() {
         let mut f = stocked();
         assert!(f.action_global_add_trader(0, true), "global_add_trader failed");
         assert!(f.action_global_deposit(0, true, 10_000_000), "global_deposit failed");
@@ -3027,15 +3034,15 @@ mod harness_tests {
             "placing a global ask failed"
         );
         assert!(f.action_global_withdraw(0, true, 10_000_000), "withdrawing the backing failed");
-        // Cleaned by a DIFFERENT actor, which is the point: anyone may collect the prepayment.
-        // The order's block index is not known a priori, so scan the aligned space.
-        let cleaned = (0..12u32).any(|block| f.action_global_clean(1, true, block));
+        // The order's block index is not known a priori, so scan the aligned space, and try
+        // every actor rather than one: none of them is the collector.
+        let cleaned = (0..N_ACTORS as u8)
+            .any(|actor| (0..12u32).any(|block| f.action_global_clean(actor, true, block)));
         assert!(
-            cleaned,
-            "global_clean could not remove an unbacked global order; the keeper incentive path is \
-             unreachable and global spam would have no remedy"
+            !cleaned,
+            "global_clean accepted a non-collector signer; the authorization check is gone"
         );
-        assert_eq!(check(&mut f), None, "a property fired while cleaning an unbacked global order");
+        assert_eq!(check(&mut f), None, "a property fired while a clean was rejected");
     }
 
     /// SECURITY PROBE (throwaway): Withdraw by a trader with NO seat.
