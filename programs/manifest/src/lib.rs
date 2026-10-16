@@ -69,9 +69,15 @@ security_txt! {
 // If a bad actor were to place many orders that were not backed across many
 // markets, there is an added gas as well as input accounts cost for honest
 // actors cancelling or matching them. To combat this, there is a gas prepayment
-// of 5_000 lamports per order. Because of this, if there is ever multiple
-// unbacked or expired global orders, it is now profitable for a 3rd party to
-// run a cleanup job and claim the gas prepayment.
+// of 5_000 lamports per order, which funds removing them again.
+//
+// Cleaning is the fee collector's, not a third party's. It used to be open to
+// anyone, so unbacked and expired global orders were somebody's profit to
+// remove and the remedy ran itself. Restricting it to the collector makes the
+// prepayment fund the operator who already runs defrag, and makes the cleanup
+// a maintenance duty: until it is run, unbacked and expired global orders stay
+// on their books and honest traders keep paying the gas and account cost of
+// stepping over them.
 //
 // Global seat squatting
 // Because global accounts cannot be thrown away and started anew like markets,

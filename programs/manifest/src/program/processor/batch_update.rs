@@ -307,51 +307,44 @@ pub(crate) fn process_batch_update_core(
                 )?;
             }
             Some(hinted_cancel_index) => {
-                // Simple sanity check on the hint given. Make sure that it
-                // aligns with block boundaries. We do a check that it is an
-                // order owned by the payer inside the handler.
-                require!(
-                    hinted_cancel_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-                    crate::program::ManifestError::WrongIndexHintParams,
-                    "Invalid cancel hint index {}",
-                    hinted_cancel_index,
-                )?;
-                // Defrag can shrink the market, so a hint from before it can
-                // point past the end. Reject it rather than panic on the slice.
-                require!(
-                    (hinted_cancel_index as usize)
+                // The hint is only an accelerator, and it identifies the order
+                // rather than authorizing the cancel: it counts only when the
+                // block is in bounds, holds a resting order, and that order is
+                // this trader's at this sequence number. Defrag relocates
+                // orders and can shrink the account past an old index, so a
+                // stale hint is expected rather than exceptional - fall back to
+                // the unhinted sequence-number lookup and spend the compute
+                // instead of failing the caller. That lookup re-checks
+                // ownership itself, so a recycled block can never cancel
+                // another trader's order.
+                let usable: bool = hinted_cancel_index % (MARKET_BLOCK_SIZE as DataIndex) == 0
+                    && (hinted_cancel_index as usize)
                         .checked_add(MARKET_BLOCK_SIZE)
-                        .is_some_and(|end| end <= dynamic_account.dynamic.len()),
-                    crate::program::ManifestError::WrongIndexHintParams,
-                    "Invalid cancel hint index {} is out of bounds",
-                    hinted_cancel_index,
-                )?;
-                require!(
-                    get_helper::<RBNode<RestingOrder>>(
+                        .is_some_and(|end| end <= dynamic_account.dynamic.len())
+                    && get_helper::<RBNode<RestingOrder>>(
                         &dynamic_account.dynamic,
                         hinted_cancel_index,
                     )
                     .get_payload_type()
-                        == MarketDataTreeNodeType::RestingOrder as u8,
-                    crate::program::ManifestError::WrongIndexHintParams,
-                    "Invalid cancel hint index {}",
-                    hinted_cancel_index,
-                )?;
-                let order: &RestingOrder = dynamic_account.get_order_by_index(hinted_cancel_index);
-                require!(
-                    trader_index == order.get_trader_index(),
-                    crate::program::ManifestError::WrongIndexHintParams,
-                    "Invalid cancel hint index {}",
-                    hinted_cancel_index,
-                )?;
-                require!(
-                    cancel_order_params.order_sequence_number() == order.get_sequence_number(),
-                    crate::program::ManifestError::WrongIndexHintParams,
-                    "Invalid cancel hint sequence number index {}",
-                    hinted_cancel_index,
-                )?;
-                dynamic_account
-                    .cancel_order_by_index(hinted_cancel_index, &global_trade_accounts_opts)?;
+                        == MarketDataTreeNodeType::RestingOrder as u8
+                    && {
+                        let order: &RestingOrder =
+                            dynamic_account.get_order_by_index(hinted_cancel_index);
+                        trader_index == order.get_trader_index()
+                            && cancel_order_params.order_sequence_number()
+                                == order.get_sequence_number()
+                    };
+                if usable {
+                    dynamic_account
+                        .cancel_order_by_index(hinted_cancel_index, &global_trade_accounts_opts)?;
+                } else {
+                    batch_cancel_order(
+                        &mut dynamic_account,
+                        trader_index,
+                        cancel_order_params.order_sequence_number(),
+                        &global_trade_accounts_opts,
+                    )?;
+                }
             }
         };
     }

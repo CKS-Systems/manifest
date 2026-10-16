@@ -53,6 +53,43 @@ async fn run(f: &TestFixture, key: &Keypair) -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+/// Budgets each step separately: nodes relocated, then empty seats reclaimed.
+async fn run_configured(
+    f: &TestFixture,
+    key: &Keypair,
+    relocations: Option<u32>,
+    seats: Option<u32>,
+) -> anyhow::Result<()> {
+    run_configured_close(f, key, relocations, seats, false).await
+}
+/// As `run_configured`, but states whether this run may retire the market.
+async fn run_configured_close(
+    f: &TestFixture,
+    key: &Keypair,
+    relocations: Option<u32>,
+    seats: Option<u32>,
+    may_close: bool,
+) -> anyhow::Result<()> {
+    let instruction = manifest::program::defrag_instruction_configured(
+        &f.market_fixture.key,
+        &key.pubkey(),
+        &f.sol_mint_fixture.key,
+        &f.usdc_mint_fixture.key,
+        spl_token::id(),
+        spl_token::id(),
+        relocations,
+        seats,
+        may_close,
+    );
+    send_tx_with_retry(
+        Rc::clone(&f.context),
+        &[instruction],
+        Some(&f.payer()),
+        &[&f.payer_keypair(), key],
+    )
+    .await?;
+    Ok(())
+}
 #[tokio::test]
 async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> anyhow::Result<()> {
     let f = TestFixture::new().await;
@@ -61,6 +98,13 @@ async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> an
     assert!(run(&f, &wrong).await.is_err());
     assert!(f.try_load(&f.market_fixture.key).await?.is_some());
     let key = collector(&f);
+    // Retiring the market is opt in, so an ordinary run leaves it standing
+    // even though it has compacted to nothing.
+    run(&f, &key).await?;
+    assert!(
+        f.try_load(&f.market_fixture.key).await?.is_some(),
+        "a run that did not ask to close retired the market"
+    );
     let base =
         manifest::validation::get_vault_address(&f.market_fixture.key, &f.sol_mint_fixture.key).0;
     let quote =
@@ -74,7 +118,8 @@ async fn defrag_rejects_non_collector_and_closes_empty_market_and_vaults() -> an
     let total = f.try_load(&f.market_fixture.key).await?.unwrap().lamports
         + f.try_load(&base).await?.unwrap().lamports
         + f.try_load(&quote).await?.unwrap().lamports;
-    run(&f, &key).await?;
+    // Asking for it retires the market, its vaults and their lamports.
+    run_configured_close(&f, &key, None, None, true).await?;
     assert!(f.try_load(&f.market_fixture.key).await?.is_none());
     assert!(f.try_load(&base).await?.is_none());
     assert!(f.try_load(&quote).await?.is_none());
@@ -343,6 +388,50 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
         units < 1_250_000,
         "large defrag regressed to {units} CU against a 1.4M ceiling"
     );
+
+    // A small seat budget must make the tree work small too. Rebuilding the
+    // 12,999 retained seats here costs more than the transaction ceiling even
+    // though only one seat was requested; the no-relocation path removes that
+    // seat from the existing tree instead.
+    let capped_transaction = Transaction::new_signed_with_payer(
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            manifest::program::defrag_instruction_configured(
+                &f.market_fixture.key,
+                &key.pubkey(),
+                &f.sol_mint_fixture.key,
+                &f.usdc_mint_fixture.key,
+                spl_token::id(),
+                spl_token::id(),
+                Some(0),
+                Some(1),
+                false,
+            ),
+        ],
+        Some(&payer.pubkey()),
+        &[&payer, &key],
+        blockhash,
+    );
+    let capped_result = f
+        .context
+        .borrow_mut()
+        .banks_client
+        .simulate_transaction(capped_transaction)
+        .await?;
+    let capped_units: u64 = capped_result
+        .simulation_details
+        .as_ref()
+        .unwrap()
+        .units_consumed;
+    println!("CU capped-seat defrag: {capped_units}");
+    assert!(
+        capped_result.result.as_ref().unwrap().is_ok(),
+        "{capped_result:?}"
+    );
+    assert!(
+        capped_units < 1_250_000,
+        "capped-seat defrag regressed to {capped_units} CU against a 1.4M ceiling"
+    );
     assert_eq!(
         value
             .get_trader_balance(&Pubkey::new_from_array({
@@ -358,11 +447,14 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
 }
 
 /// Defrag shrinks the account, so index hints cached before it can point past
-/// the new end. Every hint validator, the global clean index included, must
-/// answer with the documented hint error instead of panicking on the
-/// out-of-bounds slice.
+/// the new end. A market hint is only an accelerator, so the trader and cancel
+/// paths absorb a stale one by falling back to the lookup the unhinted path
+/// uses, letting a client whose cache aged out succeed for extra compute
+/// rather than fail. The global clean hint indexes the global account, which
+/// market defrag never touches, so it keeps rejecting outright. Nothing may
+/// panic on the out-of-bounds slice.
 #[tokio::test]
-async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
+async fn stale_hints_past_a_shrunk_market_resolve_by_lookup() -> anyhow::Result<()> {
     use manifest::program::ManifestError;
     use solana_transaction::{InstructionError, TransactionError};
     let mut f = TestFixture::new().await;
@@ -376,22 +468,49 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
 
     // Block aligned, typed correctly before the shrink, far past the end now.
     let stale: u32 = (MARKET_BLOCK_SIZE * 1_000) as u32;
-    let trader_hint_error = f
-        .batch_update_for_keypair(Some(stale), vec![], vec![], &f.payer_keypair())
-        .await
-        .unwrap_err()
-        .unwrap();
+    // The payer still holds a seat, so the stale trader hint resolves to it.
+    f.batch_update_for_keypair(Some(stale), vec![], vec![], &f.payer_keypair())
+        .await?;
+    // And a stale cancel hint still cancels the right order: the fallback
+    // finds it by sequence number and re-checks ownership.
+    f.market_fixture.reload().await;
+    let resting_sequence = {
+        let asks = f.market_fixture.market.get_asks();
+        asks.iter::<RestingOrder>()
+            .next()
+            .unwrap()
+            .1
+            .get_sequence_number()
+    };
+    f.batch_update_for_keypair(
+        None,
+        vec![CancelOrderParams::new_with_hint(
+            resting_sequence,
+            Some(stale),
+        )],
+        vec![],
+        &f.payer_keypair(),
+    )
+    .await?;
+    f.market_fixture.reload().await;
     assert_eq!(
-        trader_hint_error,
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
-        )
+        f.market_fixture
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .count(),
+        0,
+        "the stale-hinted cancel should have removed the resting order"
     );
-    let cancel_hint_error = f
+    // A cancel for an order that genuinely is not there still fails, hinted or
+    // not: the fallback is a lookup, not a silent success.
+    let missing_error = f
         .batch_update_for_keypair(
             None,
-            vec![CancelOrderParams::new_with_hint(0, Some(stale))],
+            vec![CancelOrderParams::new_with_hint(
+                resting_sequence,
+                Some(stale),
+            )],
             vec![],
             &f.payer_keypair(),
         )
@@ -399,22 +518,28 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
         .unwrap_err()
         .unwrap();
     assert_eq!(
-        cancel_hint_error,
+        missing_error,
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
+            InstructionError::Custom(ManifestError::InvalidCancel as u32),
         )
     );
+    // Re-place an order so the fresh-hint check at the end of this test has
+    // something to cancel.
+    f.place_order(Side::Ask, 300, 1, 0, 0, OrderType::Limit)
+        .await?;
+    // Global clean is collector only, so run it as the collector: the hint
+    // rejection, not the authorization check, must be what fails here.
     let clean_hint_error = send_tx_with_retry(
         Rc::clone(&f.context),
         &[global_clean_instruction(
             &f.global_fixture.key,
-            &f.payer(),
+            &key.pubkey(),
             &f.market_fixture.key,
             stale,
         )],
-        Some(&f.payer()),
-        &[&f.payer_keypair().insecure_clone()],
+        Some(&key.pubkey()),
+        &[&key],
     )
     .await
     .unwrap_err()
@@ -440,6 +565,163 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
         &f.payer_keypair(),
     )
     .await?;
+    Ok(())
+}
+
+/// Each step is budgeted on its own through the instruction itself: a run with
+/// both budgets at zero collects excess lamports and truncates the free tail
+/// while leaving every entry, and therefore every cached index, alone; a seat
+/// budget reclaims only its share.
+#[tokio::test]
+async fn instruction_budgets_each_step_independently() -> anyhow::Result<()> {
+    let mut f = TestFixture::new().await;
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, 1000).await?;
+    // Four empty seats to reclaim, and an order so the market is not closable.
+    for seat in 0..4u8 {
+        let keypair = Keypair::new_from_array([200 + seat; 32]);
+        f.context.borrow_mut().set_account(
+            &keypair.pubkey(),
+            &AccountSharedData::from(Account::new(
+                1_000_000_000,
+                0,
+                &solana_sdk_ids::system_program::id(),
+            )),
+        );
+        f.claim_seat_for_keypair(&keypair).await?;
+    }
+    f.place_order(Side::Ask, 300, 1, 0, 0, OrderType::Limit)
+        .await?;
+    let key = collector(&f);
+    f.market_fixture.reload().await;
+    // Seats counted from the raw account: node type sits at offset 13 of each
+    // block, and 1 is ClaimedSeat.
+    let seat_count = |data: &[u8]| -> usize {
+        let blocks = (data.len() - MARKET_FIXED_SIZE) / MARKET_BLOCK_SIZE;
+        (0..blocks)
+            .filter(|block| data[MARKET_FIXED_SIZE + block * MARKET_BLOCK_SIZE + 13] == 1)
+            .count()
+    };
+    let seats_before = seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data);
+    let order_index_before = f
+        .market_fixture
+        .market
+        .get_asks()
+        .iter::<RestingOrder>()
+        .next()
+        .unwrap()
+        .0;
+
+    // Collect-only: no seat reclaimed, the resting order right where it was.
+    run_configured(&f, &key, Some(0), Some(0)).await?;
+    f.market_fixture.reload().await;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before,
+        "a collect-only run took a seat"
+    );
+    assert_eq!(
+        f.market_fixture
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .next()
+            .unwrap()
+            .0,
+        order_index_before,
+        "a collect-only run moved an order"
+    );
+    assert_eq!(
+        f.try_load(&f.market_fixture.key).await?.unwrap().lamports,
+        Rent::default()
+            .minimum_balance(f.try_load(&f.market_fixture.key).await?.unwrap().data.len()),
+        "excess was not collected"
+    );
+
+    // Two seats at a time, still relocating nothing.
+    run_configured(&f, &key, Some(0), Some(2)).await?;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before - 2
+    );
+    run_configured(&f, &key, Some(0), Some(2)).await?;
+    assert_eq!(
+        seat_count(&f.try_load(&f.market_fixture.key).await?.unwrap().data),
+        seats_before - 4,
+        "the rest should be reclaimable"
+    );
+    Ok(())
+}
+
+/// A client whose seat defrag reclaimed - zero balances and no resting orders -
+/// holds a hint that no longer names any seat. The fallback lookup finds none
+/// either, so it reports the actionable reason rather than a hint error: claim
+/// a seat again. This is the integrator-facing case, because third-party
+/// wrappers cache the seat index and cannot all be expected to re-resolve it.
+#[tokio::test]
+async fn a_reclaimed_seats_stale_hint_reports_no_seat() -> anyhow::Result<()> {
+    use manifest::program::ManifestError;
+    use solana_transaction::{InstructionError, TransactionError};
+    let mut f = TestFixture::new().await;
+    // The payer funds a seat so the market survives defrag; the second keypair
+    // claims one and leaves it empty, which is what defrag reclaims.
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, 1000).await?;
+    f.claim_seat_for_keypair(&f.second_keypair).await?;
+    f.market_fixture.reload().await;
+    let reclaimed_index = f
+        .market_fixture
+        .market
+        .get_trader_index(&f.second_keypair.pubkey());
+    assert_ne!(reclaimed_index, hypertree::NIL);
+
+    let key = collector(&f);
+    run(&f, &key).await?;
+
+    f.market_fixture.reload().await;
+    assert_eq!(
+        f.market_fixture
+            .market
+            .get_trader_index(&f.second_keypair.pubkey()),
+        hypertree::NIL,
+        "the empty seat should have been reclaimed"
+    );
+    // A batch that neither places nor cancels returns before any seat is
+    // needed, so it still succeeds on the stale hint - the hint alone is never
+    // the thing that fails.
+    f.batch_update_for_keypair(
+        Some(reclaimed_index),
+        vec![],
+        vec![],
+        &f.second_keypair.insecure_clone(),
+    )
+    .await?;
+    // Placing does need a seat. The stale hint resolves to NIL, so the error
+    // names the real problem rather than the hint.
+    let error = f
+        .batch_update_for_keypair(
+            Some(reclaimed_index),
+            vec![],
+            vec![PlaceOrderParams::new(
+                1,
+                1,
+                0,
+                false,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &f.second_keypair.insecure_clone(),
+        )
+        .await
+        .unwrap_err()
+        .unwrap();
+    assert_eq!(
+        error,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(ManifestError::AlreadyClaimedSeat as u32),
+        )
+    );
     Ok(())
 }
 
@@ -610,11 +892,24 @@ async fn defrag_large_free_list_fits_one_instruction() -> anyhow::Result<()> {
             rent_epoch: 0,
         }),
     );
+    // Nothing survives a market that is all free list, so permit the close:
+    // this test is about the pass fitting in one instruction, and retiring the
+    // market is the heaviest ending that pass can have.
     send_tx_with_retry(
         Rc::clone(&f.context),
         &[
             ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-            ix(&f, &key),
+            manifest::program::defrag_instruction_configured(
+                &f.market_fixture.key,
+                &key.pubkey(),
+                &f.sol_mint_fixture.key,
+                &f.usdc_mint_fixture.key,
+                spl_token::id(),
+                spl_token::id(),
+                None,
+                None,
+                true,
+            ),
         ],
         Some(&f.payer()),
         &[&f.payer_keypair(), &key],

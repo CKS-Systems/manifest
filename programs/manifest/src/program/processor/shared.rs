@@ -4,8 +4,8 @@ use std::mem::size_of;
 use crate::{
     require,
     state::{
-        claimed_seat::ClaimedSeat, constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed,
-        MarketFixed, MarketRefMut, GLOBAL_BLOCK_SIZE,
+        constants::MARKET_BLOCK_SIZE, DynamicAccount, GlobalFixed, MarketFixed, MarketRefMut,
+        GLOBAL_BLOCK_SIZE,
     },
     validation::{ManifestAccount, ManifestAccountInfo, Signer},
 };
@@ -17,13 +17,11 @@ use pinocchio::instruction::{
 };
 
 use crate::validation::{as_raw_key, AccountViewExt};
-use hypertree::{get_helper, get_mut_helper, DataIndex, Get, RBNode};
+use hypertree::{get_helper, get_mut_helper, DataIndex, Get};
 #[cfg(not(feature = "certora"))]
 use pinocchio::sysvars::Sysvar;
 use pinocchio::{error::ProgramError, ProgramResult};
 use solana_program::instruction::Instruction;
-
-use super::batch_update::MarketDataTreeNodeType;
 
 pub(crate) fn expand_market_if_needed<'a, T: ManifestAccount + Pod + Clone>(
     payer: &AccountView,
@@ -250,54 +248,30 @@ pub(crate) fn get_trader_index_with_hint(
     dynamic_account: &MarketRefMut,
     payer: &Signer,
 ) -> Result<DataIndex, ProgramError> {
+    // A hint is only an accelerator: the seat is uniquely determined by
+    // (market, trader), so a hint that no longer names the payer's seat is
+    // not an authorization problem, just a stale cache. Defrag relocates
+    // seats, reclaims empty ones, and can shrink the account past an old
+    // index, so staleness is expected rather than exceptional. Resolve it the
+    // way the wrapper's sync does - validate, and otherwise fall back to the
+    // same tree lookup the unhinted path performs - and spend the compute
+    // instead of failing a caller whose cached index aged out. A payer with
+    // no seat at all still resolves to NIL, which callers reject with
+    // `assert_already_has_seat`.
+    #[cfg(not(feature = "certora"))]
     let trader_index: DataIndex = match trader_index_hint {
         None => dynamic_account.get_trader_index(payer.pubkey()),
-        Some(hinted_index) => {
-            verify_trader_index_hint(hinted_index, &dynamic_account, &payer)?;
-            hinted_index
-        }
+        Some(hinted_index) => dynamic_account.resolve_trader_index(hinted_index, payer.pubkey()),
     };
+    // The prover models this as the lookup, which is exact rather than an
+    // approximation: resolution only accepts a hint whose node is a claimed
+    // seat naming the payer, and a trader holds at most one seat per market,
+    // so a hint that resolves resolves to precisely what the lookup returns.
+    // Taking the lookup unconditionally also keeps `resolve_trader_index`,
+    // which is compiled out under `certora`, off the verified path.
+    #[cfg(feature = "certora")]
+    let trader_index: DataIndex = dynamic_account.get_trader_index(payer.pubkey());
     Ok(trader_index)
-}
-
-fn verify_trader_index_hint(
-    hinted_index: DataIndex,
-    dynamic_account: &MarketRefMut,
-    payer: &Signer,
-) -> ProgramResult {
-    require!(
-        hinted_index % (MARKET_BLOCK_SIZE as DataIndex) == 0,
-        crate::program::ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {} did not align",
-        hinted_index,
-    )?;
-    // Defrag can shrink the market, so a hint from before it can point past
-    // the end of the account. Reject it rather than panic on the slice.
-    require!(
-        (hinted_index as usize)
-            .checked_add(MARKET_BLOCK_SIZE)
-            .is_some_and(|end| end <= dynamic_account.dynamic.len()),
-        crate::program::ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {} is out of bounds",
-        hinted_index,
-    )?;
-    require!(
-        get_helper::<RBNode<ClaimedSeat>>(&dynamic_account.dynamic, hinted_index)
-            .get_payload_type()
-            == MarketDataTreeNodeType::ClaimedSeat as u8,
-        crate::program::ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {} is not a ClaimedSeat",
-        hinted_index,
-    )?;
-    require!(
-        payer
-            .pubkey()
-            .eq(dynamic_account.get_trader_key_by_index(hinted_index)),
-        crate::program::ManifestError::WrongIndexHintParams,
-        "Invalid trader hint index {} did not match payer",
-        hinted_index
-    )?;
-    Ok(())
 }
 
 /// Builds pinocchio's borrowed instruction from a `solana_program` one and

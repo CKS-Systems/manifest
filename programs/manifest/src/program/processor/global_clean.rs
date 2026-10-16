@@ -43,6 +43,17 @@ pub(crate) fn process_global_clean(
         system_program,
     } = global_clean_context;
 
+    // Collector only, the same key defrag requires. Cleaning an unbacked
+    // global order pays that order's gas deposit to whoever calls, so leaving
+    // it permissionless made book maintenance a race for that deposit. The
+    // collector now owns this the way it owns defrag, and the deposit funds
+    // the same operator doing the work.
+    require!(
+        *payer.pubkey() == super::defrag::DEFRAG_COLLECTOR,
+        pinocchio::error::ProgramError::InvalidArgument,
+        "Invalid collector"
+    )?;
+
     let global_trade_accounts: GlobalTradeAccounts = GlobalTradeAccounts {
         mint_opt: None,
         global: global.clone(),

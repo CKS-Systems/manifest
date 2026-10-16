@@ -139,6 +139,12 @@ pub enum ManifestInstruction {
     /// gas prepayment deposits. This is not required for normal operation of
     /// market. It exists as a deterrent to unfillable and unmaintained global
     /// spam.
+    ///
+    /// The payer must be the fee collector, the same key Defrag requires, so
+    /// the gas prepayment pays the operator who runs the cleanup rather than
+    /// whoever wins a race to it. The flip side is that nobody else will do
+    /// this work, so unfillable global orders rest on the book until the
+    /// collector clears them.
     #[account(0, writable, signer, name = "payer", desc = "Payer for this tx, receiver of rent deposit")]
     #[account(1, writable, name = "market", desc = "Account holding all market state")]
     #[account(2, name = "system_program", desc = "System program")]

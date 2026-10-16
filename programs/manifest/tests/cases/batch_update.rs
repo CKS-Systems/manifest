@@ -157,7 +157,8 @@ async fn batch_update_test() -> anyhow::Result<()> {
         )
         .await?;
 
-    // A stale snapshot must keep its documented error in either mode.
+    // A stale snapshot now falls back to the sequence-number lookup, so both
+    // modes report the same honest reason: that order is already gone.
     let hinted_error = test_fixture
         .batch_update_for_keypair(
             Some(0),
@@ -175,7 +176,7 @@ async fn batch_update_test() -> anyhow::Result<()> {
         hinted_error,
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
+            InstructionError::Custom(ManifestError::InvalidCancel as u32),
         )
     );
     let unhinted_error = test_fixture
