@@ -465,16 +465,18 @@ async fn stale_hints_past_a_shrunk_market_resolve_by_lookup() -> anyhow::Result<
     // something to cancel.
     f.place_order(Side::Ask, 300, 1, 0, 0, OrderType::Limit)
         .await?;
+    // Global clean is collector only, so run it as the collector: the hint
+    // rejection, not the authorization check, must be what fails here.
     let clean_hint_error = send_tx_with_retry(
         Rc::clone(&f.context),
         &[global_clean_instruction(
             &f.global_fixture.key,
-            &f.payer(),
+            &key.pubkey(),
             &f.market_fixture.key,
             stale,
         )],
-        Some(&f.payer()),
-        &[&f.payer_keypair().insecure_clone()],
+        Some(&key.pubkey()),
+        &[&key],
     )
     .await
     .unwrap_err()

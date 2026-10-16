@@ -1601,6 +1601,22 @@ pub async fn get_and_deserialize<T: Pack>(
     }
 }
 
+/// The keypair whose pubkey is `DEFRAG_COLLECTOR` under the `test` feature,
+/// funded so it can pay for the collector-only instructions (defrag and
+/// global clean).
+pub fn collector_keypair(context: &Rc<RefCell<ProgramTestContext>>) -> Keypair {
+    let key: Keypair = Keypair::new_from_array([42; 32]);
+    context.borrow_mut().set_account(
+        &key.pubkey(),
+        &solana_account::AccountSharedData::from(Account::new(
+            1_000_000_000,
+            0,
+            &solana_sdk_ids::system_program::id(),
+        )),
+    );
+    key
+}
+
 pub async fn send_tx_with_retry(
     context: Rc<RefCell<ProgramTestContext>>,
     instructions: &[Instruction],

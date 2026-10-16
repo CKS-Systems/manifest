@@ -24,8 +24,8 @@ use solana_system_interface::instruction::{create_account, transfer};
 use solana_transaction::{InstructionError, TransactionError};
 
 use crate::{
-    send_tx_with_retry, GlobalFixture, MarketFixture, MintFixture, TestFixture, Token,
-    TokenAccountFixture,
+    collector_keypair, send_tx_with_retry, GlobalFixture, MarketFixture, MintFixture, TestFixture,
+    Token, TokenAccountFixture,
 };
 
 #[tokio::test]
@@ -1203,6 +1203,8 @@ async fn global_evict_22() -> anyhow::Result<()> {
 #[tokio::test]
 async fn global_clean() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
+    // Global clean is collector only.
+    let collector: Keypair = collector_keypair(&test_fixture.context);
     test_fixture.claim_seat().await?;
 
     test_fixture.global_add_trader().await?;
@@ -1229,12 +1231,12 @@ async fn global_clean() -> anyhow::Result<()> {
         Rc::clone(&test_fixture.context),
         &[global_clean_instruction(
             &test_fixture.global_fixture.key,
-            &test_fixture.payer(),
+            &collector.pubkey(),
             &test_fixture.market_fixture.key,
             MARKET_BLOCK_SIZE as DataIndex
         ),],
-        Some(&test_fixture.payer()),
-        &[&test_fixture.payer_keypair().insecure_clone()],
+        Some(&collector.pubkey()),
+        &[&collector],
     )
     .await
     .is_err());
@@ -1245,12 +1247,12 @@ async fn global_clean() -> anyhow::Result<()> {
         Rc::clone(&test_fixture.context),
         &[global_clean_instruction(
             &test_fixture.global_fixture.key,
-            &test_fixture.payer(),
+            &collector.pubkey(),
             &test_fixture.market_fixture.key,
             MARKET_BLOCK_SIZE as DataIndex,
         )],
-        Some(&test_fixture.payer()),
-        &[&test_fixture.payer_keypair().insecure_clone()],
+        Some(&collector.pubkey()),
+        &[&collector],
     )
     .await?;
 
@@ -1260,6 +1262,8 @@ async fn global_clean() -> anyhow::Result<()> {
 #[tokio::test]
 async fn maintenance_clean() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
+    // Global clean is collector only.
+    let collector: Keypair = collector_keypair(&test_fixture.context);
     test_fixture.claim_seat().await?;
     test_fixture.global_add_trader().await?;
     test_fixture.deposit(Token::USDC, 100).await?;
@@ -1289,12 +1293,12 @@ async fn maintenance_clean() -> anyhow::Result<()> {
         Rc::clone(&test_fixture.context),
         &[global_clean_instruction(
             &test_fixture.global_fixture.key,
-            &test_fixture.payer(),
+            &collector.pubkey(),
             &test_fixture.market_fixture.key,
             MARKET_BLOCK_SIZE as DataIndex,
         )],
-        Some(&test_fixture.payer()),
-        &[&test_fixture.payer_keypair().insecure_clone()],
+        Some(&collector.pubkey()),
+        &[&collector],
     )
     .await?;
 
@@ -1328,12 +1332,12 @@ async fn maintenance_clean() -> anyhow::Result<()> {
         Rc::clone(&test_fixture.context),
         &[global_clean_instruction(
             &test_fixture.global_fixture.key,
-            &test_fixture.payer(),
+            &collector.pubkey(),
             &test_fixture.market_fixture.key,
             MARKET_BLOCK_SIZE as DataIndex,
         )],
-        Some(&test_fixture.payer()),
-        &[&test_fixture.payer_keypair().insecure_clone()],
+        Some(&collector.pubkey()),
+        &[&collector],
     )
     .await?;
 

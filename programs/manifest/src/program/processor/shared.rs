@@ -258,10 +258,19 @@ pub(crate) fn get_trader_index_with_hint(
     // instead of failing a caller whose cached index aged out. A payer with
     // no seat at all still resolves to NIL, which callers reject with
     // `assert_already_has_seat`.
+    #[cfg(not(feature = "certora"))]
     let trader_index: DataIndex = match trader_index_hint {
         None => dynamic_account.get_trader_index(payer.pubkey()),
         Some(hinted_index) => dynamic_account.resolve_trader_index(hinted_index, payer.pubkey()),
     };
+    // The prover models this as the lookup, which is exact rather than an
+    // approximation: resolution only accepts a hint whose node is a claimed
+    // seat naming the payer, and a trader holds at most one seat per market,
+    // so a hint that resolves resolves to precisely what the lookup returns.
+    // Taking the lookup unconditionally also keeps `resolve_trader_index`,
+    // which is compiled out under `certora`, off the verified path.
+    #[cfg(feature = "certora")]
+    let trader_index: DataIndex = dynamic_account.get_trader_index(payer.pubkey());
     Ok(trader_index)
 }
 
