@@ -208,11 +208,26 @@ impl<
             MAX_DEFRAG_BLOCKS
         )?;
 
+        // With relocations disabled, remove capped seats from the existing
+        // tree as they are selected. No node can change address in that mode,
+        // so rebuilding every retained seat would turn a small seat budget
+        // into unbounded tree work. Relocation runs still rebuild below,
+        // because moving a seat invalidates the links stored at its old index.
+        let preserve_seat_tree: bool = relocations == Some(0) && seat_limit.is_some();
+
         // Mark what survives. `FreeList::add` zeroes the payload including the
         // node type, so free blocks read as `Empty`. Scanning allocated blocks
         // once marks every order together with its owner, including owners
         // whose balances are zero.
         let mut keep: Vec<u64> = vec![0u64; blocks.div_ceil(64)];
+        // In the no-relocation path, remember empty seats during the required
+        // allocation scan. Selecting the highest ones from bitmap words below
+        // avoids a second full scan over a large market.
+        let mut empty_seats: Vec<u64> = if preserve_seat_tree {
+            vec![0u64; keep.len()]
+        } else {
+            Vec::new()
+        };
         for block in 0..blocks {
             let index: usize = block * MARKET_BLOCK_SIZE;
             match dynamic[index + NODE_TYPE] {
@@ -237,6 +252,8 @@ impl<
                         || seat.quote_withdrawable_balance != QuoteAtoms::ZERO
                     {
                         set_bit(&mut keep, block);
+                    } else if preserve_seat_tree {
+                        set_bit(&mut empty_seats, block);
                     }
                 }
                 _ => {}
@@ -249,19 +266,57 @@ impl<
         // cap is kept instead. Skipped entirely when unbounded, so the common
         // run pays nothing for this.
         if let Some(seat_limit) = seat_limit {
-            let mut reclaimable: u32 = seat_limit;
-            for block in (0..blocks).rev() {
-                let index: usize = block * MARKET_BLOCK_SIZE;
-                if dynamic[index + NODE_TYPE] != MarketDataTreeNodeType::ClaimedSeat as u8
-                    || bit(&keep, block)
-                {
-                    continue;
+            if preserve_seat_tree {
+                // Start by retaining every empty seat, then clear at most the
+                // requested number of highest bits and remove exactly those
+                // nodes from the existing tree.
+                for (kept, empty) in keep.iter_mut().zip(&mut empty_seats) {
+                    *empty &= !*kept;
+                    *kept |= *empty;
                 }
-                match reclaimable.checked_sub(1) {
-                    // Inside the budget: leave it unkept so it is reclaimed.
-                    Some(left) => reclaimable = left,
-                    // Past the budget: this run keeps the seat.
-                    None => set_bit(&mut keep, block),
+                let mut reclaimable: u32 = seat_limit;
+                for word_at in (0..empty_seats.len()).rev() {
+                    let mut candidates: u64 = empty_seats[word_at] & keep[word_at];
+                    while reclaimable > 0 && candidates != 0 {
+                        let in_word: usize = 63 - candidates.leading_zeros() as usize;
+                        let mask: u64 = 1u64 << in_word;
+                        let block: usize = word_at * 64 + in_word;
+                        keep[word_at] &= !mask;
+                        candidates &= !mask;
+                        reclaimable -= 1;
+
+                        let index: usize = block * MARKET_BLOCK_SIZE;
+                        let mut tree: RedBlackTree<ClaimedSeat> =
+                            RedBlackTree::new(dynamic, fixed.claimed_seats_root_index, NIL);
+                        tree.remove_by_index(index as DataIndex);
+                        fixed.claimed_seats_root_index = tree.get_root_index();
+
+                        // Preserve the existing free list too. It is filtered
+                        // after the new account frontier is known rather than
+                        // reconstructed by scanning every retained block.
+                        dynamic[index..index + MARKET_BLOCK_SIZE].fill(0);
+                        write_index(dynamic, index, fixed.free_list_head_index);
+                        fixed.free_list_head_index = index as DataIndex;
+                    }
+                    if reclaimable == 0 {
+                        break;
+                    }
+                }
+            } else {
+                let mut reclaimable: u32 = seat_limit;
+                for block in (0..blocks).rev() {
+                    let index: usize = block * MARKET_BLOCK_SIZE;
+                    if dynamic[index + NODE_TYPE] != MarketDataTreeNodeType::ClaimedSeat as u8
+                        || bit(&keep, block)
+                    {
+                        continue;
+                    }
+                    match reclaimable.checked_sub(1) {
+                        // Inside the budget: leave it unkept so it is reclaimed.
+                        Some(left) => reclaimable = left,
+                        // Past the budget: this run keeps the seat.
+                        None => set_bit(&mut keep, block),
+                    }
                 }
             }
         }
@@ -342,41 +397,72 @@ impl<
             .map_or(0, |at| at * 64 + (64 - keep[at].leading_zeros() as usize));
         let new_blocks: usize = frontier.max(keep_count + 2);
 
-        // Rebuild the seat tree from the survivors. Reclaimed seats simply
-        // never go back into it, which is why reclaiming needs no tree work,
-        // and why a run that reclaims thousands costs no more than one that
-        // reclaims none. The bitmap decides, not the node type: a reclaimed
-        // seat that no survivor happened to displace still reads as a seat.
-        fixed.claimed_seats_root_index = NIL;
-        for block in SetBlocks::new(&keep) {
-            let index: usize = block * MARKET_BLOCK_SIZE;
-            if dynamic[index + NODE_TYPE] != MarketDataTreeNodeType::ClaimedSeat as u8 {
-                continue;
+        // Relocation invalidates seat-tree links, so rebuild from the
+        // survivors. A capped no-relocation run already removed just its
+        // selected seats from the existing tree above and leaves it intact.
+        if !preserve_seat_tree {
+            fixed.claimed_seats_root_index = NIL;
+            for block in SetBlocks::new(&keep) {
+                let index: usize = block * MARKET_BLOCK_SIZE;
+                if dynamic[index + NODE_TYPE] != MarketDataTreeNodeType::ClaimedSeat as u8 {
+                    continue;
+                }
+                let seat: ClaimedSeat =
+                    *get_helper::<RBNode<ClaimedSeat>>(dynamic, index as DataIndex).get_value();
+                let mut tree: RedBlackTree<ClaimedSeat> =
+                    RedBlackTree::<ClaimedSeat>::new(dynamic, fixed.claimed_seats_root_index, NIL);
+                tree.insert(index as DataIndex, seat);
+                fixed.claimed_seats_root_index = tree.get_root_index();
+                get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, index as DataIndex)
+                    .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
             }
-            let seat: ClaimedSeat =
-                *get_helper::<RBNode<ClaimedSeat>>(dynamic, index as DataIndex).get_value();
-            let mut tree: RedBlackTree<ClaimedSeat> =
-                RedBlackTree::<ClaimedSeat>::new(dynamic, fixed.claimed_seats_root_index, NIL);
-            tree.insert(index as DataIndex, seat);
-            fixed.claimed_seats_root_index = tree.get_root_index();
-            get_mut_helper::<RBNode<ClaimedSeat>>(dynamic, index as DataIndex)
-                .set_payload_type(MarketDataTreeNodeType::ClaimedSeat as u8);
         }
 
-        // Chain the holes below the frontier, lowest first, so later
-        // allocations prefer low blocks and leave the tail reclaimable. This
-        // also blanks the reclaimed seats that were never displaced.
-        let mut head: DataIndex = NIL;
-        for block in (0..new_blocks).rev() {
-            if bit(&keep, block) {
-                continue;
+        if preserve_seat_tree {
+            // Nothing moved, so the existing free list already names every
+            // hole. Keep its nodes below the new frontier and discard links
+            // into the tail that will be truncated. Reversing the surviving
+            // links is harmless and avoids another scan over all blocks.
+            let mut old: DataIndex = fixed.free_list_head_index;
+            let mut head: DataIndex = NIL;
+            let mut visited: usize = 0;
+            while old != NIL {
+                require_rejecting!(
+                    old as usize % MARKET_BLOCK_SIZE == 0 && (old as usize) < allocated,
+                    ProgramError::InvalidAccountData,
+                    "Invalid free-list index {}",
+                    old
+                )?;
+                visited += 1;
+                require_rejecting!(
+                    visited <= blocks,
+                    ProgramError::InvalidAccountData,
+                    "Cyclic free list"
+                )?;
+                let next: DataIndex = read_index(dynamic, old as usize);
+                if (old as usize) < new_blocks * MARKET_BLOCK_SIZE {
+                    write_index(dynamic, old as usize, head);
+                    head = old;
+                }
+                old = next;
             }
-            let index: usize = block * MARKET_BLOCK_SIZE;
-            dynamic[index..index + MARKET_BLOCK_SIZE].fill(0);
-            write_index(dynamic, index, head);
-            head = index as DataIndex;
+            fixed.free_list_head_index = head;
+        } else {
+            // Chain the holes below the frontier, lowest first, so later
+            // allocations prefer low blocks and leave the tail reclaimable.
+            // This also blanks reclaimed seats that were never displaced.
+            let mut head: DataIndex = NIL;
+            for block in (0..new_blocks).rev() {
+                if bit(&keep, block) {
+                    continue;
+                }
+                let index: usize = block * MARKET_BLOCK_SIZE;
+                dynamic[index..index + MARKET_BLOCK_SIZE].fill(0);
+                write_index(dynamic, index, head);
+                head = index as DataIndex;
+            }
+            fixed.free_list_head_index = head;
         }
-        fixed.free_list_head_index = head;
         fixed.num_bytes_allocated = (new_blocks * MARKET_BLOCK_SIZE) as u32;
         // Invalidate wrappers' quiet-sync shortcut even when no order traded.
         fixed.order_sequence_number = fixed
@@ -625,6 +711,11 @@ mod tests {
             assert_eq!(seat_count(&m), expected, "round {round} reclaimed wrongly");
             assert_eq!(fifo(&m), before, "round {round} disturbed the book");
             assert_ne!(m.get_trader_index(&maker), NIL);
+            assert_eq!(
+                free_count(&m) as usize,
+                m.dynamic.len() / MARKET_BLOCK_SIZE - occupancy(&m).len(),
+                "round {round} lost a free-list entry"
+            );
         }
         assert_eq!(seat_count(&m), funded_seats);
         // A further capped run has nothing left to reclaim.

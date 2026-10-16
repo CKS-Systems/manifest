@@ -369,6 +369,49 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
         units < 1_250_000,
         "large defrag regressed to {units} CU against a 1.4M ceiling"
     );
+
+    // A small seat budget must make the tree work small too. Rebuilding the
+    // 12,999 retained seats here costs more than the transaction ceiling even
+    // though only one seat was requested; the no-relocation path removes that
+    // seat from the existing tree instead.
+    let capped_transaction = Transaction::new_signed_with_payer(
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            manifest::program::defrag_instruction_configured(
+                &f.market_fixture.key,
+                &key.pubkey(),
+                &f.sol_mint_fixture.key,
+                &f.usdc_mint_fixture.key,
+                spl_token::id(),
+                spl_token::id(),
+                Some(0),
+                Some(1),
+            ),
+        ],
+        Some(&payer.pubkey()),
+        &[&payer, &key],
+        blockhash,
+    );
+    let capped_result = f
+        .context
+        .borrow_mut()
+        .banks_client
+        .simulate_transaction(capped_transaction)
+        .await?;
+    let capped_units: u64 = capped_result
+        .simulation_details
+        .as_ref()
+        .unwrap()
+        .units_consumed;
+    println!("CU capped-seat defrag: {capped_units}");
+    assert!(
+        capped_result.result.as_ref().unwrap().is_ok(),
+        "{capped_result:?}"
+    );
+    assert!(
+        capped_units < 1_250_000,
+        "capped-seat defrag regressed to {capped_units} CU against a 1.4M ceiling"
+    );
     assert_eq!(
         value
             .get_trader_balance(&Pubkey::new_from_array({
