@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792086224270,
+  "lastUpdate": 1792175441527,
   "repoUrl": "https://github.com/Bonasa-Tech/manifest",
   "entries": {
     "CU Benchmark": [
@@ -15209,6 +15209,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "MFX_99",
             "value": 2392,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cyrbritt@gmail.com",
+            "name": "Britt Cyr",
+            "username": "brittcyr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c51120ba8d63fae2851acc3d8a211fa4ad77b9d6",
+          "message": "Lenient market index hints, independently budgeted defrag, collector-only global clean (#764)\n\n* Absorb stale market index hints instead of failing the caller\n\nA market index hint is only a lookup accelerator. The seat is uniquely\ndetermined by (market, trader), and a cancel hint identifies an order\nrather than authorizing the cancel, so a hint that no longer matches is a\nstale cache rather than a permission problem. Defrag makes staleness\nordinary: it relocates seats and orders, reclaims empty seats, and\nshrinks the account past indices a client cached before the run.\n\nBoth market hint paths now resolve rather than reject. The trader hint\ngoes through `resolve_trader_index`, the same helper the wrapper's sync\nalready uses, which validates the hint and otherwise falls back to the\ntree lookup the unhinted path performs. The cancel hint is checked\nagainst the order's trader and sequence number, and falls back to the\nunhinted sequence-number lookup, which re-checks ownership itself, so a\nrecycled block can never cancel another trader's order. Callers pay the\nlookup's compute instead of losing the transaction.\n\nErrors now name the real problem: a batch that places with a reclaimed\nseat reports AlreadyClaimedSeat (\"Need to claim a seat first\") and a\ncancel for an order that is genuinely gone reports InvalidCancel, hinted\nor not. The global clean hint indexes the global account, which market\ndefrag never touches, and keeps rejecting outright.\n\nThird-party integrators motivated this: wrappers cache the seat and order\nindices and cannot all be expected to re-resolve them after a defrag run.\n\n* Budget each defrag step independently\n\nDefrag did three things on one dial. The optional u32 bounded relocations\nonly: every run reclaimed every empty seat, and collecting excess\nlamports came along whether or not it was wanted. An operator who needed\njust one of those had no way to ask, and the one combination worth having\nmost - collect the accrued fees without disturbing a single entry - was\nunreachable.\n\nThe instruction now takes up to two budgets, so each step stands alone:\n\n  (empty)                unbounded relocations, every empty seat\n  [relocations]           that many relocations, every empty seat\n  [relocations, seats]    that many relocations, that many seats\n\nBoth legacy encodings keep their exact meaning, so existing callers and\nthe TypeScript client are unaffected. An explicit zero disables its step\nrather than meaning unbounded, so a computed budget that rounds down to\nzero yields less work than asked for, never more.\n\n`(0, 0)` is the new useful case: collect excess lamports and truncate\nwhatever free tail exists while leaving every entry in place. Nothing\nmoves, so no cached index is invalidated, which matters for third-party\nwrappers that cache seat and order indices. Capped seat reclamation takes\nthe highest empty seats first, since only vacating high blocks lets the\naccount shrink.\n\nMeasured on a mainnet market with 741 seats and 187 orders, relocating\nnothing leaves all 187 orders and every funded seat at their original\naddress while reclaiming the empty seats into reusable free blocks; full\ncompaction returns far more rent but moves two thirds of the orders.\n\n* Restrict global clean to the fee collector\n\nCleaning an unbacked or expired global order pays that order's gas\ndeposit to whoever submits the transaction, so a permissionless clean\nmade book maintenance a race for the deposit. GlobalClean now requires\nthe same collector key defrag does, so the operator doing the\nmaintenance is the one the deposit funds.\n\nThe exploit regression test keeps the guard it was written for. It now\nasserts twice: a stranger cannot reach the clean path at all, and the\ncollector still cannot clean a permanent non-global bid, so the\nauthorization check is not what makes that case fail.\n\nGlobalClean's order_index stays strictly validated, unlike the market\nhints made lenient earlier in this branch. That index is the order's only\nidentifier - GlobalCleanParams carries nothing else, no sequence number -\nso there is nothing to resolve a stale one against, and guessing could\nclean a different order that now occupies the block. Rejecting is\ncorrect, and with the instruction restricted to the collector the caller\nis tooling that can re-read the market first.\n\nCertora: the trader-index resolution added earlier is compiled out under\nthe certora feature, so the verified build models that path as the plain\nlookup. That is exact rather than approximate, because resolution only\naccepts a hint whose node is a claimed seat naming the payer and a trader\nholds at most one seat per market, so a hint that resolves resolves to\nwhat the lookup returns. All six prover configurations compile and the\nELF is sBPF v3.\n\n* Retire the third-party global-clean keeper path in docs and fuzzing\n\nRestricting global clean to the collector invalidated the invariant the\nfuzz harness was built to protect: that an unbacked global order can be\nremoved by anyone, who collects its gas prepayment. The harness caught\nit, which is the harness working.\n\nThe positive path cannot be asserted there any more. The bundle fuzzes\nthe production artifact, where DEFRAG_COLLECTOR is the mainnet key, and\nthe harness signs with generated actors, so no draw can authorize a\nclean. That is the same reason Defrag has no action in the harness at\nall. The reachability assertion is replaced with its complement - no\nnon-collector may clean, over the sequence that makes a clean legitimate\n- which still fails loudly if the authorization check is ever dropped.\nProof that cleaning works moved to the integration tests, which run the\ntest-feature program and can sign as the collector.\n\nThe protocol header claimed the remedy ran itself: \"it is now profitable\nfor a 3rd party to run a cleanup job and claim the gas prepayment\". That\nis no longer true, and a comment that lies about an incentive is worse\nthan no comment. It now says what the trade actually is: the prepayment\nfunds the operator who already runs defrag, and until that operator runs\nit, unbacked and expired global orders rest on their books while honest\ntraders pay the gas and account cost of stepping over them.\n\nThe instruction's own doc is deliberately left alone. Its text is part of\nthe generated IDL and the solita TypeScript client, so documenting the\nrestriction there means regenerating published artifacts; worth doing on\npurpose, not as a side effect of this branch.\n\n* Format the harness test to the fuzz crate's rustfmt width\n\n* Document the global clean collector restriction on the instruction\n\nThe instruction enum is where an integrator reads what an instruction\nrequires, so the collector restriction belongs there rather than only at\nthe enforcement site and in the protocol header.\n\nInstruction doc comments are part of the derived IDL, so the harness IDL\nis regenerated with it; the diff is the added doc lines and nothing else.\nThe account keeps its `payer` name and description: the name is still\naccurate, and renaming it would churn every generated client for nothing.\nThe client IDL and TypeScript client are deliberately left alone - the\nautogen workflow that would check them is disabled and nothing publishes\na regenerated IDL, and that generator appends arguments rather than\nrewriting, so running it once against a committed file duplicates them.\n\n* Bound capped seat reclamation work\n\n* Make retiring a market an explicit defrag parameter\n\nClosing was implicit: any run whose compaction left nothing but the two\nspare blocks, with empty vaults, retired the market, closed both vaults\nand destroyed the address. That is the one irreversible thing defrag\ndoes, and it happened as a side effect of how empty the market was\nrather than because an operator asked for it.\n\nA ninth data byte, nonzero, now permits it. The byte is last so the\nbudgets keep their offsets, and the accepted lengths become 0, 4, 8 and\n9. Every shorter form leaves a fully compacted market standing, so the\nbudget combinations are safe to run unattended and the dangerous one has\nto be spelled out per run.\n\nEmptiness is a snapshot, which is why the default had to change: a live\nmarket whose maker has pulled every quote is indistinguishable from an\nabandoned one. On mainnet today 1,494 of 4,064 markets would qualify,\nand 47 of them traded within the last week.\n\nNo market has been retired by defrag on mainnet, so nothing depends on\nthe old default. The tests that relied on it now ask for it: the close\ncase asserts first that an ordinary run leaves an emptied market alone,\nthen that opting in retires it and sweeps its vaults.",
+          "timestamp": "2026-10-16T14:26:18-04:00",
+          "tree_id": "e7c8ee76b66e4217a3eee98776eebd5161a92f8d",
+          "url": "https://github.com/Bonasa-Tech/manifest/commit/c51120ba8d63fae2851acc3d8a211fa4ad77b9d6"
+        },
+        "date": 1792175438237,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "PHX_50",
+            "value": 6748,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_95",
+            "value": 8819,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "PHX_99",
+            "value": 10866,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_50",
+            "value": 1117,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_95",
+            "value": 1584,
+            "range": "",
+            "unit": "CU",
+            "extra": ""
+          },
+          {
+            "name": "MFX_99",
+            "value": 2388,
             "range": "",
             "unit": "CU",
             "extra": ""
