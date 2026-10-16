@@ -358,11 +358,14 @@ async fn defrag_large_empty_seat_population_fits_one_instruction() -> anyhow::Re
 }
 
 /// Defrag shrinks the account, so index hints cached before it can point past
-/// the new end. Every hint validator, the global clean index included, must
-/// answer with the documented hint error instead of panicking on the
-/// out-of-bounds slice.
+/// the new end. A market hint is only an accelerator, so the trader and cancel
+/// paths absorb a stale one by falling back to the lookup the unhinted path
+/// uses, letting a client whose cache aged out succeed for extra compute
+/// rather than fail. The global clean hint indexes the global account, which
+/// market defrag never touches, so it keeps rejecting outright. Nothing may
+/// panic on the out-of-bounds slice.
 #[tokio::test]
-async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
+async fn stale_hints_past_a_shrunk_market_resolve_by_lookup() -> anyhow::Result<()> {
     use manifest::program::ManifestError;
     use solana_transaction::{InstructionError, TransactionError};
     let mut f = TestFixture::new().await;
@@ -376,22 +379,49 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
 
     // Block aligned, typed correctly before the shrink, far past the end now.
     let stale: u32 = (MARKET_BLOCK_SIZE * 1_000) as u32;
-    let trader_hint_error = f
-        .batch_update_for_keypair(Some(stale), vec![], vec![], &f.payer_keypair())
-        .await
-        .unwrap_err()
-        .unwrap();
+    // The payer still holds a seat, so the stale trader hint resolves to it.
+    f.batch_update_for_keypair(Some(stale), vec![], vec![], &f.payer_keypair())
+        .await?;
+    // And a stale cancel hint still cancels the right order: the fallback
+    // finds it by sequence number and re-checks ownership.
+    f.market_fixture.reload().await;
+    let resting_sequence = {
+        let asks = f.market_fixture.market.get_asks();
+        asks.iter::<RestingOrder>()
+            .next()
+            .unwrap()
+            .1
+            .get_sequence_number()
+    };
+    f.batch_update_for_keypair(
+        None,
+        vec![CancelOrderParams::new_with_hint(
+            resting_sequence,
+            Some(stale),
+        )],
+        vec![],
+        &f.payer_keypair(),
+    )
+    .await?;
+    f.market_fixture.reload().await;
     assert_eq!(
-        trader_hint_error,
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
-        )
+        f.market_fixture
+            .market
+            .get_asks()
+            .iter::<RestingOrder>()
+            .count(),
+        0,
+        "the stale-hinted cancel should have removed the resting order"
     );
-    let cancel_hint_error = f
+    // A cancel for an order that genuinely is not there still fails, hinted or
+    // not: the fallback is a lookup, not a silent success.
+    let missing_error = f
         .batch_update_for_keypair(
             None,
-            vec![CancelOrderParams::new_with_hint(0, Some(stale))],
+            vec![CancelOrderParams::new_with_hint(
+                resting_sequence,
+                Some(stale),
+            )],
             vec![],
             &f.payer_keypair(),
         )
@@ -399,12 +429,16 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
         .unwrap_err()
         .unwrap();
     assert_eq!(
-        cancel_hint_error,
+        missing_error,
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(ManifestError::WrongIndexHintParams as u32),
+            InstructionError::Custom(ManifestError::InvalidCancel as u32),
         )
     );
+    // Re-place an order so the fresh-hint check at the end of this test has
+    // something to cancel.
+    f.place_order(Side::Ask, 300, 1, 0, 0, OrderType::Limit)
+        .await?;
     let clean_hint_error = send_tx_with_retry(
         Rc::clone(&f.context),
         &[global_clean_instruction(
@@ -440,6 +474,78 @@ async fn stale_hints_past_a_shrunk_market_fail_cleanly() -> anyhow::Result<()> {
         &f.payer_keypair(),
     )
     .await?;
+    Ok(())
+}
+
+/// A client whose seat defrag reclaimed - zero balances and no resting orders -
+/// holds a hint that no longer names any seat. The fallback lookup finds none
+/// either, so it reports the actionable reason rather than a hint error: claim
+/// a seat again. This is the integrator-facing case, because third-party
+/// wrappers cache the seat index and cannot all be expected to re-resolve it.
+#[tokio::test]
+async fn a_reclaimed_seats_stale_hint_reports_no_seat() -> anyhow::Result<()> {
+    use manifest::program::ManifestError;
+    use solana_transaction::{InstructionError, TransactionError};
+    let mut f = TestFixture::new().await;
+    // The payer funds a seat so the market survives defrag; the second keypair
+    // claims one and leaves it empty, which is what defrag reclaims.
+    f.claim_seat().await?;
+    f.deposit(Token::SOL, 1000).await?;
+    f.claim_seat_for_keypair(&f.second_keypair).await?;
+    f.market_fixture.reload().await;
+    let reclaimed_index = f
+        .market_fixture
+        .market
+        .get_trader_index(&f.second_keypair.pubkey());
+    assert_ne!(reclaimed_index, hypertree::NIL);
+
+    let key = collector(&f);
+    run(&f, &key).await?;
+
+    f.market_fixture.reload().await;
+    assert_eq!(
+        f.market_fixture
+            .market
+            .get_trader_index(&f.second_keypair.pubkey()),
+        hypertree::NIL,
+        "the empty seat should have been reclaimed"
+    );
+    // A batch that neither places nor cancels returns before any seat is
+    // needed, so it still succeeds on the stale hint - the hint alone is never
+    // the thing that fails.
+    f.batch_update_for_keypair(
+        Some(reclaimed_index),
+        vec![],
+        vec![],
+        &f.second_keypair.insecure_clone(),
+    )
+    .await?;
+    // Placing does need a seat. The stale hint resolves to NIL, so the error
+    // names the real problem rather than the hint.
+    let error = f
+        .batch_update_for_keypair(
+            Some(reclaimed_index),
+            vec![],
+            vec![PlaceOrderParams::new(
+                1,
+                1,
+                0,
+                false,
+                OrderType::Limit,
+                NO_EXPIRATION_LAST_VALID_SLOT,
+            )],
+            &f.second_keypair.insecure_clone(),
+        )
+        .await
+        .unwrap_err()
+        .unwrap();
+    assert_eq!(
+        error,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(ManifestError::AlreadyClaimedSeat as u32),
+        )
+    );
     Ok(())
 }
 
