@@ -1791,6 +1791,13 @@ export class ManifestClient {
    * Hints add four bytes per cancel. Send returned instructions separately or
    * pack by serialized transaction size; the whole array may not fit one tx.
    *
+   * @deprecated Since SDK 0.2.49. The deployed wrapper's `cancel_all` now
+   * searches the full core book, including flipped reverse and direct-core
+   * orders (https://github.com/Bonasa-Tech/manifest/pull/732). Use
+   * `cancelAllIx()` for cancellation only, or
+   * `batchUpdateIx(placeParams, [], true)` for an atomic cancel-and-replace.
+   * This snapshot-based escape hatch bypasses wrapper bookkeeping and can
+   * produce stale duplicate cancels when combined with wrapper placements.
    * @param useOrderIndexHints Use validated node offsets from the snapshot.
    * @returns TransactionInstruction[]
    */

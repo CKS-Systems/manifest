@@ -35,9 +35,9 @@ Canonical public SDK docs live in the Bonasa-Tech `manifest` repository TypeScri
 
 ### Batch and Advanced
 
-- `client.batchUpdateIx({ cancels, orders })`
+- `client.batchUpdateIx(placeParams, cancelParams, cancelAll)`
 - `client.placeOrderWithRequiredDepositIxs({...})`
-- `client.cancelAllOnCoreIx()`
+- `client.cancelAllOnCoreIx()` (deprecated advanced escape hatch; prefer wrapper `cancelAllIx()`)
 
 ### Global Account Management
 
@@ -77,7 +77,7 @@ Practical reverse-order notes:
 - The SDK converts `spreadBps` internally when building the onchain params.
 - `Reverse` uses coarser spread precision.
 - `ReverseTight` uses finer spread precision and is the better fit when tight quoting matters.
-- `cancelAllIx()` is wrapper-based and does not fully cover reversed orders after they flip. Use `cancelAllOnCoreIx()` when you need core-level cleanup, including reverse/global edge cases.
+- `cancelAllIx()` is wrapper-based and searches the full core book, so it also covers reverse orders after they flip and orders placed directly through core. For atomic cancel-and-replace, use `batchUpdateIx(placeParams, [], true)`. `cancelAllOnCoreIx()` is deprecated because its snapshot-based direct-core cancels bypass wrapper bookkeeping; retain it only as an advanced fallback for a wrapper cancel-all that cannot fit within the compute budget on a very large shared book.
 
 ## Account Model
 
