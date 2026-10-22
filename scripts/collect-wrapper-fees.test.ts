@@ -1,0 +1,203 @@
+/**
+ * Unit tests for the defrag compute estimate that drives v1 batch packing.
+ * Pure functions only: no RPC, no keypair, no validator.
+ *
+ * Run with: yarn test:collect-wrapper-fees
+ */
+import { PublicKey } from '@solana/web3.js';
+import * as assert from 'node:assert/strict';
+import {
+  estimateBatchDefragCu,
+  estimateDefragCu,
+  packCollectTransactions,
+} from './collect-wrapper-fees';
+
+// Mirrors the script's own constants; a copy here fails the test if either
+// side moves without the other being reconsidered.
+const CU_BUDGET_PER_TRANSACTION = 1_300_000;
+const V1_MAX_WRAPPERS = 61;
+// --defrag sends a Defrag and a Collect per wrapper, so the 64-instruction
+// limit binds before the 61-address one: 64 / 2 = 32.
+const V1_MAX_DEFRAG_WRAPPERS = 32;
+const COLLECTOR = new PublicKey(new Uint8Array(32).fill(7));
+
+// Measured on the 2026-10-22 mainnet sweep: the cheapest already-packed
+// wrapper, and the per-wrapper cost of the 618,304-byte outlier.
+const MEASURED_PACKED_WRAPPER_CU = 1_155;
+const MEASURED_LARGEST_WRAPPER_SPACE = 618_304;
+const MEASURED_LARGEST_WRAPPER_CU = 566_509;
+
+type TestWrapper = {
+  pubkey: PublicKey;
+  trader: PublicKey;
+  amount: bigint;
+  space: number;
+};
+
+function wrapper(index: number, space: number): TestWrapper {
+  const bytes = new Uint8Array(32);
+  bytes[0] = index % 256;
+  bytes[1] = Math.floor(index / 256);
+  bytes[31] = 1;
+  return {
+    pubkey: new PublicKey(bytes),
+    trader: new PublicKey(bytes),
+    amount: 1_000_000n,
+    space,
+  };
+}
+
+const tests: [string, () => void][] = [
+  [
+    'a small wrapper no longer reserves a fiftieth of the budget',
+    () => {
+      // The old 60,000 base put floor(1_300_000/60_000) = 21 small wrappers in
+      // a transaction no matter their real cost. Anything at or above 40,625
+      // per wrapper (1_300_000/32) reimposes a compute cap before the
+      // instruction limit binds.
+      const small = estimateDefragCu(1_600);
+      assert.ok(
+        small < CU_BUDGET_PER_TRANSACTION / V1_MAX_DEFRAG_WRAPPERS,
+        `estimate ${small} still caps batches below the v1 address limit`,
+      );
+    },
+  ],
+  [
+    'the estimate stays above the measured floor',
+    () => {
+      assert.ok(
+        estimateDefragCu(0) > MEASURED_PACKED_WRAPPER_CU,
+        'estimate dips under the cheapest wrapper ever measured',
+      );
+    },
+  ],
+  [
+    'the estimate covers the largest wrapper ever swept',
+    () => {
+      assert.ok(
+        estimateDefragCu(MEASURED_LARGEST_WRAPPER_SPACE) >
+          MEASURED_LARGEST_WRAPPER_CU,
+        'estimate underprices the 618KB wrapper',
+      );
+    },
+  ],
+  [
+    'the estimate never exceeds one transaction budget',
+    () => {
+      assert.equal(
+        estimateDefragCu(64 * 1024 * 1024),
+        CU_BUDGET_PER_TRANSACTION,
+      );
+    },
+  ],
+  [
+    'tail-sized wrappers pack to the v1 instruction limit',
+    () => {
+      // 4,288 bytes is the modal size in the 2026-10-22 sweep's tail.
+      const wrappers = Array.from({ length: 150 }, (_, at) =>
+        wrapper(at, 4_288),
+      );
+      const batches = packCollectTransactions(
+        wrappers,
+        COLLECTOR,
+        undefined,
+        true,
+      );
+      assert.equal(
+        batches[0].length,
+        V1_MAX_DEFRAG_WRAPPERS,
+        'first batch should fill the instruction limit, not stop at 21',
+      );
+    },
+  ],
+  [
+    'a large wrapper still gets a transaction to itself',
+    () => {
+      const batches = packCollectTransactions(
+        [
+          wrapper(0, MEASURED_LARGEST_WRAPPER_SPACE),
+          wrapper(1, MEASURED_LARGEST_WRAPPER_SPACE),
+        ],
+        COLLECTOR,
+        undefined,
+        true,
+      );
+      assert.equal(batches.length, 2);
+      assert.equal(batches[0].length, 1);
+    },
+  ],
+  [
+    'no batch is packed past the compute budget',
+    () => {
+      const sizes = [928, 1_600, 4_288, 8_128, 36_352, 290_752, 618_304];
+      const wrappers = Array.from({ length: 200 }, (_, at) =>
+        wrapper(at, sizes[at % sizes.length]),
+      );
+      const batches = packCollectTransactions(
+        wrappers,
+        COLLECTOR,
+        undefined,
+        true,
+      );
+      for (const [at, batch] of batches.entries()) {
+        const budgeted = estimateBatchDefragCu(batch, true);
+        assert.ok(
+          budgeted <= CU_BUDGET_PER_TRANSACTION,
+          `batch ${at} budgeted ${budgeted} CU, over the per-transaction budget`,
+        );
+        assert.ok(
+          batch.length <= V1_MAX_DEFRAG_WRAPPERS,
+          `batch ${at} holds ${batch.length} wrappers, over the v1 instruction limit`,
+        );
+      }
+      assert.equal(
+        batches.reduce((total, batch) => total + batch.length, 0),
+        wrappers.length,
+        'packing dropped wrappers',
+      );
+    },
+  ],
+  [
+    'the explicit cap still wins',
+    () => {
+      const wrappers = Array.from({ length: 50 }, (_, at) =>
+        wrapper(at, 1_600),
+      );
+      const batches = packCollectTransactions(wrappers, COLLECTOR, 5, true);
+      assert.ok(
+        batches.every((batch) => batch.length <= 5),
+        '--max-wrappers-per-tx was not honoured',
+      );
+    },
+  ],
+  [
+    'collect without defrag is unaffected by the compute estimate',
+    () => {
+      const wrappers = Array.from({ length: 150 }, (_, at) =>
+        wrapper(at, 618_304),
+      );
+      const batches = packCollectTransactions(
+        wrappers,
+        COLLECTOR,
+        undefined,
+        false,
+      );
+      assert.equal(batches[0].length, V1_MAX_WRAPPERS);
+      assert.equal(estimateBatchDefragCu(batches[0], false), 0);
+    },
+  ],
+];
+
+let failures = 0;
+for (const [name, body] of tests) {
+  try {
+    body();
+    console.log(`  ok  ${name}`);
+  } catch (error) {
+    failures += 1;
+    console.error(`FAIL  ${name}`);
+    console.error(`      ${error instanceof Error ? error.message : error}`);
+  }
+}
+console.log(`\n${tests.length - failures}/${tests.length} passed`);
+if (failures > 0) process.exit(1);

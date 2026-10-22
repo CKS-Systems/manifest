@@ -35,11 +35,26 @@ const DEFRAG_DISCRIMINANT = 8;
 const WRAPPER_FIXED_SIZE = 64;
 const WRAPPER_BLOCK_SIZE = 96;
 const NIL = 0xffffffff;
-// Full-defrag compute scales with account size (a mark walk over every block
-// plus bounded relocations). Measured against mainnet wrapper state on a
-// localnet: ~1 CU/byte for the largest accounts, higher per byte for small,
-// relocation-heavy ones. 2.5/byte keeps every observed case under the cap.
-const DEFRAG_CU_BASE = 60_000;
+// Full-defrag compute scales with account size: the mark walk, the relocation
+// scan and the free-list rebuild each touch every block once, and relocations
+// are bounded by the program's own per-run clamp. The per-byte term carries
+// the whole estimate; the base only covers per-instruction overhead.
+//
+// Calibrated against the 2026-10-22 mainnet sweep (421 wrappers, 28 txs, every
+// batch simulated). Worst observed cost was 1.46 CU/byte, on the 3-wrapper
+// batch of 30,144 total bytes; the 618,304-byte wrapper came in at 0.92
+// CU/byte, and the smallest already-packed wrappers at 1,155 CU each. 2.5/byte
+// keeps a 1.7x margin over the worst case, and because the estimate is at
+// least DEFRAG_CU_PER_BYTE per byte while real cost stays below it, a batch
+// that fits CU_BUDGET_PER_TRANSACTION cannot exceed the MAX_COMPUTE_UNITS the
+// transaction requests.
+//
+// The base was 60,000 through the 2026-10-22 sweep, which is 50x the measured
+// cost of an already-packed wrapper. Since 1_300_000/60_000 = 21, it capped
+// every batch of small wrappers at 21 regardless of real cost, short of the 32
+// the 64-instruction limit allows in --defrag mode. 2,500 covers the measured
+// 1,155 floor with margin and lets the per-byte term decide the batch size.
+const DEFRAG_CU_BASE = 2_500;
 const DEFRAG_CU_PER_BYTE = 2.5;
 const CU_BUDGET_PER_TRANSACTION = 1_300_000;
 // Wrapper state discriminator: little-endian u64 value 1.
@@ -221,10 +236,25 @@ function predictDefraggedSpace(data: Buffer): number | null {
   return WRAPPER_FIXED_SIZE + liveBlocks * WRAPPER_BLOCK_SIZE;
 }
 
-function estimateDefragCu(space: number): number {
+export function estimateDefragCu(space: number): number {
   return Math.min(
     CU_BUDGET_PER_TRANSACTION,
     Math.ceil(DEFRAG_CU_BASE + DEFRAG_CU_PER_BYTE * space),
+  );
+}
+
+/** What the batcher budgeted for a batch, so simulation can be compared
+ *  against it. The estimate drives packing, so a run that reports both keeps
+ *  DEFRAG_CU_BASE and DEFRAG_CU_PER_BYTE honest against mainnet state. */
+export function estimateBatchDefragCu(
+  batch: CollectableWrapper[],
+  withDefrag: boolean,
+): number {
+  if (!withDefrag) return 0;
+  return batch.reduce(
+    (total, wrapper) =>
+      total + (wrapper.defragCu ?? estimateDefragCu(wrapper.space)),
+    0,
   );
 }
 
@@ -285,10 +315,18 @@ function serializedSize(
     return Buffer.from(getBase64EncodedWireTransaction(transaction), 'base64')
       .length;
   } catch (error) {
+    // Every way a batch can fail to compile is "this batch does not fit", and
+    // the caller's job is to close the batch and start a new one. Besides the
+    // wire size and the 64-address limit, --defrag mode runs into the
+    // 64-instruction limit first: at two instructions per wrapper that caps a
+    // defrag batch at 32 wrappers, half the 61 addresses a v1 transaction can
+    // name and the reason --defrag cannot reach collect-only's batch size.
     if (
       error instanceof Error &&
       (error.message.includes('too large') ||
-        error.message.includes('64 account'))
+        error.message.includes('64 account') ||
+        (error.message.includes('instructions') &&
+          error.message.includes('maximum')))
     ) {
       return null;
     }
@@ -628,7 +666,8 @@ Environment:
   );
   if (withDefrag) {
     const bytesFreed = collectableWrappers.reduce(
-      (sum, { space, predictedSpace }) => sum + (space - (predictedSpace ?? space)),
+      (sum, { space, predictedSpace }) =>
+        sum + (space - (predictedSpace ?? space)),
       0,
     );
     console.log(
@@ -637,16 +676,14 @@ Environment:
   }
   const tableLimit = 25;
   console.table(
-    collectableWrappers.slice(0, tableLimit).map(
-      ({ pubkey, trader, amount, space, predictedSpace }) => ({
+    collectableWrappers
+      .slice(0, tableLimit)
+      .map(({ pubkey, trader, amount, space, predictedSpace }) => ({
         wrapper: pubkey.toBase58(),
         trader: trader.toBase58(),
-        ...(withDefrag
-          ? { bytes: space, defraggedBytes: predictedSpace }
-          : {}),
+        ...(withDefrag ? { bytes: space, defraggedBytes: predictedSpace } : {}),
         recoverableSOL: formatSOL(amount),
-      }),
-    ),
+      })),
   );
   if (collectableWrappers.length > tableLimit) {
     console.log(
@@ -700,7 +737,11 @@ Environment:
         return;
       }
       console.log(
-        `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes`,
+        `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes${
+          withDefrag
+            ? ` (budgeted ${estimateBatchDefragCu(batches[0], withDefrag)} CU)`
+            : ''
+        }`,
       );
     }
     console.log(
@@ -757,8 +798,11 @@ Environment:
           for (const log of simulation.logs ?? []) console.error(`  ${log}`);
           break;
         }
+        const predictedCu: number = estimateBatchDefragCu(batch, withDefrag);
         console.log(
-          `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes`,
+          `Simulation passed: ${simulation.unitsConsumed ?? 'unknown'} CU, ${simulation.loadedAccountsDataSize ?? 'unknown'} loaded-account bytes${
+            withDefrag ? ` (budgeted ${predictedCu} CU)` : ''
+          }`,
         );
         if (stopRequested) break;
 
