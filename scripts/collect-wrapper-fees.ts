@@ -19,8 +19,10 @@ import {
   type KeyPairSigner,
 } from '@solana/kit';
 import { Connection, PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 import * as fs from 'fs';
 import { PROGRAM_ID as WRAPPER_PROGRAM_ID } from '../client/ts/src/wrapper';
+import { runCoreCollections } from './collector-core';
 
 const { RPC_URL, KEYPAIR_PATH } = process.env;
 
@@ -472,6 +474,68 @@ async function buildSignedTransaction(
   return signTransactionMessageWithSigners(message);
 }
 
+/**
+ * A v1 message carrying arbitrary instructions. The wrapper path has its own
+ * builder shaped around Collect/Defrag pairs; the core phases need the generic
+ * form, and both must set loadedAccountsDataSizeLimit or a multi-leg batch
+ * fails MaxLoadedAccountsDataSizeExceeded before executing anything.
+ */
+function createGenericMessage(
+  instructions: Instruction[],
+  feePayer: PublicKey,
+  recentBlockhash: string,
+  lastValidBlockHeight: bigint,
+  computeUnitLimit: number,
+  loadedAccountsDataSizeLimit: number,
+) {
+  return pipe(
+    createTransactionMessage({ version: 1 }),
+    (message) =>
+      setTransactionMessageFeePayer(address(feePayer.toBase58()), message),
+    (message) =>
+      setTransactionMessageLifetimeUsingBlockhash(
+        { blockhash: blockhash(recentBlockhash), lastValidBlockHeight },
+        message,
+      ),
+    (message) => appendTransactionMessageInstructions(instructions, message),
+    (message) =>
+      setTransactionMessageConfig(
+        { computeUnitLimit, loadedAccountsDataSizeLimit },
+        message,
+      ),
+  );
+}
+
+/** Wire size of an instruction list, or null when it cannot be built at all. */
+function genericSerializedSize(
+  instructions: Instruction[],
+  feePayer: PublicKey,
+): number | null {
+  try {
+    const message = createGenericMessage(
+      instructions,
+      feePayer,
+      SIZE_CHECK_BLOCKHASH,
+      0n,
+      MAX_COMPUTE_UNITS,
+      MAX_LOADED_ACCOUNTS_DATA_SIZE,
+    );
+    return Buffer.from(
+      getBase64EncodedWireTransaction(compileTransaction(message)),
+      'base64',
+    ).length;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('too large') ||
+        error.message.includes('account addresses'))
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function simulateTransaction(
   encodedTransaction: string,
   sigVerify: boolean,
@@ -513,6 +577,18 @@ async function run(): Promise<void> {
   yarn collect:wrapper-fees --defrag --all-public --execute
       Defrag + collect every wrapper with anything to recover.
 
+Core-program phases (see scripts/README-fee-collection.md):
+  yarn collect:wrapper-fees --markets
+      Dry-run the core market sweep: accrued advanced-order fees plus any
+      already-free tail. Relocates nothing.
+
+  yarn collect:wrapper-fees --markets --global-clean --execute
+      Sweep markets and clean expired orders in the same pass.
+
+  yarn collect:wrapper-fees --markets --tail-tighten --min-shrink=3 --execute
+      Also truncate free tails of at least 3 blocks. Safe hourly, but note
+      traders re-pay most of that rent on their next placement.
+
 Options:
   --wrapper=ADDRESS           Select exactly one test wrapper.
   --all-public               Explicitly select all fee-bearing public wrappers.
@@ -522,6 +598,14 @@ Options:
   --max-wrappers-per-tx=N    Safety cap below the v1 maximum of ${V1_MAX_WRAPPERS}.
   --delay-ms=N               Delay between transactions (default ${DEFAULT_DELAY_MS}ms).
   --execute                  Submit; without this flag the command is read-only.
+  --markets                  Sweep core markets for accrued fees. Needs no
+                             wrapper target; relocates nothing.
+  --global-clean             Clean expired orders for their gas deposits.
+                             Requires --markets: one clean exactly cancels one
+                             signature fee, so it must ride along.
+  --tail-tighten             Also take markets whose free tail can truncate.
+  --min-shrink=N             With --tail-tighten, require N blocks of shrink.
+  --max-markets=N            Cap markets per run, highest recovery first.
 
 Execution safety:
   Every transaction is simulated before submission. Ctrl-C stops before the
@@ -540,10 +624,33 @@ Environment:
   const execute = process.argv.includes('--execute');
   const allPublic = process.argv.includes('--all-public');
   const withDefrag = process.argv.includes('--defrag');
+  // Core-program phases. Opt-in, so every existing invocation is unchanged.
+  const sweepMarkets = process.argv.includes('--markets');
+  const globalClean = process.argv.includes('--global-clean');
+  const tailTighten = process.argv.includes('--tail-tighten');
+  const minShrinkBlocks = tailTighten
+    ? (parsePositiveInteger('min-shrink', 'MIN_SHRINK_BLOCKS') ?? 1)
+    : 0;
+  const maxMarkets = parsePositiveInteger('max-markets', 'MAX_MARKETS');
   const wrapperOption = optionValue('wrapper');
-  if (allPublic === (wrapperOption !== undefined)) {
+  const coreOnly =
+    (sweepMarkets || globalClean) && !allPublic && wrapperOption === undefined;
+  if (tailTighten && !sweepMarkets) {
     throw new Error(
-      'Choose exactly one target: --wrapper=ADDRESS or --all-public',
+      '--tail-tighten applies to the market sweep; pass --markets as well',
+    );
+  }
+  // GlobalClean pays one gas deposit per order and a transaction costs one
+  // signature, so cleaning alone barely covers itself. Requiring it to ride
+  // with another phase is the operator's instruction and the economics agree.
+  if (globalClean && !sweepMarkets) {
+    throw new Error(
+      '--global-clean must ride along with --markets: a clean-only run barely pays for its own signature',
+    );
+  }
+  if (!coreOnly && allPublic === (wrapperOption !== undefined)) {
+    throw new Error(
+      'Choose exactly one target: --wrapper=ADDRESS or --all-public (or use --markets for the core-only phases)',
     );
   }
   const selectedWrapper = wrapperOption
@@ -558,6 +665,93 @@ Environment:
   const collector = execute ? await loadCollector() : undefined;
   const collectorPublicKey = collector?.publicKey ?? AUTHORIZED_COLLECTOR;
   const connection = new Connection(RPC_URL, 'confirmed');
+
+  if (sweepMarkets || globalClean) {
+    console.log(`Mode: ${execute ? 'EXECUTE' : 'DRY RUN'} (core phases)`);
+    const coreResult = await runCoreCollections(
+      {
+        rpc,
+        bs58encode: (buffer: Buffer) => bs58.encode(buffer),
+        collector: collectorPublicKey,
+        measure: (instructions) =>
+          genericSerializedSize(instructions, collectorPublicKey),
+        sleep: (ms: number) => sleep(ms, () => stopRequested),
+        simulate: async (instructions, units, dataSize) => {
+          const { value } = await rpc<{
+            value: { blockhash: string; lastValidBlockHeight: number };
+          }>('getLatestBlockhash', [{ commitment: 'confirmed' }]);
+          const message = createGenericMessage(
+            instructions,
+            collectorPublicKey,
+            value.blockhash,
+            BigInt(value.lastValidBlockHeight),
+            units,
+            dataSize,
+          );
+          const encoded = getBase64EncodedWireTransaction(
+            compileTransaction(message),
+          );
+          const simulation = await simulateTransaction(encoded, false);
+          return {
+            err: simulation.err,
+            unitsConsumed: simulation.unitsConsumed,
+          };
+        },
+        buildAndSend: async (instructions, units, dataSize) => {
+          if (collector === undefined)
+            throw new Error('collector keypair required to execute');
+          const { value } = await rpc<{
+            value: { blockhash: string; lastValidBlockHeight: number };
+          }>('getLatestBlockhash', [{ commitment: 'confirmed' }]);
+          const unsigned = createGenericMessage(
+            instructions,
+            collectorPublicKey,
+            value.blockhash,
+            BigInt(value.lastValidBlockHeight),
+            units,
+            dataSize,
+          );
+          const signed = await signTransactionMessageWithSigners(
+            setTransactionMessageFeePayerSigner(collector.signer, unsigned),
+          );
+          const encoded = getBase64EncodedWireTransaction(signed);
+          const signature = await rpc<string>('sendTransaction', [
+            encoded,
+            {
+              encoding: 'base64',
+              preflightCommitment: 'confirmed',
+              maxRetries: 3,
+            },
+          ]);
+          await connection.confirmTransaction(
+            {
+              signature,
+              blockhash: value.blockhash,
+              lastValidBlockHeight: value.lastValidBlockHeight,
+            },
+            'confirmed',
+          );
+          return signature;
+        },
+      },
+      {
+        execute,
+        sweepMarkets,
+        globalClean,
+        minShrinkBlocks,
+        minRecoveryLamports: 100_000n,
+        maxMarkets,
+        delayMs,
+        shouldStop: () => stopRequested,
+      },
+    );
+    console.log(
+      `Core phases: ${coreResult.transactionsSent} transactions, ` +
+        `${formatSOL(coreResult.recoveredLamports + coreResult.cleanRewardLamports)} recovered ` +
+        `(${coreResult.marketsSelected} markets, ${coreResult.cleanableOrders} orders cleaned)`,
+    );
+    if (coreOnly) return;
+  }
 
   console.log(`Mode: ${execute ? 'EXECUTE' : 'DRY RUN'}`);
   console.log(`Operation: ${withDefrag ? 'defrag + collect' : 'collect only'}`);
