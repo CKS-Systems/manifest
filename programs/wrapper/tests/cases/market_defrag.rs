@@ -106,7 +106,9 @@ async fn defrag_market(
 async fn market_defrag_relocates_orders_and_the_wrapper_still_works() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
-    test_fixture.deposit(Token::SOL, 100 * SOL_UNIT_SIZE).await?;
+    test_fixture
+        .deposit(Token::SOL, 100 * SOL_UNIT_SIZE)
+        .await?;
 
     // Several orders, then cancel from the middle so the market holds free
     // blocks below live ones. That is what gives defrag somewhere to relocate
@@ -119,7 +121,10 @@ async fn market_defrag_relocates_orders_and_the_wrapper_still_works() -> anyhow:
     .await?;
     wrapper_batch(
         &test_fixture,
-        vec![WrapperCancelOrderParams::new(1), WrapperCancelOrderParams::new(2)],
+        vec![
+            WrapperCancelOrderParams::new(1),
+            WrapperCancelOrderParams::new(2),
+        ],
         vec![],
     )
     .await?;
@@ -180,7 +185,10 @@ async fn market_defrag_relocates_orders_and_the_wrapper_still_works() -> anyhow:
     // And it keeps working: a second batch over the healed view still runs.
     wrapper_batch(
         &test_fixture,
-        vec![WrapperCancelOrderParams::new(4), WrapperCancelOrderParams::new(5)],
+        vec![
+            WrapperCancelOrderParams::new(4),
+            WrapperCancelOrderParams::new(5),
+        ],
         vec![],
     )
     .await?;
@@ -199,10 +207,22 @@ async fn market_defrag_relocates_orders_and_the_wrapper_still_works() -> anyhow:
 async fn cancel_only_batch_after_market_defrag_succeeds() -> anyhow::Result<()> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
     test_fixture.claim_seat().await?;
-    test_fixture.deposit(Token::SOL, 100 * SOL_UNIT_SIZE).await?;
+    test_fixture
+        .deposit(Token::SOL, 100 * SOL_UNIT_SIZE)
+        .await?;
 
-    wrapper_batch(&test_fixture, vec![], vec![ask(1, 10), ask(2, 11), ask(3, 12)]).await?;
-    wrapper_batch(&test_fixture, vec![WrapperCancelOrderParams::new(1)], vec![]).await?;
+    wrapper_batch(
+        &test_fixture,
+        vec![],
+        vec![ask(1, 10), ask(2, 11), ask(3, 12)],
+    )
+    .await?;
+    wrapper_batch(
+        &test_fixture,
+        vec![WrapperCancelOrderParams::new(1)],
+        vec![],
+    )
+    .await?;
 
     let before: Account = market_account(&test_fixture).await;
     let key: Keypair = collector(&test_fixture);
@@ -211,7 +231,12 @@ async fn cancel_only_batch_after_market_defrag_succeeds() -> anyhow::Result<()> 
     assert!(after.data.len() <= before.data.len());
 
     // Cancel only: no placement, so nothing forces a full re-read.
-    wrapper_batch(&test_fixture, vec![WrapperCancelOrderParams::new(2)], vec![]).await?;
+    wrapper_batch(
+        &test_fixture,
+        vec![WrapperCancelOrderParams::new(2)],
+        vec![],
+    )
+    .await?;
     let (_, orders) = wrapper_view(&test_fixture).await;
     let ids: Vec<u64> = orders.iter().map(|(id, _)| *id).collect();
     assert_eq!(ids, vec![3], "the cancel-only path handled the relocation");
